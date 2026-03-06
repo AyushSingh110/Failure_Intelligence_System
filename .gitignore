@@ -1,0 +1,33 @@
+# --- Python Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.venv
+pip-log.txt
+
+# --- Failure Intelligence Storage (The Vault) ---
+# We ignore the actual data files so your personal test results 
+# don't overwrite your teammate's data on GitHub.
+storage/*.json
+!storage/__init__.py
+failures.json
+
+# --- VS Code & IDEs ---
+.vscode/
+.idea/
+*.swp
+*.bak
+
+# --- Testing & Reports ---
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+*.log
+
+# --- Streamlit ---
+.streamlit/config.toml
+static/
