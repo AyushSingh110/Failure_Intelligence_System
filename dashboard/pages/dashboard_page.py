@@ -14,6 +14,7 @@ from components.widgets import (
     render_kpi_card_html,
     render_inference_row,
     render_empty_state,
+    render_callout,
 )
 
 
@@ -37,6 +38,8 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
     n_models = df["model"].nunique() if not df.empty and "model" in df.columns else 0
 
     # ── KPI cards ──
+    st.markdown(render_section_label("System Overview"), unsafe_allow_html=True)
+
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
@@ -76,17 +79,21 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
             variant="risk" if r_count > 0 else "ok",
         ), unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom:12px'></div>", unsafe_allow_html=True)
 
     has_data    = not df.empty
     has_entropy = has_data and "entropy" in df.columns and df["entropy"].dropna().shape[0] > 0
     has_models  = has_data and "model"   in df.columns and df["model"].nunique() > 0
 
     if not has_data:
-        st.info("No data yet — run `python inject_test_data.py` to populate the vault.")
+        st.markdown(render_callout(
+            "No inference data detected yet. Run <code>python inject_test_data.py</code> to populate "
+            "the vault with sample data, or send live requests to the API.",
+            "info",
+        ), unsafe_allow_html=True)
         return
 
-    #  Model comparison charts (shown when multiple models exist) 
+    #  Model comparison charts (shown when multiple models exist)
     if has_models and df["model"].nunique() > 1:
         st.markdown(render_section_label("Model Comparison"), unsafe_allow_html=True)
         chart_col1, chart_col2 = st.columns([1, 1])
@@ -105,17 +112,16 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
             )
 
     elif has_models:
-        # Single model — show a note
         only_model = df["model"].iloc[0]
-        st.info(
-            f"Only one model detected: **{only_model}**. "
-            "Run `python inject_test_data.py` to inject data from multiple models "
-            "and enable the Model Comparison charts.",
-            icon="ℹ️",
-        )
+        st.markdown(render_callout(
+            f"Single model detected: <b>{only_model}</b>. "
+            "Inject data from multiple models with <code>python inject_test_data.py</code> "
+            "to enable the Model Comparison charts.",
+            "info",
+        ), unsafe_allow_html=True)
 
-    # Blended signal time series 
-    st.markdown(render_section_label("Signal Time Series (All Models)"), unsafe_allow_html=True)
+    # Blended signal time series
+    st.markdown(render_section_label("Signal Time Series"), unsafe_allow_html=True)
 
     if has_entropy:
         st.plotly_chart(
@@ -124,9 +130,9 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
             config={"displayModeBar": False},
         )
     else:
-        st.info("No entropy data yet.")
+        st.caption("No entropy data available yet.")
 
-    # Lower row: recent inferences + latency 
+    # Lower row: recent inferences + latency
     col_a, col_b = st.columns([3, 2])
 
     with col_a:
@@ -135,7 +141,6 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
             for r in reversed(records[-8:]):
                 metrics = r.get("metrics") or {}
                 e_val   = metrics.get("entropy") or metrics.get("entropy_score")
-                # Show model name in the inference row
                 model_label = f"{r.get('model_name', 'unknown')} v{r.get('model_version', '?')}"
                 st.markdown(
                     render_inference_row(
@@ -147,7 +152,7 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
                     unsafe_allow_html=True,
                 )
         else:
-            st.markdown(render_empty_state("No records yet."), unsafe_allow_html=True)
+            st.markdown(render_empty_state("No inference records yet."), unsafe_allow_html=True)
 
     with col_b:
         st.markdown(render_section_label("Latency Distribution"), unsafe_allow_html=True)
@@ -164,11 +169,11 @@ def render(auto_refresh: bool, refresh_interval: int) -> None:
             )
             avg_lat = kpi.get("avg_latency")
             if avg_lat:
-                st.caption(f"Avg: {avg_lat:.1f} ms")
+                st.caption(f"Mean latency: {avg_lat:.1f} ms")
         else:
             st.caption("No latency data.")
 
-    # Auto-refresh 
+    # Auto-refresh
     if auto_refresh:
         time.sleep(refresh_interval)
         st.cache_data.clear()

@@ -1,4 +1,17 @@
-from app.schemas import FailureSignalVector, ClusterAssignment, LabelResult
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+from app.schemas import (
+    AgentVerdict,
+    FailureSignalVector,
+    ClusterAssignment,
+    LabelResult,
+    JuryVerdict,
+    DiagnosticRequest,
+    DiagnosticResponse,
+)
 from engine.detector.consistency import compute_consistency
 from engine.detector.entropy import compute_entropy
 from engine.detector.ensemble import compute_disagreement
@@ -9,24 +22,150 @@ from engine.archetypes.labeling import (
 )
 from engine.archetypes.clustering import archetype_registry
 from engine.evolution.tracker import evolution_tracker
+from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext
+from engine.agents.linguistic_auditor import linguistic_auditor
+from engine.agents.adversarial_specialist import adversarial_specialist
+from engine.agents.domain_critic import domain_critic
 from config import get_settings
 
+logger   = logging.getLogger(__name__)
 settings = get_settings()
 
+_ADVERSARIAL_ROOTS = frozenset({
+    "PROMPT_INJECTION",
+    "JAILBREAK_ATTEMPT",
+    "INSTRUCTION_OVERRIDE",
+    "TOKEN_SMUGGLING",
+    "INTENTIONAL_PROMPT_ATTACK",
+})
+
+
+# ── DiagnosticJury ─────────────────────────────────────────────────────────
+
+class DiagnosticJury:
+
+    def __init__(self) -> None:
+        self._agents: list[BaseJuryAgent] = [
+            adversarial_specialist,
+            linguistic_auditor,
+            domain_critic,
+        ]
+
+    def deliberate(self, context: DiagnosticContext) -> JuryVerdict:
+        verdicts: list[AgentVerdict] = []
+
+        for agent in self._agents:
+            try:
+                verdict = agent.analyze(context)
+                verdicts.append(verdict)
+            except Exception as exc:
+                logger.error(
+                    "Agent %s raised an unexpected exception: %s",
+                    agent.agent_name, exc, exc_info=True,
+                )
+                verdicts.append(AgentVerdict(
+                    agent_name=agent.agent_name,
+                    root_cause="AGENT_ERROR",
+                    confidence_score=0.0,
+                    mitigation_strategy="",
+                    skipped=True,
+                    skip_reason=f"Agent raised exception: {exc}",
+                ))
+
+        return self._aggregate(verdicts)
+
+    def _aggregate(self, verdicts: list[AgentVerdict]) -> JuryVerdict:
+        active  = [v for v in verdicts if not v.skipped]
+        skipped = [v for v in verdicts if v.skipped]
+
+        jury_confidence = (
+            round(sum(v.confidence_score for v in active) / len(active), 4)
+            if active else 0.0
+        )
+
+        primary = (
+            max(active, key=lambda v: v.confidence_score)
+            if active else None
+        )
+
+        is_adversarial = any(v.root_cause in _ADVERSARIAL_ROOTS for v in active)
+        is_complex     = any(v.root_cause == "PROMPT_COMPLEXITY_OOD" for v in active)
+
+        failure_summary = self._build_summary(primary, active, is_adversarial, is_complex)
+
+        logger.debug(
+            "Jury deliberation complete | active=%d skipped=%d primary=%s confidence=%.3f",
+            len(active), len(skipped),
+            primary.root_cause if primary else "NONE",
+            jury_confidence,
+        )
+
+        return JuryVerdict(
+            verdicts=verdicts,
+            primary_verdict=primary,
+            jury_confidence=jury_confidence,
+            is_adversarial=is_adversarial,
+            is_complex_prompt=is_complex,
+            failure_summary=failure_summary,
+        )
+
+    @staticmethod
+    def _build_summary(
+        primary:        Optional[AgentVerdict],
+        active:         list[AgentVerdict],
+        is_adversarial: bool,
+        is_complex:     bool,
+    ) -> str:
+        if not active:
+            return "No diagnostic agents reached a conclusion. Manual review recommended."
+        if not primary:
+            return "All agents skipped. Failure cause undetermined."
+
+        conf_pct = int(primary.confidence_score * 100)
+
+        if is_adversarial:
+            return (
+                f"Adversarial attack detected ({primary.root_cause}) "
+                f"with {conf_pct}% confidence. "
+                f"{primary.mitigation_strategy[:100]}"
+            )
+
+        if is_complex:
+            n_dims = len(primary.evidence.get("dimensions_fired", [])) if primary.evidence else 0
+            return (
+                f"Prompt complexity is the likely failure cause ({n_dims} complexity "
+                f"signal(s) detected, confidence {conf_pct}%). "
+                f"Recommend decomposing into simpler sub-prompts."
+            )
+
+        if len(active) > 1:
+            causes = ", ".join(v.root_cause for v in active)
+            return (
+                f"Multiple potential causes identified: {causes}. "
+                f"Primary diagnosis: {primary.root_cause} ({conf_pct}% confidence)."
+            )
+
+        return (
+            f"Diagnosis: {primary.root_cause} "
+            f"(confidence {conf_pct}%, agent: {primary.agent_name})."
+        )
+
+
+# ── FailureAgent ───────────────────────────────────────────────────────────
 
 class FailureAgent:
 
-    def run(
-        self,
-        model_outputs:    list[str],
-        primary_output:   str,
-        secondary_output: str,
-    ) -> dict:
-        """
-        Phase 1 path: extract signal, return signal + archetype label.
-        Does NOT update the registry or tracker (use run_full for that).
-        """
-        signal    = self._build_signal(model_outputs, primary_output, secondary_output)
+    def __init__(self) -> None:
+        self._jury = DiagnosticJury()
+
+    # ── Phase 1 ────────────────────────────────────────────────────────
+
+    def run(self, model_outputs: list[str]) -> dict:
+        """Phase 1: extract signal, return signal + archetype label."""
+        primary_output   = model_outputs[0]
+        secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+
+        signal    = self._build_signal(model_outputs)
         archetype = label_failure_archetype(signal)
         embedding = compute_embedding_distance(primary_output, secondary_output)
 
@@ -36,48 +175,84 @@ class FailureAgent:
             "embedding_distance":    embedding["embedding_distance"],
         }
 
-    def run_full(
-        self,
-        model_outputs:    list[str],
-        primary_output:   str,
-        secondary_output: str,
-    ) -> dict:
-        """
-        Phase 2 path: extract signal, assign to cluster, update tracker.
-        Returns full diagnostic output including cluster assignment and trend.
-        """
-        signal    = self._build_signal(model_outputs, primary_output, secondary_output)
+    # ── Phase 2 ────────────────────────────────────────────────────────
+
+    def run_full(self, model_outputs: list[str]) -> dict:
+        """Phase 2: extract signal, assign to cluster, update tracker."""
+        primary_output   = model_outputs[0]
+        secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+
+        signal    = self._build_signal(model_outputs)
         embedding = compute_embedding_distance(primary_output, secondary_output)
 
-        # Phase 2: cluster assignment
-        assignment: ClusterAssignment = archetype_registry.assign(signal)   # type: ignore[assignment]
-        cluster_dict = dict(assignment)
-
-        # Phase 2: label with conditions
-        label_detail: LabelResult = label_failure_archetype_detailed(signal)  # type: ignore[assignment]
-        label_dict = dict(label_detail)
-
-        # Phase 2: update evolution tracker
+        assignment:   ClusterAssignment = archetype_registry.assign(signal)
+        label_detail: LabelResult       = label_failure_archetype_detailed(signal)
         evolution_tracker.record(signal)
         trend = evolution_tracker.trend_summary()
 
         return {
             "failure_signal_vector": signal.model_dump(),
-            "cluster_assignment":    cluster_dict,
-            "label_detail":          label_dict,
+            "cluster_assignment":    dict(assignment),
+            "label_detail":          dict(label_detail),
             "embedding_distance":    embedding["embedding_distance"],
             "trend_summary":         trend,
         }
 
-    def _build_signal(
-        self,
-        model_outputs:    list[str],
-        primary_output:   str,
-        secondary_output: str,
-    ) -> FailureSignalVector:
+    # ── Phase 3 ────────────────────────────────────────────────────────
+
+    def run_diagnostic(self, request: DiagnosticRequest) -> DiagnosticResponse:
+        """Phase 3: full Phase 1 + Phase 2 + DiagnosticJury reasoning."""
+        # Derive primary and secondary from model_outputs list.
+        # model_outputs[0] = primary (model under test)
+        # model_outputs[1] = secondary/reference model (if present)
+        primary_output   = request.model_outputs[0]
+        secondary_output = (
+            request.model_outputs[1]
+            if len(request.model_outputs) > 1
+            else request.model_outputs[0]
+        )
+
+        # ── Phase 1 ────────────────────────────────────────────────────
+        signal    = self._build_signal(request.model_outputs)
+        archetype = label_failure_archetype(signal)
+        embedding = compute_embedding_distance(primary_output, secondary_output)
+
+        # ── Phase 2 ────────────────────────────────────────────────────
+        archetype_registry.assign(signal)
+        evolution_tracker.record(signal)
+
+        # ── Phase 3 ────────────────────────────────────────────────────
+        context = DiagnosticContext.build(
+            prompt=request.prompt,
+            primary_output=primary_output,
+            secondary_output=secondary_output,
+            model_outputs=request.model_outputs,
+            fsv=signal,
+            latency_ms=request.latency_ms,
+        )
+        jury_verdict = self._jury.deliberate(context)
+
+        return DiagnosticResponse(
+            failure_signal_vector=signal,
+            archetype=archetype,
+            embedding_distance=embedding["embedding_distance"],
+            jury=jury_verdict,
+        )
+
+    # ── Shared signal builder ──────────────────────────────────────────
+
+    def _build_signal(self, model_outputs: list[str]) -> FailureSignalVector:
+        """
+        Builds a FailureSignalVector from all provided model outputs.
+
+        All 3 detectors receive the full list:
+          - consistency + entropy : use the full list for clustering
+          - ensemble              : compares ALL pairwise combinations
+          - embedding             : compares outputs[0] vs outputs[1]
+        """
         consistency   = compute_consistency(model_outputs)
         entropy_score = compute_entropy(model_outputs)
-        ensemble      = compute_disagreement(primary_output, secondary_output)
+        ensemble      = compute_disagreement(model_outputs)   # ← list, not two strings
 
         high_failure_risk = (
             entropy_score >= settings.high_entropy_threshold
@@ -96,4 +271,6 @@ class FailureAgent:
         )
 
 
-failure_agent = FailureAgent()
+# ── Singletons ─────────────────────────────────────────────────────────────
+failure_agent   = FailureAgent()
+diagnostic_jury = failure_agent._jury

@@ -1,6 +1,17 @@
+"""
+pages/analyze_page.py
+
+Failure Signal Extraction — analysis of multi-model outputs.
+
+Two modes:
+  Auto   — select a stored question from the vault dropdown; model outputs
+            are fetched automatically from stored inference records.
+  Manual — paste outputs directly, one per line.
+"""
+
 import streamlit as st
 
-from utils.api import analyze_outputs
+from utils.api import analyze_outputs, fetch_questions_with_outputs
 from components.charts import answer_distribution_bar, signal_radar
 from components.widgets import render_section_label, render_status_pill, render_empty_state
 
@@ -13,22 +24,86 @@ def render() -> None:
     with col_input:
         st.markdown(render_section_label("Inputs"), unsafe_allow_html=True)
 
-        model_outputs_raw = st.text_area(
-            "Model Outputs — one per line",
-            placeholder="Paris\nParis\nLondon\nParis",
-            height=130,
-            help="Paste multiple sampled outputs from your model, one per line.",
+        # ── Mode toggle ────────────────────────────────────────────────
+        mode = st.radio(
+            "Input mode",
+            ["Auto — load from vault", "Manual — paste outputs"],
+            horizontal=True,
+            label_visibility="collapsed",
         )
-        primary_output = st.text_input(
-            "Primary Model Output",
-            placeholder="The capital of France is Paris.",
-            help="Output from your primary / production model.",
-        )
-        secondary_output = st.text_input(
-            "Secondary Model Output",
-            placeholder="France's capital city is Lyon.",
-            help="Output from a secondary / shadow model for ensemble comparison.",
-        )
+
+        model_outputs: list[str] = []
+
+        if mode == "Auto — load from vault":
+            # ── Load grouped questions from backend ────────────────────
+            with st.spinner("Loading stored questions…"):
+                grouped = fetch_questions_with_outputs()
+
+            if not grouped:
+                st.warning(
+                    "No stored inference records found. "
+                    "Run `python inject_test_data.py` first to populate the vault."
+                )
+                return
+
+            questions = sorted(grouped.keys())
+            selected_q = st.selectbox(
+                "Select a question from the vault",
+                options=questions,
+                label_visibility="collapsed",
+            )
+
+            records = grouped.get(selected_q, [])
+
+            # Show which models were found
+            model_names = [r["model_name"] for r in records]
+            st.caption(
+                f"{len(records)} model output(s) found: "
+                + ", ".join(f"**{m}**" for m in model_names)
+            )
+
+            # Show a preview table of what will be analyzed
+            if records:
+                st.markdown(
+                    "<div style='font-size:12px;color:var(--text-color);opacity:.7;"
+                    "margin:8px 0 4px'>Outputs that will be compared:</div>",
+                    unsafe_allow_html=True,
+                )
+                for r in records:
+                    st.markdown(
+                        f"<div style='font-size:12px;padding:4px 0;border-bottom:"
+                        f"1px solid rgba(128,128,128,0.15)'>"
+                        f"<b>{r['model_name']}</b> &nbsp;→&nbsp; {r['output_text'][:120]}"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+
+            model_outputs = [r["output_text"] for r in records]
+
+        else:
+            # ── Manual mode ────────────────────────────────────────────
+            model_outputs_raw = st.text_area(
+                "Model outputs — one per line",
+                placeholder=(
+                    "Paris\n"
+                    "Paris\n"
+                    "London\n"
+                    "Paris\n"
+                    "Berlin"
+                ),
+                height=160,
+                label_visibility="collapsed",
+                help=(
+                    "Paste one output per line. "
+                    "Line 1 = primary model, Line 2 = reference model, "
+                    "Lines 3+ = additional ensemble members."
+                ),
+            )
+            model_outputs = [
+                o.strip()
+                for o in model_outputs_raw.splitlines()
+                if o.strip()
+            ]
 
         run = st.button("▶  Run Signal Extraction", use_container_width=True, type="primary")
 
@@ -38,20 +113,20 @@ def render() -> None:
         if not run:
             st.markdown(
                 render_empty_state(
-                    "Enter model outputs on the left<br>and run extraction to see<br>"
-                    "the Failure Signal Vector here."
+                    "Select a question or paste outputs<br>"
+                    "on the left and run extraction<br>"
+                    "to see the Failure Signal Vector here."
                 ),
                 unsafe_allow_html=True,
             )
             return
 
-        model_outputs = [o.strip() for o in model_outputs_raw.splitlines() if o.strip()]
         if not model_outputs:
-            st.error("Enter at least one model output.")
+            st.error("No model outputs to analyze. Select a question or paste outputs.")
             return
 
-        with st.spinner("Extracting failure signals..."):
-            result = analyze_outputs(model_outputs, primary_output, secondary_output)
+        with st.spinner("Extracting failure signals…"):
+            result = analyze_outputs(model_outputs)
 
         if result is None:
             st.error(

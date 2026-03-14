@@ -14,3 +14,6 @@ streamlit
 requests
 
 plotly
+faiss-cpu
+sentence-transformers
+pytest

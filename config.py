@@ -1,33 +1,3 @@
-"""
-config.py — Failure Intelligence Engine: Centralized Configuration
-
-All runtime parameters for every engine module live here.
-No magic numbers anywhere else in the codebase.
-
-Environment Variable Override
-------------------------------
-Every field maps directly to an env var of the same name (uppercased).
-For example:
-    HIGH_ENTROPY_THRESHOLD=0.80 uvicorn app.main:app
-
-Or place them in a .env file at the project root (see .env.example).
-
-Validation
-----------
-pydantic-settings validates types and ranges at startup.
-The app will refuse to start with an invalid configuration rather than
-silently misbehaving at runtime.
-
-Usage
------
-    from config import get_settings
-    settings = get_settings()
-    threshold = settings.high_entropy_threshold
-
-get_settings() is cached via @lru_cache — safe to call at module level
-anywhere in the codebase without performance concern.
-"""
-
 from functools import lru_cache
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
@@ -35,30 +5,21 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
 
-    # ------------------------------------------------------------------
+    
     # Application identity
-    # ------------------------------------------------------------------
+    app_name:    str  = "Failure Intelligence Engine"
+    app_version: str  = "3.0.0"
+    debug:       bool = False
+    log_level:   str  = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
 
-    app_name: str = "Failure Intelligence Engine"
-    app_version: str = "1.0.0"
-    debug: bool = False
-    log_level: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
-
-    # ------------------------------------------------------------------
+    
     # API server
-    # ------------------------------------------------------------------
-
-    api_host: str = "0.0.0.0"
-    api_port: int = Field(default=8000, ge=1, le=65535)
-    api_prefix: str = "/api/v1"
+    api_host:     str       = "0.0.0.0"
+    api_port:     int       = Field(default=8000, ge=1, le=65535)
+    api_prefix:   str       = "/api/v1"
     cors_origins: list[str] = Field(default=["*"])
 
-    # ------------------------------------------------------------------
-    # Detector thresholds
-    # Used by: ensemble.py, labeling.py, failure_agent.py, routes.py
-    # ------------------------------------------------------------------
-
-    # ensemble.py — cosine similarity below this → models disagree
+    # ensemble.py — cosine similarity below this threshold → models disagree
     ensemble_disagreement_threshold: float = Field(default=0.65, ge=0.0, le=1.0)
 
     # labeling.py / routes.py — entropy above this → UNSTABLE_OUTPUT or HALLUCINATION_RISK
@@ -67,15 +28,15 @@ class Settings(BaseSettings):
     # labeling.py / routes.py — agreement below this → LOW_CONFIDENCE
     low_agreement_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
 
-    # ------------------------------------------------------------------
+    
     # Clustering
     # Used by: clustering.py
-    # ------------------------------------------------------------------
+    
 
     # Base similarity required to merge a signal into an existing cluster
     cluster_base_similarity_threshold: float = Field(default=0.80, ge=0.0, le=1.0)
 
-    # Similarity below this → signal is a NOVEL_ANOMALY, not a cluster member
+    # Similarity below this → signal is NOVEL_ANOMALY, not a cluster member
     cluster_novel_anomaly_ceiling: float = Field(default=0.45, ge=0.0, le=1.0)
 
     # How much the threshold grows per existing cluster (adaptive threshold)
@@ -84,29 +45,29 @@ class Settings(BaseSettings):
     # Hard ceiling on adaptive threshold growth
     cluster_threshold_max: float = Field(default=0.92, ge=0.0, le=1.0)
 
-    # ------------------------------------------------------------------
+    
     # Evolution tracker
     # Used by: tracker.py
-    # ------------------------------------------------------------------
+    
 
     # Number of signals to keep in the rolling window
     tracker_window_size: int = Field(default=100, ge=2, le=10_000)
 
-    # Exponential decay factor (0 < alpha ≤ 1)
-    # Higher → slower decay (history matters more)
-    # Lower  → faster decay (recency dominates)
+    # Exponential decay factor  (0 < alpha <= 1)
+    # Higher -> slower decay (history matters more)
+    # Lower  -> faster decay (recency dominates)
     tracker_decay_alpha: float = Field(default=0.94, gt=0.0, le=1.0)
 
-    # high_risk_rate above this → is_degrading() returns True
+    # high_risk_rate above this -> is_degrading() returns True
     tracker_degradation_risk_threshold: float = Field(default=0.40, ge=0.0, le=1.0)
 
-    # degradation_velocity above this → is_degrading() returns True
+    # degradation_velocity above this -> is_degrading() returns True
     tracker_degradation_velocity_threshold: float = Field(default=0.05, ge=0.0, le=1.0)
 
-    # ------------------------------------------------------------------
+    
     # Vault (storage)
     # Used by: database.py
-    # ------------------------------------------------------------------
+    
 
     # Path to the JSON vault file, relative to project root
     vault_path: str = "storage/vault.json"
@@ -117,32 +78,101 @@ class Settings(BaseSettings):
     # How often the background flush thread writes to disk (seconds)
     vault_flush_interval_seconds: float = Field(default=5.0, ge=0.5, le=300.0)
 
-    # ------------------------------------------------------------------
-    # Embedding detector
-    # Used by: embedding.py
-    # ------------------------------------------------------------------
+    
+    # Embeddings
+    # Used by: embedding.py, encoder.py
+    
 
-    # N-gram size for character-level similarity (Phase 1)
+    # N-gram size for character-level similarity (Phase 1/2 fallback)
     embedding_ngram_size: int = Field(default=3, ge=1, le=6)
 
-    # Phase 2 toggle: when True, embedding.py uses sentence-transformers
-    # instead of n-grams (requires: pip install sentence-transformers)
-    embedding_use_transformer: bool = False
+    # Phase 3: enable sentence-transformer embeddings
+    # Set True for DiagnosticJury + FAISS semantic search
+    # Requires: pip install sentence-transformers
+    embedding_use_transformer: bool = True
 
-    # HuggingFace model ID to use when embedding_use_transformer=True
-    embedding_transformer_model: str = "all-MiniLM-L6-v2"
+    # HuggingFace model ID — 384-dim, fast, fits on RTX 3050 (4 GB VRAM)
+    embedding_transformer_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
-    # ------------------------------------------------------------------
+    # Dimension of all-MiniLM-L6-v2 output vectors
+    # Must match the model above — change only if you swap to a different model
+    embedding_dimension: int = Field(default=384, ge=64)
+
+    
+    # FAISS Vector Index
+    # Used by: registry.py (AdversarialRegistry)
+    
+
+    # Path where the FAISS adversarial prompt index is persisted to disk
+    # Created automatically on first run, reloaded on subsequent starts
+    faiss_index_path: str = "storage/faiss_adversarial.index"
+
+    # Sidecar JSON mapping each FAISS row -> { prompt, label, category, source }
+    faiss_meta_path: str = "storage/faiss_adversarial_meta.json"
+
+    # Cosine similarity above which a query prompt is flagged adversarial
+    # Range: 0.0-1.0  |  Default: 0.82 (high precision, low false-positive rate)
+    faiss_adversarial_similarity_threshold: float = Field(default=0.82, ge=0.0, le=1.0)
+
+    # Number of nearest neighbours FAISS returns per query
+    faiss_top_k: int = Field(default=5, ge=1, le=50)
+
+    
+    # Phase 3 -- DiagnosticJury agent thresholds
+    # Used by: linguistic_auditor.py, adversarial_specialist.py
+    
+
+    # -- LinguisticAuditor ---------------------------------------------
+
+    # Minimum prompt complexity score to activate the LinguisticAuditor.
+    # Below this score the agent skips entirely.
+    # Range: 0.0-1.0  |  Lower = more sensitive (catches more edge cases)
+    jury_linguistic_complexity_threshold: float = Field(default=0.20, ge=0.0, le=1.0)
+
+    # Minimum entropy for the LinguisticAuditor to confirm PROMPT_COMPLEXITY_OOD.
+    # Should sit below high_entropy_threshold so it catches moderate instability.
+    # Range: 0.0-1.0  |  Default: 0.45
+    jury_linguistic_entropy_threshold: float = Field(default=0.45, ge=0.0, le=1.0)
+
+    # -- AdversarialSpecialist -----------------------------------------
+
+    # FAISS cosine similarity threshold used inside the agent's confidence formula.
+    # Kept separate from faiss_adversarial_similarity_threshold so the jury
+    # agent can be tuned independently from the raw FAISS index.
+    # Range: 0.0-1.0  |  Default: 0.82
+    jury_adversarial_faiss_threshold: float = Field(default=0.82, ge=0.0, le=1.0)
+
+    # Confidence cap when ONLY the regex layer fires (no FAISS confirmation).
+    # Prevents regex-only matches from claiming full 0.91 base confidence.
+    # Range: 0.0-1.0  |  Default: 0.75
+    jury_adversarial_pattern_confidence: float = Field(default=0.75, ge=0.0, le=1.0)
+
+    
+    # Phase 3 — DomainCritic (Agent 3) thresholds
+    # Used by: engine/agents/domain_critic.py
+    
+
+    # Minimum scaled confidence for DomainCritic to return a verdict.
+    # Below this, it returns DOMAIN_CORRECT or skips entirely.
+    # Range: 0.0-1.0  |  Default: 0.30
+    jury_domain_confidence_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
+
+    # Cosine similarity below this value triggers self-contradiction in Layer 2.
+    # 0.70 means primary and secondary outputs differ meaningfully.
+    # Range: 0.0-1.0  |  Default: 0.70
+    jury_domain_self_contradiction_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+
+    
     # Dashboard
     # Used by: dashboard/ui.py
-    # ------------------------------------------------------------------
+    
 
     dashboard_auto_refresh_seconds: int = Field(default=10, ge=5, le=300)
-    dashboard_max_chart_records: int = Field(default=500, ge=10)
+    dashboard_max_chart_records:    int = Field(default=500, ge=10)
 
-    # ------------------------------------------------------------------
+    
     # Validators
-    # ------------------------------------------------------------------
+    
 
     @field_validator("cluster_novel_anomaly_ceiling")
     @classmethod
@@ -159,8 +189,6 @@ class Settings(BaseSettings):
     @classmethod
     def entropy_above_agreement(cls, v: float, info) -> float:
         low_agree = info.data.get("low_agreement_threshold", 0.50)
-        # These operate on different axes so no hard constraint,
-        # but warn if they're identical (likely a misconfiguration).
         if v == low_agree:
             import warnings
             warnings.warn(
@@ -171,15 +199,13 @@ class Settings(BaseSettings):
             )
         return v
 
-    # ------------------------------------------------------------------
-    # Pydantic-settings config
-    # ------------------------------------------------------------------
-
+    
+    # Pydantic-settings model config
     model_config = {
-        "env_file": ".env",
+        "env_file":          ".env",
         "env_file_encoding": "utf-8",
-        "case_sensitive": False,
-        "extra": "ignore",
+        "case_sensitive":    False,
+        "extra":             "ignore",
     }
 
 
