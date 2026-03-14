@@ -1,74 +1,3 @@
-"""
-engine/detector/consistency.py
-
-Computes sample agreement, FSD score, and answer distribution across
-multiple sampled model outputs.
-
-The Problem with Exact String Matching
-----------------------------------------
-The original implementation counted answers using exact string matching
-after prefix stripping. This works perfectly for short factual answers:
-
-    "Paris", "Paris", "Paris"  →  agreement = 1.0  ✓
-
-But completely breaks for long-form paraphrases:
-
-    "Quantum entanglement is a phenomenon where two particles become
-     correlated so that measuring one instantly determines the state
-     of the other, regardless of distance."
-
-    "Quantum entanglement occurs when two particles share a quantum
-     state, meaning the measurement of one instantaneously affects
-     the other no matter how far apart they are."
-
-Both sentences mean exactly the same thing. Exact match counts them
-as two different answers → agreement=0.2, entropy=1.0 → FALSE POSITIVE
-HALLUCINATION_RISK. The system was misdiagnosing correct behaviour.
-
-The Fix: Two-Path Consistency
--------------------------------
-Path A — Semantic clustering (long-form outputs):
-  When at least one output exceeds SHORT_ANSWER_THRESHOLD (40 chars)
-  AND sentence-transformers is installed:
-
-    1. Encode all outputs to 384-dim L2-normalised vectors via the
-       shared SentenceEncoder singleton (engine/encoder.py).
-    2. Greedily cluster outputs: two outputs are "the same answer"
-       if their cosine similarity ≥ SEMANTIC_SIMILARITY_THRESHOLD (0.82).
-    3. agreement_score = largest cluster size / total outputs.
-    4. answer_counts   = { representative_text : cluster_size }.
-
-  Cluster centroids are updated as a running mean and re-normalised
-  after each assignment so cosine similarity stays valid.
-
-Path B — Exact string matching (short answers + fallback):
-  Used when:
-    - All outputs are short (≤ 40 chars) — "Paris", "1945", "Au"
-    - sentence-transformers is not installed
-    - The encoder raised an exception
-
-  Exact match is actually more accurate than semantic similarity for
-  single-word or single-number answers where paraphrasing is impossible.
-
-Public API — completely unchanged
------------------------------------
-  compute_consistency(model_outputs: list[str]) -> ConsistencyResult
-    ConsistencyResult["agreement_score"]  float  [0, 1]
-    ConsistencyResult["fsd_score"]        float  [0, 1]
-    ConsistencyResult["answer_counts"]    dict[str, int]
-
-No changes needed anywhere else in the codebase.
-
-Threshold tuning (no config change required — constants defined here):
-  SEMANTIC_SIMILARITY_THRESHOLD = 0.82
-    Two outputs with cosine similarity ≥ 0.82 are treated as the same
-    answer. Lower this to merge more aggressively. Raise it to be stricter.
-
-  SHORT_ANSWER_THRESHOLD = 40
-    Outputs shorter than 40 chars always use exact matching.
-    "Paris" and "paris" match after _normalize(). "1945" always exact.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -80,7 +9,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# ── Tuning constants ───────────────────────────────────────────────────────
+# ── Tuning constants ──
 
 # Cosine similarity at or above this → two outputs are the "same answer"
 SEMANTIC_SIMILARITY_THRESHOLD: float = 0.82
@@ -140,9 +69,9 @@ def _normalize(text: str) -> str:
     return result.lower().strip()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Path A — Semantic clustering
-# ══════════════════════════════════════════════════════════════════════════════
+
+#  Semantic clustering
+
 
 def _semantic_cluster(
     normalized_outputs: list[str],
@@ -150,14 +79,6 @@ def _semantic_cluster(
 ) -> dict[str, int] | None:
     """
     Groups outputs into semantic clusters using cosine similarity.
-
-    Returns dict { representative_text: cluster_size }
-    Returns None if the encoder is unavailable → caller falls back to exact match.
-
-    Algorithm:
-      For each output vector, find the first existing cluster whose
-      centroid has cosine similarity ≥ threshold. If none found, start
-      a new cluster. Update centroids as running means (re-normalised).
     """
     try:
         from engine.encoder import get_encoder
@@ -178,7 +99,7 @@ def _semantic_cluster(
     n = len(normalized_outputs)
 
     cluster_centroids: list[np.ndarray] = []
-    cluster_labels:    list[str]        = []   # representative text per cluster
+    cluster_labels:    list[str]        = []   
     cluster_sizes:     list[int]        = []
 
     for i in range(n):
@@ -215,31 +136,24 @@ def _semantic_cluster(
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Path B — Exact string matching (original logic, used as fallback)
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def _exact_cluster(normalized_outputs: list[str]) -> dict[str, int]:
     """Original exact-match counting. Accurate for short answers."""
     return dict(Counter(normalized_outputs))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Public API
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def compute_consistency(model_outputs: list[str]) -> ConsistencyResult:
     """
     Computes agreement, FSD, and answer distribution across model outputs.
-
-    Automatically selects semantic clustering for long-form outputs and
-    exact matching for short answers or when the encoder is unavailable.
-
-    agreement_score : fraction of outputs in the largest semantic cluster.
-    fsd_score       : (top_count - second_count) / total.
-    answer_counts   : { representative_text : cluster_size }
     """
-    # ── Edge cases ─────────────────────────────────────────────────────
+    # Edge cases 
     if not model_outputs:
         return ConsistencyResult(
             agreement_score=0.0,
@@ -258,10 +172,7 @@ def compute_consistency(model_outputs: list[str]) -> ConsistencyResult:
     normalized_outputs = [_normalize(o) for o in model_outputs]
     total_samples      = len(normalized_outputs)
 
-    # ── Choose path ────────────────────────────────────────────────────
-    # Use semantic clustering only when at least one output is long-form.
-    # Short answers ("Paris", "1945") never need semantic grouping —
-    # exact match is both faster and more accurate for single tokens.
+    # Choose path and cluster outputs 
     is_long_form = any(len(o) >= SHORT_ANSWER_THRESHOLD for o in normalized_outputs)
 
     answer_counts: dict[str, int] | None = None

@@ -7,27 +7,13 @@ from typing import Optional
 from app.schemas import AgentVerdict, FailureSignalVector
 
 
-# ── Context container ──────────────────────────────────────────────────────
-
+# Context container 
 @dataclass(frozen=True)
 class DiagnosticContext:
-    """
-    Read-only context bundle passed to every agent.
-    Frozen to prevent agents from mutating shared state.
-
-    Attributes
-    ----------
-    prompt            : Original user-facing input text.
-    primary_output    : Primary model response (model under test).
-    secondary_output  : Secondary model response (reference/ensemble model).
-    model_outputs     : All sampled outputs used for consistency analysis.
-    fsv               : FailureSignalVector from Phase 1.
-    latency_ms        : Optional. Inference latency in milliseconds.
-    """
     prompt:           str
     primary_output:   str
     secondary_output: str
-    model_outputs:    tuple[str, ...]    # tuple so dataclass remains frozen/hashable
+    model_outputs:    tuple[str, ...]   
     fsv:              FailureSignalVector
     latency_ms:       Optional[float] = None
 
@@ -51,18 +37,10 @@ class DiagnosticContext:
         )
 
 
-# ── Base agent ─────────────────────────────────────────────────────────────
+#Base agent 
 
 class BaseJuryAgent(ABC):
-    """
-    Abstract base class for all DiagnosticJury agents.
-
-    Subclass contract:
-      - Set agent_name as a class-level constant string.
-      - Implement analyze(context) returning an AgentVerdict.
-      - Never raise exceptions; always return a verdict (possibly skipped).
-    """
-
+    "Abstract base class for all DiagnosticJury agents"
     #: Override in every subclass — used for logging and verdict attribution.
     agent_name: str = "UNNAMED_AGENT"
 
@@ -86,7 +64,7 @@ class BaseJuryAgent(ABC):
     # ── Helpers available to all subclasses ───────────────────────────
 
     def _skip(self, reason: str) -> AgentVerdict:
-        """Convenience: return a skipped verdict with a clean reason string."""
+        """return a skipped verdict with a clean reason string."""
         return AgentVerdict(
             agent_name=self.agent_name,
             root_cause="NOT_APPLICABLE",
