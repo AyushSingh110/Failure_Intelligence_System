@@ -3,7 +3,13 @@ import pandas as pd
 
 from utils.api import fetch_inferences
 from utils.data import build_inference_dataframe
-from components.widgets import render_section_label, render_kpi_card_html
+from components.widgets import (
+    render_section_label,
+    render_kpi_card_html,
+    render_field_label,
+    render_callout,
+    render_empty_state,
+)
 
 
 @st.cache_data(ttl=10)
@@ -36,7 +42,6 @@ def _model_summary_table(df: pd.DataFrame) -> None:
 
     summary_df = pd.DataFrame(rows)
 
-    # Colour-code Risk % column
     st.dataframe(
         summary_df,
         use_container_width=True,
@@ -52,19 +57,30 @@ def _model_summary_table(df: pd.DataFrame) -> None:
 
 def render() -> None:
     st.markdown(render_section_label("Inference Vault"), unsafe_allow_html=True)
+    st.markdown(
+        render_callout(
+            "Browse, filter, and inspect every inference record stored in the system. "
+            "Use the filters below to drill into specific models or request IDs.",
+            "info",
+        ),
+        unsafe_allow_html=True,
+    )
 
     records = _cached_inferences()
 
     if not records:
-        st.info("The vault is empty. Inject records via `python inject_test_data.py`")
+        st.markdown(render_empty_state("No records in the vault yet"), unsafe_allow_html=True)
+        st.markdown(
+            render_callout("Run <code>python inject_data.py</code> to seed the vault with sample records.", "warning"),
+            unsafe_allow_html=True,
+        )
         return
 
     df_all = build_inference_dataframe(records)
 
-    #  Model stats summary 
+    # ── Model stats summary ───────────────────────────────────────────────────
     st.markdown(render_section_label("Model Summary"), unsafe_allow_html=True)
 
-    # KPI cards per model
     models_found = sorted(df_all["model"].dropna().unique()) if not df_all.empty else []
 
     if models_found:
@@ -85,24 +101,26 @@ def render() -> None:
                     variant="risk" if is_bad else "ok",
                 ), unsafe_allow_html=True)
 
-        st.markdown("<div style='margin:12px 0'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin:14px 0'></div>", unsafe_allow_html=True)
         _model_summary_table(df_all)
 
-    st.markdown("<div style='margin:20px 0'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin:24px 0'></div>", unsafe_allow_html=True)
 
-    #  Filter bar 
+    # ── Filter bar ────────────────────────────────────────────────────────────
     st.markdown(render_section_label("Filter & Browse"), unsafe_allow_html=True)
 
     filter_col, model_col, count_col = st.columns([3, 2, 1])
 
     with filter_col:
+        st.markdown(render_field_label("Search", "request ID, model, or input text"), unsafe_allow_html=True)
         search = st.text_input(
             "Search",
-            placeholder="Filter by request ID…",
+            placeholder="Filter by request ID, model name, or input text…",
             label_visibility="collapsed",
         )
 
     with model_col:
+        st.markdown(render_field_label("Model", "filter by model"), unsafe_allow_html=True)
         model_options = ["All models"] + models_found
         selected_model = st.selectbox(
             "Model filter",
@@ -112,7 +130,7 @@ def render() -> None:
 
     with count_col:
         st.markdown(
-            f"<div style='padding-top:8px;font-family:IBM Plex Mono,monospace;"
+            f"<div style='padding-top:26px;font-family:JetBrains Mono,monospace;"
             f"font-size:12px;color:#6e7681;text-align:right;'>"
             f"{len(records)} total</div>",
             unsafe_allow_html=True,
@@ -134,10 +152,10 @@ def render() -> None:
         ]
 
     if not filtered:
-        st.warning(f"No records match your filters.")
+        st.markdown(render_empty_state("No records match your filters"), unsafe_allow_html=True)
         return
 
-    # Records table
+    # ── Records table ─────────────────────────────────────────────────────────
     st.markdown(render_section_label("Records"), unsafe_allow_html=True)
 
     df = build_inference_dataframe(filtered)
@@ -163,13 +181,14 @@ def render() -> None:
             },
         )
 
-    #  Record detail 
+    # ── Record detail ─────────────────────────────────────────────────────────
     st.markdown(render_section_label("Record Detail", margin_top=True), unsafe_allow_html=True)
 
     record_ids = [r.get("request_id", "") for r in filtered[-100:]]
     if not record_ids:
         return
 
+    st.markdown(render_field_label("Select Record", "choose a request ID to inspect"), unsafe_allow_html=True)
     selected_id = st.selectbox(
         "Select record",
         record_ids,
@@ -182,34 +201,62 @@ def render() -> None:
 
         with dc_a:
             st.markdown(render_section_label("Model"), unsafe_allow_html=True)
-            st.write(f"**Name:** `{selected.get('model_name', '—')}`")
-            st.write(f"**Version:** `{selected.get('model_version', '—')}`")
-            st.write(f"**Temperature:** `{selected.get('temperature', '—')}`")
+            st.markdown(
+                f"<div style='font-family:Inter,sans-serif;font-size:13px;color:#c9d1d9;line-height:1.8;'>"
+                f"<b>Name:</b> <code style='color:#79c0ff;'>{selected.get('model_name', '—')}</code><br>"
+                f"<b>Version:</b> <code style='color:#79c0ff;'>{selected.get('model_version', '—')}</code><br>"
+                f"<b>Temperature:</b> <code style='color:#79c0ff;'>{selected.get('temperature', '—')}</code>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
         with dc_b:
             st.markdown(render_section_label("Request"), unsafe_allow_html=True)
-            st.write(f"**Timestamp:** `{str(selected.get('timestamp', '—'))[:19]}`")
-            st.write(f"**Latency:** `{selected.get('latency_ms', '—')} ms`")
-            st.write(f"**Correct:** `{selected.get('is_correct', '—')}`")
+            st.markdown(
+                f"<div style='font-family:Inter,sans-serif;font-size:13px;color:#c9d1d9;line-height:1.8;'>"
+                f"<b>Timestamp:</b> <code style='color:#79c0ff;'>{str(selected.get('timestamp', '—'))[:19]}</code><br>"
+                f"<b>Latency:</b> <code style='color:#79c0ff;'>{selected.get('latency_ms', '—')} ms</code><br>"
+                f"<b>Correct:</b> <code style='color:#79c0ff;'>{selected.get('is_correct', '—')}</code>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
         with dc_c:
             st.markdown(render_section_label("Metrics"), unsafe_allow_html=True)
             metrics = selected.get("metrics") or {}
             if metrics:
-                for k, v in metrics.items():
-                    if v is not None:
-                        st.write(f"**{k}:** `{v}`")
+                lines = "".join(
+                    f"<b>{k}:</b> <code style='color:#79c0ff;'>{v}</code><br>"
+                    for k, v in metrics.items() if v is not None
+                )
+                st.markdown(
+                    f"<div style='font-family:Inter,sans-serif;font-size:13px;color:#c9d1d9;line-height:1.8;'>"
+                    f"{lines}</div>",
+                    unsafe_allow_html=True,
+                )
             else:
                 st.caption("No metrics stored.")
+
+        st.markdown("<div style='margin:12px 0'></div>", unsafe_allow_html=True)
 
         # Input / Output
         io_col_a, io_col_b = st.columns(2)
         with io_col_a:
             st.markdown(render_section_label("Input"), unsafe_allow_html=True)
-            st.caption(selected.get("input_text", "—"))
+            st.markdown(
+                f"<div style='font-family:Inter,sans-serif;font-size:13px;color:#8b949e;"
+                f"background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;'>"
+                f"{selected.get('input_text', '—')}</div>",
+                unsafe_allow_html=True,
+            )
         with io_col_b:
             st.markdown(render_section_label("Output"), unsafe_allow_html=True)
-            st.caption(selected.get("output_text", "—"))
+            st.markdown(
+                f"<div style='font-family:Inter,sans-serif;font-size:13px;color:#8b949e;"
+                f"background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;'>"
+                f"{selected.get('output_text', '—')}</div>",
+                unsafe_allow_html=True,
+            )
 
         with st.expander("Full JSON"):
             st.json(selected)

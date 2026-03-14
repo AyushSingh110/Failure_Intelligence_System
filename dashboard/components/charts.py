@@ -5,14 +5,24 @@ from plotly.subplots import make_subplots
 
 # Shared layout applied to every chart
 _BASE_LAYOUT = dict(
-    paper_bgcolor="#0a0c10",
+    paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="#0d1117",
-    font=dict(family="IBM Plex Mono, monospace", color="#6e7681", size=11),
-    margin=dict(l=44, r=16, t=32, b=40),
-    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#21262d", borderwidth=1),
+    font=dict(family="Inter, -apple-system, sans-serif", color="#6e7681", size=11),
+    margin=dict(l=44, r=16, t=36, b=40),
+    legend=dict(
+        bgcolor="rgba(0,0,0,0)",
+        bordercolor="#21262d",
+        borderwidth=1,
+        font=dict(size=11, color="#8b949e"),
+    ),
 )
 
-_AXIS_STYLE = dict(gridcolor="#21262d", zeroline=False, showline=False, tickfont=dict(size=10))
+_AXIS_STYLE = dict(
+    gridcolor="rgba(33,38,45,0.6)",
+    zeroline=False,
+    showline=False,
+    tickfont=dict(size=10, color="#484f58"),
+)
 
 
 def _apply_base(fig: go.Figure, height: int, title: str = "") -> go.Figure:
@@ -76,7 +86,7 @@ def entropy_agreement_timeseries(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(**_BASE_LAYOUT, height=400)
     fig.update_xaxes(**_AXIS_STYLE)
     fig.update_yaxes(range=[0, 1], **_AXIS_STYLE)
-    fig.update_annotations(font=dict(color="#6e7681", size=10, family="IBM Plex Mono"))
+    fig.update_annotations(font=dict(color="#6e7681", size=10, family="Inter, sans-serif"))
     return fig
 
 
@@ -138,8 +148,8 @@ def signal_radar(fsv: dict) -> go.Figure:
         height=280,
         polar=dict(
             bgcolor="#0d1117",
-            radialaxis=dict(range=[0, 1], gridcolor="#21262d", tickfont=dict(size=9)),
-            angularaxis=dict(gridcolor="#21262d", tickfont=dict(size=10, color="#c9d1d9")),
+            radialaxis=dict(range=[0, 1], gridcolor="rgba(33,38,45,0.6)", tickfont=dict(size=9, color="#484f58")),
+            angularaxis=dict(gridcolor="rgba(33,38,45,0.6)", tickfont=dict(size=10, color="#c9d1d9")),
         ),
     )
     return fig

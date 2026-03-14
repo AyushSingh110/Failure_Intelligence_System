@@ -11,11 +11,30 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize vault on disk if it doesn't exist
+    # ── Startup ────────────────────────────────────────────────────────
+    # 1. Initialize vault
     from storage.database import initialize_vault
     initialize_vault()
+
+    # 2. Warm up sentence encoder so errors appear at boot, not silently
+    #    on first request.
+    print("[startup] Warming up sentence encoder...")
+    try:
+        from engine.encoder import get_encoder
+        encoder = get_encoder()
+        _ = encoder.encode("warmup")
+        if encoder.available:
+            print("[startup] Sentence encoder ready.")
+        else:
+            print("[startup] WARNING: Sentence encoder unavailable.")
+            print("[startup]   Consistency and embedding will use n-gram fallback.")
+            print("[startup]   Check [encoder] lines above for the exact error.")
+    except Exception as exc:
+        print(f"[startup] Encoder warmup failed: {exc}")
+
     yield
-    # Shutdown: flush in-memory store to disk
+
+    # ── Shutdown ───────────────────────────────────────────────────────
     from storage.database import flush_vault
     flush_vault()
 

@@ -27,14 +27,19 @@ router   = APIRouter()
 settings = get_settings()
 
 
-def _build_failure_signal(
-    model_outputs:    list[str],
-    primary_output:   str,
-    secondary_output: str,
-) -> FailureSignalVector:
+def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
+    """
+    Builds FSV from all model outputs.
+    Primary  = model_outputs[0]
+    Secondary = model_outputs[1] (or [0] if only one provided)
+    Ensemble disagreement is computed across ALL pairwise combinations.
+    """
+    primary_output   = model_outputs[0]
+    secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+
     consistency   = compute_consistency(model_outputs)
     entropy_score = compute_entropy(model_outputs)
-    ensemble      = compute_disagreement(primary_output, secondary_output)
+    ensemble      = compute_disagreement(model_outputs)   # full list — all pairs
 
     high_failure_risk = (
         entropy_score >= settings.high_entropy_threshold
@@ -65,18 +70,11 @@ def track_inference(request: InferenceRequest) -> TrackResponse:
 
 @router.post("/analyze", response_model=dict)
 def analyze_outputs(body: AnalyzeRequest) -> dict:
-    """
-    Phase 1 analysis endpoint — used by the Streamlit dashboard Analyze page.
-    Returns failure_signal_vector + archetype label + embedding_distance
-    so the UI can display all three without needing a separate call.
-    """
-    signal    = _build_failure_signal(
-        body.model_outputs,
-        body.primary_output,
-        body.secondary_output,
-    )
+    signal    = _build_failure_signal(body.model_outputs)
     archetype = label_failure_archetype(signal)
-    embedding = compute_embedding_distance(body.primary_output, body.secondary_output)
+    primary   = body.model_outputs[0]
+    secondary = body.model_outputs[1] if len(body.model_outputs) > 1 else body.model_outputs[0]
+    embedding = compute_embedding_distance(primary, secondary)
     return {
         "failure_signal_vector": signal.model_dump(),
         "archetype":             archetype,
@@ -86,13 +84,7 @@ def analyze_outputs(body: AnalyzeRequest) -> dict:
 
 @router.post("/track-and-analyze", response_model=dict)
 def track_and_analyze(request: InferenceRequest, body: AnalyzeRequest) -> dict:
-    """
-    Combined endpoint: stores the inference AND returns its failure signal
-    in one round trip — useful for real-time monitoring pipelines.
-    """
-    signal  = _build_failure_signal(
-        body.model_outputs, body.primary_output, body.secondary_output,
-    )
+    signal  = _build_failure_signal(body.model_outputs)
     success = save_inference(request)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to store inference record")
@@ -108,6 +100,31 @@ def list_inferences() -> list[InferenceRequest]:
     return get_all_inferences()
 
 
+@router.get("/inferences/grouped/by-question", response_model=dict)
+def get_inferences_grouped_by_question() -> dict:
+    all_records = get_all_inferences()
+    grouped: dict[str, list[dict]] = {}
+
+    for record in all_records:
+        question = record.input_text.strip()
+        if not question:
+            continue
+        if question not in grouped:
+            grouped[question] = []
+        grouped[question].append({
+            "model_name":    record.model_name,
+            "model_version": record.model_version,
+            "output_text":   record.output_text,
+            "latency_ms":    record.latency_ms,
+            "timestamp":     record.timestamp.isoformat(),
+        })
+
+    for question in grouped:
+        grouped[question].sort(key=lambda r: r["model_name"])
+
+    return grouped
+
+
 @router.get("/inferences/{request_id}", response_model=InferenceRequest)
 def get_inference(request_id: str) -> InferenceRequest:
     record = get_inference_by_id(request_id)
@@ -120,18 +137,7 @@ def get_inference(request_id: str) -> InferenceRequest:
 
 @router.post("/analyze/v2", response_model=ArchetypeAnalysisResponse)
 def analyze_v2(body: AnalyzeRequest) -> ArchetypeAnalysisResponse:
-    """
-    Full Phase 2 analysis:
-    - Extracts failure signal (Phase 1)
-    - Assigns to archetype cluster
-    - Returns detailed label with conditions
-    - Updates evolution tracker
-    """
-    result = failure_agent.run_full(
-        body.model_outputs,
-        body.primary_output,
-        body.secondary_output,
-    )
+    result = failure_agent.run_full(body.model_outputs)   # list only — no primary/secondary
     return ArchetypeAnalysisResponse(
         failure_signal_vector=FailureSignalVector(**result["failure_signal_vector"]),
         cluster_assignment=ClusterAssignment(**result["cluster_assignment"]),
@@ -143,14 +149,12 @@ def analyze_v2(body: AnalyzeRequest) -> ArchetypeAnalysisResponse:
 
 @router.get("/trend", response_model=TrendResponse)
 def get_trend() -> TrendResponse:
-    """Returns the current EMA-based evolution trend from the tracker."""
     summary = evolution_tracker.trend_summary()
     return TrendResponse(**summary)
 
 
 @router.get("/clusters", response_model=ClusterSummaryResponse)
 def get_clusters() -> ClusterSummaryResponse:
-    """Returns all known failure archetypes and their cluster statistics."""
     clusters = archetype_registry.summarize()
     return ClusterSummaryResponse(
         total_clusters=len(clusters),
@@ -160,10 +164,16 @@ def get_clusters() -> ClusterSummaryResponse:
 
 @router.delete("/clusters/reset", response_model=dict)
 def reset_clusters() -> dict:
-    """
-    Resets the archetype registry. Useful for testing or after model redeployment.
-    """
     from engine.archetypes.clustering import ArchetypeClusterRegistry
     import engine.archetypes.clustering as clustering_module
     clustering_module.archetype_registry = ArchetypeClusterRegistry()
     return {"status": "reset", "message": "Archetype registry cleared"}
+
+
+# ── Phase 3 endpoint ──────────────────────────────────────────────────────
+
+from app.schemas import DiagnosticRequest, DiagnosticResponse
+
+@router.post("/diagnose", response_model=DiagnosticResponse)
+def diagnose(body: DiagnosticRequest) -> DiagnosticResponse:
+    return failure_agent.run_diagnostic(body)
