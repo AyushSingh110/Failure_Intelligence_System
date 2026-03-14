@@ -1,62 +1,3 @@
-"""
-engine/agents/linguistic_auditor.py — DiagnosticJury Agent 1
-
-LinguisticAuditor
-=================
-Detects failures caused by prompt complexity or semantic ambiguity.
-Answers the question: "Did this fail because the prompt was too hard to parse?"
-
-Complexity Scoring Model
-------------------------
-The agent scores the prompt across 6 independent complexity dimensions.
-Each dimension contributes a weighted score to a final complexity index
-in the range [0.0, 1.0].
-
-Dimension              Weight    What it catches
-─────────────────────────────────────────────────────────────────────
-double_negation         0.25     "not incorrect", "never not true"
-ambiguous_reference     0.20     "the one after Lincoln", "that entity"
-temporal_constraint     0.15     "before the one after", "last year's next"
-nested_reasoning        0.20     "which of the following is... of the ones that..."
-contradictory_instr     0.10     "answer yes and no", "be concise and exhaustive"
-multi_hop_chain         0.10     multi-step deduction across several entities
-
-Total max weight = 1.00.  Score is the weighted sum of fired dimensions,
-clipped to [0.0, 1.0].
-
-Decision Logic
---------------
-                 ┌──────────────────────────────────────────────────────┐
-                 │   complexity_score ≥ threshold                       │
-                 │         AND                                          │
-                 │   (entropy ≥ entropy_threshold                       │
-                 │    OR agreement ≤ low_agreement_threshold            │
-                 │    OR fsv.high_failure_risk == True)                 │
-                 └──────────────────────────────────────────────────────┘
-                                      │ YES
-                                      ▼
-                         root_cause = PROMPT_COMPLEXITY_OOD
-
-If complexity is high but the model succeeded (low entropy, high agreement),
-the agent returns COMPLEX_BUT_STABLE — complexity did not cause failure.
-
-If complexity is low, the agent skips — this failure has a different cause.
-
-Confidence Score Derivation
------------------------------
-confidence = 0.4 × complexity_score + 0.6 × failure_signal_strength
-
-failure_signal_strength = mean([
-    min(entropy / high_entropy_threshold, 1.0),
-    max(1 - agreement / low_agreement_threshold, 0.0),
-    1.0 if high_failure_risk else 0.0,
-])
-
-The 0.6 weighting on failure signal is deliberate: complexity alone is not
-enough to call a failure — the signal must also show instability.
-A prompt can be complex and the model can still handle it correctly.
-"""
-
 from __future__ import annotations
 
 import math
@@ -70,14 +11,12 @@ from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext
 settings = get_settings()
 
 
-# ── Complexity dimension detectors ─────────────────────────────────────────
-
+# Complexity dimension detectors 
 class _Dimension(NamedTuple):
     name:   str
     weight: float
     fired:  bool
-    detail: str   # human-readable evidence for the evidence dict
-
+    detail: str   
 
 # Compiled regex patterns — compiled once at module load, not per call
 _RE_DOUBLE_NEGATION = re.compile(
@@ -189,14 +128,6 @@ def _first_match(pattern: re.Pattern, text: str) -> str:
 
 
 def compute_complexity_score(prompt: str) -> tuple[float, list[_Dimension]]:
-    """
-    Public function — also used directly by tests.
-
-    Returns
-    -------
-    score  : float in [0, 1] — weighted sum of fired dimensions
-    dims   : list of _Dimension (for evidence reporting)
-    """
     dims  = _detect_dimensions(prompt)
     score = sum(d.weight for d in dims if d.fired)
     return round(float(min(score, 1.0)), 4), dims
@@ -205,10 +136,6 @@ def compute_complexity_score(prompt: str) -> tuple[float, list[_Dimension]]:
 def _failure_signal_strength(fsv) -> float:
     """
     Normalises the FSV failure signals into a [0, 1] strength value.
-
-    entropy contribution   : how far entropy is above threshold (capped at 1)
-    agreement contribution : how far agreement is below threshold (capped at 1)
-    risk flag contribution : binary 0 or 1
     """
     cfg = get_settings()
 
@@ -222,16 +149,9 @@ def _failure_signal_strength(fsv) -> float:
     return round((e_contrib + a_contrib + r_contrib) / 3.0, 4)
 
 
-# ── Agent ──────────────────────────────────────────────────────────────────
+#  Agent 
 
 class LinguisticAuditor(BaseJuryAgent):
-    """
-    Agent 1 — Linguistic Auditor
-
-    Detects PROMPT_COMPLEXITY_OOD when a structurally complex prompt
-    coincides with high model output instability.
-    """
-
     agent_name: str = "LinguisticAuditor"
 
     def analyze(self, context: DiagnosticContext) -> AgentVerdict:
@@ -240,7 +160,7 @@ class LinguisticAuditor(BaseJuryAgent):
         complexity_score, dims = compute_complexity_score(context.prompt)
         fired_dims = [d for d in dims if d.fired]
 
-        # ── Skip if prompt has no detectable complexity ────────────────
+        #  Skip if prompt has no detectable complexity 
         if complexity_score < cfg.jury_linguistic_complexity_threshold:
             return self._skip(
                 f"Prompt complexity score {complexity_score:.3f} is below "
@@ -248,13 +168,13 @@ class LinguisticAuditor(BaseJuryAgent):
                 f"Failure cause is likely not prompt complexity."
             )
 
-        # ── Compute failure signal strength ────────────────────────────
+        # Compute failure signal strength 
         signal_strength = _failure_signal_strength(context.fsv)
 
-        # ── Confidence = 40% complexity weight + 60% signal weight ────
+        # ── Confidence = 40% complexity weight + 60% signal weight 
         raw_confidence = 0.40 * complexity_score + 0.60 * signal_strength
 
-        # ── Determine root cause ───────────────────────────────────────
+        #  Determine root cause 
         model_failed = (
             context.fsv.entropy_score >= cfg.jury_linguistic_entropy_threshold
             or context.fsv.agreement_score <= cfg.low_agreement_threshold
@@ -278,9 +198,9 @@ class LinguisticAuditor(BaseJuryAgent):
                 "Monitor this query pattern — it may degrade under higher temperature "
                 "or with a weaker model."
             )
-            confidence   = raw_confidence * 0.4   # downweight — not a real failure
+            confidence   = raw_confidence * 0.4   
 
-        # ── Build evidence dict ────────────────────────────────────────
+        # Build evidence dict
         evidence = {
             "complexity_score":    complexity_score,
             "signal_strength":     signal_strength,
@@ -301,5 +221,5 @@ class LinguisticAuditor(BaseJuryAgent):
         )
 
 
-# ── Module-level singleton ─────────────────────────────────────────────────
+# ── Module-level singleton ────────
 linguistic_auditor = LinguisticAuditor()

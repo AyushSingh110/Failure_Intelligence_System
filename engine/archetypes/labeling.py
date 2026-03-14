@@ -5,7 +5,7 @@ from config import get_settings
 settings = get_settings()
 
 
-# ── Archetype label constants ─────────────────────────────────────────────
+# ── Archetype label constants ────
 ARCHETYPE_HALLUCINATION_RISK    = "HALLUCINATION_RISK"
 ARCHETYPE_OVERCONFIDENT_FAILURE = "OVERCONFIDENT_FAILURE"
 ARCHETYPE_BLIND_SPOT            = "MODEL_BLIND_SPOT"

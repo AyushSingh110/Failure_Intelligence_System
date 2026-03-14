@@ -13,9 +13,9 @@ from engine.archetypes.registry import adversarial_registry, FAISSSearchResult
 
 @dataclass
 class _AttackPattern:
-    category:        str     # INJECTION | JAILBREAK | OVERRIDE | SMUGGLING
-    root_cause:      str     # taxonomy label for this category
-    base_confidence: float   # base confidence when pattern fires
+    category:        str     
+    root_cause:      str     
+    base_confidence: float   
     pattern:         re.Pattern
 
 
@@ -123,11 +123,6 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
 # Layer 1: pattern matching 
 
 def _run_pattern_detection(prompt: str) -> tuple[_AttackPattern | None, str]:
-    """
-    Runs all attack patterns against the prompt.
-    Returns (best_match_pattern, matched_text) or (None, "").
-    Priorities: SMUGGLING > INJECTION > JAILBREAK > OVERRIDE
-    """
     priority_order = ["SMUGGLING", "INJECTION", "JAILBREAK", "OVERRIDE"]
     hits: dict[str, tuple[_AttackPattern, str]] = {}
 
@@ -143,9 +138,7 @@ def _run_pattern_detection(prompt: str) -> tuple[_AttackPattern | None, str]:
 
     return None, ""
 
-
-#  Layer 2: FAISS semantic search 
-
+# FAISS semantic search 
 def _run_faiss_detection(prompt: str) -> tuple[FAISSSearchResult | None, float]:
     cfg = get_settings()
 
@@ -177,13 +170,11 @@ class AdversarialSpecialist(BaseJuryAgent):
     def analyze(self, context: DiagnosticContext) -> AgentVerdict:
         cfg = get_settings()
 
-        # Layer 1: regex 
+        #regex 
         pattern_hit, matched_text = _run_pattern_detection(context.prompt)
 
-        # Layer 2: FAISS semantic search 
+        # FAISS semantic search 
         faiss_hit, faiss_confidence = _run_faiss_detection(context.prompt)
-
-        # ── Skip if neither layer fired ────────────────────────────────
         if pattern_hit is None and faiss_hit is None:
             return self._skip(
                 "No adversarial patterns detected by either regex or FAISS "
@@ -198,24 +189,21 @@ class AdversarialSpecialist(BaseJuryAgent):
             # Bonus if FAISS also confirms
             if faiss_hit and faiss_hit.is_match:
                 pattern_conf = min(pattern_conf + 0.05, 1.0)
-            # Penalty: low entropy means model was consistent — it may have
-            # obeyed the attack (worse), not that the signal is weak
+            # Penalty
             if context.fsv.entropy_score < 0.25:
                 pattern_conf = max(pattern_conf - 0.08, 0.0)
         else:
-            # FAISS-only hit — use the label from the seed record
+            # FAISS only hit 
             root_cause   = faiss_hit.record.label
             pattern_conf = 0.0
 
         # Final confidence 
         if pattern_hit and faiss_hit and faiss_hit.is_match:
-            # Both layers agree — use the stronger signal
+            # Both layers agree use the stronger signal
             confidence = max(pattern_conf, faiss_confidence)
         elif pattern_hit:
-            # Layer 1 only 
             confidence = min(pattern_conf, cfg.jury_adversarial_pattern_confidence)
         else:
-            # Layer 2 only 
             confidence = faiss_confidence
 
         # Build mitigation string 

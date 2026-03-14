@@ -1,109 +1,3 @@
-"""
-engine/agents/domain_critic.py — DiagnosticJury Agent 3
-
-DomainCritic
-============
-Detects whether a model output is factually incorrect — hallucination,
-knowledge boundary failure, or temporal cutoff mismatch.
-
-Answers the question:
-    "Did this model fail because it stated something factually wrong?"
-
-How it works (no external API, no dummy data)
----------------------------------------------
-The agent works purely on the signals already computed by Phase 1 and
-the text available in DiagnosticContext. It does NOT call GPT, Claude,
-or any external knowledge base. This makes it:
-  - Zero-latency (no extra network calls)
-  - Always available (works offline)
-  - Deterministic (same input → same verdict)
-
-It uses three independent internal detection layers:
-
-Layer 1 — Contradiction Signal (FSV-based)
-  If multiple model samples disagree with each other (low agreement,
-  high entropy), the model is uncertain about the fact. Uncertain models
-  hallucinate. This is the strongest signal.
-
-Layer 2 — Self-Contradiction Scan (output-vs-output)
-  Encodes primary and secondary model outputs with the shared
-  SentenceEncoder and computes cosine similarity. If the same model
-  gives semantically very different answers when sampled twice, it is
-  contradicting itself — strong hallucination indicator.
-
-Layer 3 — Hedge/Uncertainty Phrase Detection (regex)
-  Detects epistemic hedge phrases in the model output:
-  "I think", "I believe", "I'm not sure", "as far as I know",
-  "it's possible that", "you might want to verify", etc.
-  These are the model's own self-distrust signals — it's telling you
-  it might be wrong.
-
-Layer 4 — Temporal Cutoff Detection (regex on prompt)
-  Detects prompts that ask about recent events, current prices,
-  live scores, or "latest" information. Models have training cutoffs
-  and will hallucinate recent facts confidently. This layer flags
-  these queries as TEMPORAL_KNOWLEDGE_CUTOFF.
-
-Root Cause Taxonomy
--------------------
-  FACTUAL_HALLUCINATION      — model outputs contradictory/uncertain facts
-  KNOWLEDGE_BOUNDARY_FAILURE — prompt asks about something the model
-                                clearly does not know (high uncertainty
-                                but not time-sensitive)
-  TEMPORAL_KNOWLEDGE_CUTOFF  — prompt asks for current/recent information
-                                that is beyond the model's training data
-  DOMAIN_CORRECT             — all signals suggest the model is confident
-                                and consistent (not a factual failure)
-
-Confidence Score Derivation
-----------------------------
-The agent computes a weighted score from all layers that fired:
-
-  contradiction_signal   weight 0.40  (strongest — FSV-derived)
-  self_contradiction     weight 0.35  (strong — semantic divergence)
-  hedge_density          weight 0.15  (moderate — model self-doubt)
-  temporal_flag          weight 0.10  (categorical — cutoff risk)
-
-  raw_confidence = weighted sum of fired layer scores (clipped to [0,1])
-
-  Final confidence is also scaled by failure_signal_strength from Phase 1,
-  so the verdict only fires with high confidence when BOTH the factual
-  signal AND the Phase 1 instability signal agree.
-
-Connecting to a Real Knowledge Base (future)
---------------------------------------------
-When you want to wire in a real verifier (RAG, Wikipedia API, etc.),
-the integration point is _run_external_verification() at the bottom.
-It is called if all internal layers pass. Replace the stub return with
-your real lookup — the rest of the agent stays unchanged.
-
-Decision Tree
--------------
-                ┌────────────────────────────────────────────┐
-                │  Any of Layer 1/2/3/4 fired?               │
-                └────────────────┬───────────────────────────┘
-                                 │ YES
-                         ┌───────▼────────┐
-                         │ temporal flag? │
-                         └───────┬────────┘
-                          YES    │    NO
-                          │      │
-                          ▼      ▼
-              TEMPORAL_  ┌──────────────────────┐
-              KNOWLEDGE_ │ confidence ≥ 0.65?   │
-              CUTOFF     └──────┬───────────────┘
-                          YES   │   NO
-                          │     │
-                          ▼     ▼
-              FACTUAL_  KNOWLEDGE_
-              HALLUCIN- BOUNDARY_
-              ATION     FAILURE
-
-                 │ NO (nothing fired)
-                 ▼
-             DOMAIN_CORRECT (low confidence, skip if very low)
-"""
-
 from __future__ import annotations
 
 import re
@@ -121,9 +15,9 @@ logger   = logging.getLogger(__name__)
 settings = get_settings()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Layer 3 — Hedge/Uncertainty phrase detector
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 _RE_HEDGE = re.compile(
     r"\b("
@@ -154,9 +48,9 @@ _RE_HEDGE = re.compile(
 )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Layer 4 — Temporal/cutoff prompt detector
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 _RE_TEMPORAL = re.compile(
     r"\b("
@@ -183,32 +77,19 @@ _RE_TEMPORAL = re.compile(
 )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Detection result container
-# ══════════════════════════════════════════════════════════════════════════════
 
+# Detection result container
 class _LayerResult(NamedTuple):
     fired:        bool
-    score:        float    # contribution to confidence [0, 1]
-    evidence_key: str      # key to use in the evidence dict
-    detail:       str      # human-readable detail string
+    score:        float   
+    evidence_key: str      
+    detail:       str      
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Layer 1 — Contradiction signal (FSV-derived)
-# ══════════════════════════════════════════════════════════════════════════════
 
 def _run_contradiction_signal(context: DiagnosticContext) -> _LayerResult:
-    """
-    Computes a contradiction score from Phase 1 FSV signals.
-
-    The FSV already tells us:
-      - entropy_score    : how spread-out model outputs are (0=all same, 1=all different)
-      - agreement_score  : fraction of outputs that match the plurality answer
-      - high_failure_risk: combined Phase 1 flag
-
-    We normalise these against their thresholds and combine.
-    """
     cfg   = get_settings()
     fsv   = context.fsv
 
@@ -250,22 +131,11 @@ def _run_contradiction_signal(context: DiagnosticContext) -> _LayerResult:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 2 — Self-contradiction scan (semantic divergence between outputs)
-# ══════════════════════════════════════════════════════════════════════════════
+
+# (semantic divergence between outputs)
+
 
 def _run_self_contradiction(context: DiagnosticContext) -> _LayerResult:
-    """
-    Encodes primary and secondary outputs and measures cosine similarity.
-
-    primary_output  = the main model answer being evaluated
-    secondary_output = a second sample from the same model (or a reference)
-
-    Low similarity between two answers to the same prompt = self-contradiction.
-
-    Uses the shared SentenceEncoder (already loaded by AdversarialSpecialist
-    or LinguisticAuditor earlier in the jury — no extra model loading).
-    """
     encoder = get_encoder()
 
     # Graceful degradation if encoder is unavailable
@@ -327,16 +197,11 @@ def _run_self_contradiction(context: DiagnosticContext) -> _LayerResult:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 # Layer 3 — Hedge/uncertainty phrase detection (model's own self-doubt)
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def _run_hedge_detection(context: DiagnosticContext) -> _LayerResult:
-    """
-    Counts hedge phrases across ALL sampled outputs, not just primary.
-    A single hedge in one output contributes less than the same hedge
-    appearing in multiple samples — convergent self-doubt is stronger evidence.
-    """
     all_outputs = list(context.model_outputs) or [context.primary_output]
 
     total_hedges   = 0
@@ -373,9 +238,9 @@ def _run_hedge_detection(context: DiagnosticContext) -> _LayerResult:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Layer 4 — Temporal/cutoff detection (prompt asks for post-cutoff information)
-# ══════════════════════════════════════════════════════════════════════════════
+
+# Layer 4 — Temporal/cutoff detection 
+
 
 def _run_temporal_detection(context: DiagnosticContext) -> _LayerResult:
     """
@@ -401,47 +266,9 @@ def _run_temporal_detection(context: DiagnosticContext) -> _LayerResult:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Future integration point — external knowledge base
-# ══════════════════════════════════════════════════════════════════════════════
 
+# external knowledge base
 def _run_external_verification(context: DiagnosticContext) -> _LayerResult:
-    """
-    FUTURE INTEGRATION POINT — wire in a real verifier here.
-
-    When you are ready to connect to a real knowledge source, replace
-    the return below with a call to your chosen verifier:
-
-    Option A — RAG (recommended for your project since RAGService exists):
-        from backend.services.rag_service import RAGService
-        rag = RAGService()
-        ground_truth = rag.retrieve_facts(context.prompt)
-        similarity   = compute_similarity(context.primary_output, ground_truth)
-        fired        = similarity < 0.60
-        ...
-
-    Option B — Wikipedia API (for general knowledge):
-        import wikipedia
-        page    = wikipedia.summary(extract_topic(context.prompt), sentences=3)
-        vec_out = encoder.encode(context.primary_output)
-        vec_gt  = encoder.encode(page)
-        cosine  = float(np.dot(vec_out, vec_gt))
-        fired   = cosine < 0.55
-        ...
-
-    Option C — Ollama / local LLM verifier:
-        import requests
-        r = requests.post("http://localhost:11434/api/generate", json={
-            "model": "mistral",
-            "prompt": f"Is this factually correct? '{context.primary_output}' Answer only yes or no."
-        })
-        answer = r.json()["response"].strip().lower()
-        fired  = answer.startswith("no")
-        ...
-
-    Right now this returns no signal (fired=False) so it never affects
-    the verdict — the internal layers handle everything.
-    """
     return _LayerResult(
         fired=False,
         score=0.0,
@@ -450,10 +277,8 @@ def _run_external_verification(context: DiagnosticContext) -> _LayerResult:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Failure signal strength helper (mirrors LinguisticAuditor's version)
-# ══════════════════════════════════════════════════════════════════════════════
 
+# Failure signal strength helper (mirrors LinguisticAuditor's version)
 def _failure_signal_strength(context: DiagnosticContext) -> float:
     """
     Combines Phase 1 FSV into a single [0, 1] instability score.
@@ -470,10 +295,8 @@ def _failure_signal_strength(context: DiagnosticContext) -> float:
     return round((e + a + r) / 3.0, 4)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Agent
-# ══════════════════════════════════════════════════════════════════════════════
 
+# Agent
 class DomainCritic(BaseJuryAgent):
     """
     Agent 3 — Domain Critic
@@ -511,7 +334,7 @@ class DomainCritic(BaseJuryAgent):
         layers = [layer1, layer2, layer3, layer4]
         fired_layers = [l for l in layers if l.fired]
 
-        # ── Skip if absolutely nothing fired ──────────────────────────
+        # Skip if absolutely nothing fired 
         if not fired_layers:
             return self._skip(
                 "All four DomainCritic layers returned no signal. "
@@ -519,7 +342,7 @@ class DomainCritic(BaseJuryAgent):
                 "Factual hallucination is not the likely failure cause."
             )
 
-        # ── Compute weighted confidence ────────────────────────────────
+        # Compute weighted confidence 
         raw_confidence = sum(
             l.score * self._WEIGHTS[l.evidence_key]
             for l in layers
@@ -576,14 +399,14 @@ class DomainCritic(BaseJuryAgent):
                 "Model outputs appear broadly consistent. Monitor this query pattern."
             )
 
-        # ── If DOMAIN_CORRECT and confidence is very low, skip ─────────
+        # If DOMAIN_CORRECT and confidence is very low, skip 
         if root_cause == "DOMAIN_CORRECT" and scaled_confidence < 0.20:
             return self._skip(
                 f"DomainCritic confidence {scaled_confidence:.3f} is below minimum "
                 f"threshold — outputs are broadly consistent. No factual failure detected."
             )
 
-        # ── Build evidence dict ────────────────────────────────────────
+        #  Build evidence dict 
         evidence = {
             "root_cause_selected":      root_cause,
             "raw_confidence":           round(raw_confidence, 4),

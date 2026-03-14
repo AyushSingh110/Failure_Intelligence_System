@@ -1,38 +1,3 @@
-"""
-engine/detector/entropy.py
-
-Computes normalised Shannon entropy across multiple model outputs.
-
-The Problem
------------
-The original implementation used exact string matching via Counter.
-This gives entropy=1.0 for 5 semantically identical paraphrases
-because each string is literally different — even though all 5 outputs
-mean the same thing.
-
-The Fix
--------
-entropy.py now uses the same two-path logic as consistency.py:
-
-  Path A — Semantic (long-form outputs):
-    Reuses the cluster counts from compute_consistency() rather than
-    recomputing embeddings from scratch. If the outputs are long-form,
-    _semantic_cluster() groups paraphrases into clusters, and entropy
-    is computed over cluster sizes instead of raw string counts.
-
-  Path B — Exact (short answers + fallback):
-    Original Counter-based logic. Used for short answers like "Paris",
-    "1945", or when the encoder is unavailable.
-
-Result for 5 paraphrases of the same answer:
-  BEFORE: entropy = 1.0  (5 different strings → max entropy)
-  AFTER:  entropy = 0.0  (1 semantic cluster → zero entropy)
-
-Public API — unchanged
------------------------
-  compute_entropy(model_outputs: list[str]) -> float  [0.0, 1.0]
-"""
-
 from __future__ import annotations
 
 import math
@@ -59,23 +24,11 @@ def _entropy_from_counts(counts: dict, total: int) -> float:
 
 
 def compute_entropy(model_outputs: list[str]) -> float:
-    """
-    Normalised Shannon entropy across model outputs.
 
-    Uses semantic clustering for long-form outputs so that paraphrases
-    of the same answer contribute to the same probability bucket.
-    Falls back to exact string matching for short answers.
-
-    Returns float in [0.0, 1.0]:
-      0.0 = all outputs are semantically identical (no uncertainty)
-      1.0 = every output is semantically different (maximum uncertainty)
-    """
     if not model_outputs or len(model_outputs) == 1:
         return 0.0
 
     total = len(model_outputs)
-
-    # ── Choose path — mirror consistency.py logic exactly ─────────────
     normalized = [o.strip().lower() for o in model_outputs]
     is_long_form = any(len(o) >= SHORT_ANSWER_THRESHOLD for o in normalized)
 
@@ -99,7 +52,7 @@ def compute_entropy(model_outputs: list[str]) -> float:
         except Exception as exc:
             logger.warning("entropy.py: semantic path failed: %s", exc)
 
-    # ── Exact match path (short answers or fallback) ───────────────────
+    # Exact path
     counts = dict(Counter(normalized))
     logger.debug(
         "entropy.py: exact-match path → %d unique answer(s) from %d outputs",

@@ -77,7 +77,7 @@ class SignalEvolutionTracker:
     def current_window_size(self) -> int:
         return self._count
 
-    # ── Public EMA metrics ────────────────────────────────────────────
+    # Public EMA metrics 
 
     def average_entropy(self) -> float:
         return round(self._entropy_ema.value, 4)
@@ -91,24 +91,14 @@ class SignalEvolutionTracker:
     def high_risk_rate(self) -> float:
         """
         EMA of the high-risk binary flag.
-        A sudden burst of failures causes this to spike immediately
-        because recent observations carry weight alpha vs (1-alpha) for history.
         """
         return round(self._high_risk_ema.value, 4)
 
-    # ── Velocity and degradation ──────────────────────────────────────
+    # ── Velocity and degradation ─
 
     def degradation_velocity(self, history: list[float] | None = None) -> float:
         """
         Detects whether the rate of high-risk failures is accelerating.
-
-        Uses the slope between the first and second half of the risk history:
-            velocity = mean(second_half) - mean(first_half)
-
-        Positive → failure rate accelerating (degradation)
-        Negative → failure rate decelerating (recovery)
-
-        Accepts an optional external history list for testing or batch use.
         """
         source = history if history is not None else list(self._risk_history)
         if len(source) < 2:
