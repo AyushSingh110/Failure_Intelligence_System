@@ -13,7 +13,7 @@ from app.schemas import (
     DiagnosticResponse,
 )
 from engine.detector.consistency import compute_consistency
-from engine.detector.entropy import compute_entropy
+from engine.detector.entropy import compute_entropy, compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
 from engine.detector.embedding import compute_embedding_distance
 from engine.archetypes.labeling import (
@@ -40,7 +40,8 @@ _ADVERSARIAL_ROOTS = frozenset({
 })
 
 
-# DiagnosticJury 
+# ── DiagnosticJury ─────────────────────────────────────────────────────────
+
 class DiagnosticJury:
 
     def __init__(self) -> None:
@@ -150,14 +151,14 @@ class DiagnosticJury:
         )
 
 
-#FailureAgent 
+# ── FailureAgent ───────────────────────────────────────────────────────────
 
 class FailureAgent:
 
     def __init__(self) -> None:
         self._jury = DiagnosticJury()
 
-    # ── Phase 1 ────
+    # ── Phase 1 ────────────────────────────────────────────────────────
 
     def run(self, model_outputs: list[str]) -> dict:
         """Phase 1: extract signal, return signal + archetype label."""
@@ -174,7 +175,7 @@ class FailureAgent:
             "embedding_distance":    embedding["embedding_distance"],
         }
 
-    # ── Phase 2 ────
+    # ── Phase 2 ────────────────────────────────────────────────────────
 
     def run_full(self, model_outputs: list[str]) -> dict:
         """Phase 2: extract signal, assign to cluster, update tracker."""
@@ -197,10 +198,13 @@ class FailureAgent:
             "trend_summary":         trend,
         }
 
-    # ── Phase 3 ────
+    # ── Phase 3 ────────────────────────────────────────────────────────
 
     def run_diagnostic(self, request: DiagnosticRequest) -> DiagnosticResponse:
         """Phase 3: full Phase 1 + Phase 2 + DiagnosticJury reasoning."""
+        # Derive primary and secondary from model_outputs list.
+        # model_outputs[0] = primary (model under test)
+        # model_outputs[1] = secondary/reference model (if present)
         primary_output   = request.model_outputs[0]
         secondary_output = (
             request.model_outputs[1]
@@ -208,16 +212,16 @@ class FailureAgent:
             else request.model_outputs[0]
         )
 
-        # ── Phase 1 
+        # ── Phase 1 ────────────────────────────────────────────────────
         signal    = self._build_signal(request.model_outputs)
         archetype = label_failure_archetype(signal)
         embedding = compute_embedding_distance(primary_output, secondary_output)
 
-        # ── Phase 2 
+        # ── Phase 2 ────────────────────────────────────────────────────
         archetype_registry.assign(signal)
         evolution_tracker.record(signal)
 
-        # ── Phase 3 
+        # ── Phase 3 ────────────────────────────────────────────────────
         context = DiagnosticContext.build(
             prompt=request.prompt,
             primary_output=primary_output,
@@ -235,17 +239,40 @@ class FailureAgent:
             jury=jury_verdict,
         )
 
-    #  Shared signal builder 
+    # ── Shared signal builder ──────────────────────────────────────────
 
     def _build_signal(self, model_outputs: list[str]) -> FailureSignalVector:
-        consistency   = compute_consistency(model_outputs)
-        entropy_score = compute_entropy(model_outputs)
-        ensemble      = compute_disagreement(model_outputs)  
+        """
+        Builds a FailureSignalVector from all provided model outputs.
 
+        All 3 detectors receive the full list:
+          - consistency + entropy : use the full list for clustering
+          - ensemble              : compares ALL pairwise combinations
+          - embedding             : compares outputs[0] vs outputs[1]
+        """
+        consistency   = compute_consistency(model_outputs)
+        # Use compute_entropy_from_counts to guarantee entropy and consistency
+        # always use the exact same semantic clusters — prevents the case where
+        # they compute clusters independently and get different results.
+        entropy_score = compute_entropy_from_counts(
+            consistency["answer_counts"],
+            len(model_outputs),
+        )
+        ensemble      = compute_disagreement(model_outputs)   # ← list, not two strings
+
+        # Guard: never set high_failure_risk from ensemble alone when entropy=0.0.
+        # entropy=0.0 means all outputs are semantically consistent — the model is stable.
+        # Without this guard, short/long paraphrase pairs ("Paris" vs "The capital of
+        # France is Paris.") can trigger ensemble_disagreement=True even after the
+        # _pair_similarity fix, which would cascade to OVERCONFIDENT_FAILURE.
+        ensemble_fires = (
+            ensemble["disagreement"] is True
+            and entropy_score > 0.0
+        )
         high_failure_risk = (
             entropy_score >= settings.high_entropy_threshold
             or consistency["agreement_score"] <= settings.low_agreement_threshold
-            or ensemble["disagreement"] is True
+            or ensemble_fires
         )
 
         return FailureSignalVector(
@@ -259,6 +286,6 @@ class FailureAgent:
         )
 
 
-# Singletons 
+# ── Singletons ─────────────────────────────────────────────────────────────
 failure_agent   = FailureAgent()
 diagnostic_jury = failure_agent._jury

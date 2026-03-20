@@ -1,0 +1,54 @@
+[build-system]
+requires      = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name        = "fie-sdk"
+version     = "0.1.0"
+description = "AI Failure Intelligence Engine — automatically monitor your LLM for hallucinations, adversarial attacks, and model degradation"
+readme      = "README.md"
+requires-python = ">=3.9"
+license     = { text = "MIT" }
+
+authors = [
+    { name = "Ayush", email = "ayushsingh355vns@gmail.com" }
+]
+
+keywords = [
+    "llm", "monitoring", "observability",
+    "hallucination-detection", "ai-safety",
+    "prompt-injection", "model-degradation"
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+]
+
+# These are the ONLY dependencies the user needs to install
+# requests is almost always already installed
+dependencies = [
+    "requests>=2.28.0",
+]
+
+[project.optional-dependencies]
+# Optional: only needed if user wants richer logging
+dev = [
+    "pytest>=7.0",
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+Homepage   = "https://github.com/yourusername/fie-sdk"
+Repository = "https://github.com/yourusername/fie-sdk"
+Issues     = "https://github.com/yourusername/fie-sdk/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fie"]

@@ -142,3 +142,75 @@ class DiagnosticResponse(BaseModel):
     archetype:             str
     embedding_distance:    float
     jury:                  JuryVerdict
+
+
+# ── Phase 4 schemas — Real-time Monitor ───────────────────────────────────
+
+class OllamaModelResult(BaseModel):
+    """Response from a single Ollama shadow model."""
+    model_name:  str
+    output_text: str
+    latency_ms:  float
+    success:     bool
+    error:       str = ""
+
+
+class MonitorRequest(BaseModel):
+    """
+    Input to the /monitor endpoint.
+
+    The user sends a prompt and their primary model output.
+    FIE automatically calls Ollama shadow models to get additional
+    outputs, then runs the full pipeline on all outputs together.
+
+    prompt               : the original user prompt
+    primary_output       : response from the user's main model
+    primary_model_name   : name of the main model (for logging)
+    run_full_jury        : if True, runs Phase 3 DiagnosticJury as well
+                           if False, only runs Phase 1 + Phase 2 (faster)
+    """
+    prompt:             str
+    primary_output:     str
+    primary_model_name: str            = "primary"
+    run_full_jury:      bool           = True
+    latency_ms:         Optional[float] = None
+
+
+class FixResult(BaseModel):
+    """Result from the auto-fix engine."""
+    fixed_output:      str
+    fix_applied:       bool
+    fix_strategy:      str
+    fix_explanation:   str
+    original_output:   str
+    root_cause:        str
+    fix_confidence:    float = Field(default=0.0, ge=0.0, le=1.0)
+    improvement_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    warning:           str   = ""
+
+
+class MonitorResponse(BaseModel):
+    """
+    Full response from the /monitor endpoint.
+    Contains Phase 1 + Phase 2 results and optionally Phase 3 jury.
+    Also includes the raw Ollama model responses for transparency.
+    """
+    # What models responded and what they said
+    shadow_model_results:  list[OllamaModelResult]
+    all_model_outputs:     list[str]   # primary + all shadow outputs
+    ollama_available:      bool
+
+    # Phase 1 + 2
+    failure_signal_vector: FailureSignalVector
+    archetype:             str
+    embedding_distance:    float
+
+    # Phase 3 (only if run_full_jury=True)
+    jury:                  Optional[JuryVerdict] = None
+
+    # Quick summary
+    high_failure_risk:     bool
+    failure_summary:       str
+
+    # Auto-fix result (None if no failure detected or fix not applied)
+    fix_result:            Optional[FixResult] = None
