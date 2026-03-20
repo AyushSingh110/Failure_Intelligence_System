@@ -475,8 +475,8 @@ from fie import monitor
 # User gets answer immediately, FIE checks in background
 # Use when: speed is critical
 @monitor(
-    fie_url    = "https://your-fie-server.railway.app",
-    api_key    = "fie-your-key",
+    fie_url    = "<your_railway_url>",
+    api_key    = "<your_fie_api_key>",
     mode       = "monitor",
     alert_slack= "https://hooks.slack.com/your-webhook",
 )
@@ -488,8 +488,8 @@ def call_gpt4(prompt: str) -> str:
 # User ALWAYS gets the correct answer
 # Use when: accuracy is critical (medical, legal, finance)
 @monitor(
-    fie_url    = "https://your-fie-server.railway.app",
-    api_key    = "fie-your-key",
+    fie_url    = "<your_railway_url>",
+    api_key    = "<your_fie_api_key>",
     mode       = "correct",
 )
 def call_gpt4(prompt: str) -> str:
@@ -556,7 +556,7 @@ Three models run in parallel via Groq's fast inference API:
 **Total parallel time: ~1 second** (vs 15-40 seconds with local Ollama).
 
 ```dotenv
-GROQ_API_KEY=gsk_your_groq_api_key
+GROQ_API_KEY=<your_groq_api_key>
 GROQ_ENABLED=true
 ```
 
@@ -748,7 +748,7 @@ pip install -r requirements.txt
 # 4. Configure .env
 cp .env.example .env
 # Add these to .env:
-# MONGODB_URI=your_mongodb_atlas_uri
+# MONGODB_URI=<your_mongodb_atlas_uri>
 # GROQ_API_KEY=your_groq_api_key
 # GROQ_ENABLED=true
 # OLLAMA_ENABLED=false
@@ -807,10 +807,10 @@ pip install sentence-transformers faiss-cpu
 
 ```dotenv
 # MongoDB
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/
+MONGODB_URI=<your_mongodb_atlas_uri>
 
 # Groq shadow models (fast cloud API)
-GROQ_API_KEY=gsk_your_key_here
+GROQ_API_KEY=<your_groq_api_key>
 GROQ_ENABLED=true
 
 # Ollama local models (private/sensitive data)
@@ -1133,7 +1133,7 @@ startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 Railway Environment Variables:
 ```
-MONGODB_URI     = your_mongodb_atlas_uri
+MONGODB_URI     = <your_mongodb_atlas_uri>
 GROQ_API_KEY    = your_groq_api_key
 GROQ_ENABLED    = true
 OLLAMA_ENABLED  = false
@@ -1157,7 +1157,7 @@ FIE_API_URL = https://your-fastapi-service.railway.app/api/v1
 # Users point their SDK to Railway URL
 @monitor(
     fie_url="https://your-backend.railway.app",
-    api_key="fie-your-key"
+    api_key="<your_fie_api_key>"
 )
 def call_llm(prompt): ...
 ```
