@@ -11,13 +11,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── Startup ────────────────────────────────────────────────────────
-    # 1. Initialize vault
+    #  Startup
+    # Initialize vault
     from storage.database import initialize_vault
     initialize_vault()
-
-    # 2. Warm up sentence encoder so errors appear at boot, not silently
-    #    on first request.
     print("[startup] Warming up sentence encoder...")
     try:
         from engine.encoder import get_encoder
@@ -34,7 +31,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # ── Shutdown ───────────────────────────────────────────────────────
+    #  Shutdown ───────────────────────────────────────────────────────
     from storage.database import flush_vault
     flush_vault()
 

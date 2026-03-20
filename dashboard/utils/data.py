@@ -4,7 +4,6 @@ import pandas as pd
 def _safe_metrics(record: dict) -> dict:
     """
     Safely extracts the metrics dict from a record.
-    Handles: None, missing key, nested Pydantic object serialized as dict.
     """
     m = record.get("metrics")
     if m is None:

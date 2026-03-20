@@ -78,7 +78,7 @@ def render() -> None:
 
     df_all = build_inference_dataframe(records)
 
-    # ── Model stats summary ───────────────────────────────────────────────────
+    # Model stats summary 
     st.markdown(render_section_label("Model Summary"), unsafe_allow_html=True)
 
     models_found = sorted(df_all["model"].dropna().unique()) if not df_all.empty else []
@@ -106,7 +106,7 @@ def render() -> None:
 
     st.markdown("<div style='margin:24px 0'></div>", unsafe_allow_html=True)
 
-    # ── Filter bar ────────────────────────────────────────────────────────────
+    # Filter bar
     st.markdown(render_section_label("Filter & Browse"), unsafe_allow_html=True)
 
     filter_col, model_col, count_col = st.columns([3, 2, 1])
@@ -155,7 +155,7 @@ def render() -> None:
         st.markdown(render_empty_state("No records match your filters"), unsafe_allow_html=True)
         return
 
-    # ── Records table ─────────────────────────────────────────────────────────
+    # Records table 
     st.markdown(render_section_label("Records"), unsafe_allow_html=True)
 
     df = build_inference_dataframe(filtered)

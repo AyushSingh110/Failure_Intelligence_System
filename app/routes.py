@@ -1,4 +1,7 @@
+import logging
 from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 
 from app.schemas import (
     InferenceRequest,
@@ -14,7 +17,7 @@ from app.schemas import (
 )
 from storage.database import save_inference, get_all_inferences, get_inference_by_id
 from engine.detector.consistency import compute_consistency
-from engine.detector.entropy import compute_entropy
+from engine.detector.entropy import compute_entropy, compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
 from engine.detector.embedding import compute_embedding_distance
 from engine.archetypes.labeling import label_failure_archetype
@@ -38,13 +41,24 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
     secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
 
     consistency   = compute_consistency(model_outputs)
-    entropy_score = compute_entropy(model_outputs)
+    entropy_score = compute_entropy_from_counts(
+        consistency["answer_counts"],
+        len(model_outputs),
+    )
     ensemble      = compute_disagreement(model_outputs)   # full list — all pairs
 
+    # Guard: if entropy is zero, all outputs are semantically consistent.
+    # Never flag high_failure_risk from ensemble alone when entropy=0.0 —
+    # this prevents false positives from short/long paraphrase pairs
+    # like ("Paris", "The capital of France is Paris.") triggering OVERCONFIDENT_FAILURE.
+    ensemble_fires = (
+        ensemble["disagreement"] is True
+        and entropy_score > 0.0   # only count ensemble disagreement if model is actually inconsistent
+    )
     high_failure_risk = (
         entropy_score >= settings.high_entropy_threshold
         or consistency["agreement_score"] <= settings.low_agreement_threshold
-        or ensemble["disagreement"] is True
+        or ensemble_fires
     )
 
     return FailureSignalVector(
@@ -133,6 +147,31 @@ def get_inference(request_id: str) -> InferenceRequest:
     return record
 
 
+@router.delete("/inferences/{request_id}", response_model=dict)
+def delete_inference_record(request_id: str) -> dict:
+    """Deletes a single inference record by request_id."""
+    from storage.database import delete_inference
+    success = delete_inference(request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Inference '{request_id}' not found")
+    return {"status": "deleted", "request_id": request_id}
+
+
+@router.delete("/inferences", response_model=dict)
+def clear_all_inferences() -> dict:
+    """
+    Deletes ALL inference records from MongoDB.
+    Use for resetting between test runs.
+    """
+    from storage.database import get_all_inferences, delete_inference
+    records = get_all_inferences()
+    count   = 0
+    for r in records:
+        if delete_inference(r.request_id):
+            count += 1
+    return {"status": "cleared", "deleted_count": count}
+
+
 # ── Phase 2 endpoints ─────────────────────────────────────────────────────
 
 @router.post("/analyze/v2", response_model=ArchetypeAnalysisResponse)
@@ -177,3 +216,233 @@ from app.schemas import DiagnosticRequest, DiagnosticResponse
 @router.post("/diagnose", response_model=DiagnosticResponse)
 def diagnose(body: DiagnosticRequest) -> DiagnosticResponse:
     return failure_agent.run_diagnostic(body)
+
+
+# ── Phase 4 — Real-time monitor endpoint ──────────────────────────────────
+
+from app.schemas import MonitorRequest, MonitorResponse, OllamaModelResult
+
+@router.post("/monitor", response_model=MonitorResponse)
+def monitor(body: MonitorRequest) -> MonitorResponse:
+    """
+    Real-time monitoring endpoint — the core of the production system.
+
+    Flow:
+      1. Receive prompt + primary model output from user
+      2. Fan out prompt to all Ollama shadow models in parallel
+      3. Combine primary output + shadow outputs into model_outputs list
+      4. Run full FIE pipeline (Phase 1 + 2 + optionally Phase 3)
+      5. Return full analysis with all model responses
+
+    This endpoint is what the @monitor decorator in the SDK calls.
+    Users never need to paste anything manually — it all happens here.
+    """
+    from app.schemas import DiagnosticRequest
+
+    # ── Step 1: Call shadow models (Groq or Ollama) ─────────────────────
+    # Groq: fast cloud API, ~1 second, free tier 14,400 req/day
+    # Ollama: local, private, slower — uncomment below to re-enable
+    ollama_available   = False  # kept for schema compatibility
+    shadow_results_raw = []
+
+    if settings.groq_enabled and settings.groq_api_key:
+        # ── Groq shadow models ──────────────────────────────────────
+        from engine.groq_service import get_groq_service
+        groq = get_groq_service()
+        if groq:
+            groq_results = groq.fan_out(body.prompt)
+            shadow_results_raw = groq_results
+            successful = [r for r in groq_results if r.success]
+            ollama_available = len(successful) > 0
+            logger.info(
+                "Groq shadow models: %d/%d responded successfully",
+                len(successful), len(groq_results),
+            )
+        else:
+            logger.warning("Groq service unavailable — running without shadow models")
+
+    # ── Ollama fallback (commented out — uncomment for local/private use) ──
+    # elif settings.ollama_enabled:
+    #     from engine.ollama_service import ollama_service
+    #     if ollama_service.is_available():
+    #         shadow_results_raw = ollama_service.fan_out(body.prompt)
+    #         ollama_available   = True
+    #     else:
+    #         print("[monitor] Ollama not running. Start: ollama serve")
+
+    else:
+        logger.warning(
+            "No shadow model provider configured. "
+            "Add GROQ_API_KEY=gsk_xxx to .env file."
+        )
+
+    # ── Step 2: Build full model_outputs list ──────────────────────────
+    # Primary output always goes first (index 0)
+    model_outputs = [body.primary_output]
+
+    # Add successful shadow model outputs
+    for r in shadow_results_raw:
+        if r.success and r.output_text:
+            model_outputs.append(r.output_text)
+
+    # Convert to schema format
+    shadow_model_results = [
+        OllamaModelResult(
+            model_name=r.model_name,
+            output_text=r.output_text,
+            latency_ms=r.latency_ms,
+            success=r.success,
+            error=r.error,
+        )
+        for r in shadow_results_raw
+    ]
+
+    # ── Step 3: Run FIE pipeline ───────────────────────────────────────
+    signal    = _build_failure_signal(model_outputs)
+    archetype = label_failure_archetype(signal)
+    primary   = model_outputs[0]
+    secondary = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+    embedding = compute_embedding_distance(primary, secondary)
+
+    # Update archetype registry and EMA tracker
+    archetype_registry.assign(signal)
+    evolution_tracker.record(signal)
+
+    # ── Step 4: Optionally run DiagnosticJury ──────────────────────────
+    jury_verdict = None
+    if body.run_full_jury:
+        diag_request = DiagnosticRequest(
+            prompt=body.prompt,
+            model_outputs=model_outputs,
+            latency_ms=body.latency_ms,
+        )
+        diag_response = failure_agent.run_diagnostic(diag_request)
+        jury_verdict  = diag_response.jury
+
+    # ── Step 5: Build failure summary ─────────────────────────────────
+    if jury_verdict and jury_verdict.failure_summary:
+        failure_summary = jury_verdict.failure_summary
+    elif signal.high_failure_risk:
+        failure_summary = (
+            f"High failure risk detected — archetype: {archetype}. "
+            f"Entropy: {signal.entropy_score:.3f}, "
+            f"Agreement: {signal.agreement_score:.3f}"
+        )
+    else:
+        failure_summary = f"Model outputs are stable — archetype: {archetype}"
+
+    # ── Step 5b: Auto-fix engine ────────────────────────────────────────
+    # Only run if failure detected AND jury has a primary verdict
+    fix_result_schema = None
+    if signal.high_failure_risk and jury_verdict and jury_verdict.primary_verdict:
+        try:
+            from engine.fix_engine import apply_fix
+            from app.schemas import FixResult as FixResultSchema
+
+            primary_v  = jury_verdict.primary_verdict
+            root_cause = primary_v.root_cause
+            confidence = primary_v.confidence_score
+
+            # Get successful shadow outputs
+            shadow_texts = [
+                r.output_text
+                for r in shadow_model_results
+                if r.success and r.output_text
+            ]
+
+            # Apply fix
+            fix = apply_fix(
+                prompt         = body.prompt,
+                primary_output = body.primary_output,
+                shadow_outputs = shadow_texts,
+                root_cause     = root_cause,
+                confidence     = confidence,
+                model_fn       = None,  # no model_fn on server side
+            )
+
+            fix_result_schema = FixResultSchema(
+                fixed_output      = fix.fixed_output,
+                fix_applied       = fix.fix_applied,
+                fix_strategy      = fix.fix_strategy,
+                fix_explanation   = fix.fix_explanation,
+                original_output   = fix.original_output,
+                root_cause        = fix.root_cause,
+                fix_confidence    = fix.fix_confidence,
+                improvement_score = fix.improvement_score,
+                warning           = fix.warning,
+            )
+
+            if fix.fix_applied:
+                logger.info(
+                    "Auto-fix applied | strategy=%s | confidence=%.3f",
+                    fix.fix_strategy, fix.fix_confidence,
+                )
+                # Update failure summary to reflect the fix
+                failure_summary = (
+                    f"⚡ AUTO-FIXED: {fix.fix_strategy} applied. "
+                    f"{fix.fix_explanation[:150]}"
+                )
+
+        except Exception as exc:
+            logger.error("Fix engine failed: %s", exc, exc_info=True)
+
+    # ── Step 6: Save to MongoDB ────────────────────────────────────
+    # Build an InferenceRequest and persist it so the dashboard
+    # can display real data from /inferences endpoint.
+    try:
+        import uuid
+        from datetime import datetime
+        from app.schemas import InferenceRequest, MathematicalMetrics
+
+        inference_record = InferenceRequest(
+            request_id    = str(uuid.uuid4())[:12],
+            timestamp     = datetime.utcnow(),
+            model_name    = body.primary_model_name,
+            model_version = "monitor-v1",
+            temperature   = 0.7,
+            latency_ms    = body.latency_ms or 0.0,
+            input_text    = body.prompt,
+            output_text   = body.primary_output,
+            metrics       = MathematicalMetrics(
+                entropy          = signal.entropy_score,
+                agreement_score  = signal.agreement_score,
+                fsd_score        = signal.fsd_score,
+                embedding_distance = embedding["embedding_distance"],
+            ),
+        )
+        save_inference(inference_record)
+    except Exception as exc:
+        logger.warning("Failed to save inference record: %s", exc)
+
+    return MonitorResponse(
+        shadow_model_results  = shadow_model_results,
+        all_model_outputs     = model_outputs,
+        ollama_available      = ollama_available,
+        failure_signal_vector = signal,
+        archetype             = archetype,
+        embedding_distance    = embedding["embedding_distance"],
+        jury                  = jury_verdict,
+        high_failure_risk     = signal.high_failure_risk,
+        failure_summary       = failure_summary,
+        fix_result            = fix_result_schema,
+    )
+
+
+@router.get("/monitor/status", response_model=dict)
+def monitor_status() -> dict:
+    """
+    Returns the current status of the Ollama service.
+    Used by the dashboard to show which models are available.
+    """
+    from engine.ollama_service import ollama_service
+    available       = ollama_service.is_available()
+    active_models   = ollama_service.get_available_models() if available else []
+    configured      = ollama_service.models
+
+    return {
+        "ollama_running":    available,
+        "configured_models": configured,
+        "active_models":     active_models,
+        "ready_models":      [m for m in configured if m in active_models],
+        "missing_models":    [m for m in configured if m not in active_models],
+    }
