@@ -32,23 +32,21 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 
-# These are the ONLY dependencies the user needs to install
-# requests is almost always already installed
 dependencies = [
     "requests>=2.28.0",
 ]
 
 [project.optional-dependencies]
-# Optional: only needed if user wants richer logging
 dev = [
     "pytest>=7.0",
     "httpx>=0.24.0",
 ]
 
 [project.urls]
-Homepage   = "https://github.com/yourusername/fie-sdk"
-Repository = "https://github.com/yourusername/fie-sdk"
-Issues     = "https://github.com/yourusername/fie-sdk/issues"
+Homepage      = "https://github.com/AyushSingh110/Failure_Intelligence_System"
+Repository    = "https://github.com/AyushSingh110/Failure_Intelligence_System"
+Issues        = "https://github.com/AyushSingh110/Failure_Intelligence_System/issues"
+Documentation = "https://github.com/AyushSingh110/Failure_Intelligence_System#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["fie"]
