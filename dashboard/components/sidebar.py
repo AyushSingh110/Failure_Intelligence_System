@@ -1,15 +1,25 @@
+"""
+components/sidebar.py
+
+Renders the sidebar and returns navigation state.
+
+PAGE_* constants are the single source of truth for navigation labels.
+They are imported by ui.py for routing — no copy-paste drift possible.
+"""
+
 import streamlit as st
 from components.widgets import render_connection_badge, render_section_label
 from utils.api import check_connection, API_BASE
 
 # ── Single source of truth for page labels ────────────────────────────────
-PAGE_DASHBOARD = "📊 Dashboard"
-PAGE_ANALYZE   = "🔬 Analyze"
-PAGE_DIAGNOSE  = "⚖  Diagnose"       # Phase 3 — DiagnosticJury
-PAGE_VAULT     = "📦 Vault"
-PAGE_ALERTS    = "🚨  Alerts"
+PAGE_DASHBOARD = "Dashboard"
+PAGE_ANALYZE   = "Analyze"
+PAGE_DIAGNOSE  = "Diagnose"       # Phase 3 — DiagnosticJury
+PAGE_VAULT     = "Vault"
+PAGE_ALERTS    = "Alerts"
+PAGE_SETTINGS  = "Settings"
 
-_ALL_PAGES = [PAGE_DASHBOARD, PAGE_ANALYZE, PAGE_DIAGNOSE, PAGE_VAULT, PAGE_ALERTS]
+_ALL_PAGES = [PAGE_DASHBOARD, PAGE_ANALYZE, PAGE_DIAGNOSE, PAGE_VAULT, PAGE_ALERTS, PAGE_SETTINGS]
 
 
 def render_sidebar(default_refresh: int = 10) -> dict:
@@ -87,6 +97,36 @@ def render_sidebar(default_refresh: int = 10) -> dict:
             "</div>",
             unsafe_allow_html=True,
         )
+
+    # ── User info at bottom of sidebar ───────────────────────────────────
+    st.sidebar.markdown("---")
+
+    name      = st.session_state.get("name", "")
+    api_key   = st.session_state.get("api_key", "")
+    plan      = st.session_state.get("plan", "free")
+    is_admin  = st.session_state.get("is_admin", False)
+
+    if name:
+        st.sidebar.markdown(
+            f"<div style='font-size:12px;color:#8b949e;margin-bottom:4px;'>"
+            f"👤 <b style='color:#c9d1d9;'>{name}</b> "
+            f"<span style='color:#{'f85149' if is_admin else '58a6ff'};'>"
+            f"{'[ADMIN]' if is_admin else f'[{plan.upper()}]'}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    if api_key:
+        st.sidebar.markdown(
+            f"<div style='font-family:IBM Plex Mono,monospace;font-size:10px;"
+            f"color:#6e7681;background:#161b22;padding:6px 8px;"
+            f"border-radius:4px;border:1px solid #30363d;"
+            f"word-break:break-all;margin-bottom:8px;'>"
+            f"🔑 {api_key}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        st.sidebar.caption("Use this key in @monitor(api_key=...)")
 
     return {
         "page":             page,
