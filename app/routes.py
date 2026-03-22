@@ -45,12 +45,8 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
         consistency["answer_counts"],
         len(model_outputs),
     )
-    ensemble      = compute_disagreement(model_outputs)   # full list — all pairs
+    ensemble      = compute_disagreement(model_outputs)   
 
-    # Guard: if entropy is zero, all outputs are semantically consistent.
-    # Never flag high_failure_risk from ensemble alone when entropy=0.0 —
-    # this prevents false positives from short/long paraphrase pairs
-    # like ("Paris", "The capital of France is Paris.") triggering OVERCONFIDENT_FAILURE.
     ensemble_fires = (
         ensemble["disagreement"] is True
         and entropy_score > 0.0   # only count ensemble disagreement if model is actually inconsistent

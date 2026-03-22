@@ -17,3 +17,10 @@ plotly
 faiss-cpu
 sentence-transformers
 pytest
+
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+PyJWT
+bcrypt
+streamlit-google-auth
