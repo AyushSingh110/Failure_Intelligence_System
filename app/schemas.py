@@ -15,6 +15,7 @@ class MathematicalMetrics(BaseModel):
 
 class InferenceRequest(BaseModel):
     request_id:    str
+    tenant_id:     str = "anonymous"  # identifies which user this belongs to
     timestamp:     datetime
     model_name:    str
     model_version: str
