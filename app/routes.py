@@ -330,14 +330,24 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
     # ── Step 5b: Auto-fix engine ────────────────────────────────────────
     # Only run if failure detected AND jury has a primary verdict
     fix_result_schema = None
-    if signal.high_failure_risk and jury_verdict and jury_verdict.primary_verdict:
+    if jury_verdict and jury_verdict.primary_verdict:
         try:
             from engine.fix_engine import apply_fix
+            from engine.fix_engine import prompt_requires_live_data
             from app.schemas import FixResult as FixResultSchema
 
             primary_v  = jury_verdict.primary_verdict
             root_cause = primary_v.root_cause
             confidence = primary_v.confidence_score
+            layers_fired = set((primary_v.evidence or {}).get("layers_fired", []))
+            factual_roots = {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"}
+            externally_verified_factual_mismatch = (
+                root_cause in factual_roots
+                and "external_verification" in layers_fired
+            )
+
+            if not (signal.high_failure_risk or externally_verified_factual_mismatch):
+                raise RuntimeError("Auto-fix skipped: no actionable failure signal.")
 
             # Get successful shadow outputs
             shadow_texts = [
@@ -346,29 +356,38 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
                 if r.success and r.output_text
             ]
 
-            # Apply fix
-            fix = apply_fix(
-                prompt         = body.prompt,
-                primary_output = body.primary_output,
-                shadow_outputs = shadow_texts,
-                root_cause     = root_cause,
-                confidence     = confidence,
-                model_fn       = None,  # no model_fn on server side
+            prompt_is_temporal = prompt_requires_live_data(body.prompt)
+            prefer_rag_grounding = (
+                externally_verified_factual_mismatch
+                and not signal.high_failure_risk
+                and not prompt_is_temporal
             )
 
-            fix_result_schema = FixResultSchema(
-                fixed_output      = fix.fixed_output,
-                fix_applied       = fix.fix_applied,
-                fix_strategy      = fix.fix_strategy,
-                fix_explanation   = fix.fix_explanation,
-                original_output   = fix.original_output,
-                root_cause        = fix.root_cause,
-                fix_confidence    = fix.fix_confidence,
-                improvement_score = fix.improvement_score,
-                warning           = fix.warning,
-            )
+            fix = None
+            if not prefer_rag_grounding:
+                fix = apply_fix(
+                    prompt         = body.prompt,
+                    primary_output = body.primary_output,
+                    shadow_outputs = shadow_texts,
+                    root_cause     = root_cause,
+                    confidence     = confidence,
+                    model_fn       = None,  # no model_fn on server side
+                )
 
-            if fix.fix_applied:
+            if fix is not None:
+                fix_result_schema = FixResultSchema(
+                    fixed_output      = fix.fixed_output,
+                    fix_applied       = fix.fix_applied,
+                    fix_strategy      = fix.fix_strategy,
+                    fix_explanation   = fix.fix_explanation,
+                    original_output   = fix.original_output,
+                    root_cause        = fix.root_cause,
+                    fix_confidence    = fix.fix_confidence,
+                    improvement_score = fix.improvement_score,
+                    warning           = fix.warning,
+                )
+
+            if fix is not None and fix.fix_applied:
                 logger.info(
                     "Auto-fix applied | strategy=%s | confidence=%.3f",
                     fix.fix_strategy, fix.fix_confidence,
@@ -378,9 +397,48 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
                     f"⚡ AUTO-FIXED: {fix.fix_strategy} applied. "
                     f"{fix.fix_explanation[:150]}"
                 )
+            if (
+                prefer_rag_grounding
+                or (
+                    (fix is None or not fix.fix_applied)
+                    and root_cause in factual_roots
+                    and not prompt_is_temporal
+                )
+            ):
+                from engine.rag_grounder import ground_with_wikipedia
+
+                rag_result = ground_with_wikipedia(body.prompt, body.primary_output)
+                if rag_result.success:
+                    fix_result_schema = FixResultSchema(
+                        fixed_output      = rag_result.grounded_answer,
+                        fix_applied       = True,
+                        fix_strategy      = "RAG_GROQ_GROUNDING",
+                        fix_explanation   = (
+                            "Shadow-model consensus was unavailable, so FIE used "
+                            "Wikipedia-grounded retrieval and Groq-based correction."
+                        ),
+                        original_output   = body.primary_output,
+                        root_cause        = root_cause,
+                        fix_confidence    = rag_result.confidence,
+                        improvement_score = rag_result.confidence,
+                        warning           = f"Grounded source: {rag_result.source}",
+                    )
+                    failure_summary = (
+                        "⚡ AUTO-FIXED: RAG_GROQ_GROUNDING applied. "
+                        "Recovered a grounded factual answer using Wikipedia context."
+                    )
+                    logger.info(
+                        "Auto-fix applied | strategy=RAG_GROQ_GROUNDING | confidence=%.3f",
+                        rag_result.confidence,
+                    )
+                else:
+                    logger.warning("RAG grounding unavailable: %s", rag_result.error)
 
         except Exception as exc:
-            logger.error("Fix engine failed: %s", exc, exc_info=True)
+            if "Auto-fix skipped" in str(exc):
+                logger.debug(str(exc))
+            else:
+                logger.error("Fix engine failed: %s", exc, exc_info=True)
 
     # ── Step 6: Save to MongoDB ────────────────────────────────────
     # Build an InferenceRequest and persist it so the dashboard

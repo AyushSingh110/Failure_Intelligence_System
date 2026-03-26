@@ -1,3 +1,4 @@
+#domain_critic.py
 from __future__ import annotations
 
 import re
@@ -43,12 +44,15 @@ _RE_TEMPORAL = re.compile(
     r"(?:news|version|update|release|price|score|ranking|report|data|information|status)|"
     r"(?:right\s+now|as\s+of\s+(?:today|now|this\s+(?:moment|year|month|week)))|"
     r"(?:today(?:'s)?\s+(?:price|score|news|weather|rate|stock|update))|"
+    r"(?:today(?:'s)?)|"
     r"(?:live\s+(?:score|match|update|result|feed|data))|"
     r"(?:real.time\s+(?:data|price|update|score|feed))|"
     r"(?:in\s+(?:2024|2025|2026))|"
     r"(?:what\s+is\s+the\s+current\s+(?:price|rate|status|version|score|ranking|ceo|president|pm|prime\s+minister))|"
+    r"(?:what\s+is\s+the\s+(?:latest|newest|current)\s+(?:iphone|android|python|version|model|release))|"
     r"(?:who\s+is\s+(?:currently|now|the\s+current)\s+(?:the\s+)?(?:president|pm|prime\s+minister|ceo|head|leader|champion))|"
     r"(?:(?:stock|share|market|crypto|bitcoin|eth(?:ereum)?)\s+(?:price|value|rate)\s+(?:today|now|currently))|"
+    r"(?:(?:live|current)\s+(?:score|weather|price|version|result|status))|"
     r"(?:(?:won|win|winner|champion)\s+(?:the\s+)?(?:latest|recent|last|this\s+year(?:'s)?)\s+)"
     r")\b",
     re.IGNORECASE | re.DOTALL,
@@ -162,8 +166,44 @@ def _run_temporal_detection(context: DiagnosticContext) -> _LayerResult:
 
 
 def _run_external_verification(context: DiagnosticContext) -> _LayerResult:
-    return _LayerResult(False, 0.0, "external_verification",
-                        "External verifier not yet connected.")
+    if re.fullmatch(r"[\s\d\+\-\*\/\(\)=\?\.]+", context.prompt):
+        return _LayerResult(
+            False,
+            0.0,
+            "external_verification",
+            "Skipped external verification for arithmetic-style prompt.",
+        )
+
+    try:
+        from engine.rag_grounder import ground_with_wikipedia, compare_with_ground_truth
+
+        grounding = ground_with_wikipedia(context.prompt, context.primary_output)
+        if not grounding.success:
+            return _LayerResult(
+                False,
+                0.0,
+                "external_verification",
+                grounding.error or "External verifier unavailable.",
+            )
+
+        check = compare_with_ground_truth(context.primary_output, grounding.grounded_answer)
+        detail = (
+            f"{check.reason}. grounded_answer={grounding.grounded_answer[:160]!r} "
+            f"source={grounding.source}"
+        )
+        return _LayerResult(
+            fired=not check.matches,
+            score=round(check.confidence, 4),
+            evidence_key="external_verification",
+            detail=detail,
+        )
+    except Exception as exc:
+        return _LayerResult(
+            False,
+            0.0,
+            "external_verification",
+            f"External verification error: {exc}",
+        )
 
 
 def _failure_signal_strength(context: DiagnosticContext) -> float:
@@ -191,6 +231,7 @@ class DomainCritic(BaseJuryAgent):
         "self_contradiction":   0.35,
         "hedge_detection":      0.15,
         "temporal_detection":   0.10,
+        "external_verification": 0.45,
     }
 
     def analyze(self, context: DiagnosticContext) -> AgentVerdict:
@@ -200,8 +241,9 @@ class DomainCritic(BaseJuryAgent):
         layer2 = _run_self_contradiction(context)
         layer3 = _run_hedge_detection(context)
         layer4 = _run_temporal_detection(context)
+        layer5 = _run_external_verification(context)
 
-        layers       = [layer1, layer2, layer3, layer4]
+        layers       = [layer1, layer2, layer3, layer4, layer5]
         fired_layers = [l for l in layers if l.fired]
 
         if not fired_layers:
@@ -221,6 +263,7 @@ class DomainCritic(BaseJuryAgent):
         scaled_confidence = round(0.55 * raw_confidence + 0.45 * (raw_confidence * fss), 4)
 
         temporal_fired     = layer4.fired
+        external_fired     = layer5.fired
         high_contradiction = (layer1.score > 0.30 or layer2.score > 0.40)
         moderate_signal    = scaled_confidence >= cfg.jury_domain_confidence_threshold
 
@@ -231,10 +274,10 @@ class DomainCritic(BaseJuryAgent):
                 "Connect a web search tool or real-time data feed. "
                 "Consider routing 'current/latest/live' queries to a RAG pipeline."
             )
-        elif high_contradiction and moderate_signal:
+        elif (external_fired or high_contradiction) and moderate_signal:
             root_cause = "FACTUAL_HALLUCINATION"
             mitigation = (
-                "High output inconsistency detected — model is generating conflicting facts. "
+                "Ground-truth verification detected a factual mismatch or high output inconsistency. "
                 "Lower the temperature to reduce sampling variance. "
                 "Add a self-consistency check: sample 3-5 outputs and take the plurality answer. "
                 "Consider grounding the response with a RAG retrieval step before generation."

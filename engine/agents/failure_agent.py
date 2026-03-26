@@ -1,3 +1,4 @@
+#failure_agent.py
 from __future__ import annotations
 
 import logging
@@ -37,6 +38,10 @@ _ADVERSARIAL_ROOTS = frozenset({
     "INSTRUCTION_OVERRIDE",
     "TOKEN_SMUGGLING",
     "INTENTIONAL_PROMPT_ATTACK",
+})
+
+_TEMPORAL_ROOTS = frozenset({
+    "TEMPORAL_KNOWLEDGE_CUTOFF",
 })
 
 
@@ -83,13 +88,25 @@ class DiagnosticJury:
             if active else 0.0
         )
 
-        primary = (
-            max(active, key=lambda v: v.confidence_score)
-            if active else None
-        )
-
         is_adversarial = any(v.root_cause in _ADVERSARIAL_ROOTS for v in active)
+        is_temporal    = any(v.root_cause in _TEMPORAL_ROOTS for v in active)
         is_complex     = any(v.root_cause == "PROMPT_COMPLEXITY_OOD" for v in active)
+
+        if is_adversarial:
+            primary = max(
+                (v for v in active if v.root_cause in _ADVERSARIAL_ROOTS),
+                key=lambda v: v.confidence_score,
+            )
+        elif is_temporal:
+            primary = max(
+                (v for v in active if v.root_cause in _TEMPORAL_ROOTS),
+                key=lambda v: v.confidence_score,
+            )
+        else:
+            primary = (
+                max(active, key=lambda v: v.confidence_score)
+                if active else None
+            )
 
         failure_summary = self._build_summary(primary, active, is_adversarial, is_complex)
 
@@ -160,10 +177,17 @@ class FailureAgent:
 
     # ── Phase 1 ────────────────────────────────────────────────────────
 
-    def run(self, model_outputs: list[str]) -> dict:
+    def run(
+        self,
+        model_outputs: list[str],
+        primary_output: Optional[str] = None,
+        secondary_output: Optional[str] = None,
+    ) -> dict:
         """Phase 1: extract signal, return signal + archetype label."""
-        primary_output   = model_outputs[0]
-        secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+        primary_output = primary_output or model_outputs[0]
+        secondary_output = secondary_output or (
+            model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+        )
 
         signal    = self._build_signal(model_outputs)
         archetype = label_failure_archetype(signal)
@@ -177,10 +201,17 @@ class FailureAgent:
 
     # ── Phase 2 ────────────────────────────────────────────────────────
 
-    def run_full(self, model_outputs: list[str]) -> dict:
+    def run_full(
+        self,
+        model_outputs: list[str],
+        primary_output: Optional[str] = None,
+        secondary_output: Optional[str] = None,
+    ) -> dict:
         """Phase 2: extract signal, assign to cluster, update tracker."""
-        primary_output   = model_outputs[0]
-        secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+        primary_output = primary_output or model_outputs[0]
+        secondary_output = secondary_output or (
+            model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
+        )
 
         signal    = self._build_signal(model_outputs)
         embedding = compute_embedding_distance(primary_output, secondary_output)
