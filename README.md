@@ -1196,21 +1196,6 @@ Railway automatically redeploys when you push to GitHub. Server changes are live
 
 ---
 
-## Adding DomainCritic RAG Verifier — Teammate Guide
-
-Only one file needs to change: `engine/agents/domain_critic.py`
-
-The stub `_run_external_verification()` is already in place:
-
-```python
-def _run_external_verification(self, claim: str, context: str) -> dict:
-    # Connect Wikipedia API or local Ollama knowledge base here
-    # Return: {"verified": bool, "source": str, "confidence": float}
-    pass
-```
-
-Full integration guide in `engine/agents/domain_critic.py`. Zero other files need to change.
-
 ---
 
 <div align="center">
