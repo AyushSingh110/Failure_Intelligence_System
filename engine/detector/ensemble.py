@@ -166,8 +166,8 @@ def _pair_similarity(text_a: str, text_b: str) -> float:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def compute_disagreement(
-    model_outputs:          list[str],
-    disagreement_threshold: float | None = None,
+    model_outputs: list[str] | str,
+    disagreement_threshold: float | str | None = None,
 ) -> EnsembleResult:
     """
     Computes ensemble disagreement across ALL provided model outputs.
@@ -190,7 +190,34 @@ def compute_disagreement(
         pair_similarities : list of individual pairwise scores
         n_pairs           : total number of pairs evaluated
     """
-    threshold = disagreement_threshold or settings.ensemble_disagreement_threshold
+    if isinstance(model_outputs, str):
+        secondary_output = (
+            disagreement_threshold
+            if isinstance(disagreement_threshold, str)
+            else ""
+        )
+        if not model_outputs.strip() and secondary_output.strip():
+            return EnsembleResult(
+                disagreement=True,
+                similarity_score=0.0,
+                pair_similarities=[0.0],
+                n_pairs=1,
+            )
+        if not model_outputs.strip() and not secondary_output.strip():
+            return EnsembleResult(
+                disagreement=False,
+                similarity_score=1.0,
+                pair_similarities=[],
+                n_pairs=0,
+            )
+        model_outputs = [model_outputs, secondary_output]
+        disagreement_threshold = None
+
+    threshold = (
+        float(disagreement_threshold)
+        if disagreement_threshold is not None
+        else settings.ensemble_disagreement_threshold
+    )
 
     # Filter out blank outputs — a model that returned nothing is not useful
     valid_outputs = [o for o in model_outputs if o.strip()]

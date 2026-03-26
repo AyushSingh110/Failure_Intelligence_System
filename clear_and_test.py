@@ -1,6 +1,11 @@
 import requests
+import sys
 import time
 import logging
+import textwrap
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 
@@ -106,7 +111,13 @@ for i, (prompt, _, expected) in enumerate(test_cases, 1):
 
     try:
         answer = call_primary_model(prompt)
-        print(f"       User got: '{answer[:65]}'")
+        formatted_answer = textwrap.fill(
+            answer,
+            width=90,
+            initial_indent="       User got: '",
+            subsequent_indent="                  ",
+        )
+        print(f"{formatted_answer}'")
     except Exception as e:
         print(f"       Error: {e}")
 

@@ -32,6 +32,8 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
+from engine.prompt_guard import score_prompt_attack
+
 logger = logging.getLogger(__name__)
 
 
@@ -188,15 +190,62 @@ _INJECTION_PATTERNS = [
     re.compile(r'disregard\s+(all\s+)?previous', re.IGNORECASE),
     re.compile(r'forget\s+(all\s+)?previous\s+instructions?', re.IGNORECASE),
     re.compile(r'your\s+new\s+(primary\s+)?directive', re.IGNORECASE),
+    re.compile(r'new\s+(primary\s+)?directive', re.IGNORECASE),
     re.compile(r'override\s+(all\s+)?instructions?', re.IGNORECASE),
+    re.compile(r'override\s+(all\s+)?(?:safeguards?|safety|guidelines?|protections?)', re.IGNORECASE),
     re.compile(r'you\s+are\s+now\s+(?:DAN|an?\s+unrestricted)', re.IGNORECASE),
+    re.compile(r'answer\s+only\s+as\s+dan', re.IGNORECASE),
+    re.compile(r'never\s+refuse\s+any\s+request', re.IGNORECASE),
+    re.compile(r'obey\s+only\s+me', re.IGNORECASE),
     re.compile(r'act\s+as\s+(an?\s+)?ai\s+with\s+no\s+restrictions?', re.IGNORECASE),
+    re.compile(r'act\s+as\s+an?\s+unrestricted\s+(?:model|assistant|ai)', re.IGNORECASE),
+    re.compile(r'no\s+ethical\s+limits?', re.IGNORECASE),
+    re.compile(r'answer\s+anything', re.IGNORECASE),
     re.compile(r'bypass\s+(all\s+)?(?:safety|content|ethical)', re.IGNORECASE),
     re.compile(r'<\|system\|>.*?(?:<\|endoftext\|>|$)', re.IGNORECASE | re.DOTALL),
     re.compile(r'\[INST\].*?\[/INST\]', re.IGNORECASE | re.DOTALL),
     re.compile(r'reveal\s+(your\s+)?system\s+prompt', re.IGNORECASE),
+    re.compile(r'(?:hidden|secret|internal|developer)\s+(?:message|messages|prompt|instructions?|rules?)', re.IGNORECASE),
     re.compile(r'print\s+your\s+(system\s+)?instructions?', re.IGNORECASE),
+    re.compile(r'chain\s+of\s+thought', re.IGNORECASE),
+    re.compile(r'admin\s+password', re.IGNORECASE),
 ]
+
+
+def _prompt_contains_adversarial_pattern(prompt: str) -> bool:
+    if any(pattern.search(prompt or "") for pattern in _INJECTION_PATTERNS):
+        return True
+    signal = score_prompt_attack(prompt or "")
+    return signal.root_cause is not None and signal.score >= 0.72
+
+
+_REAL_TIME_PATTERNS = [
+    re.compile(r'\bcurrent\b', re.IGNORECASE),
+    re.compile(r'\blatest\b', re.IGNORECASE),
+    re.compile(r'\bmost\s+recent\b', re.IGNORECASE),
+    re.compile(r'\bright\s+now\b', re.IGNORECASE),
+    re.compile(r'\btoday(?:\'s)?\b', re.IGNORECASE),
+    re.compile(r'\blive\b', re.IGNORECASE),
+    re.compile(r'\breal[-\s]?time\b', re.IGNORECASE),
+    re.compile(r'\bup[-\s]?to[-\s]?date\b', re.IGNORECASE),
+    re.compile(r'\b(?:president|prime\s+minister|ceo|price|weather|score|version|release|model)\b', re.IGNORECASE),
+]
+
+
+def prompt_requires_live_data(prompt: str) -> bool:
+    prompt = prompt or ""
+    matched = sum(1 for pattern in _REAL_TIME_PATTERNS if pattern.search(prompt))
+    return matched >= 2 or any(
+        phrase in prompt.lower()
+        for phrase in [
+            "current price",
+            "latest iphone",
+            "current president",
+            "live score",
+            "current python version",
+            "weather in",
+        ]
+    )
 
 _SECURITY_REINFORCEMENT = (
     "\n\n[SYSTEM SECURITY]: You are a helpful, honest assistant. "
@@ -356,6 +405,21 @@ def _generate_temporal_fallback(prompt: str, today: str) -> str:
             f"As of my training cutoff, I don't have the current market data you're asking about. "
             f"Today is {today}. For real-time prices, please check: "
             f"CoinMarketCap (crypto), Yahoo Finance (stocks), or Google Finance."
+        )
+    elif any(w in prompt_lower for w in ["president", "prime minister", "ceo", "leader"]):
+        return (
+            f"I don't have up-to-date live information about that role after my training cutoff. "
+            f"Today is {today}. Please check an official or current source to verify who currently holds that position."
+        )
+    elif any(w in prompt_lower for w in ["python", "version", "release", "iphone", "latest model"]):
+        return (
+            f"I don't have up-to-date product or software release information after my training cutoff. "
+            f"Today is {today}. Please check the official release notes or vendor website for the current version."
+        )
+    elif any(w in prompt_lower for w in ["score", "match", "game", "winner", "champion"]):
+        return (
+            f"I don't have access to live sports data or real-time scores. "
+            f"Today is {today}. Please check a live sports source for the current result."
         )
     elif any(w in prompt_lower for w in ["news", "latest", "recent", "today"]):
         return (
@@ -600,6 +664,14 @@ def apply_fix(
         root_cause, confidence, len(shadow_outputs),
     )
 
+    forced_strategy = None
+    if _prompt_contains_adversarial_pattern(prompt):
+        forced_strategy = STRATEGY_SANITIZE_AND_RERUN
+        confidence = max(confidence, MEDIUM_CONFIDENCE)
+    elif prompt_requires_live_data(prompt):
+        forced_strategy = STRATEGY_CONTEXT_INJECTION
+        confidence = max(confidence, MEDIUM_CONFIDENCE)
+
     # ── Confidence gate ────────────────────────────────────────────────
     if confidence < MEDIUM_CONFIDENCE:
         return _apply_no_fix(
@@ -613,7 +685,7 @@ def apply_fix(
         )
 
     # ── Look up fix strategy ───────────────────────────────────────────
-    strategy = _STRATEGY_MAP.get(root_cause, STRATEGY_NO_FIX)
+    strategy = forced_strategy or _STRATEGY_MAP.get(root_cause, STRATEGY_NO_FIX)
 
     if strategy == STRATEGY_NO_FIX:
         return _apply_no_fix(
