@@ -48,6 +48,11 @@ from fie.config import get_config
 logger = logging.getLogger("fie")
 
 
+def _preview(text: str, limit: int = 120) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else f"{text[:limit]}..."
+
+
 def monitor(
     fie_url:       Optional[str] = None,
     api_key:       Optional[str] = None,
@@ -203,8 +208,8 @@ def monitor(
                             "[FIE] ⚡ CORRECTED — User gets fixed answer | "
                             "strategy=%s | original='%s...' | fixed='%s...'",
                             fix_result.get("fix_strategy", ""),
-                            primary_output[:50],
-                            fixed_output[:50],
+                            _preview(primary_output),
+                            _preview(fixed_output),
                         )
                         # Return fixed answer to user
                         return fixed_output
@@ -248,12 +253,12 @@ def _log_result(
         strategy = fix_result.get("fix_strategy", "")
         logger.info(
             "[FIE] %s | ⚡ FIXED | %s → %s | latency=%.0fms | %s",
-            model_name, archetype, strategy, latency_ms, summary[:80],
+            model_name, archetype, strategy, latency_ms, _preview(summary),
         )
     else:
         logger.info(
             "[FIE] %s | %s | %s | latency=%.0fms | %s",
-            model_name, risk_label, archetype, latency_ms, summary[:80],
+            model_name, risk_label, archetype, latency_ms, _preview(summary),
         )
 
     warning = fix_result.get("warning", "")

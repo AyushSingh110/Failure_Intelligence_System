@@ -42,11 +42,16 @@ class GroqModelResponse:
 # In teeno ko shadow models ki tarah use karenge
 GROQ_MODELS = [
     "llama-3.1-8b-instant",   # fastest — good for simple facts
-    "mixtral-8x7b-32768",     # most accurate — good for complex questions
-    "gemma2-9b-it",           # Google ka model — good diversity
+    "llama-3.3-70b-versatile",
+    "llama-3.2-3b-preview",
 ]
 
 # Groq API endpoint
+_MODEL_ALIASES = {
+    "mixtral-8x7b-32768": "llama-3.3-70b-versatile",
+    "gemma2-9b-it": "llama-3.1-8b-instant",
+}
+
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
@@ -68,7 +73,7 @@ class GroqService:
         timeout_seconds: int       = 30,
     ) -> None:
         self._api_key  = api_key
-        self._models   = models or GROQ_MODELS
+        self._models   = self._normalize_models(models or GROQ_MODELS)
         self._timeout  = timeout_seconds
 
         # Session with auth header — created once, reused for all calls
@@ -78,10 +83,30 @@ class GroqService:
             "Content-Type":  "application/json",
         })
 
+    @staticmethod
+    def _normalize_models(models: list[str]) -> list[str]:
+        normalized: list[str] = []
+
+        for model_name in models:
+            resolved_name = _MODEL_ALIASES.get(model_name, model_name)
+            if resolved_name != model_name:
+                logger.warning(
+                    "Remapping deprecated Groq model '%s' to '%s'",
+                    model_name,
+                    resolved_name,
+                )
+            if resolved_name not in normalized:
+                normalized.append(resolved_name)
+
+        return normalized or GROQ_MODELS
+
     def _call_single_model(
         self,
         model_name: str,
         prompt:     str,
+        *,
+        max_tokens: int = 500,
+        temperature: float = 0.1,
     ) -> GroqModelResponse:
         """
         Ek Groq model ko call karta hai aur response return karta hai.
@@ -97,8 +122,8 @@ class GroqService:
                 json={
                     "model":       model_name,
                     "messages":    [{"role": "user", "content": prompt}],
-                    "max_tokens":  500,    # short answers for comparison
-                    "temperature": 0.1,   # low temperature = consistent answers
+                    "max_tokens":  max_tokens,
+                    "temperature": temperature,
                 },
                 timeout=self._timeout,
             )
@@ -135,7 +160,12 @@ class GroqService:
                 logger.warning("Groq rate limit hit for model %s", model_name)
                 error = "Rate limit exceeded — free tier limit reached"
             else:
-                error = str(exc)
+                response_text = ""
+                try:
+                    response_text = exc.response.text
+                except Exception:
+                    response_text = ""
+                error = str(exc) if not response_text else f"{exc} | {response_text}"
             return GroqModelResponse(
                 model_name = model_name,
                 success    = False,
@@ -193,6 +223,26 @@ class GroqService:
         results.sort(key=lambda r: r.model_name)
         return results
 
+    def complete(
+        self,
+        prompt: str,
+        *,
+        model_name: Optional[str] = None,
+        max_tokens: int = 300,
+        temperature: float = 0.1,
+    ) -> GroqModelResponse:
+        """
+        Run a single grounded completion through one Groq model.
+        Used by focused workflows like RAG verification/fallback.
+        """
+        target_model = model_name or self._models[0]
+        return self._call_single_model(
+            target_model,
+            prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
     def is_available(self) -> bool:
         """
         Groq API reachable hai kya? Simple health check.
@@ -245,7 +295,7 @@ def get_groq_service() -> Optional[GroqService]:
             )
             logger.info(
                 "GroqService initialized with models: %s",
-                settings.groq_models,
+                _groq_service_instance._models,
             )
 
         except Exception as exc:

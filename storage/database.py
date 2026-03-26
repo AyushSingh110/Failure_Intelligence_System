@@ -34,6 +34,8 @@ logger = logging.getLogger(__name__)
 _client     = None
 _db         = None
 _collection = None
+_fallback_records: dict[str, InferenceRequest] = {}
+_fallback_mode = False
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────
@@ -71,7 +73,7 @@ def initialize_vault() -> None:
     Connects to MongoDB Atlas and initializes the collection.
     Called once at application startup from main.py lifespan.
     """
-    global _client, _db, _collection
+    global _client, _db, _collection, _fallback_mode
 
     settings = get_settings()
 
@@ -80,7 +82,12 @@ def initialize_vault() -> None:
             "MONGODB_URI is not set in .env file. "
             "Add MONGODB_URI=mongodb+srv://... to your .env"
         )
-        raise RuntimeError("MONGODB_URI not configured. Check your .env file.")
+        _fallback_mode = True
+        _client = None
+        _db = None
+        _collection = None
+        print("[database] Falling back to in-memory storage because MongoDB is not configured.")
+        return
 
     try:
         from pymongo import MongoClient
@@ -113,14 +120,23 @@ def initialize_vault() -> None:
         _collection.create_index("model_name", background=True)
 
         count = _collection.count_documents({})
+        _fallback_mode = False
         print(f"[database] Collection ready — {count} existing records.")
 
     except ImportError:
         print("[database] ERROR: pymongo not installed. Run: pip install pymongo")
-        raise
+        _fallback_mode = True
+        _client = None
+        _db = None
+        _collection = None
+        print("[database] Falling back to in-memory storage because pymongo is unavailable.")
     except Exception as exc:
         print(f"[database] ERROR connecting to MongoDB: {exc}")
-        raise
+        _fallback_mode = True
+        _client = None
+        _db = None
+        _collection = None
+        print("[database] Falling back to in-memory storage because MongoDB is unavailable.")
 
 
 def flush_vault() -> None:
@@ -138,7 +154,13 @@ def save_inference(data: InferenceRequest) -> bool:
     Uses upsert so duplicate request_ids don't crash.
     """
     try:
+        if _fallback_mode:
+            _fallback_records[data.request_id] = data
+            return True
         col = _get_collection()
+        if col is None:
+            _fallback_records[data.request_id] = data
+            return True
         doc = _to_doc(data)
         col.update_one(
             {"_id": doc["_id"]},
@@ -157,7 +179,19 @@ def get_all_inferences() -> list[InferenceRequest]:
     Most recent first — matches the original vault behaviour.
     """
     try:
+        if _fallback_mode:
+            return sorted(
+                _fallback_records.values(),
+                key=lambda record: record.timestamp,
+                reverse=True,
+            )
         col  = _get_collection()
+        if col is None:
+            return sorted(
+                _fallback_records.values(),
+                key=lambda record: record.timestamp,
+                reverse=True,
+            )
         docs = col.find({}, sort=[("timestamp", -1)])
         records = []
         for doc in docs:
@@ -173,7 +207,11 @@ def get_all_inferences() -> list[InferenceRequest]:
 def get_inference_by_id(request_id: str) -> InferenceRequest | None:
     """Returns a single inference record by request_id, or None."""
     try:
+        if _fallback_mode:
+            return _fallback_records.get(request_id)
         col = _get_collection()
+        if col is None:
+            return _fallback_records.get(request_id)
         doc = col.find_one({"request_id": request_id})
         if doc is None:
             return None
@@ -186,7 +224,11 @@ def get_inference_by_id(request_id: str) -> InferenceRequest | None:
 def delete_inference(request_id: str) -> bool:
     """Deletes a single inference record. Returns True if deleted."""
     try:
+        if _fallback_mode:
+            return _fallback_records.pop(request_id, None) is not None
         col    = _get_collection()
+        if col is None:
+            return _fallback_records.pop(request_id, None) is not None
         result = col.delete_one({"request_id": request_id})
         return result.deleted_count > 0
     except Exception as exc:

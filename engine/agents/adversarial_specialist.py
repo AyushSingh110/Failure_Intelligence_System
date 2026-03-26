@@ -7,6 +7,7 @@ from app.schemas import AgentVerdict
 from config import get_settings
 from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext
 from engine.archetypes.registry import adversarial_registry, FAISSSearchResult
+from engine.prompt_guard import score_prompt_attack
 
 
 # Attack pattern definitions 
@@ -33,7 +34,9 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
             r"forget\s+(?:everything|all\s+(?:previous|prior))\s+(?:you\s+were\s+told|instructions?)|"
             r"reveal\s+(?:the\s+)?(?:system\s+prompt|your\s+(?:instructions?|guidelines?|rules?))|"
             r"(?:print|show|output|display|repeat|tell\s+me)\s+(?:your\s+)?system\s+(?:prompt|instructions?)|"
+            r"(?:print|show|output|display|reveal|tell\s+me)\s+(?:the\s+)?(?:hidden|secret|internal|developer)\s+(?:message|messages|prompt|instructions?|rules?)|"
             r"what\s+are\s+your\s+(?:hidden|secret|internal|original)\s+instructions?|"
+            r"(?:internal|hidden|secret)\s+(?:instructions?|rules?)|"
             r"new\s+(?:primary\s+)?(?:instruction|directive|rule|task)\s*[:;]?\s+(?:you\s+must|ignore)|"
             r"(?:your\s+)?(?:new\s+)?(?:primary\s+)?directive\s+is\s+to\s+ignore|"
             r"SYSTEM\s*[:;]\s*override|"
@@ -68,7 +71,11 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
             r"(?:act|respond|behave|operate)\s+as\s+(?:if|though)\s+(?:you\s+(?:were|had|have)\s+)?(?:no\s+|never\s+(?:had\s+)?)"
             r"(?:safety|ethical|content)\s+(?:training|guidelines?|restrictions?)|"
             # playing the role of no-restriction AI
-            r"you\s+are\s+now\s+playing\s+(?:the\s+role\s+of\s+)?an?\s+(?:AI|assistant)\s+(?:with\s+)?no\s+restrictions?"
+            r"you\s+are\s+now\s+playing\s+(?:the\s+role\s+of\s+)?an?\s+(?:AI|assistant)\s+(?:with\s+)?no\s+restrictions?|"
+            r"answer\s+only\s+as\s+dan|"
+            r"never\s+refuse\s+any\s+request|"
+            r"no\s+ethical\s+limits?|"
+            r"answer\s+anything"
             r")\b",
             re.IGNORECASE | re.DOTALL,
         ),
@@ -83,7 +90,11 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
             r"\b("
             r"forget\s+all\s+(?:previous\s+)?instructions?\s+and\s+(?:obey|follow|comply\s+with)|"
             r"(?:bypass|circumvent|override|disable)\s+(?:your\s+)?(?:safety|content|ethical)\s+(?:filter|restriction|guideline|check)|"
+            r"(?:bypass|circumvent|override|disable)\s+(?:all\s+)?(?:safeguards?|protections?)|"
             r"(?:your\s+)?(?:ethical\s+)?guidelines?\s+are\s+now\s+(?:suspended|disabled|removed|lifted)|"
+            r"output\s+your\s+chain\s+of\s+thought|"
+            r"chain\s+of\s+thought\s+step\s+by\s+step|"
+            r"obey\s+only\s+me|"
             r"(?:as\s+(?:your\s+)?(?:admin|administrator|supervisor|creator|developer|owner)|"
             r"I\s+(?:am|have)\s+(?:authorized?|authorised?|granted)\s+(?:you\s+)?(?:special\s+)?(?:permission|access))\s+"
             r".{0,50}(?:bypass|ignore|disable|override)|"
@@ -138,6 +149,13 @@ def _run_pattern_detection(prompt: str) -> tuple[_AttackPattern | None, str]:
 
     return None, ""
 
+
+def _run_guard_detection(prompt: str) -> tuple[str | None, float, list[str]]:
+    signal = score_prompt_attack(prompt)
+    if signal.root_cause is None or signal.score < 0.75:
+        return None, 0.0, []
+    return signal.root_cause, signal.score, list(signal.evidence)
+
 # FAISS semantic search 
 def _run_faiss_detection(prompt: str) -> tuple[FAISSSearchResult | None, float]:
     cfg = get_settings()
@@ -172,12 +190,13 @@ class AdversarialSpecialist(BaseJuryAgent):
 
         #regex 
         pattern_hit, matched_text = _run_pattern_detection(context.prompt)
+        guard_root, guard_confidence, guard_evidence = _run_guard_detection(context.prompt)
 
         # FAISS semantic search 
         faiss_hit, faiss_confidence = _run_faiss_detection(context.prompt)
-        if pattern_hit is None and faiss_hit is None:
+        if pattern_hit is None and faiss_hit is None and guard_root is None:
             return self._skip(
-                "No adversarial patterns detected by either regex or FAISS "
+                "No adversarial patterns detected by regex, semantic search, or prompt guard "
                 f"(FAISS index size: {adversarial_registry.size} patterns). "
                 "Failure is likely not an intentional adversarial attack."
             )
@@ -192,6 +211,9 @@ class AdversarialSpecialist(BaseJuryAgent):
             # Penalty
             if context.fsv.entropy_score < 0.25:
                 pattern_conf = max(pattern_conf - 0.08, 0.0)
+        elif guard_root is not None:
+            root_cause = guard_root
+            pattern_conf = guard_confidence
         else:
             # FAISS only hit 
             root_cause   = faiss_hit.record.label
@@ -201,8 +223,14 @@ class AdversarialSpecialist(BaseJuryAgent):
         if pattern_hit and faiss_hit and faiss_hit.is_match:
             # Both layers agree use the stronger signal
             confidence = max(pattern_conf, faiss_confidence)
+        elif pattern_hit and guard_root is not None:
+            confidence = max(pattern_conf, guard_confidence)
+        elif guard_root is not None and faiss_hit and faiss_hit.is_match:
+            confidence = max(guard_confidence, faiss_confidence)
         elif pattern_hit:
             confidence = min(pattern_conf, cfg.jury_adversarial_pattern_confidence)
+        elif guard_root is not None:
+            confidence = guard_confidence
         else:
             confidence = faiss_confidence
 
@@ -254,6 +282,14 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "root_cause":      pattern_hit.root_cause,
                 "matched_text":    matched_text,
                 "base_confidence": pattern_hit.base_confidence,
+            }
+
+        if guard_root is not None:
+            evidence["detection_layers_fired"].append("prompt_guard")
+            evidence["prompt_guard"] = {
+                "root_cause": guard_root,
+                "confidence": guard_confidence,
+                "evidence": guard_evidence[:5],
             }
 
         if faiss_hit:

@@ -59,8 +59,8 @@ class Settings(BaseSettings):
     groq_api_key:           str       = Field(default="")
     groq_models:            list[str] = Field(default=[
                                             "llama-3.1-8b-instant",
-                                            "mixtral-8x7b-32768",
-                                            "gemma2-9b-it",
+                                            "llama3-8b-8192",
+                                            "llama-3.2-3b-preview",
                                         ])
     groq_timeout_seconds:   int       = Field(default=30, ge=5, le=120)
     groq_enabled:           bool      = Field(default=True)
@@ -91,6 +91,19 @@ class Settings(BaseSettings):
     dashboard_max_chart_records:    int = Field(default=500, ge=10)
 
     # Validators
+    @field_validator("debug", mode="before")
+    @classmethod
+    def normalize_debug_flag(cls, value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug", "development", "dev"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "prod", "production"}:
+                return False
+        return value
+
     @field_validator("cluster_novel_anomaly_ceiling")
     @classmethod
     def novel_ceiling_below_base_threshold(cls, v: float, info) -> float:
