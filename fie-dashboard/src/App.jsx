@@ -3,11 +3,11 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { isLoggedIn } from './lib/auth'
 import LoginPage     from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
-import AnalyzePage   from './pages/AnalyzePage'
-import DiagnosePage  from './pages/DiagnosePage'
+import AnalyzePage   from './pages/Analyzepage'
+import DiagnosePage  from './pages/Diagnosepage'
 import AlertsPage    from './pages/AlertsPage'
-import VaultPage     from './pages/VaultPage'
-import SettingsPage  from './pages/SettingsPage'
+import VaultPage     from './pages/Vaultpage'
+import SettingsPage  from './pages/Settingspage'
 import Layout        from './components/Layout'
 
 function Protected({ children }) {
