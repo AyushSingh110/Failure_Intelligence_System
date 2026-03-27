@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,16 @@ from app.schemas import (
     ClusterAssignment,
     LabelResult,
 )
-from storage.database import save_inference, get_all_inferences, get_inference_by_id
+from storage.database import (
+    save_inference,
+    get_all_inferences,
+    get_all_inferences as get_all_inferences_admin,
+    get_inference_by_id,
+    get_inference_by_id_for_tenant,
+    get_inferences_for_tenant,
+    delete_inference_for_tenant,
+    clear_inferences_for_tenant,
+)
 from engine.detector.consistency import compute_consistency
 from engine.detector.entropy import compute_entropy, compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
@@ -25,6 +34,7 @@ from engine.archetypes.clustering import archetype_registry
 from engine.evolution.tracker import evolution_tracker
 from engine.agents.failure_agent import failure_agent
 from config import get_settings
+from app.auth_guard import require_user, require_admin, resolve_user
 
 router   = APIRouter()
 settings = get_settings()
@@ -106,13 +116,27 @@ def track_and_analyze(request: InferenceRequest, body: AnalyzeRequest) -> dict:
 
 
 @router.get("/inferences", response_model=list[InferenceRequest])
-def list_inferences() -> list[InferenceRequest]:
-    return get_all_inferences()
+def list_inferences(
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> list[InferenceRequest]:
+    user = require_user(authorization, x_api_key)
+    if user.get("is_admin", False):
+        return get_all_inferences_admin()
+    return get_inferences_for_tenant(user["tenant_id"])
 
 
 @router.get("/inferences/grouped/by-question", response_model=dict)
-def get_inferences_grouped_by_question() -> dict:
-    all_records = get_all_inferences()
+def get_inferences_grouped_by_question(
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> dict:
+    user = require_user(authorization, x_api_key)
+    all_records = (
+        get_all_inferences_admin()
+        if user.get("is_admin", False)
+        else get_inferences_for_tenant(user["tenant_id"])
+    )
     grouped: dict[str, list[dict]] = {}
 
     for record in all_records:
@@ -136,35 +160,61 @@ def get_inferences_grouped_by_question() -> dict:
 
 
 @router.get("/inferences/{request_id}", response_model=InferenceRequest)
-def get_inference(request_id: str) -> InferenceRequest:
-    record = get_inference_by_id(request_id)
+def get_inference(
+    request_id: str,
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> InferenceRequest:
+    user = require_user(authorization, x_api_key)
+    record = (
+        get_inference_by_id(request_id)
+        if user.get("is_admin", False)
+        else get_inference_by_id_for_tenant(request_id, user["tenant_id"])
+    )
     if record is None:
         raise HTTPException(status_code=404, detail=f"Inference '{request_id}' not found")
     return record
 
 
 @router.delete("/inferences/{request_id}", response_model=dict)
-def delete_inference_record(request_id: str) -> dict:
+def delete_inference_record(
+    request_id: str,
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> dict:
     """Deletes a single inference record by request_id."""
     from storage.database import delete_inference
-    success = delete_inference(request_id)
+    user = require_user(authorization, x_api_key)
+    success = (
+        delete_inference(request_id)
+        if user.get("is_admin", False)
+        else delete_inference_for_tenant(request_id, user["tenant_id"])
+    )
     if not success:
         raise HTTPException(status_code=404, detail=f"Inference '{request_id}' not found")
     return {"status": "deleted", "request_id": request_id}
 
 
 @router.delete("/inferences", response_model=dict)
-def clear_all_inferences() -> dict:
+def clear_all_inferences(
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> dict:
     """
     Deletes ALL inference records from MongoDB.
     Use for resetting between test runs.
     """
-    from storage.database import get_all_inferences, delete_inference
-    records = get_all_inferences()
-    count   = 0
-    for r in records:
-        if delete_inference(r.request_id):
-            count += 1
+    from storage.database import delete_inference
+    user = require_user(authorization, x_api_key)
+    if user.get("is_admin", False):
+        records = get_all_inferences_admin()
+        count = 0
+        for r in records:
+            if delete_inference(r.request_id):
+                count += 1
+        return {"status": "cleared", "deleted_count": count}
+
+    count = clear_inferences_for_tenant(user["tenant_id"])
     return {"status": "cleared", "deleted_count": count}
 
 
@@ -210,16 +260,29 @@ def reset_clusters() -> dict:
 from app.schemas import DiagnosticRequest, DiagnosticResponse
 
 @router.post("/diagnose", response_model=DiagnosticResponse)
-def diagnose(body: DiagnosticRequest) -> DiagnosticResponse:
-    return failure_agent.run_diagnostic(body)
+def diagnose(
+    body: DiagnosticRequest,
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> DiagnosticResponse:
+    user = resolve_user(authorization, x_api_key)
+    response = failure_agent.run_diagnostic(body)
+    if not (user and user.get("is_admin", False)):
+        response.explanation_internal = None
+    return response
 
 
 # ── Phase 4 — Real-time monitor endpoint ──────────────────────────────────
 
 from app.schemas import MonitorRequest, MonitorResponse, OllamaModelResult
+from engine.explainability.explanation_builder import attach_explanations_to_monitor
 
 @router.post("/monitor", response_model=MonitorResponse)
-def monitor(body: MonitorRequest) -> MonitorResponse:
+def monitor(
+    body: MonitorRequest,
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> MonitorResponse:
     """
     Real-time monitoring endpoint — the core of the production system.
 
@@ -234,6 +297,14 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
     Users never need to paste anything manually — it all happens here.
     """
     from app.schemas import DiagnosticRequest
+
+    current_user = resolve_user(authorization, x_api_key)
+    if current_user:
+        try:
+            from app.auth import increment_usage
+            increment_usage(current_user["tenant_id"])
+        except Exception as exc:
+            logger.warning("Failed to update usage counters: %s", exc)
 
     # ── Step 1: Call shadow models (Groq or Ollama) ─────────────────────
     # Groq: fast cloud API, ~1 second, free tier 14,400 req/day
@@ -443,13 +514,16 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
     # ── Step 6: Save to MongoDB ────────────────────────────────────
     # Build an InferenceRequest and persist it so the dashboard
     # can display real data from /inferences endpoint.
+    stored_request_id = None
     try:
         import uuid
         from datetime import datetime
         from app.schemas import InferenceRequest, MathematicalMetrics
 
+        stored_request_id = str(uuid.uuid4())[:12]
         inference_record = InferenceRequest(
-            request_id    = str(uuid.uuid4())[:12],
+            request_id    = stored_request_id,
+            tenant_id     = current_user["tenant_id"] if current_user else "anonymous",
             timestamp     = datetime.utcnow(),
             model_name    = body.primary_model_name,
             model_version = "monitor-v1",
@@ -468,7 +542,7 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
     except Exception as exc:
         logger.warning("Failed to save inference record: %s", exc)
 
-    return MonitorResponse(
+    response = MonitorResponse(
         shadow_model_results  = shadow_model_results,
         all_model_outputs     = model_outputs,
         ollama_available      = ollama_available,
@@ -480,6 +554,10 @@ def monitor(body: MonitorRequest) -> MonitorResponse:
         failure_summary       = failure_summary,
         fix_result            = fix_result_schema,
     )
+    response = attach_explanations_to_monitor(response, request_id=stored_request_id)
+    if not (current_user and current_user.get("is_admin", False)):
+        response.explanation_internal = None
+    return response
 
 
 @router.get("/monitor/status", response_model=dict)
