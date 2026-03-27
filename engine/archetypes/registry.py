@@ -135,9 +135,10 @@ class AdversarialRegistry:
     def __init__(self) -> None:
         self._index    = None     # faiss.IndexFlatIP
         self._metadata: list[AdversarialRecord] = []
-        self._lock     = threading.Lock()
+        self._lock     = threading.RLock()
         self._seeded   = False
-        self._faiss_ok = False   
+        self._faiss_ok = False
+        self._initialized = False
 
     # Public API 
 
@@ -151,9 +152,9 @@ class AdversarialRegistry:
         Encodes prompt and searches for top-k nearest adversarial patterns.
         Returns results sorted by similarity descending.
         """
-        cfg     = get_settings()
+        cfg = get_settings()
+        self._initialize_once()
         encoder = get_encoder()
-        self._ensure_ready()
 
         vec = encoder.encode(prompt).reshape(1, -1)
 
@@ -185,8 +186,8 @@ class AdversarialRegistry:
         source:   str = "user",
     ) -> None:
         """Encodes and inserts one new adversarial pattern into the index."""
+        self._initialize_once()
         encoder = get_encoder()
-        self._ensure_ready()
 
         vec    = encoder.encode(prompt).reshape(1, -1)
         record = AdversarialRecord(prompt=prompt, label=label, category=category, source=source)
@@ -268,6 +269,24 @@ class AdversarialRegistry:
 
     # ── Internal 
 
+    def _initialize_once(self) -> None:
+        if self._initialized:
+            return
+
+        with self._lock:
+            if self._initialized:
+                return
+
+            loaded = self.load()
+            if not loaded:
+                self.seed()
+                try:
+                    self.save()
+                except Exception as exc:
+                    logger.warning("FAISS save failed during lazy init: %s", exc)
+
+            self._initialized = True
+
     def _ensure_ready(self) -> None:
         """Initialises FAISS index if not already done."""
         if self._faiss_ok:
@@ -286,13 +305,4 @@ class AdversarialRegistry:
 
 # ── Singleton ────────────────────
 
-def _build_registry() -> AdversarialRegistry:
-    reg = AdversarialRegistry()
-    loaded = reg.load()
-    if not loaded:
-        reg.seed()
-        reg.save()
-    return reg
-
-
-adversarial_registry: AdversarialRegistry = _build_registry()
+adversarial_registry: AdversarialRegistry = AdversarialRegistry()

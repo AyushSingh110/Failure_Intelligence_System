@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import threading
 
 from app.routes import router
 from app.auth_routes import router as auth_router
@@ -10,13 +11,9 @@ from config import get_settings
 settings = get_settings()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    #  Startup
-    # Initialize vault
-    from storage.database import initialize_vault
-    initialize_vault()
-    print("[startup] Warming up sentence encoder...")
+def _warm_encoder_in_background() -> None:
+    """Warm the sentence encoder after startup without blocking the web server."""
+    print("[startup] Background encoder warmup started...")
     try:
         from engine.encoder import get_encoder
         encoder = get_encoder()
@@ -26,9 +23,17 @@ async def lifespan(app: FastAPI):
         else:
             print("[startup] WARNING: Sentence encoder unavailable.")
             print("[startup]   Consistency and embedding will use n-gram fallback.")
-            print("[startup]   Check [encoder] lines above for the exact error.")
     except Exception as exc:
         print(f"[startup] Encoder warmup failed: {exc}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    #  Startup
+    # Initialize vault
+    from storage.database import initialize_vault
+    initialize_vault()
+    threading.Thread(target=_warm_encoder_in_background, daemon=True).start()
 
     yield
 
