@@ -515,33 +515,6 @@ def monitor(
     # Build an InferenceRequest and persist it so the dashboard
     # can display real data from /inferences endpoint.
     stored_request_id = None
-    try:
-        import uuid
-        from datetime import datetime
-        from app.schemas import InferenceRequest, MathematicalMetrics
-
-        stored_request_id = str(uuid.uuid4())[:12]
-        inference_record = InferenceRequest(
-            request_id    = stored_request_id,
-            tenant_id     = current_user["tenant_id"] if current_user else "anonymous",
-            timestamp     = datetime.utcnow(),
-            model_name    = body.primary_model_name,
-            model_version = "monitor-v1",
-            temperature   = 0.7,
-            latency_ms    = body.latency_ms or 0.0,
-            input_text    = body.prompt,
-            output_text   = body.primary_output,
-            metrics       = MathematicalMetrics(
-                entropy          = signal.entropy_score,
-                agreement_score  = signal.agreement_score,
-                fsd_score        = signal.fsd_score,
-                embedding_distance = embedding["embedding_distance"],
-            ),
-        )
-        save_inference(inference_record)
-    except Exception as exc:
-        logger.warning("Failed to save inference record: %s", exc)
-
     response = MonitorResponse(
         shadow_model_results  = shadow_model_results,
         all_model_outputs     = model_outputs,
@@ -557,6 +530,40 @@ def monitor(
     response = attach_explanations_to_monitor(response, request_id=stored_request_id)
     if not (current_user and current_user.get("is_admin", False)):
         response.explanation_internal = None
+
+    try:
+        import uuid
+        from datetime import datetime
+        from app.schemas import InferenceRequest, MathematicalMetrics
+
+        stored_request_id = str(uuid.uuid4())[:12]
+        if response.explanation_external is not None:
+            response.explanation_external.request_id = stored_request_id
+        if response.explanation_internal is not None:
+            response.explanation_internal.request_id = stored_request_id
+
+        inference_record = InferenceRequest(
+            request_id    = stored_request_id,
+            tenant_id     = current_user["tenant_id"] if current_user else "anonymous",
+            timestamp     = datetime.utcnow(),
+            model_name    = body.primary_model_name,
+            model_version = "monitor-v1",
+            temperature   = 0.7,
+            latency_ms    = body.latency_ms or 0.0,
+            input_text    = body.prompt,
+            output_text   = body.primary_output,
+            metrics       = MathematicalMetrics(
+                entropy            = signal.entropy_score,
+                agreement_score    = signal.agreement_score,
+                fsd_score          = signal.fsd_score,
+                embedding_distance = embedding["embedding_distance"],
+            ),
+            human_explanation   = response.human_explanation,
+            explanation_external = response.explanation_external,
+        )
+        save_inference(inference_record)
+    except Exception as exc:
+        logger.warning("Failed to save inference record: %s", exc)
     return response
 
 

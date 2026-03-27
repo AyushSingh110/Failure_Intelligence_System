@@ -10,9 +10,11 @@ from app.schemas import (
     ExplanationSignal,
     ExplanationStep,
     FixResult,
+    HumanExplanation,
     JuryVerdict,
     MonitorResponse,
 )
+from engine.explainability.humanizer import build_human_explanation
 from engine.explainability.redaction import filter_safe_evidence, sanitize_text_for_external
 
 
@@ -376,6 +378,7 @@ def attach_explanations_to_diagnostic(response: DiagnosticResponse) -> Diagnosti
         failure_summary=response.jury.failure_summary,
         mode="external",
     )
+    response.human_explanation = build_human_explanation(response.explanation_external)
     return response
 
 
@@ -404,4 +407,5 @@ def attach_explanations_to_monitor(
         failure_summary=response.failure_summary,
         mode="external",
     )
+    response.human_explanation = build_human_explanation(response.explanation_external)
     return response

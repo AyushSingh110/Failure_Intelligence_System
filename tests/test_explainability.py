@@ -66,6 +66,8 @@ def test_attach_explanations_to_diagnostic_adds_internal_and_external_views():
     assert enriched.explanation_external.mode == "external"
     assert enriched.explanation_internal.final_label == "PROMPT_INJECTION"
     assert enriched.explanation_external.internal_only is False
+    assert enriched.human_explanation is not None
+    assert enriched.human_explanation.summary
 
 
 def test_attach_explanations_to_monitor_keeps_fix_context():
@@ -100,3 +102,5 @@ def test_attach_explanations_to_monitor_keeps_fix_context():
     assert enriched.explanation_internal.final_fix_strategy == "SANITIZE_AND_RERUN"
     assert enriched.explanation_external.evidence
     assert all(item.safe_to_expose for item in enriched.explanation_external.evidence)
+    assert enriched.human_explanation is not None
+    assert enriched.human_explanation.recommended_action
