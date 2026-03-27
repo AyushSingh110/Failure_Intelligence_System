@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from collections import Counter, defaultdict
@@ -15,6 +16,8 @@ if hasattr(sys.stdout, "reconfigure"):
 
 BASE = "http://localhost:8000/api/v1"
 REPORT_PATH = Path("storage/stress_test_report.json")
+AUTH_EMAIL = os.getenv("FIE_STRESS_EMAIL") or os.getenv("ADMIN_EMAIL") or "stress-test@local.dev"
+AUTH_NAME = os.getenv("FIE_STRESS_NAME", "FIE Stress Test")
 
 
 @dataclass
@@ -41,6 +44,30 @@ class StressResult:
     failure_summary: str
     user_output: str
     reasons: list[str]
+
+
+def _login_headers() -> dict[str, str]:
+    """
+    Authenticate against the local backend and return headers for protected routes.
+
+    The stress suite now uses the same authenticated flow as the dashboard so:
+    - clearing /inferences works after auth hardening
+    - generated records are tagged to a real tenant instead of 'anonymous'
+    """
+    response = requests.post(
+        f"{BASE}/auth/google",
+        json={"email": AUTH_EMAIL, "name": AUTH_NAME, "picture": ""},
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    token = payload.get("token")
+    if not token:
+        raise RuntimeError("Login succeeded but no session token was returned.")
+    return {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
 
 
 def _contains_any(text: str, snippets: list[str]) -> bool:
@@ -144,16 +171,17 @@ def _build_cases() -> list[StressCase]:
     ]
 
 
-def _clear_database() -> None:
-    response = requests.delete(f"{BASE}/inferences", timeout=30)
+def _clear_database(headers: dict[str, str]) -> None:
+    response = requests.delete(f"{BASE}/inferences", headers=headers, timeout=30)
     response.raise_for_status()
     data = response.json()
     print(f"[OK] Cleared {data.get('deleted_count', 0)} records from MongoDB")
 
 
-def _run_case(case: StressCase) -> StressResult:
+def _run_case(case: StressCase, headers: dict[str, str]) -> StressResult:
     response = requests.post(
         f"{BASE}/monitor",
+        headers=headers,
         json={
             "prompt": case.prompt,
             "primary_output": case.primary_output,
@@ -177,7 +205,9 @@ def main() -> int:
     print()
 
     try:
-        _clear_database()
+        headers = _login_headers()
+        print(f"[OK] Authenticated as {AUTH_EMAIL}")
+        _clear_database(headers)
     except Exception as exc:
         print(f"[ERROR] Could not clear database: {exc}")
         return 1
@@ -192,7 +222,7 @@ def main() -> int:
         print(f"  Prompt: {case.prompt[:110]}")
         start = time.time()
         try:
-            result = _run_case(case)
+            result = _run_case(case, headers)
             elapsed = round(time.time() - start, 2)
             results.append(result)
             per_category[result.category] += 1

@@ -31,6 +31,8 @@ class InferenceRequest(BaseModel):
 
     metrics:      Optional[MathematicalMetrics] = None
     embedding_id: Optional[str] = None
+    human_explanation: Optional["HumanExplanation"] = None
+    explanation_external: Optional["ExplanationBundle"] = None
 
 
 class FailureSignalVector(BaseModel):
@@ -147,6 +149,7 @@ class DiagnosticResponse(BaseModel):
     jury:                  JuryVerdict
     explanation_internal:  Optional["ExplanationBundle"] = None
     explanation_external:  Optional["ExplanationBundle"] = None
+    human_explanation:     Optional["HumanExplanation"] = None
 
 
 # ── Phase 4 schemas — Real-time Monitor ───────────────────────────────────
@@ -250,6 +253,16 @@ class ExplanationBundle(BaseModel):
     internal_only: bool = False
 
 
+class HumanExplanation(BaseModel):
+    """Plain-language explanation generated from structured XAI signals."""
+    summary: str
+    why_risky: str
+    recommended_action: str
+    severity: str = "medium"
+    generated_by: str = "template"
+    safe_for_user: bool = True
+
+
 class MonitorResponse(BaseModel):
     """
     Full response from the /monitor endpoint.
@@ -277,3 +290,4 @@ class MonitorResponse(BaseModel):
     fix_result:            Optional[FixResult] = None
     explanation_internal:  Optional[ExplanationBundle] = None
     explanation_external:  Optional[ExplanationBundle] = None
+    human_explanation:     Optional[HumanExplanation] = None
