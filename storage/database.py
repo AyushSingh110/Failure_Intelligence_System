@@ -204,6 +204,34 @@ def get_all_inferences() -> list[InferenceRequest]:
         return []
 
 
+def get_inferences_for_tenant(tenant_id: str) -> list[InferenceRequest]:
+    """Returns only the inference records belonging to a single tenant."""
+    try:
+        if _fallback_mode:
+            return sorted(
+                (record for record in _fallback_records.values() if record.tenant_id == tenant_id),
+                key=lambda record: record.timestamp,
+                reverse=True,
+            )
+        col = _get_collection()
+        if col is None:
+            return sorted(
+                (record for record in _fallback_records.values() if record.tenant_id == tenant_id),
+                key=lambda record: record.timestamp,
+                reverse=True,
+            )
+        docs = col.find({"tenant_id": tenant_id}, sort=[("timestamp", -1)])
+        records = []
+        for doc in docs:
+            record = _from_doc(doc)
+            if record:
+                records.append(record)
+        return records
+    except Exception as exc:
+        logger.error("Failed to fetch inferences for tenant %s: %s", tenant_id, exc)
+        return []
+
+
 def get_inference_by_id(request_id: str) -> InferenceRequest | None:
     """Returns a single inference record by request_id, or None."""
     try:
@@ -221,6 +249,34 @@ def get_inference_by_id(request_id: str) -> InferenceRequest | None:
         return None
 
 
+def get_inference_by_id_for_tenant(request_id: str, tenant_id: str) -> InferenceRequest | None:
+    """Returns a single inference record if it belongs to the given tenant."""
+    try:
+        if _fallback_mode:
+            record = _fallback_records.get(request_id)
+            if record and record.tenant_id == tenant_id:
+                return record
+            return None
+        col = _get_collection()
+        if col is None:
+            record = _fallback_records.get(request_id)
+            if record and record.tenant_id == tenant_id:
+                return record
+            return None
+        doc = col.find_one({"request_id": request_id, "tenant_id": tenant_id})
+        if doc is None:
+            return None
+        return _from_doc(doc)
+    except Exception as exc:
+        logger.error(
+            "Failed to fetch inference %s for tenant %s: %s",
+            request_id,
+            tenant_id,
+            exc,
+        )
+        return None
+
+
 def delete_inference(request_id: str) -> bool:
     """Deletes a single inference record. Returns True if deleted."""
     try:
@@ -234,3 +290,52 @@ def delete_inference(request_id: str) -> bool:
     except Exception as exc:
         logger.error("Failed to delete inference %s: %s", request_id, exc)
         return False
+
+
+def delete_inference_for_tenant(request_id: str, tenant_id: str) -> bool:
+    """Deletes one inference record if it belongs to the given tenant."""
+    try:
+        if _fallback_mode:
+            record = _fallback_records.get(request_id)
+            if record and record.tenant_id == tenant_id:
+                _fallback_records.pop(request_id, None)
+                return True
+            return False
+        col = _get_collection()
+        if col is None:
+            record = _fallback_records.get(request_id)
+            if record and record.tenant_id == tenant_id:
+                _fallback_records.pop(request_id, None)
+                return True
+            return False
+        result = col.delete_one({"request_id": request_id, "tenant_id": tenant_id})
+        return result.deleted_count > 0
+    except Exception as exc:
+        logger.error(
+            "Failed to delete inference %s for tenant %s: %s",
+            request_id,
+            tenant_id,
+            exc,
+        )
+        return False
+
+
+def clear_inferences_for_tenant(tenant_id: str) -> int:
+    """Deletes all inference records for a single tenant and returns the number removed."""
+    try:
+        if _fallback_mode:
+            to_delete = [key for key, record in _fallback_records.items() if record.tenant_id == tenant_id]
+            for key in to_delete:
+                _fallback_records.pop(key, None)
+            return len(to_delete)
+        col = _get_collection()
+        if col is None:
+            to_delete = [key for key, record in _fallback_records.items() if record.tenant_id == tenant_id]
+            for key in to_delete:
+                _fallback_records.pop(key, None)
+            return len(to_delete)
+        result = col.delete_many({"tenant_id": tenant_id})
+        return int(result.deleted_count)
+    except Exception as exc:
+        logger.error("Failed to clear inferences for tenant %s: %s", tenant_id, exc)
+        return 0

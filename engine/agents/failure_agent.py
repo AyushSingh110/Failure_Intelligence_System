@@ -28,6 +28,7 @@ from engine.agents.linguistic_auditor import linguistic_auditor
 from engine.agents.adversarial_specialist import adversarial_specialist
 from engine.agents.domain_critic import domain_critic
 from config import get_settings
+from engine.explainability.explanation_builder import attach_explanations_to_diagnostic
 
 logger   = logging.getLogger(__name__)
 settings = get_settings()
@@ -263,12 +264,13 @@ class FailureAgent:
         )
         jury_verdict = self._jury.deliberate(context)
 
-        return DiagnosticResponse(
+        response = DiagnosticResponse(
             failure_signal_vector=signal,
             archetype=archetype,
             embedding_distance=embedding["embedding_distance"],
             jury=jury_verdict,
         )
+        return attach_explanations_to_diagnostic(response)
 
     # ── Shared signal builder ──────────────────────────────────────────
 

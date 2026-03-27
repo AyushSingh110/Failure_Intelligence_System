@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getSession } from '../lib/auth'
+import ExplanationPanel from '../components/ExplanationPanel'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
@@ -127,9 +128,12 @@ export default function DiagnosePage() {
 
   const jury   = result?.jury || {}
   const fsv    = result?.failure_signal_vector || {}
-  const agents = jury.all_verdicts || []
+  const agents = jury.verdicts || jury.all_verdicts || []
   const primary_verdict = jury.primary_verdict || {}
   const pvColor = ROOT_COLOR[primary_verdict.root_cause] || 'var(--accent-cyan)'
+  const explanationInternal = result?.explanation_internal || null
+  const explanationExternal = result?.explanation_external || null
+  const isAdmin = Boolean(session?.is_admin)
 
   return (
     <>
@@ -251,8 +255,14 @@ export default function DiagnosePage() {
                   </div>
                 )}
 
+                <ExplanationPanel
+                  internalExplanation={explanationInternal}
+                  externalExplanation={explanationExternal}
+                  isAdmin={isAdmin}
+                />
+
                 {/* Agent cards */}
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px' }}>ALL AGENTS</div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', color: 'var(--text-muted)', marginTop: '16px', marginBottom: '8px' }}>ALL AGENTS</div>
                 {agents.map((v, i) => <AgentCard key={v.agent_name || i} verdict={v} index={i} />)}
 
               </div>

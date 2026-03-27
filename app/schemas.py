@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
@@ -143,6 +145,8 @@ class DiagnosticResponse(BaseModel):
     archetype:             str
     embedding_distance:    float
     jury:                  JuryVerdict
+    explanation_internal:  Optional["ExplanationBundle"] = None
+    explanation_external:  Optional["ExplanationBundle"] = None
 
 
 # ── Phase 4 schemas — Real-time Monitor ───────────────────────────────────
@@ -190,6 +194,62 @@ class FixResult(BaseModel):
     warning:           str   = ""
 
 
+class ExplanationSignal(BaseModel):
+    """Normalized signal used to justify a diagnosis or mitigation."""
+    name: str
+    source: str
+    value: str
+    normalized_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    direction: str
+    contribution_weight: float = Field(default=0.0, ge=0.0, le=1.0)
+    summary: str
+
+
+class ExplanationEvidence(BaseModel):
+    """Evidence item that supports an explanation."""
+    type: str
+    source: str
+    content_preview: str
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    supports: str
+    safe_to_expose: bool = False
+
+
+class ExplanationStep(BaseModel):
+    """One step in the system's decision trace."""
+    stage: str
+    decision: str
+    reason: str
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    inputs_used: list[str] = Field(default_factory=list)
+
+
+class ExplanationAttribution(BaseModel):
+    """Ranked factor showing which inputs influenced the explanation most."""
+    factor: str
+    impact_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    polarity: str
+    details: str
+
+
+class ExplanationBundle(BaseModel):
+    """Structured explainability payload for audit, dashboard, or user views."""
+    explanation_version: str = "v1"
+    mode: str
+    request_id: Optional[str] = None
+    final_label: str
+    final_fix_strategy: str
+    explanation_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    summary: str
+    decision_trace: list[ExplanationStep] = Field(default_factory=list)
+    signals: list[ExplanationSignal] = Field(default_factory=list)
+    evidence: list[ExplanationEvidence] = Field(default_factory=list)
+    attributions: list[ExplanationAttribution] = Field(default_factory=list)
+    alternatives_considered: list[str] = Field(default_factory=list)
+    uncertainty_notes: list[str] = Field(default_factory=list)
+    internal_only: bool = False
+
+
 class MonitorResponse(BaseModel):
     """
     Full response from the /monitor endpoint.
@@ -215,3 +275,5 @@ class MonitorResponse(BaseModel):
 
     # Auto-fix result (None if no failure detected or fix not applied)
     fix_result:            Optional[FixResult] = None
+    explanation_internal:  Optional[ExplanationBundle] = None
+    explanation_external:  Optional[ExplanationBundle] = None
