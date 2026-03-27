@@ -23,10 +23,3 @@ numpy
 faiss-cpu
 sentence-transformers
 
-# Optional local dashboard tooling
-streamlit
-streamlit-google-auth
-plotly
-
-# Test tooling
-pytest
