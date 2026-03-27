@@ -1,0 +1,27 @@
+.git
+.gitignore
+.pytest_cache
+.venv
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.zip
+.DS_Store
+
+# Local apps and build artifacts not needed for the backend container.
+dashboard
+dist
+fie-dashboard
+Failure_Intelligence_System
+
+# Local test and cache output.
+htmlcov
+.coverage
+
+# Environment files should be provided by Cloud Run, not baked into the image.
+.env
+
+# Windows virtualenv / editor noise.
+Thumbs.db
