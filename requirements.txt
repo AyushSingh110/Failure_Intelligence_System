@@ -1,26 +1,32 @@
-# Web framework
+# Core API server
 fastapi
 uvicorn[standard]==0.29.0
 
-# Data validation
+# Validation and settings
 pydantic
 pydantic-settings
-
-# Environment
 python-dotenv
 
-# Dashboard 
-streamlit
+# HTTP and auth
 requests
-
-plotly
-faiss-cpu
-sentence-transformers
-pytest
-
+PyJWT
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
-PyJWT
 bcrypt
+
+# Database
+pymongo
+
+# ML / retrieval / vector logic
+numpy
+faiss-cpu
+sentence-transformers
+
+# Optional local dashboard tooling
+streamlit
 streamlit-google-auth
+plotly
+
+# Test tooling
+pytest
