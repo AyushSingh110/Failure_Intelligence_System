@@ -3,7 +3,7 @@
  * Base URL reads from env variable
  */
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '')
 
 async function request(method, path, body = null, token = null) {
   const headers = { 'Content-Type': 'application/json' }

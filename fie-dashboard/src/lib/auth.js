@@ -21,7 +21,7 @@ function getCurrentRedirectUri() {
     return import.meta.env.VITE_REDIRECT_URI || ''
   }
 
-  return `${window.location.origin}${window.location.pathname}`
+  return window.location.origin
 }
 
 export function getGoogleRedirectUri() {
