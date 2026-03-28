@@ -1,14 +1,3 @@
-"""
-engine/rag/rag_pipeline.py
-
-RAG pipeline — Wikipedia context fetch + Groq grounded response.
-Neerada ka code — updated to use Groq instead of Ollama.
-
-Used by:
-  - DomainCritic external verification layer
-  - Future: direct RAG endpoint
-"""
-
 from __future__ import annotations
 
 import logging
