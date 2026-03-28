@@ -1,8 +1,3 @@
-"""
-engine/rag/retriever.py
-Wikipedia API se factual context retrieve karta hai.
-Smarter query extraction for better Wikipedia hits.
-"""
 from __future__ import annotations
 import logging
 import re

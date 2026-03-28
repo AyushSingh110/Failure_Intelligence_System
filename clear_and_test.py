@@ -11,9 +11,9 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 
 BASE = "http://localhost:8000/api/v1"
 
-# ─────────────────────────────────────────────────────────────────
-# STEP 1: Clear all dummy data
-# ─────────────────────────────────────────────────────────────────
+
+# Clear all dummy data
+
 print("=" * 60)
 print("STEP 1 — Clearing ALL data from MongoDB")
 print("=" * 60)
@@ -31,9 +31,9 @@ except Exception as e:
 print()
 time.sleep(1)
 
-# ─────────────────────────────────────────────────────────────────
-# STEP 2: Send real inferences through the SDK
-# ─────────────────────────────────────────────────────────────────
+
+# Send real inferences through the SDK
+
 print("=" * 60)
 print("STEP 2 — Sending 10 real inferences through the SDK")
 print("Each call → /monitor → Ollama shadow models → FIE analysis")
@@ -126,7 +126,7 @@ for i, (prompt, _, expected) in enumerate(test_cases, 1):
     if i < len(test_cases):
         time.sleep(1)
 
-# ─────────────────────────────────────────────────────────────────
+
 print("=" * 60)
 print("DONE — All 10 inferences sent!")
 print()

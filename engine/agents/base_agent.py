@@ -61,7 +61,7 @@ class BaseJuryAgent(ABC):
         """
         ...
 
-    # ── Helpers available to all subclasses ───────────────────────────
+    # Helpers available to all subclasses 
 
     def _skip(self, reason: str) -> AgentVerdict:
         """return a skipped verdict with a clean reason string."""
