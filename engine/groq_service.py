@@ -1,17 +1,3 @@
-"""
-engine/groq_service.py
-
-Groq API ke through shadow models call karta hai.
-Ollama ka replacement hai — same interface, same output format.
-
-Groq kyun?
-  - Ollama: 15-40 seconds per model (local GPU)
-  - Groq:   0.5-2 seconds per model (cloud API)
-  - Groq free tier: 14,400 requests/day
-  - Internet chahiye, lekin bahut fast hai
-
-"""
-
 from __future__ import annotations
 
 import logging
@@ -37,11 +23,9 @@ class GroqModelResponse:
     latency_ms:  float = 0.0
     error:       str   = ""
 
-
-# Groq pe available free models
-# In teeno ko shadow models ki tarah use karenge
+#Shadow models
 GROQ_MODELS = [
-    "llama-3.1-8b-instant",   # fastest — good for simple facts
+    "llama-3.1-8b-instant",  
     "llama-3.3-70b-versatile",
     "llama-3.2-3b-preview",
 ]
@@ -58,12 +42,6 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 class GroqService:
     """
     Groq API se multiple shadow models call karta hai parallel mein.
-
-    Usage:
-        service = GroqService(api_key="gsk_xxx")
-        results = service.fan_out("Who invented the telephone?")
-        for r in results:
-            print(r.model_name, r.output_text)
     """
 
     def __init__(
@@ -109,10 +87,8 @@ class GroqService:
         temperature: float = 0.1,
     ) -> GroqModelResponse:
         """
-        Ek Groq model ko call karta hai aur response return karta hai.
-
-        Groq OpenAI-compatible API use karta hai — same format as GPT-4 API.
-        Isliye requests.post se direct call kar sakte hain.
+        single model is called with the prompt, and response is returned as GroqModelResponse.
+        Errors are caught and returned in the response object.
         """
         start = time.time()
 
@@ -184,12 +160,6 @@ class GroqService:
 
     def fan_out(self, prompt: str) -> list[GroqModelResponse]:
         """
-        Saare configured Groq models ko PARALLEL mein call karta hai.
-
-        Parallel kyun?
-          3 models sequentially: 0.5s + 1.0s + 0.8s = 2.3s total
-          3 models parallel:     max(0.5s, 1.0s, 0.8s) = 1.0s total
-
         Returns list of GroqModelResponse sorted by model name.
         Failed models bhi include hote hain (success=False).
         """
@@ -262,9 +232,8 @@ class GroqService:
             return False
 
 
-# ── Singleton instance ─────────────────────────────────────────────────────
+# Singleton instance 
 # Created once when module loads, reused for all requests
-# (same pattern as ollama_service.py)
 
 _groq_service_instance: Optional[GroqService] = None
 
@@ -272,7 +241,6 @@ _groq_service_instance: Optional[GroqService] = None
 def get_groq_service() -> Optional[GroqService]:
     """
     GroqService ka singleton instance return karta hai.
-    Agar GROQ_API_KEY nahi hai config mein → None return karta hai.
     """
     global _groq_service_instance
 
