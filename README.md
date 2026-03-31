@@ -595,14 +595,6 @@ Areas that are present but optional or still evolving:
 - Extended RAG workflows
 - More production hardening around quotas, rate limits, and observability
 
-## Notes
-
-- The previous README contained older references to Streamlit and Railway; the current implementation is centered on React/Vite, Vercel, and Google Cloud Run.
-- Groq is the active shadow-model path in the backend. Ollama remains available as a fallback or local option.
-- Internal explanation fields are intentionally hidden from non-admin users.
-- Release automation is available through `.github/workflows/publish-pypi.yml`, and the release process is documented in `RELEASE_CHECKLIST.md`.
-- If you use the GitHub Action for publishing, configure PyPI trusted publishing for this repository first.
-
 ## License
 
 MIT
