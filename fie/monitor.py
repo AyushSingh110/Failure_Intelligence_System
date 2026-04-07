@@ -4,33 +4,8 @@ fie/monitor.py
 The @monitor decorator — main thing users interact with.
 
 TWO MODES:
-
-mode="monitor" (default, async):
-  - Primary model call hota hai
-  - User ko IMMEDIATELY answer milta hai
-  - FIE background mein check karta hai
-  - Agar galat tha → alert aata hai, MongoDB mein save hota hai
-  - User ko galat answer mil sakta hai
-  - Use karo jab: speed important hai, monitoring sufficient hai
-
+mode="monitor" (default, async)
 mode="correct" (real-time correction):
-  - Primary model aur Shadow models SIMULTANEOUSLY call hote hain
-  - Dono ke answers aane ke baad FIE compare karta hai
-  - Agar galat → fixed answer return hota hai
-  - User ko HAMESHA sahi answer milta hai
-  - Thoda slower (15-30s wait) but CORRECT
-  - Use karo jab: accuracy critical hai (medical, legal, finance)
-
-Example:
-    from fie import monitor
-
-    # Mode 1: Fast monitoring
-    @monitor(fie_url="...", mode="monitor")
-    def call_gpt4(prompt): ...
-
-    # Mode 2: Real-time correction
-    @monitor(fie_url="...", mode="correct")
-    def call_gpt4(prompt): ...
 """
 
 from __future__ import annotations

@@ -1,21 +1,6 @@
 """
 app/auth.py
-
-Complete authentication system:
-  - Google OAuth token verification
-  - User creation in MongoDB on first login
-  - API key generation (automatic)
-  - JWT session management
-  - Tenant ID for data isolation
-
-How it works:
-  1. User clicks "Login with Google" in Streamlit
-  2. Google gives us: email, name, picture
-  3. We verify it is a real Google account
-  4. Create/fetch user in MongoDB
-  5. Give them a JWT session token
-  6. All their inferences are tagged with tenant_id
-  7. Dashboard only shows their tenant_id data
+Complete authentication system
 """
 
 from __future__ import annotations
