@@ -24,7 +24,7 @@ GOOGLE_TOKEN_URL     = "https://oauth2.googleapis.com/token"
 GOOGLE_USER_URL      = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
-# ── Schemas ────────────────────────────────────────────────────────────────
+# Schemas 
 
 class GoogleCallbackRequest(BaseModel):
     code:         str
@@ -57,8 +57,7 @@ class UserInfo(BaseModel):
     calls_limit: int
 
 
-# ── Endpoints ──────────────────────────────────────────────────────────────
-
+# Endpoints 
 @router.post("/google-callback", response_model=LoginResponse)
 def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
     """
@@ -75,7 +74,7 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
             redirect_uri,
         )
 
-    # Step 1 — Exchange code for access token
+    #Exchange code for access token
     try:
         token_resp = http_requests.post(
             GOOGLE_TOKEN_URL,
