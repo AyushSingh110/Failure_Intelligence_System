@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "0.2.0"
-description     = "Monitor, diagnose, explain, and auto-correct LLM failures with shadow-model analysis, explainability, and secure multi-tenant tooling"
+version         = "0.3.0"
+description     = "Monitor, diagnose, explain, and auto-correct LLM failures — with ground truth verification, Wikidata/Serper verification, confidence-weighted shadow consensus, and human escalation"
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
 license         = { text = "MIT" }
