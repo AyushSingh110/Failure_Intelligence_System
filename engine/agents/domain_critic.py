@@ -38,6 +38,32 @@ _RE_HEDGE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# Permanent-fact patterns — questions whose answers NEVER change over time.
+# If a prompt or answer matches these, temporal routing is suppressed.
+_RE_PERMANENT_FACT = re.compile(
+    r"\b("
+    # Chemical / element questions
+    r"(?:chemical\s+(?:symbol|formula|name|element)\s+(?:for|of))|"
+    r"(?:what\s+(?:element|symbol)\s+is)|"
+    r"(?:atomic\s+(?:number|mass|weight)\s+(?:of|for))|"
+    r"(?:molecular\s+(?:formula|weight|mass)\s+(?:of|for))|"
+    # Pure math
+    r"(?:what\s+is\s+\d+\s*[\+\-\*\/]\s*\d+)|"
+    r"(?:square\s+root\s+of)|"
+    r"(?:how\s+many\s+(?:sides|angles|vertices|faces)\s+(?:does|in)\s+a)|"
+    # Well-known physical constants
+    r"(?:speed\s+of\s+light)|"
+    r"(?:gravitational\s+constant)|"
+    r"(?:boiling\s+point\s+of\s+water)|"
+    r"(?:freezing\s+point\s+of\s+water)|"
+    r"(?:melting\s+point\s+of)|"
+    # Historical fixed facts
+    r"(?:when\s+was\s+(?:the\s+)?(?:earth|universe|solar\s+system)\s+formed)|"
+    r"(?:how\s+many\s+(?:planets|moons|continents|oceans)\s+(?:are\s+there|does\s+earth\s+have))"
+    r")\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
 _RE_TEMPORAL = re.compile(
     r"\b("
     r"(?:latest|most\s+recent|newest|current|up.to.date|up\s+to\s+date)\s+"
@@ -154,6 +180,21 @@ def _run_hedge_detection(context: DiagnosticContext) -> _LayerResult:
 
 
 def _run_temporal_detection(context: DiagnosticContext) -> _LayerResult:
+    # Suppress temporal detection for prompts about permanently fixed facts
+    # (chemistry, math, physics constants, geography fundamentals).
+    # These facts don't change with time so they should never be routed to
+    # real-time search or escalated as TEMPORAL_KNOWLEDGE_CUTOFF.
+    if _RE_PERMANENT_FACT.search(context.prompt):
+        return _LayerResult(
+            fired=False,
+            score=0.0,
+            evidence_key="temporal_detection",
+            detail=(
+                "Permanent-fact pattern matched in prompt — temporal routing suppressed. "
+                "Chemical, mathematical, and physical constant facts do not change over time."
+            ),
+        )
+
     matches = _RE_TEMPORAL.findall(context.prompt)
     fired   = bool(matches)
     score   = min(len(matches) * 0.35, 1.0)

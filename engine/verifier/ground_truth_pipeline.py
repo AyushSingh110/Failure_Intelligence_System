@@ -42,6 +42,7 @@ GroundTruthPipelineResult:
 from __future__ import annotations
 
 import logging
+import re as _re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -113,12 +114,12 @@ def run_ground_truth_pipeline(
 
     # ── Stage 2: Claim extraction ──────────────────────────────────────────
     claim = None
-    is_temporal = _is_temporal_root_cause(root_cause)
+    is_temporal = _is_temporal_root_cause(root_cause) and not _is_permanent_fact(prompt)
 
     if not is_temporal:
         try:
             from engine.claim_extractor import extract_claim
-            claim = extract_claim(primary_output)
+            claim = extract_claim(primary_output, question=prompt)
             if claim:
                 result.pipeline_trace.append(
                     f"Claim extracted: {claim.subject} | {claim.property} | {claim.value}"
@@ -196,9 +197,24 @@ def run_ground_truth_pipeline(
                     f"Wikidata found entity '{wiki.entity_label}': {wiki.entity_desc[:120]}"
                 )
 
-                if not wiki.matches_claim and wiki.confidence >= 0.70:
-                    # Wikidata says the claim is wrong — override
+                if not wiki.matches_claim and wiki.confidence >= 0.75:
+                    # Wikidata says the claim is wrong — only override when we
+                    # have a meaningful, self-contained answer to substitute.
                     correct = wiki.wikidata_value or wiki.entity_desc
+
+                    if not _is_meaningful_override(correct):
+                        result.pipeline_trace.append(
+                            f"Wikidata INCONSISTENT but correct_value '{correct}' "
+                            f"is a bare fragment — skipping override, escalating"
+                        )
+                        result.requires_escalation = True
+                        result.escalation_reason = (
+                            f"Wikidata found a mismatch (confidence={wiki.confidence:.2f}) "
+                            f"but could not produce a complete replacement answer. "
+                            "Manual review recommended."
+                        )
+                        return result
+
                     result.verified_answer = correct
                     result.confidence      = wiki.confidence
                     result.source          = wiki.source
@@ -265,11 +281,69 @@ def run_ground_truth_pipeline(
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
+_RE_PERMANENT_FACT_GT = _re.compile(
+    r"\b("
+    r"(?:chemical\s+(?:symbol|formula|name|element)\s+(?:for|of))|"
+    r"(?:what\s+(?:element|symbol)\s+is)|"
+    r"(?:atomic\s+(?:number|mass|weight)\s+(?:of|for))|"
+    r"(?:molecular\s+(?:formula|weight|mass)\s+(?:of|for))|"
+    r"(?:what\s+is\s+\d+\s*[\+\-\*\/]\s*\d+)|"
+    r"(?:square\s+root\s+of)|"
+    r"(?:speed\s+of\s+light)|"
+    r"(?:boiling\s+point\s+of\s+water)|"
+    r"(?:freezing\s+point\s+of\s+water)"
+    r")\b",
+    _re.IGNORECASE | _re.DOTALL,
+)
+
+
+def _is_permanent_fact(prompt: str) -> bool:
+    """Returns True when the prompt is about a fact that never changes over time."""
+    return bool(_RE_PERMANENT_FACT_GT.search(prompt))
+
+
 def _is_temporal_root_cause(root_cause: str) -> bool:
-    return root_cause in (
-        "TEMPORAL_KNOWLEDGE_CUTOFF",
-        "KNOWLEDGE_BOUNDARY_FAILURE",
-    )
+    # Only true TEMPORAL failures should route to Serper real-time search.
+    # KNOWLEDGE_BOUNDARY_FAILURE means "model is uncertain near the edge of its
+    # training data" — not that the fact itself changes over time.  Routing
+    # permanent facts (chemistry, math, geography) through Serper and then
+    # escalating when Serper is absent is a false positive.
+    return root_cause == "TEMPORAL_KNOWLEDGE_CUTOFF"
+
+
+def _is_meaningful_override(correct_value: str) -> bool:
+    """
+    Guard against using a bare description fragment as an override answer.
+
+    Wikidata descriptions are short summaries (e.g. "alchemist", "river in France",
+    "New South Wales").  These make poor standalone answers.  We only accept an
+    override when correct_value looks like a real, self-contained answer:
+      - At least 3 words (proper nouns like "Alexander Graham Bell") OR
+      - A well-known short proper noun that is NOT a common English word
+        (heuristic: starts with a capital letter and is not all-lowercase)
+    """
+    if not correct_value:
+        return False
+    words = correct_value.split()
+    if len(words) >= 3:
+        return True
+    # Single or two-word values: accept only if they look like a proper noun
+    # (starts with uppercase and isn't a known fragment pattern)
+    if len(words) in (1, 2):
+        # Must start with uppercase to be a proper noun
+        if not correct_value[0].isupper():
+            return False
+        # Reject obvious sentence fragments (starts lowercase after strip)
+        lower = correct_value.lower()
+        bad_fragments = {
+            "alchemist", "inventor", "chemist", "scientist", "engineer",
+            "musician", "politician", "author", "writer", "artist",
+            "unknown", "n/a", "none", "various", "multiple",
+        }
+        if lower in bad_fragments:
+            return False
+        return True
+    return False
 
 
 def _compute_consensus_strength(
