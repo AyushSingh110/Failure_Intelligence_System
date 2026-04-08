@@ -76,6 +76,35 @@ class WikidataResult:
     error:          str   = ""
 
 
+# Properties that imply the subject is something humans invented/created/founded
+_INVENTION_PROPERTIES = frozenset({
+    "inventor", "invented_by", "created_by", "designed_by", "founded_by",
+    "discovered_by", "developer", "manufacturer", "author", "composer",
+})
+
+# Entity description keywords that suggest a creative work (song, film, book, etc.)
+# We should reject these when the property is about invention/creation of a physical thing
+_CREATIVE_WORK_SIGNALS = (
+    "single by", "song by", "album by", "film by", "movie by",
+    "television series", "tv series", "video game", "novel by",
+    "book by", "play by", "musical", "opera", "podcast",
+    "2010", "2011", "2012", "2013", "2014", "2015",  # year signals in music descriptions
+)
+
+
+def _is_creative_work_entity(entity_desc: str, property_name: str) -> bool:
+    """
+    Returns True when a Wikidata entity looks like a song/film/book
+    but the claim property is about a physical invention, discovery, or institution.
+    This prevents "telephone (song by Lady Gaga)" from being used to verify
+    "who invented the telephone?"
+    """
+    if property_name.lower() not in _INVENTION_PROPERTIES:
+        return False
+    desc_lower = entity_desc.lower()
+    return any(signal in desc_lower for signal in _CREATIVE_WORK_SIGNALS)
+
+
 def verify_claim_with_wikidata(
     subject: str,
     property_name: str,
@@ -99,8 +128,11 @@ def verify_claim_with_wikidata(
     try:
         timeout = _get_timeout()
 
-        # Step A: Find the entity on Wikidata
-        entity = _search_entity(subject, timeout)
+        # Step A: Find the entity on Wikidata.
+        # Strategy: try a context-enriched query first (subject + property) so that
+        # "telephone" + "inventor" searches "telephone invention" rather than the
+        # first Wikidata result which may be a song or other disambiguation.
+        entity = _search_entity_with_context(subject, property_name, timeout)
         if not entity:
             logger.debug("Wikidata: no entity found for '%s'", subject)
             return WikidataResult(
@@ -146,35 +178,77 @@ def verify_claim_with_wikidata(
         return WikidataResult(found=False, error=str(exc))
 
 
-def _search_entity(query: str, timeout: int) -> Optional[dict]:
+def _search_entity_with_context(
+    subject: str,
+    property_name: str,
+    timeout: int,
+) -> Optional[dict]:
     """
-    Search Wikidata for an entity matching the query string.
-    Returns the first result as a dict with id, label, description.
-    Returns None if no results found.
+    Search Wikidata for the best-matching entity for a claim.
+
+    Strategy (in order):
+    1. Try enriched query: subject + " " + property_name  (e.g. "telephone inventor")
+       This greatly reduces ambiguity — "telephone invention" → Q11606 (telephone) not a song.
+    2. Fall back to plain subject search with top-5 results, picking the best match
+       (skipping creative-work entities when the property implies a physical invention).
+    3. Fall back to the absolute first result.
     """
-    params = {
-        "action":   "wbsearchentities",
-        "search":   query,
-        "language": "en",
-        "format":   "json",
-        "limit":    1,
-    }
     headers = {"User-Agent": _USER_AGENT}
 
-    resp = requests.get(_WIKIDATA_API, params=params, headers=headers, timeout=timeout)
-    resp.raise_for_status()
-    data = resp.json()
+    # --- Attempt 1: enriched query ---
+    enriched_query = f"{subject} {property_name.replace('_', ' ')}".strip()
+    enriched = _fetch_search_results(enriched_query, limit=3, timeout=timeout, headers=headers)
+    for hit in enriched:
+        desc = hit.get("description", "")
+        if not _is_creative_work_entity(desc, property_name):
+            return hit  # first non-creative-work result from enriched query
 
-    results = data.get("search", [])
-    if not results:
-        return None
+    # --- Attempt 2: plain subject with top-5 candidates, skip creative works ---
+    candidates = _fetch_search_results(subject, limit=5, timeout=timeout, headers=headers)
+    for hit in candidates:
+        desc = hit.get("description", "")
+        if not _is_creative_work_entity(desc, property_name):
+            return hit
 
-    first = results[0]
-    return {
-        "id":          first.get("id", ""),
-        "label":       first.get("label", query),
-        "description": first.get("description", ""),
-    }
+    # --- Attempt 3: absolute fallback — first plain result ---
+    if candidates:
+        return candidates[0]
+
+    return None
+
+
+def _fetch_search_results(
+    query: str,
+    limit: int,
+    timeout: int,
+    headers: dict,
+) -> list[dict]:
+    """
+    Call wbsearchentities and return a list of result dicts (id, label, description).
+    Returns empty list on any error.
+    """
+    try:
+        params = {
+            "action":   "wbsearchentities",
+            "search":   query,
+            "language": "en",
+            "format":   "json",
+            "limit":    limit,
+        }
+        resp = requests.get(_WIKIDATA_API, params=params, headers=headers, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        return [
+            {
+                "id":          r.get("id", ""),
+                "label":       r.get("label", query),
+                "description": r.get("description", ""),
+            }
+            for r in data.get("search", [])
+        ]
+    except Exception as exc:
+        logger.debug("Wikidata search failed for query=%r: %s", query, exc)
+        return []
 
 
 def _verify_via_groq(
@@ -207,7 +281,9 @@ Claim being checked:
 Answer with EXACTLY this format (3 lines, nothing else):
 VERDICT: CONSISTENT or INCONSISTENT or UNCERTAIN
 CONFIDENCE: 0.0 to 1.0
-CORRECT_VALUE: <the correct value from the description, or UNKNOWN if not clear>"""
+CORRECT_VALUE: <a complete, self-contained answer phrase that directly answers the property question, or UNKNOWN if not determinable from the description>
+
+Important: CORRECT_VALUE must be a full answer phrase (e.g. "Alexander Graham Bell", "Canberra, Australia") not a fragment or partial word."""
 
     try:
         from engine.groq_service import get_groq_service

@@ -68,6 +68,27 @@ class ExtractedClaim:
 
 # Extraction prompt sent to Groq
 _EXTRACTION_PROMPT = """\
+You are a fact extraction system. Read the question and the answer below, then extract the MAIN factual claim.
+
+Return ONLY a valid JSON object with exactly these three fields:
+  "subject"  — the thing the question is asking about (e.g. "telephone", "Australia", "Einstein")
+  "property" — the relationship or attribute being asked about (e.g. "inventor", "capital", "birthplace")
+  "value"    — the stated answer value (e.g. "Alexander Graham Bell", "Sydney", "Ulm")
+
+Rules:
+- The subject must come from the QUESTION, not from the answer — it is what the question is ABOUT
+- If there is no clear, verifiable factual claim, return: null
+- Do not include explanation, markdown, or extra text — ONLY the JSON or null
+- Use simple lowercase snake_case for property names
+- Keep values as concise proper nouns
+
+Question: {question}
+Answer: {text}
+
+JSON:"""
+
+# Fallback prompt when no question is available
+_EXTRACTION_PROMPT_NO_QUESTION = """\
 You are a fact extraction system. Read the sentence below and extract the MAIN factual claim.
 
 Return ONLY a valid JSON object with exactly these three fields:
@@ -86,7 +107,7 @@ Sentence: {text}
 JSON:"""
 
 
-def extract_claim(text: str) -> Optional[ExtractedClaim]:
+def extract_claim(text: str, question: str = "") -> Optional[ExtractedClaim]:
     """
     Extracts the main atomic factual claim from a model output string.
 
@@ -107,7 +128,7 @@ def extract_claim(text: str) -> Optional[ExtractedClaim]:
     -------
     ExtractedClaim | None
     """
-    if not text or len(text.strip()) < 10:
+    if not text or len(text.strip()) < 3:
         return None
 
     try:
@@ -117,7 +138,13 @@ def extract_claim(text: str) -> Optional[ExtractedClaim]:
             logger.debug("Groq unavailable — claim extraction skipped")
             return None
 
-        prompt   = _EXTRACTION_PROMPT.format(text=text[:500])
+        if question and len(question.strip()) >= 5:
+            prompt = _EXTRACTION_PROMPT.format(
+                question=question.strip()[:300],
+                text=text[:500],
+            )
+        else:
+            prompt = _EXTRACTION_PROMPT_NO_QUESTION.format(text=text[:500])
         response = groq.complete(
             prompt,
             model_name  = "llama-3.1-8b-instant",  # fastest model for structured tasks
