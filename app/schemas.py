@@ -263,6 +263,41 @@ class HumanExplanation(BaseModel):
     safe_for_user: bool = True
 
 
+class GroundTruthVerification(BaseModel):
+    """
+    Result from the ground truth verification pipeline (Steps 4–7).
+    Embedded in MonitorResponse for full transparency.
+    """
+    verified_answer:     str   = ""
+    confidence:          float = Field(default=0.0, ge=0.0, le=1.0)
+    source:              str   = "none"
+    from_cache:          bool  = False
+    requires_escalation: bool  = False
+    escalation_reason:   str   = ""
+    pipeline_trace:      list[str] = Field(default_factory=list)
+
+
+class FeedbackRequest(BaseModel):
+    """
+    Step 8 — User submits ground truth feedback for a specific inference.
+
+    is_correct     : True = the model's answer was right
+    correct_answer : (when is_correct=False) what the right answer actually is
+    notes          : optional free-text comment
+    """
+    is_correct:     bool
+    correct_answer: Optional[str] = None
+    notes:          Optional[str] = None
+
+
+class FeedbackResponse(BaseModel):
+    """Response to a feedback submission."""
+    status:          str
+    request_id:      str
+    cache_updated:   bool  = False
+    message:         str   = ""
+
+
 class MonitorResponse(BaseModel):
     """
     Full response from the /monitor endpoint.
@@ -291,3 +326,8 @@ class MonitorResponse(BaseModel):
     explanation_internal:  Optional[ExplanationBundle] = None
     explanation_external:  Optional[ExplanationBundle] = None
     human_explanation:     Optional[HumanExplanation] = None
+
+    # Step 7+10 — Ground truth verification and escalation
+    ground_truth:          Optional[GroundTruthVerification] = None
+    requires_human_review: bool = False
+    escalation_reason:     str  = ""

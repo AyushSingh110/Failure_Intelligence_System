@@ -320,6 +320,44 @@ def delete_inference_for_tenant(request_id: str, tenant_id: str) -> bool:
         return False
 
 
+# ── Step 8: User feedback storage ─────────────────────────────────────────
+
+def save_feedback(feedback_doc: dict) -> bool:
+    """
+    Saves a user feedback record to the 'feedback' collection.
+    feedback_doc must contain at least: request_id, tenant_id, is_correct.
+
+    Called from POST /feedback/{request_id} endpoint.
+    Also triggers ground_truth_cache update when is_correct=False
+    and correct_answer is provided.
+    """
+    try:
+        if _fallback_mode or _db is None:
+            logger.warning("Feedback not saved — MongoDB unavailable")
+            return False
+        col = _db["feedback"]
+        col.create_index("request_id", background=True)
+        col.create_index("tenant_id", background=True)
+        col.insert_one(feedback_doc)
+        return True
+    except Exception as exc:
+        logger.error("Failed to save feedback: %s", exc)
+        return False
+
+
+def get_feedback_for_request(request_id: str) -> list[dict]:
+    """Returns all feedback records for a given request_id."""
+    try:
+        if _fallback_mode or _db is None:
+            return []
+        col  = _db["feedback"]
+        docs = list(col.find({"request_id": request_id}, {"_id": 0}))
+        return docs
+    except Exception as exc:
+        logger.error("Failed to fetch feedback for %s: %s", request_id, exc)
+        return []
+
+
 def clear_inferences_for_tenant(tenant_id: str) -> int:
     """Deletes all inference records for a single tenant and returns the number removed."""
     try:

@@ -1,4 +1,4 @@
-# Failure Intelligence Engine
+# Failure Intelligence Engine — v3.1.0
 
 **AI reliability platform for detecting, diagnosing, explaining, and correcting LLM failures in real time.**
 
@@ -575,25 +575,322 @@ pytest tests/test_auth_visibility.py
 - Docker, Cloud Build, and Cloud Run for backend deployment
 - Vercel for frontend deployment
 
+## What is new in v3.1.0 — Ground Truth Verification Layer
+
+This release implements a complete 10-step ground truth verification system that solves the most critical weakness in v3.0: shadow models from the same family hallucinating in the same direction.
+
+### Step 1 — Diverse shadow model families
+
+Shadow models are now from three different training lineages to minimize correlated failure:
+
+- `llama-3.3-70b-versatile` — Meta (strong general model)
+- `deepseek-r1-distill-llama-70b` — DeepSeek (reasoning-tuned, different RLHF)
+- `qwen-qwq-32b` — Alibaba Qwen (different pretraining corpus)
+
+Change location: `config.py` → `groq_models`
+
+### Step 2 — Confidence signals from shadow models
+
+Each shadow model is now asked to rate its own certainty (`HIGH`, `MEDIUM`, or `LOW`) alongside its answer. The rating is parsed and stripped from the output text automatically.
+
+Change location: `engine/groq_service.py` → `fan_out_with_confidence()`, `_parse_confidence()`
+
+### Step 3 — Confidence-weighted consensus
+
+The auto-fix engine no longer uses simple majority vote. Each shadow model's vote is weighted by its self-reported confidence (`HIGH=3`, `MEDIUM=2`, `LOW=1`). If weighted consensus is below 50%, the fix escalates to human review instead of guessing.
+
+Change location: `engine/fix_engine.py` → `_apply_shadow_consensus()`
+
+### Step 4 — Atomic claim extraction
+
+Before querying external sources, FIE extracts the main factual claim from the model output as `{subject, property, value}`. This structured form can be matched against Wikidata's knowledge graph.
+
+New file: `engine/claim_extractor.py`
+
+### Step 5 — Wikidata structured fact verification
+
+Wikidata is a free, structured knowledge graph (no API key required). FIE searches for the entity in the claim and asks Groq to check whether the claimed value matches the Wikidata description. This breaks the circular model-verifying-model problem because Wikidata is a database, not an LLM.
+
+New file: `engine/verifier/wikidata_verifier.py`
+
+### Step 6 — Serper real-time search for temporal questions
+
+When the DomainCritic detects `TEMPORAL_KNOWLEDGE_CUTOFF`, Wikidata is not sufficient. FIE routes to Serper.dev (Google Search API) for live results. Requires `SERPER_API_KEY` in `.env`.
+
+New file: `engine/verifier/serper_verifier.py`
+
+### Step 7 — Verified answer cache
+
+Every human-submitted correction (Step 8) and every high-confidence external verification (Wikidata/Serper ≥ 90%) is saved to a MongoDB `ground_truth_cache` collection. The cache is checked first on every request using embedding similarity (threshold 0.92). A cache hit returns the verified answer with confidence 1.0 and skips all external API calls.
+
+New file: `engine/ground_truth_cache.py`
+
+### Step 8 — User feedback loop (new endpoint)
+
+```text
+POST /api/v1/feedback/{request_id}
+```
+
+Users submit whether the model's answer was correct. If `is_correct=false` and `correct_answer` is provided, the correct answer is saved to the ground truth cache immediately.
+
+New schemas: `FeedbackRequest`, `FeedbackResponse` in `app/schemas.py`
+
+### Step 9+10 — Escalation layer
+
+When no external source can establish reliable ground truth and shadow consensus is too weak, FIE no longer auto-corrects. It returns the original answer with `requires_human_review=true` and an `escalation_reason` in the response. The inference appears in the dashboard escalation queue for manual review.
+
+New strategy: `HUMAN_ESCALATION` in `engine/fix_engine.py`
+
+---
+
+## APIs required — how to get them
+
+### Groq API (required — shadow models)
+
+1. Go to [console.groq.com](https://console.groq.com)
+2. Sign in with Google
+3. Dashboard → API Keys → Create API Key
+4. Copy the key (starts with `gsk_`)
+5. Add to `.env`: `GROQ_API_KEY=gsk_your_key_here`
+
+Free tier: 14,400 requests/day per model. The three new models (llama-3.3-70b, deepseek-r1, qwen-qwq) are all available on the free tier.
+
+### Wikidata (no key required)
+
+Wikidata uses the public Wikimedia API. No registration needed. Just set in `.env`:
+
+```env
+WIKIDATA_ENABLED=true
+```
+
+### Serper.dev (optional — required for real-time temporal verification)
+
+1. Go to [serper.dev](https://serper.dev)
+2. Sign up with Google
+3. Dashboard → API Key → copy the key
+4. Add to `.env`:
+
+```env
+SERPER_API_KEY=your_key_here
+SERPER_ENABLED=true
+```
+
+Free tier: 2,500 searches/month. Paid: $50/month for 50,000 searches.
+
+Without Serper: temporal questions will escalate to human review instead of auto-correcting. This is intentional — better to escalate than return an unverified "current" answer.
+
+---
+
+## Updated `.env` file
+
+```env
+MONGODB_URI=your_mongodb_atlas_uri
+MONGODB_DB_NAME=fie_database
+
+GROQ_API_KEY=gsk_your_groq_key
+GROQ_ENABLED=true
+
+# Optional: real-time verification for temporal questions
+SERPER_API_KEY=your_serper_key
+SERPER_ENABLED=true
+
+# Wikidata: no key needed, just enable
+WIKIDATA_ENABLED=true
+GROUND_TRUTH_CACHE_ENABLED=true
+
+OLLAMA_ENABLED=false
+
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:5173
+
+JWT_SECRET_KEY=replace-with-a-long-random-secret
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_HOURS=24
+ADMIN_EMAIL=your-admin-email@example.com
+```
+
+---
+
+## How to test everything in real time
+
+This section walks you through verifying each new feature using real API calls — no unit tests, just `curl` or a REST client like Postman.
+
+### 1. Start the backend
+
+```bash
+cd Failure_Intelligence_System
+.venv\Scripts\activate        # Windows
+uvicorn app.main:app --reload
+```
+
+### 2. Get your API key
+
+Login at `http://localhost:5173` → Settings page → copy your `fie-xxxx` API key.
+
+Or call directly:
+
+```bash
+# After OAuth login, the token is in localStorage as "fie_token"
+# Use it to fetch your API key:
+curl http://localhost:8000/api/v1/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### 3. Test Step 1+2+3 — Diverse models + confidence-weighted consensus
+
+Send a factual question where one answer is clearly wrong:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/monitor \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: fie-your-api-key" \
+  -d '{
+    "prompt": "Who invented the telephone?",
+    "primary_output": "Thomas Edison invented the telephone in 1876.",
+    "primary_model_name": "gpt-4o",
+    "run_full_jury": true,
+    "latency_ms": 843
+  }'
+```
+
+What to look for in the response:
+
+- `shadow_model_results`: you should see 3 different model families responding
+- `fix_result.fix_strategy`: should be `"GT_VERIFIED"` or `"SHADOW_CONSENSUS"`
+- `fix_result.fix_explanation`: should mention confidence weights
+- `ground_truth.source`: should say `"Wikidata"` if Wikidata found the entity
+- `fix_result.fixed_output`: should say Alexander Graham Bell, not Edison
+
+### 4. Test Step 5 — Wikidata verification directly
+
+Send an output you know is factually wrong:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/monitor \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: fie-your-api-key" \
+  -d '{
+    "prompt": "What is the capital of Australia?",
+    "primary_output": "Sydney is the capital of Australia.",
+    "primary_model_name": "gpt-4o",
+    "run_full_jury": true
+  }'
+```
+
+Expected: `ground_truth.source` = `"Wikidata"`, `fix_result.fixed_output` should say `"Canberra"`.
+
+### 5. Test Step 6 — Serper real-time search (requires SERPER_API_KEY)
+
+Send a temporal question:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/monitor \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: fie-your-api-key" \
+  -d '{
+    "prompt": "Who is the current CEO of OpenAI?",
+    "primary_output": "Sam Altman is the current CEO of OpenAI.",
+    "primary_model_name": "gpt-4o",
+    "run_full_jury": true
+  }'
+```
+
+If Serper is configured: `ground_truth.source` = `"Google Search via Serper.dev"`.
+If Serper is NOT configured: `requires_human_review: true`, `escalation_reason` will explain why.
+
+### 6. Test Step 8 — Feedback loop
+
+First, get a `request_id` from a previous monitor call (it's in the stored inference):
+
+```bash
+# List your inferences to get a request_id
+curl http://localhost:8000/api/v1/inferences \
+  -H "X-API-Key: fie-your-api-key"
+```
+
+Then submit feedback:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/feedback/YOUR_REQUEST_ID \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: fie-your-api-key" \
+  -d '{
+    "is_correct": false,
+    "correct_answer": "Alexander Graham Bell invented the telephone.",
+    "notes": "Edison invented the phonograph, not the telephone."
+  }'
+```
+
+Expected response: `"cache_updated": true`
+
+### 7. Test Step 7 — Cache hit
+
+Now send the same question again:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/monitor \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: fie-your-api-key" \
+  -d '{
+    "prompt": "Who invented the telephone?",
+    "primary_output": "Thomas Edison invented the telephone.",
+    "primary_model_name": "gpt-4o",
+    "run_full_jury": true
+  }'
+```
+
+Expected: `ground_truth.from_cache: true`, `ground_truth.confidence: 1.0`.
+The pipeline skips Wikidata and Serper entirely — the answer came from the human-verified cache.
+
+### 8. Test Step 10 — Escalation
+
+Send a question where shadow models will disagree AND Wikidata/Serper cannot verify:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/monitor \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: fie-your-api-key" \
+  -d '{
+    "prompt": "What will the stock price of Apple be next month?",
+    "primary_output": "Apple stock will be $210 next month.",
+    "primary_model_name": "gpt-4o",
+    "run_full_jury": true
+  }'
+```
+
+Expected: `requires_human_review: true`, `fix_result.fix_strategy: "HUMAN_ESCALATION"`.
+
+---
+
 ## Current state of the project
 
 Implemented in the current codebase:
 
 - Multi-stage failure detection pipeline
-- Jury-based diagnosis
-- Auto-fix strategies
+- Jury-based diagnosis with 3 specialist agents
+- Auto-fix strategies (6 strategies)
 - Explainable AI response bundles
 - Human-readable explanations
 - Google-authenticated dashboard access
 - Tenant-aware storage and API key management
 - React dashboard deployment flow
 - Google Cloud backend deployment assets
+- **NEW v3.1**: Diverse shadow model families (Meta + DeepSeek + Qwen)
+- **NEW v3.1**: Confidence-weighted shadow model consensus
+- **NEW v3.1**: Atomic claim extraction via Groq
+- **NEW v3.1**: Wikidata structured fact verification (no API key needed)
+- **NEW v3.1**: Serper real-time search for temporal questions
+- **NEW v3.1**: Ground truth verified answer cache (MongoDB)
+- **NEW v3.1**: User feedback loop (`POST /feedback/{request_id}`)
+- **NEW v3.1**: Escalation layer for low-confidence cases
 
 Areas that are present but optional or still evolving:
 
 - Ollama as a local shadow-model provider
-- Extended RAG workflows
-- More production hardening around quotas, rate limits, and observability
+- Extended RAG workflows (arXiv, custom document stores)
+- Per-tenant threshold calibration from feedback data
+- Rate limiting and async job queue for high-traffic deployments
 
 ## License
 

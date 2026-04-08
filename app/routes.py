@@ -313,17 +313,20 @@ def monitor(
     shadow_results_raw = []
 
     if settings.groq_enabled and settings.groq_api_key:
-        # ── Groq shadow models ──────────────────────────────────────
+        # ── Groq shadow models (Step 2: fan_out_with_confidence) ────
         from engine.groq_service import get_groq_service
         groq = get_groq_service()
         if groq:
-            groq_results = groq.fan_out(body.prompt)
+            # STEP 2: Use fan_out_with_confidence so each shadow model
+            # self-reports its certainty. Weights feed into Step 3.
+            groq_results = groq.fan_out_with_confidence(body.prompt)
             shadow_results_raw = groq_results
             successful = [r for r in groq_results if r.success]
             ollama_available = len(successful) > 0
             logger.info(
-                "Groq shadow models: %d/%d responded successfully",
+                "Groq shadow models: %d/%d responded | confidences=%s",
                 len(successful), len(groq_results),
+                [r.model_confidence for r in successful],
             )
         else:
             logger.warning("Groq service unavailable — running without shadow models")
@@ -348,9 +351,12 @@ def monitor(
     model_outputs = [body.primary_output]
 
     # Add successful shadow model outputs
+    # STEP 2+3: Also capture confidence weights from enriched responses
+    shadow_weights: list[float] = []
     for r in shadow_results_raw:
         if r.success and r.output_text:
             model_outputs.append(r.output_text)
+            shadow_weights.append(getattr(r, "confidence_weight", 2.0))
 
     # Convert to schema format
     shadow_model_results = [
@@ -398,112 +404,169 @@ def monitor(
     else:
         failure_summary = f"Model outputs are stable — archetype: {archetype}"
 
-    # ── Step 5b: Auto-fix engine ────────────────────────────────────────
-    # Only run if failure detected AND jury has a primary verdict
+    # ── Step 5b: Ground Truth Pipeline + Auto-fix engine ───────────────────
+    # Steps 4–10: verify claim → wikidata → serper → cache → escalate/fix
     fix_result_schema = None
+    gt_result_schema  = None
+    requires_human_review = False
+    escalation_reason_str = ""
+
     if jury_verdict and jury_verdict.primary_verdict:
         try:
-            from engine.fix_engine import apply_fix
-            from engine.fix_engine import prompt_requires_live_data
-            from app.schemas import FixResult as FixResultSchema
+            from engine.fix_engine import apply_fix, prompt_requires_live_data
+            from app.schemas import FixResult as FixResultSchema, GroundTruthVerification
 
             primary_v  = jury_verdict.primary_verdict
             root_cause = primary_v.root_cause
             confidence = primary_v.confidence_score
             layers_fired = set((primary_v.evidence or {}).get("layers_fired", []))
-            factual_roots = {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"}
-            externally_verified_factual_mismatch = (
-                root_cause in factual_roots
-                and "external_verification" in layers_fired
-            )
+            factual_roots = {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION",
+                             "TEMPORAL_KNOWLEDGE_CUTOFF"}
 
-            if not (signal.high_failure_risk or externally_verified_factual_mismatch):
+            if not signal.high_failure_risk and root_cause not in factual_roots:
                 raise RuntimeError("Auto-fix skipped: no actionable failure signal.")
 
-            # Get successful shadow outputs
-            shadow_texts = [
-                r.output_text
-                for r in shadow_model_results
-                if r.success and r.output_text
-            ]
+            # Successful shadow outputs and their confidence weights
+            shadow_texts = [r.output_text for r in shadow_model_results if r.success and r.output_text]
 
-            prompt_is_temporal = prompt_requires_live_data(body.prompt)
-            prefer_rag_grounding = (
-                externally_verified_factual_mismatch
-                and not signal.high_failure_risk
-                and not prompt_is_temporal
+            # ── Steps 4–10: Ground Truth Pipeline ─────────────────────────
+            from engine.verifier.ground_truth_pipeline import run_ground_truth_pipeline
+            gt = run_ground_truth_pipeline(
+                prompt          = body.prompt,
+                primary_output  = body.primary_output,
+                root_cause      = root_cause,
+                jury_confidence = jury_verdict.jury_confidence,
+                shadow_outputs  = shadow_texts,
+                shadow_weights  = shadow_weights,
+            )
+            gt_result_schema = GroundTruthVerification(
+                verified_answer     = gt.verified_answer,
+                confidence          = gt.confidence,
+                source              = gt.source,
+                from_cache          = gt.from_cache,
+                requires_escalation = gt.requires_escalation,
+                escalation_reason   = gt.escalation_reason,
+                pipeline_trace      = gt.pipeline_trace,
+            )
+            logger.info(
+                "GT pipeline done | source=%s | escalate=%s | confidence=%.3f",
+                gt.source, gt.requires_escalation, gt.confidence,
             )
 
-            fix = None
-            if not prefer_rag_grounding:
-                fix = apply_fix(
-                    prompt         = body.prompt,
-                    primary_output = body.primary_output,
-                    shadow_outputs = shadow_texts,
-                    root_cause     = root_cause,
-                    confidence     = confidence,
-                    model_fn       = None,  # no model_fn on server side
-                )
-
-            if fix is not None:
-                fix_result_schema = FixResultSchema(
-                    fixed_output      = fix.fixed_output,
-                    fix_applied       = fix.fix_applied,
-                    fix_strategy      = fix.fix_strategy,
-                    fix_explanation   = fix.fix_explanation,
-                    original_output   = fix.original_output,
-                    root_cause        = fix.root_cause,
-                    fix_confidence    = fix.fix_confidence,
-                    improvement_score = fix.improvement_score,
-                    warning           = fix.warning,
-                )
-
-            if fix is not None and fix.fix_applied:
-                logger.info(
-                    "Auto-fix applied | strategy=%s | confidence=%.3f",
-                    fix.fix_strategy, fix.fix_confidence,
-                )
-                # Update failure summary to reflect the fix
+            # ── Step 10: Escalation check ──────────────────────────────────
+            if gt.requires_escalation:
+                requires_human_review = True
+                escalation_reason_str = gt.escalation_reason
                 failure_summary = (
-                    f"⚡ AUTO-FIXED: {fix.fix_strategy} applied. "
-                    f"{fix.fix_explanation[:150]}"
+                    "⚠️ HUMAN REVIEW REQUIRED: "
+                    f"FIE could not establish reliable ground truth. {gt.escalation_reason[:150]}"
                 )
-            if (
-                prefer_rag_grounding
-                or (
-                    (fix is None or not fix.fix_applied)
-                    and root_cause in factual_roots
-                    and not prompt_is_temporal
+                fix_result_schema = FixResultSchema(
+                    fixed_output      = body.primary_output,
+                    fix_applied       = False,
+                    fix_strategy      = "HUMAN_ESCALATION",
+                    fix_explanation   = gt.escalation_reason,
+                    original_output   = body.primary_output,
+                    root_cause        = root_cause,
+                    fix_confidence    = 0.0,
+                    improvement_score = 0.0,
+                    warning=(
+                        "FIE could not verify a reliable correction. "
+                        "This inference has been queued for human review."
+                    ),
                 )
-            ):
-                from engine.rag_grounder import ground_with_wikipedia
 
-                rag_result = ground_with_wikipedia(body.prompt, body.primary_output)
-                if rag_result.success:
+            # ── GT pipeline provided a verified answer → use it ────────────
+            elif gt.verified_answer and gt.verified_answer != body.primary_output:
+                fix_result_schema = FixResultSchema(
+                    fixed_output      = gt.verified_answer,
+                    fix_applied       = True,
+                    fix_strategy      = f"GT_VERIFIED ({gt.source})",
+                    fix_explanation   = (
+                        f"Ground truth pipeline verified the correct answer from {gt.source}. "
+                        f"Primary output contradicted verified source. "
+                        f"Confidence: {gt.confidence:.0%}."
+                    ),
+                    original_output   = body.primary_output,
+                    root_cause        = root_cause,
+                    fix_confidence    = gt.confidence,
+                    improvement_score = gt.confidence,
+                    warning           = "",
+                )
+                failure_summary = (
+                    f"⚡ AUTO-FIXED: GT_VERIFIED applied via {gt.source}. "
+                    f"Confidence: {gt.confidence:.0%}."
+                )
+                logger.info(
+                    "GT pipeline applied fix | source=%s | confidence=%.3f",
+                    gt.source, gt.confidence,
+                )
+
+            # ── GT confirmed OR no override needed → run normal fix engine ──
+            else:
+                fix = apply_fix(
+                    prompt          = body.prompt,
+                    primary_output  = body.primary_output,
+                    shadow_outputs  = shadow_texts,
+                    root_cause      = root_cause,
+                    confidence      = confidence,
+                    model_fn        = None,
+                    shadow_weights  = shadow_weights,   # STEP 3 — weighted consensus
+                )
+                if fix is not None:
                     fix_result_schema = FixResultSchema(
-                        fixed_output      = rag_result.grounded_answer,
-                        fix_applied       = True,
-                        fix_strategy      = "RAG_GROQ_GROUNDING",
-                        fix_explanation   = (
-                            "Shadow-model consensus was unavailable, so FIE used "
-                            "Wikipedia-grounded retrieval and Groq-based correction."
-                        ),
-                        original_output   = body.primary_output,
-                        root_cause        = root_cause,
-                        fix_confidence    = rag_result.confidence,
-                        improvement_score = rag_result.confidence,
-                        warning           = f"Grounded source: {rag_result.source}",
+                        fixed_output      = fix.fixed_output,
+                        fix_applied       = fix.fix_applied,
+                        fix_strategy      = fix.fix_strategy,
+                        fix_explanation   = fix.fix_explanation,
+                        original_output   = fix.original_output,
+                        root_cause        = fix.root_cause,
+                        fix_confidence    = fix.fix_confidence,
+                        improvement_score = fix.improvement_score,
+                        warning           = fix.warning,
                     )
-                    failure_summary = (
-                        "⚡ AUTO-FIXED: RAG_GROQ_GROUNDING applied. "
-                        "Recovered a grounded factual answer using Wikipedia context."
-                    )
-                    logger.info(
-                        "Auto-fix applied | strategy=RAG_GROQ_GROUNDING | confidence=%.3f",
-                        rag_result.confidence,
-                    )
-                else:
-                    logger.warning("RAG grounding unavailable: %s", rag_result.error)
+                    # STEP 10: escalation from fix engine itself
+                    if fix.requires_human_review:
+                        requires_human_review = True
+                        escalation_reason_str = fix.escalation_reason
+                        failure_summary = (
+                            "⚠️ HUMAN REVIEW REQUIRED: "
+                            f"{fix.escalation_reason[:150]}"
+                        )
+                    elif fix.fix_applied:
+                        failure_summary = (
+                            f"⚡ AUTO-FIXED: {fix.fix_strategy} applied. "
+                            f"{fix.fix_explanation[:150]}"
+                        )
+                        logger.info(
+                            "Auto-fix applied | strategy=%s | confidence=%.3f",
+                            fix.fix_strategy, fix.fix_confidence,
+                        )
+
+                # Fallback: Wikipedia RAG if fix engine produced no result
+                if (fix_result_schema is None or not fix_result_schema.fix_applied) \
+                        and root_cause in {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"} \
+                        and not prompt_requires_live_data(body.prompt):
+                    from engine.rag_grounder import ground_with_wikipedia
+                    rag_result = ground_with_wikipedia(body.prompt, body.primary_output)
+                    if rag_result.success:
+                        fix_result_schema = FixResultSchema(
+                            fixed_output      = rag_result.grounded_answer,
+                            fix_applied       = True,
+                            fix_strategy      = "RAG_GROQ_GROUNDING",
+                            fix_explanation   = (
+                                "Shadow-model consensus unavailable. FIE used "
+                                "Wikipedia-grounded retrieval and Groq-based correction."
+                            ),
+                            original_output   = body.primary_output,
+                            root_cause        = root_cause,
+                            fix_confidence    = rag_result.confidence,
+                            improvement_score = rag_result.confidence,
+                            warning           = f"Grounded source: {rag_result.source}",
+                        )
+                        failure_summary = (
+                            "⚡ AUTO-FIXED: RAG_GROQ_GROUNDING applied via Wikipedia."
+                        )
 
         except Exception as exc:
             if "Auto-fix skipped" in str(exc):
@@ -526,6 +589,9 @@ def monitor(
         high_failure_risk     = signal.high_failure_risk,
         failure_summary       = failure_summary,
         fix_result            = fix_result_schema,
+        ground_truth          = gt_result_schema,
+        requires_human_review = requires_human_review,
+        escalation_reason     = escalation_reason_str,
     )
     response = attach_explanations_to_monitor(response, request_id=stored_request_id)
     if not (current_user and current_user.get("is_admin", False)):
@@ -565,6 +631,94 @@ def monitor(
     except Exception as exc:
         logger.warning("Failed to save inference record: %s", exc)
     return response
+
+
+# ── Step 8: User Feedback endpoint ───────────────────────────────────────
+from app.schemas import FeedbackRequest, FeedbackResponse
+
+@router.post("/feedback/{request_id}", response_model=FeedbackResponse)
+def submit_feedback(
+    request_id:    str,
+    body:          FeedbackRequest,
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+) -> FeedbackResponse:
+    """
+    Step 8 — Ground Truth Feedback Loop.
+
+    Users submit whether the model's answer was correct.
+    If is_correct=False and correct_answer is provided:
+      1. The correct answer is saved to the ground_truth_cache so the same
+         question is answered correctly in all future requests (Step 7).
+      2. A feedback record is stored in MongoDB for analytics and
+         threshold calibration (Step 9).
+
+    This endpoint is the most important single feature for making FIE
+    self-improving — every correction permanently improves the system.
+
+    Authentication required. Users can only submit feedback for their
+    own tenant's inferences.
+    """
+    from storage.database import save_feedback, get_inference_by_id_for_tenant
+    from engine.ground_truth_cache import save_to_cache
+    from datetime import datetime
+
+    user = require_user(authorization, x_api_key)
+
+    # Verify the request belongs to this tenant
+    record = (
+        get_inference_by_id(request_id)
+        if user.get("is_admin", False)
+        else get_inference_by_id_for_tenant(request_id, user["tenant_id"])
+    )
+    if record is None:
+        raise HTTPException(
+            status_code = 404,
+            detail      = f"Inference '{request_id}' not found for this account",
+        )
+
+    cache_updated = False
+
+    # If user says it is wrong AND provides the correct answer → update GT cache
+    if not body.is_correct and body.correct_answer:
+        cache_updated = save_to_cache(
+            question        = record.input_text,
+            verified_answer = body.correct_answer.strip(),
+            source          = "user_feedback",
+            confidence      = 1.0,
+            verified_by     = user.get("email", "user"),
+        )
+        logger.info(
+            "GT cache updated from feedback | request_id=%s | correct=%s",
+            request_id, body.correct_answer[:60],
+        )
+
+    # Store feedback record for analytics
+    feedback_doc = {
+        "request_id":    request_id,
+        "tenant_id":     user["tenant_id"],
+        "submitted_by":  user.get("email", "unknown"),
+        "submitted_at":  datetime.utcnow().isoformat(),
+        "is_correct":    body.is_correct,
+        "correct_answer": body.correct_answer or "",
+        "notes":         body.notes or "",
+        "question":      record.input_text,
+        "model_answer":  record.output_text,
+        "model_name":    record.model_name,
+    }
+    save_feedback(feedback_doc)
+
+    return FeedbackResponse(
+        status        = "received",
+        request_id    = request_id,
+        cache_updated = cache_updated,
+        message       = (
+            "Thank you. The correct answer has been saved and will be used "
+            "to verify future similar questions."
+            if cache_updated else
+            "Feedback recorded. Thank you for helping improve the system."
+        ),
+    )
 
 
 @router.get("/monitor/status", response_model=dict)

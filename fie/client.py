@@ -3,13 +3,14 @@ fie/client.py
 
 Makes HTTP calls to your FIE FastAPI server.
 
-This is the only file that actually talks to the network.
-Everything else in the SDK calls this file.
-
 The key design principle: NEVER crash the user's app.
-If your FIE server is down or slow, the user's LLM call
-must still succeed. Every network call is wrapped in
-try/except and silently logs errors instead of raising them.
+Every network call is wrapped in try/except and silently logs
+errors instead of raising them.
+
+v0.3.0 additions:
+  - submit_feedback()  : Step 8 — submit correct answer for a past inference
+  - get_inference()    : fetch a single stored inference by request_id
+  - get_escalations()  : list all inferences flagged for human review
 """
 
 from __future__ import annotations
@@ -38,39 +39,35 @@ class FIEClient:
     """
 
     def __init__(self, config: FIEConfig) -> None:
-        self._config = config
+        self._config  = config
         self._session = requests.Session()
-
-        # Add API key to every request header if provided
         if config.api_key:
             self._session.headers.update({
-                "X-API-Key": config.api_key,
+                "X-API-Key":    config.api_key,
                 "Content-Type": "application/json",
             })
+
+    # ── Core: monitor endpoint ─────────────────────────────────────────────
 
     def monitor(
         self,
         prompt:             str,
         primary_output:     str,
-        primary_model_name: str           = "primary",
+        primary_model_name: str            = "primary",
         latency_ms:         Optional[float] = None,
-        run_full_jury:      bool           = True,
+        run_full_jury:      bool            = True,
     ) -> dict:
         """
         Sends one inference to the FIE /monitor endpoint.
 
         Returns the full FIE analysis result as a dict.
-        Returns an empty dict if the server is unreachable —
-        this means the user's app never crashes.
+        Returns empty dict if the server is unreachable — never crashes.
 
-        Parameters
-        ----------
-        prompt             : the original user prompt sent to the LLM
-        primary_output     : what the user's LLM returned
-        primary_model_name : name of the user's model (for logging)
-        latency_ms         : how long the LLM call took (optional)
-        run_full_jury      : whether to run the DiagnosticJury (Phase 3)
-                             Set False for faster analysis without root cause
+        v3.1 response includes:
+          ground_truth         : GT pipeline result (source, confidence, cache hit)
+          requires_human_review: True if escalated to human queue
+          escalation_reason    : why it was escalated
+          fix_result           : what was auto-fixed (or HUMAN_ESCALATION)
         """
         payload = {
             "prompt":             prompt,
@@ -84,44 +81,133 @@ class FIEClient:
         try:
             response = self._session.post(
                 f"{self._config.fie_url}/api/v1/monitor",
-                json=payload,
-                timeout=300,  # 300 seconds 
+                json    = payload,
+                timeout = 300,
             )
             response.raise_for_status()
             return response.json()
 
         except requests.exceptions.ConnectionError:
             logger.warning(
-                "[FIE] Could not connect to FIE server at %s. "
-                "Is the server running? Start with: uvicorn app.main:app",
+                "[FIE] Cannot connect to FIE server at %s. "
+                "Start it with: uvicorn app.main:app --reload",
                 self._config.fie_url,
             )
             return {}
-
         except requests.exceptions.Timeout:
-            logger.warning(
-                "[FIE] Request to FIE server timed out after 30s. "
-                "Server may be overloaded."
-            )
+            logger.warning("[FIE] FIE server timed out after 300s.")
+            return {}
+        except Exception as exc:
+            logger.warning("[FIE] monitor() error: %s", exc)
             return {}
 
+    # ── v0.3.0: Feedback / Ground Truth ────────────────────────────────────
+
+    def submit_feedback(
+        self,
+        request_id:     str,
+        is_correct:     bool,
+        correct_answer: Optional[str] = None,
+        notes:          Optional[str] = None,
+    ) -> dict:
+        """
+        Step 8 — Submit ground truth feedback for a stored inference.
+
+        Call this after you know whether FIE's answer was right or wrong.
+        If is_correct=False and you provide correct_answer, the correct
+        answer is stored in the verified answer cache — improving all
+        future similar questions permanently.
+
+        Parameters
+        ----------
+        request_id     : from fie_result["fix_result"] or stored inference
+        is_correct     : True = FIE returned correct answer; False = it was wrong
+        correct_answer : (when is_correct=False) what the right answer actually is
+        notes          : optional comment
+
+        Returns
+        -------
+        dict with keys: status, cache_updated, message
+        """
+        payload: dict = {"is_correct": is_correct}
+        if correct_answer:
+            payload["correct_answer"] = correct_answer
+        if notes:
+            payload["notes"] = notes
+
+        try:
+            response = self._session.post(
+                f"{self._config.fie_url}/api/v1/feedback/{request_id}",
+                json    = payload,
+                timeout = 30,
+            )
+            response.raise_for_status()
+            result = response.json()
+            if result.get("cache_updated"):
+                logger.info(
+                    "[FIE] ✅ Ground truth cache updated for request %s", request_id
+                )
+            return result
         except Exception as exc:
-            logger.warning("[FIE] Unexpected error sending to FIE server: %s", exc)
+            logger.warning("[FIE] submit_feedback() error: %s", exc)
             return {}
+
+    # ── v0.3.0: Inference lookup ────────────────────────────────────────────
+
+    def get_inference(self, request_id: str) -> dict:
+        """
+        Fetches a single stored inference by request_id.
+        Useful to check what FIE stored, or to get the request_id
+        from the most recent monitor call when using mode="monitor".
+        """
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/inferences/{request_id}",
+                timeout = 15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] get_inference(%s) error: %s", request_id, exc)
+            return {}
+
+    def list_inferences(self) -> list:
+        """Returns your most recent stored inferences (newest first)."""
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/inferences",
+                timeout = 15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] list_inferences() error: %s", exc)
+            return []
+
+    def get_trend(self) -> dict:
+        """Returns EMA-based model degradation trend for your tenant."""
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/trend",
+                timeout = 10,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] get_trend() error: %s", exc)
+            return {}
+
+    # ── Health check ────────────────────────────────────────────────────────
 
     def health_check(self) -> bool:
         """
-        Checks if the FIE server is reachable.
-        Returns True if healthy, False otherwise.
-
-        Usage:
-            if not client.health_check():
-                print("FIE server is not running")
+        Returns True if FIE server is reachable and healthy.
+        Use this before starting a batch to verify connectivity.
         """
         try:
             r = self._session.get(
                 f"{self._config.fie_url}/health",
-                timeout=5,
+                timeout = 5,
             )
             return r.status_code == 200
         except Exception:
