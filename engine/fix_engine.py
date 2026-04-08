@@ -44,6 +44,8 @@ STRATEGY_CONTEXT_INJECTION    = "CONTEXT_INJECTION"
 STRATEGY_PROMPT_DECOMPOSITION = "PROMPT_DECOMPOSITION"
 STRATEGY_SELF_CONSISTENCY     = "SELF_CONSISTENCY"
 STRATEGY_NO_FIX               = "NO_FIX"
+# STEP 10 — escalation when no reliable ground truth can be established
+STRATEGY_HUMAN_ESCALATION     = "HUMAN_ESCALATION"
 
 # Confidence thresholds
 HIGH_CONFIDENCE   = 0.70
@@ -104,14 +106,50 @@ class FixResult:
     # Warning to show user when confidence is low
     warning:           str = ""
 
+    # STEP 10 — escalation flag: True means no automated fix was safe enough.
+    # The caller should surface this to the user for manual review.
+    requires_human_review: bool = False
+    escalation_reason:     str  = ""
+
 
 # ── Strategy 1 — Shadow Consensus ─────────────────────────────────────────
 
-def _apply_shadow_consensus(
-    prompt:         str,
+def _apply_human_escalation(
     primary_output: str,
-    shadow_outputs: list[str],
-    confidence:     float,
+    root_cause:     str,
+    reason:         str,
+) -> FixResult:
+    """
+    STEP 10 — Called when no reliable ground truth could be established and
+    auto-correction would be riskier than returning the original answer.
+
+    Returns the original output unchanged with a clear escalation flag
+    so the caller can surface it in the dashboard escalation queue and
+    prompt the user for manual review.
+    """
+    return FixResult(
+        fixed_output          = primary_output,
+        fix_applied           = False,
+        fix_strategy          = STRATEGY_HUMAN_ESCALATION,
+        fix_explanation       = f"Ground truth verification inconclusive. {reason}",
+        original_output       = primary_output,
+        root_cause            = root_cause,
+        fix_confidence        = 0.0,
+        requires_human_review = True,
+        escalation_reason     = reason,
+        warning=(
+            "FIE could not verify a reliable correction for this output. "
+            "It has been added to the escalation queue for manual review."
+        ),
+    )
+
+
+def _apply_shadow_consensus(
+    prompt:            str,
+    primary_output:    str,
+    shadow_outputs:    list[str],
+    confidence:        float,
+    shadow_weights:    Optional[list[float]] = None,
 ) -> FixResult:
     """
     When shadow models agree on a different answer than the primary model,
@@ -122,11 +160,11 @@ def _apply_shadow_consensus(
 
     Example:
       Primary:  "Thomas Edison invented the telephone."  (WRONG)
-      Mistral:  "Alexander Graham Bell invented it."
-      Llama3.2: "Bell invented the telephone in 1876."
-      Phi3:     "The telephone is credited to Bell."
+      Llama:    "Alexander Graham Bell invented it."        weight=3 (HIGH)
+      DeepSeek: "Bell invented the telephone in 1876."     weight=2 (MEDIUM)
+      Qwen:     "The telephone is credited to Bell."       weight=1 (LOW)
 
-      Shadow majority: Bell → return Bell's answer
+      Weighted score for Bell: 3+2+1=6 out of max 6 → consensus_strength=1.0
     """
     if not shadow_outputs:
         return FixResult(
@@ -140,44 +178,61 @@ def _apply_shadow_consensus(
             warning         = "Could not fix — no shadow models responded.",
         )
 
-    # Find the most common shadow output using semantic grouping
-    # Simple approach: use the shadow output that appears most often
-    # For single shadow model: just use its output
-    if len(shadow_outputs) == 1:
-        shadow_answer  = shadow_outputs[0]
-        agreement_rate = 1.0
-        n_agree        = 1
-    else:
-        # Count how many shadow outputs are similar to each other
-        # Use first shadow as reference, check which others are close
-        from collections import Counter
-        # Normalize: lowercase, strip trailing punctuation
-        normalized = [s.strip().lower().rstrip('.,!?') for s in shadow_outputs]
-        counts     = Counter(normalized)
-        top_normalized, n_agree = counts.most_common(1)[0]
-        # Get the original (non-normalized) version of the most common answer
-        for s in shadow_outputs:
-            if s.strip().lower().rstrip('.,!?') == top_normalized:
-                shadow_answer = s
-                break
-        else:
-            shadow_answer = shadow_outputs[0]
-        agreement_rate = n_agree / len(shadow_outputs)
+    # STEP 3 — Confidence-weighted voting.
+    # Each shadow model casts a vote weighted by its self-reported confidence.
+    # DEFAULT weights (all MEDIUM=2.0) when shadow_weights not provided.
+    weights = shadow_weights if shadow_weights and len(shadow_weights) == len(shadow_outputs) \
+              else [2.0] * len(shadow_outputs)
+    total_weight = sum(weights)
 
-    improvement = min(confidence * agreement_rate, 1.0)
+    # Group outputs and accumulate their weights
+    # Key: normalized answer text; Value: (total_weight, best_original_text)
+    group_weights: dict[str, float] = {}
+    group_originals: dict[str, str] = {}
+
+    for output, weight in zip(shadow_outputs, weights):
+        key = output.strip().lower().rstrip(".,!?")[:200]
+        group_weights[key]    = group_weights.get(key, 0.0) + weight
+        group_originals[key]  = output  # keep last seen original
+
+    # Find the answer with the highest accumulated weight
+    best_key   = max(group_weights, key=lambda k: group_weights[k])
+    best_weight = group_weights[best_key]
+    shadow_answer = group_originals[best_key]
+
+    # consensus_strength: how dominant is the winning answer? (0-1)
+    consensus_strength = best_weight / max(total_weight, 1e-6)
+
+    logger.info(
+        "Shadow consensus | consensus_strength=%.3f | best_weight=%.1f/%.1f | answer=%s...",
+        consensus_strength, best_weight, total_weight, shadow_answer[:60],
+    )
+
+    # STEP 10 gate: if consensus is weak, escalate instead of guessing
+    if consensus_strength < 0.50:
+        return _apply_human_escalation(
+            primary_output = primary_output,
+            root_cause     = "KNOWLEDGE_BOUNDARY_FAILURE",
+            reason=(
+                f"Shadow model consensus too weak (strength={consensus_strength:.2f}). "
+                "Models disagree even among themselves — auto-correction would be unreliable."
+            ),
+        )
+
+    improvement = min(confidence * consensus_strength, 1.0)
 
     return FixResult(
         fixed_output    = shadow_answer,
         fix_applied     = True,
         fix_strategy    = STRATEGY_SHADOW_CONSENSUS,
         fix_explanation = (
-            f"Primary model gave a different answer from shadow models. "
-            f"{n_agree}/{len(shadow_outputs)} shadow model(s) agreed on the corrected answer. "
-            f"Replaced primary output with shadow consensus."
+            f"Confidence-weighted consensus applied across {len(shadow_outputs)} shadow models. "
+            f"Consensus strength: {consensus_strength:.0%}. "
+            f"Winning answer weight: {best_weight:.1f}/{total_weight:.1f}."
         ),
-        original_output = primary_output,
-        root_cause      = "KNOWLEDGE_BOUNDARY_FAILURE",
-        fix_confidence  = round(confidence * agreement_rate, 4),
+        original_output   = primary_output,
+        root_cause        = "KNOWLEDGE_BOUNDARY_FAILURE",
+        fix_confidence    = round(confidence * consensus_strength, 4),
         improvement_score = round(improvement, 4),
     )
 
@@ -631,12 +686,13 @@ def _apply_no_fix(
 # ── Public API — main entry point ──────────────────────────────────────────
 
 def apply_fix(
-    prompt:         str,
-    primary_output: str,
-    shadow_outputs: list[str],
-    root_cause:     str,
-    confidence:     float,
-    model_fn:       Optional[Callable] = None,
+    prompt:          str,
+    primary_output:  str,
+    shadow_outputs:  list[str],
+    root_cause:      str,
+    confidence:      float,
+    model_fn:        Optional[Callable]    = None,
+    shadow_weights:  Optional[list[float]] = None,
 ) -> FixResult:
     """
     Main entry point for the fix engine.
@@ -701,7 +757,8 @@ def apply_fix(
             # Use shadow model outputs directly — fastest fix
             if shadow_outputs:
                 return _apply_shadow_consensus(
-                    prompt, primary_output, shadow_outputs, confidence
+                    prompt, primary_output, shadow_outputs, confidence,
+                    shadow_weights=shadow_weights,
                 )
             else:
                 # No shadows available → self-consistency

@@ -240,6 +240,32 @@ def _log_result(
     if warning:
         logger.warning("[FIE] %s | %s", model_name, warning)
 
+    # v0.3.0 — Log ground truth verification result
+    gt = fie_result.get("ground_truth") or {}
+    if gt:
+        gt_source     = gt.get("source", "")
+        gt_confidence = gt.get("confidence", 0.0)
+        from_cache    = gt.get("from_cache", False)
+        if from_cache:
+            logger.info(
+                "[FIE] %s | GT Cache HIT | confidence=100%% | source=%s",
+                model_name, gt_source,
+            )
+        elif gt_source and gt_source != "none":
+            logger.info(
+                "[FIE] %s | GT verified | source=%s | confidence=%.0f%%",
+                model_name, gt_source, gt_confidence * 100,
+            )
+
+    # v0.3.0 — Log escalation
+    requires_review = fie_result.get("requires_human_review", False)
+    escalation_reason = fie_result.get("escalation_reason", "")
+    if requires_review:
+        logger.warning(
+            "[FIE] %s | ⚠ HUMAN REVIEW REQUIRED | %s",
+            model_name, escalation_reason[:120] if escalation_reason else "Confidence too low to auto-correct",
+        )
+
 
 # ── Helper: Slack alert ────────────────────────────────────────────────────
 
