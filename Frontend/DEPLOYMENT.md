@@ -3,7 +3,7 @@
 ## Vercel project settings
 
 - Framework preset: `Vite`
-- Root directory: `fie-dashboard`
+- Root directory: `Frontend`
 - Build command: `npm run build`
 - Output directory: `dist`
 
