@@ -928,7 +928,7 @@ Environment variables: MongoDB URI, Groq key, OAuth credentials, JWT secret
 ### Frontend — Vercel
 
 ```
-React/Vite app in fie-dashboard/
+React/Vite app in Frontend/
         ↓
 npm run build → dist/
         ↓
@@ -1410,11 +1410,11 @@ uvicorn app.main:app --reload
 ### 4. Install and start the frontend
 
 ```bash
-cd fie-dashboard
+cd Frontend
 npm install
 ```
 
-Create `fie-dashboard/.env`:
+Create `Frontend/.env`:
 
 ```env
 VITE_API_URL=http://localhost:8000/api/v1
@@ -1496,7 +1496,7 @@ Failure_Intelligence_System/
 │   ├── client.py                HTTP client to FIE backend
 │   └── config.py                SDK configuration
 │
-├── fie-dashboard/               React frontend
+├── Frontend/                    React frontend
 │   └── src/
 │       ├── pages/               LoginPage, DashboardPage, AnalyzePage,
 │       │                        DiagnosePage, AlertsPage, VaultPage, SettingsPage

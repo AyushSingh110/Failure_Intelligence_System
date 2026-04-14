@@ -2151,7 +2151,7 @@ This prevents prompt regressions from being merged silently.
 The dashboard is the FastAPI `/docs` endpoint — raw JSON from API calls. Functional but not visually impressive.
 
 **The plan:**
-A proper React dashboard (using the `fie-dashboard/` folder in the repo) with:
+A proper React dashboard (using the `Frontend/` folder in the repo) with:
 - Real-time failure rate chart (last 24 hours, rolling window)
 - Archetype distribution pie chart (what kinds of failures are happening?)
 - Per-model comparison (is Model A performing better than Model B?)
@@ -2177,7 +2177,7 @@ This is the product layer that turns FIE from a library into a commercial produc
 | 7 | Fine-tuned FIE specialist model | Needs 1000+ labeled examples | 10x cheaper, 5x faster |
 | 8 | Multi-language support | Multilingual encoder ready | Global markets |
 | 9 | GitHub Actions CI integration | Test harness ready | Developer experience |
-| 10 | SaaS React dashboard | fie-dashboard/ scaffold exists | Commercial product |
+| 10 | SaaS React dashboard | Frontend/ scaffold exists | Commercial product |
 
 ---
 
