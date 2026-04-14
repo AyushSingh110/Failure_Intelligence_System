@@ -8,8 +8,6 @@ from fie.monitor import monitor
 GROQ_API_KEY = "Key"
 FIE_API_KEY  = "FIE_API_KEY"
 FIE_URL      = "http://localhost:8000"
-
-
 @monitor(
     fie_url       = FIE_URL,
     api_key       = FIE_API_KEY,
@@ -28,8 +26,6 @@ def chat(prompt: str) -> str:
         temperature = 0.0,
     )
     return resp.choices[0].message.content.strip()
-
-
 if __name__ == "__main__":
     if sys.platform == "win32":
         os.system("")
