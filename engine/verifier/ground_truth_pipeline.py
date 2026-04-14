@@ -129,6 +129,7 @@ def run_ground_truth_pipeline(
             return result
 
     # Factual = Wikidata
+    if claim:
         try:
             from engine.verifier.wikidata_verifier import verify_claim_with_wikidata
             wiki = verify_claim_with_wikidata(
