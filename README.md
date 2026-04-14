@@ -358,7 +358,7 @@ Failure_Intelligence_System/
 │   ├── signal_logger.py           30-field signal logging + feedback wiring
 │   └── ground_truth_cache.py      Verified answer cache (write-through)
 │
-├── fie-dashboard/                 React dashboard (Vite)
+├── Frontend/                      React dashboard (Vite)
 │
 ├── data/
 │   ├── download_datasets.py       TruthfulQA download (817 examples)
@@ -434,7 +434,7 @@ uvicorn app.main:app --reload
 ### 4. Dashboard (optional)
 
 ```bash
-cd fie-dashboard
+cd Frontend
 npm install
 npm run dev
 # Dashboard: http://localhost:5173
