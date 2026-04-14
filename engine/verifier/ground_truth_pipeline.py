@@ -1,44 +1,3 @@
-"""
-engine/verifier/ground_truth_pipeline.py — Ground Truth Verification Orchestrator
-
-This is the main entry point that ties together Steps 4–10.
-Called from the /monitor endpoint after the DiagnosticJury produces a verdict.
-
-Decision flow (in priority order)
------------------------------------
-1. Cache lookup (Step 7) — cheapest, highest confidence (human-verified)
-   If hit → return cached answer immediately, skip all other steps
-
-2. Claim extraction (Step 4) — extract {subject, property, value}
-   If no clear claim found → skip Wikidata, move to Serper/escalation
-
-3a. Temporal question? (from DomainCritic verdict)
-      → Serper real-time search (Step 6)
-        Found → return grounded answer
-        Not found / Serper not configured → escalate (Step 10)
-
-3b. Static factual question?
-      → Wikidata structured lookup (Step 5)
-        Consistent → confirm shadow consensus
-        Inconsistent → override with Wikidata-sourced value
-        Not found → escalate (Step 10) if consensus too weak, else return consensus
-
-4. Cache any new verified answer with confidence >= 0.90 (Step 7 write-through)
-
-5. If no verification succeeded with enough confidence → requires_escalation=True
-   The fix engine will then call _apply_human_escalation() instead of auto-correcting
-
-What this file returns
-----------------------
-GroundTruthPipelineResult:
-  verified_answer    : the best available answer (may be same as model's)
-  confidence         : how confident we are (0–1)
-  source             : what verified it (cache / wikidata / serper / consensus)
-  requires_escalation: True → caller should NOT auto-correct, queue for human review
-  escalation_reason  : why escalation was triggered
-  from_cache         : True if the answer came from the GT cache
-"""
-
 from __future__ import annotations
 
 import logging
@@ -75,24 +34,11 @@ def run_ground_truth_pipeline(
 ) -> GroundTruthPipelineResult:
     """
     Main entry point. Called from the /monitor route after jury verdict.
-
-    Parameters
-    ----------
-    prompt          : original user question
-    primary_output  : what the primary model answered (may be wrong)
-    root_cause      : from DiagnosticJury.primary_verdict.root_cause
-    jury_confidence : from DiagnosticJury.jury_confidence
-    shadow_outputs  : texts from shadow models (already filtered for success)
-    shadow_weights  : confidence weights from fan_out_with_confidence() Step 2
-
-    Returns
-    -------
-    GroundTruthPipelineResult
     """
     result = GroundTruthPipelineResult()
     result.pipeline_trace = []
 
-    # ── Stage 1: Cache lookup ──────────────────────────────────────────────
+    # Cache lookup 
     try:
         from engine.ground_truth_cache import lookup_cache
         cache_hit = lookup_cache(prompt)
@@ -112,7 +58,7 @@ def run_ground_truth_pipeline(
         logger.warning("GT cache lookup failed: %s", exc)
         result.pipeline_trace.append(f"Cache lookup error: {exc}")
 
-    # ── Stage 2: Claim extraction ──────────────────────────────────────────
+    #Claim extraction 
     claim = None
     is_temporal = _is_temporal_root_cause(root_cause) and not _is_permanent_fact(prompt)
 
@@ -130,7 +76,7 @@ def run_ground_truth_pipeline(
             logger.warning("Claim extraction failed: %s", exc)
             result.pipeline_trace.append(f"Claim extraction error: {exc}")
 
-    # ── Stage 3a: Temporal → Serper ───────────────────────────────────────
+    # Temporal = Serper 
     if is_temporal:
         result.pipeline_trace.append("Temporal question detected → routing to Serper real-time search")
         try:
@@ -139,7 +85,7 @@ def run_ground_truth_pipeline(
 
             if serper.skip:
                 result.pipeline_trace.append(f"Serper skipped: {serper.error}")
-                # No real-time source → escalate for temporal questions
+                # No real-time source = escalate for temporal questions
                 result.requires_escalation = True
                 result.escalation_reason   = (
                     "This question requires real-time data but no live search provider "
@@ -182,8 +128,7 @@ def run_ground_truth_pipeline(
             result.escalation_reason   = f"Real-time verification failed: {exc}"
             return result
 
-    # ── Stage 3b: Factual → Wikidata ──────────────────────────────────────
-    if claim:
+    # Factual = Wikidata
         try:
             from engine.verifier.wikidata_verifier import verify_claim_with_wikidata
             wiki = verify_claim_with_wikidata(
@@ -198,8 +143,6 @@ def run_ground_truth_pipeline(
                 )
 
                 if not wiki.matches_claim and wiki.confidence >= 0.75:
-                    # Wikidata says the claim is wrong — only override when we
-                    # have a meaningful, self-contained answer to substitute.
                     correct = wiki.wikidata_value or wiki.entity_desc
 
                     if not _is_meaningful_override(correct):
@@ -247,7 +190,7 @@ def run_ground_truth_pipeline(
             logger.warning("Wikidata verification failed: %s", exc)
             result.pipeline_trace.append(f"Wikidata error: {exc}")
 
-    # ── Stage 4: All verification sources exhausted ────────────────────────
+    # All verification sources exhausted 
     # Decide based on consensus_strength whether to auto-correct or escalate
     consensus_strength = _compute_consensus_strength(shadow_outputs, shadow_weights)
     result.pipeline_trace.append(
@@ -259,7 +202,7 @@ def run_ground_truth_pipeline(
         result.pipeline_trace.append(
             "Proceeding with shadow consensus (strength sufficient)"
         )
-        # Return empty verified_answer → caller uses shadow consensus via fix_engine
+        # Return empty verified_answer = caller uses shadow consensus via fix_engine
         result.confidence = consensus_strength
         result.source     = "shadow_consensus"
         return result
@@ -279,7 +222,7 @@ def run_ground_truth_pipeline(
         return result
 
 
-# ── Helpers ─────────────────────────────────────────────────────────────────
+#Helpers
 
 _RE_PERMANENT_FACT_GT = _re.compile(
     r"\b("
@@ -303,24 +246,12 @@ def _is_permanent_fact(prompt: str) -> bool:
 
 
 def _is_temporal_root_cause(root_cause: str) -> bool:
-    # Only true TEMPORAL failures should route to Serper real-time search.
-    # KNOWLEDGE_BOUNDARY_FAILURE means "model is uncertain near the edge of its
-    # training data" — not that the fact itself changes over time.  Routing
-    # permanent facts (chemistry, math, geography) through Serper and then
-    # escalating when Serper is absent is a false positive.
     return root_cause == "TEMPORAL_KNOWLEDGE_CUTOFF"
 
 
 def _is_meaningful_override(correct_value: str) -> bool:
     """
     Guard against using a bare description fragment as an override answer.
-
-    Wikidata descriptions are short summaries (e.g. "alchemist", "river in France",
-    "New South Wales").  These make poor standalone answers.  We only accept an
-    override when correct_value looks like a real, self-contained answer:
-      - At least 3 words (proper nouns like "Alexander Graham Bell") OR
-      - A well-known short proper noun that is NOT a common English word
-        (heuristic: starts with a capital letter and is not all-lowercase)
     """
     if not correct_value:
         return False
@@ -328,12 +259,11 @@ def _is_meaningful_override(correct_value: str) -> bool:
     if len(words) >= 3:
         return True
     # Single or two-word values: accept only if they look like a proper noun
-    # (starts with uppercase and isn't a known fragment pattern)
     if len(words) in (1, 2):
         # Must start with uppercase to be a proper noun
         if not correct_value[0].isupper():
             return False
-        # Reject obvious sentence fragments (starts lowercase after strip)
+        # Reject obvious sentence fragments 
         lower = correct_value.lower()
         bad_fragments = {
             "alchemist", "inventor", "chemist", "scientist", "engineer",

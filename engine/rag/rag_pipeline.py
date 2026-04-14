@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 
 def build_rag_prompt(prompt: str, context: str | None = None) -> str:
     """
-    Wikipedia context ke saath augmented prompt banata hai.
-    Agar Wikipedia context nahi mila → original prompt return karta hai.
+    Builds a RAG prompt with Wikipedia context.
     """
     context = context or fetch_wikipedia_summary(prompt)
 
@@ -36,13 +35,7 @@ Answer:"""
 
 
 def get_grounded_answer(prompt: str, context: str | None = None) -> str:
-    """
-    RAG + Groq se grounded answer generate karta hai.
-    Ollama ki jagah Groq use karta hai.
-
-    Returns:
-        Grounded answer string, or empty string on failure.
-    """
+    """Gets a grounded answer using the RAG pipeline"""
     try:
         from engine.groq_service import get_groq_service
 

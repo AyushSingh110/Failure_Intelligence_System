@@ -1,8 +1,3 @@
-"""
-debug_test.py — Shows exactly what Ollama returns and how clustering works.
-Run: python debug_test.py
-Make sure server is running: uvicorn app.main:app --port 8000
-"""
 import requests
 import json
 

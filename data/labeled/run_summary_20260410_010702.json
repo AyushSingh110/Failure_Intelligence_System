@@ -1,0 +1,23 @@
+{
+  "total_run": 20,
+  "failure_cases": 10,
+  "correct_cases": 10,
+  "true_positives": 10,
+  "false_negatives": 0,
+  "true_negatives": 3,
+  "false_positives": 7,
+  "errors": 0,
+  "recall": 1.0,
+  "miss_rate": 0.0,
+  "specificity": 0.3,
+  "fpr": 0.7,
+  "timestamp": "2026-04-10T01:10:34.790535",
+  "source": "builtin",
+  "output_file": "C:\\Users\\ASUS\\Desktop\\Failure_Intelligence_System\\data\\labeled\\synthetic_20260410_010702.jsonl",
+  "interpretation": {
+    "recall": "% of real failures FIE caught. Target: > 80%",
+    "miss_rate": "% of real failures FIE missed. Target: < 20%",
+    "specificity": "% of correct answers FIE did NOT flag. Target: > 70%",
+    "fpr": "% of correct answers FIE wrongly flagged. Target: < 30%"
+  }
+}

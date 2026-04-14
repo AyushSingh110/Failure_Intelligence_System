@@ -1,13 +1,3 @@
-"""
-fie/monitor.py
-
-The @monitor decorator — main thing users interact with.
-
-TWO MODES:
-mode="monitor" (default, async)
-mode="correct" (real-time correction):
-"""
-
 from __future__ import annotations
 
 import concurrent.futures
@@ -34,28 +24,13 @@ def monitor(
     model_name:    Optional[str] = None,
     alert_slack:   Optional[str] = None,
     run_full_jury: bool          = True,
-    mode:          str           = "monitor",  # "monitor" or "correct"
+    mode:          str           = "monitor", 
     log_results:   bool          = True,
 
-    # Legacy parameter — kept for backward compatibility
-    # async_mode=True  → same as mode="monitor"
-    # async_mode=False → same as mode="correct"
     async_mode:    Optional[bool] = None,
 ):
     """
-    Decorator that monitors or corrects LLM outputs automatically.
-
-    Parameters
-    ----------
-    fie_url      : URL of your FIE server
-    api_key      : API key for authentication
-    model_name   : Name of LLM being monitored (for logs/dashboard)
-    alert_slack  : Slack webhook URL for failure alerts
-    run_full_jury: Run DiagnosticJury (Phase 3) for root cause
-    mode         : "monitor" = fast async monitoring
-                   "correct" = real-time correction (slower but accurate)
-    log_results  : Print FIE results to console
-    """
+    Decorator that monitors or corrects LLM outputs automatically."""
 
     # Handle legacy async_mode parameter
     if async_mode is not None:
@@ -69,7 +44,7 @@ def monitor(
         client      = FIEClient(config)
         _model_name = model_name or func.__name__
 
-        # ── MODE 1: MONITOR (fast async) ──────────────────────────
+        # MODE 1: MONITOR (fast async)
         if effective_mode == "monitor":
 
             @functools.wraps(func)
@@ -112,37 +87,22 @@ def monitor(
 
             return monitor_wrapper
 
-        # ── MODE 2: CORRECT (real-time correction) ─────────────────
+        # MODE 2: CORRECT (real-time correction)
         else:
 
             @functools.wraps(func)
             def correct_wrapper(*args, **kwargs):
-                """
-                Correction path:
-                1. Primary model aur FIE/shadow models SIMULTANEOUSLY call karo
-                2. Dono ke results aane ka wait karo
-                3. Agar fix available → fixed answer return karo
-                4. Agar stable → original answer return karo
 
-                User thoda wait karta hai (15-30s on local Ollama)
-                But user ko HAMESHA correct answer milta hai.
-
-                Timeline:
-                  t=0     → Primary model start + FIE start (parallel)
-                  t=1s    → Primary model done (fast LLM like GPT-4)
-                  t=15s   → FIE done (Ollama shadow models)
-                  t=15s   → Compare karo, fix karo, return karo
-                """
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
 
                 # Run primary model and FIE simultaneously
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
 
-                    # Thread 1: Primary model call
+                    # Thread 1:Primary model call
                     primary_future = executor.submit(func, *args, **kwargs)
 
-                    # Thread 2: We need primary output first for FIE
+                    # Thread 2:We need primary output first for FIE
                     # So: get primary output, then immediately start FIE
                     start          = time.time()
                     primary_result = primary_future.result()
@@ -151,8 +111,6 @@ def monitor(
                         primary_result if isinstance(primary_result, str)
                         else str(primary_result)
                     )
-
-                    # Now start FIE with primary output
                     fie_future = executor.submit(
                         client.monitor,
                         prompt_str,
@@ -206,7 +164,7 @@ def monitor(
     return decorator
 
 
-# ── Helper: Log FIE result ─────────────────────────────────────────────────
+#Helper: Log FIE result
 
 def _log_result(
     fie_result:  dict,
@@ -240,7 +198,7 @@ def _log_result(
     if warning:
         logger.warning("[FIE] %s | %s", model_name, warning)
 
-    # v0.3.0 — Log ground truth verification result
+    # Log ground truth verification result
     gt = fie_result.get("ground_truth") or {}
     if gt:
         gt_source     = gt.get("source", "")
@@ -257,7 +215,7 @@ def _log_result(
                 model_name, gt_source, gt_confidence * 100,
             )
 
-    # v0.3.0 — Log escalation
+    #Log escalation
     requires_review = fie_result.get("requires_human_review", False)
     escalation_reason = fie_result.get("escalation_reason", "")
     if requires_review:
@@ -267,8 +225,7 @@ def _log_result(
         )
 
 
-# ── Helper: Slack alert ────────────────────────────────────────────────────
-
+#Helper: Slack alert
 def _fire_slack_alert(
     webhook_url:    str,
     fie_result:     dict,
@@ -296,15 +253,15 @@ def _fire_slack_alert(
     fixed_output = fix_result.get("fixed_output", "")
 
     fix_section = (
-        f"\n\n✅ *Auto-Fixed:* `{fix_strategy}`\n"
+        f"\n\n *Auto-Fixed:* `{fix_strategy}`\n"
         f"*Fixed output:* {fixed_output[:200]}"
         if fix_applied else
-        "\n\n⚠️ *Fix not applied* — manual review needed"
+        "\n\n *Fix not applied* — manual review needed"
     )
 
     message = {
         "text": (
-            f"🚨 *FIE Alert — Failure Detected*\n\n"
+            f" *FIE Alert — Failure Detected*\n\n"
             f"*Model:* `{model_name}`\n"
             f"*Archetype:* `{archetype}`\n"
             f"*Root cause:* `{root_cause}` ({confidence}% confidence)\n"

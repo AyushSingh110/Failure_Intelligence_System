@@ -28,8 +28,6 @@ class WeightedSimilarityResult(TypedDict):
 def _extract_features(signal: FailureSignalVector) -> list[float]:
     """
     Extracts a normalized feature vector from a FailureSignalVector.
-    Order must be identical to _WEIGHT_VECTOR.
-    latency_ms is excluded from the schema — normalized to 0.0 when absent.
     """
     return [
         1.0 if signal.ensemble_disagreement else 0.0,
@@ -38,7 +36,7 @@ def _extract_features(signal: FailureSignalVector) -> list[float]:
         signal.fsd_score,
         signal.agreement_score,
         signal.ensemble_similarity,
-        0.0,   # latency_ms_norm — populated by weighted_distance() when available
+        0.0,   
     ]
 
 
@@ -49,7 +47,6 @@ def weighted_distance(
     """
     Computes normalized weighted distance between two raw signal dicts.
     Accepts plain dicts (e.g. from API JSON) for flexibility.
-
     Returns a float in [0.0, 1.0] where:
       0.0 = identical signals
       1.0 = maximally different signals

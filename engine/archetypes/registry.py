@@ -125,7 +125,7 @@ _SEED_CORPUS: list[AdversarialRecord] = [
 ]
 
 
-# ── Registry ──────────────────────
+# Registry
 
 class AdversarialRegistry:
     """

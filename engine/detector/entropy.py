@@ -1,23 +1,3 @@
-"""
-engine/detector/entropy.py
-
-Computes normalised Shannon entropy across multiple model outputs.
-
-Two-path design mirrors consistency.py exactly:
-  Path A — derives entropy from semantic cluster counts (long-form outputs)
-  Path B — derives entropy from exact string match counts (short answers)
-
-Critical design decision: entropy.py reuses the answer_counts already
-computed by consistency.py rather than calling _semantic_cluster again.
-This guarantees consistency and entropy always agree on what counts as
-"the same answer" — preventing the case where one sees 1 cluster and
-the other sees 2 clusters for the same input.
-
-Public API:
-  compute_entropy(model_outputs)             → float  (standalone use)
-  compute_entropy_from_counts(counts, total) → float  (used by _build_signal)
-"""
-
 from __future__ import annotations
 
 import math
@@ -45,19 +25,13 @@ def _entropy_from_counts(counts: dict, total: int) -> float:
 def compute_entropy_from_counts(answer_counts: dict[str, int], total: int) -> float:
     """
     Computes entropy from pre-computed answer counts.
-    Used by _build_signal in failure_agent.py and routes.py to ensure
-    entropy always uses the same clustering result as consistency.
     """
     return _entropy_from_counts(answer_counts, total)
 
 
 def compute_entropy(model_outputs: list[str]) -> float:
     """
-    Standalone entropy computation — used when only entropy is needed.
-    Uses semantic clustering for long-form outputs, exact match for short.
-
-    For production use inside _build_signal, prefer compute_entropy_from_counts
-    to guarantee consistency with the answer_counts from compute_consistency.
+    Standalone entropy computation for a list of model outputs.
     """
     if not model_outputs or len(model_outputs) == 1:
         return 0.0

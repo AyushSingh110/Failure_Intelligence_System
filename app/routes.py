@@ -25,7 +25,7 @@ from storage.database import (
     delete_inference_for_tenant,
     clear_inferences_for_tenant,
 )
-from engine.detector.consistency import compute_consistency
+from engine.detector.consistency import compute_consistency, is_primary_outlier
 from engine.detector.entropy import compute_entropy, compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
 from engine.detector.embedding import compute_embedding_distance
@@ -59,12 +59,26 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
 
     ensemble_fires = (
         ensemble["disagreement"] is True
-        and entropy_score > 0.0   # only count ensemble disagreement if model is actually inconsistent
+        and entropy_score > 0.0
     )
+
+    # Check whether PRIMARY is the outlier vs shadow consensus.
+    # This prevents false positives when shadow models disagree with each other
+    # in phrasing/format but primary matches the shadow majority.
+    # Example: primary="New Zealand", shadows=["New Zealand","New Zealand","Australia"]
+    #   → shadow majority = "New Zealand" → primary matches → NOT an outlier
+    # Example: primary="Australia", shadows=["New Zealand","New Zealand","New Zealand"]
+    #   → shadow majority = "New Zealand" → primary disagrees → IS an outlier
+    shadow_outputs   = model_outputs[1:]
+    primary_outlier  = is_primary_outlier(primary_output, shadow_outputs)
+
+    # high_failure_risk requires the PRIMARY to be the disagreeing party.
+    # We keep the entropy gate as a secondary catch for catastrophic disagreement
+    # (all 4 models give completely different answers — high entropy regardless of who's right).
     high_failure_risk = (
-        entropy_score >= settings.high_entropy_threshold
-        or consistency["agreement_score"] <= settings.low_agreement_threshold
-        or ensemble_fires
+        primary_outlier                                          # primary disagrees with shadow majority
+        or entropy_score >= settings.high_entropy_threshold     # total chaos across all models
+        or (ensemble_fires and primary_outlier)                  # embedding-level primary mismatch
     )
 
     return FailureSignalVector(
@@ -420,11 +434,20 @@ def monitor(
             root_cause = primary_v.root_cause
             confidence = primary_v.confidence_score
             layers_fired = set((primary_v.evidence or {}).get("layers_fired", []))
-            factual_roots = {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION",
-                             "TEMPORAL_KNOWLEDGE_CUTOFF"}
 
-            if not signal.high_failure_risk and root_cause not in factual_roots:
-                raise RuntimeError("Auto-fix skipped: no actionable failure signal.")
+            # Gate 1: Only proceed when FSV says primary is genuinely at risk.
+            # Previously this allowed GT pipeline to run on correct answers when
+            # root_cause was factual — causing wrong Wikidata fixes on stable outputs.
+            if not signal.high_failure_risk:
+                raise RuntimeError("Auto-fix skipped: primary output matches shadow consensus.")
+
+            # Gate 2: Minimum jury confidence before taking any corrective action.
+            # A low-confidence verdict (< 0.45) means the jury is unsure — acting
+            # on it produces more wrong corrections than it prevents.
+            if confidence < 0.45:
+                raise RuntimeError(
+                    f"Auto-fix skipped: jury confidence {confidence:.2f} below minimum 0.45."
+                )
 
             # Successful shadow outputs and their confidence weights
             shadow_texts = [r.output_text for r in shadow_model_results if r.success and r.output_text]
@@ -597,12 +620,100 @@ def monitor(
     if not (current_user and current_user.get("is_admin", False)):
         response.explanation_internal = None
 
+    # ── Signal logging — captures every raw value for future calibration ──
+    try:
+        from storage.signal_logger import log_signal
+
+        # Extract layer-level scores from jury verdict if available
+        _layers_fired:  list[str]        = []
+        _layer_scores:  dict[str, float] = {}
+        _jury_verdict   = ""
+        _jury_conf      = 0.0
+        if jury_verdict and jury_verdict.primary_verdict:
+            pv = jury_verdict.primary_verdict
+            ev = pv.evidence or {}
+            _layers_fired = ev.get("layers_fired", [])
+            _layer_scores = ev.get("layer_scores", {})
+            _jury_verdict = pv.root_cause
+            _jury_conf    = pv.confidence_score
+
+        # GT pipeline values
+        _gt_source    = gt_result_schema.source            if gt_result_schema else "none"
+        _gt_conf      = gt_result_schema.confidence        if gt_result_schema else 0.0
+        _gt_override  = (
+            fix_result_schema is not None
+            and fix_result_schema.fix_applied
+            and gt_result_schema is not None
+            and gt_result_schema.source not in ("none", "shadow_consensus")
+        )
+        _gt_answer    = gt_result_schema.verified_answer   if gt_result_schema else ""
+        _req_esc      = requires_human_review
+        _esc_reason   = escalation_reason_str
+
+        # Fix engine values
+        _fix_applied  = fix_result_schema.fix_applied      if fix_result_schema else False
+        _fix_strategy = fix_result_schema.fix_strategy     if fix_result_schema else ""
+        _fix_conf     = fix_result_schema.fix_confidence   if fix_result_schema else 0.0
+        _fix_output   = fix_result_schema.fixed_output     if fix_result_schema else ""
+
+        # Shadow confidence labels (not just weights)
+        _shadow_confs = [
+            getattr(r, "model_confidence", "MEDIUM")
+            for r in shadow_results_raw if r.success
+        ]
+        _shadow_texts = [r.output_text for r in shadow_results_raw if r.success and r.output_text]
+
+        _signal_log_id = log_signal(
+            request_id            = "",   # filled in after we generate stored_request_id below
+            prompt                = body.prompt,
+            primary_output        = body.primary_output,
+            shadow_outputs        = _shadow_texts,
+            shadow_confidences    = _shadow_confs,
+            shadow_weights        = shadow_weights,
+            entropy_score         = signal.entropy_score,
+            agreement_score       = signal.agreement_score,
+            fsd_score             = signal.fsd_score,
+            ensemble_disagreement = bool(signal.ensemble_disagreement),
+            high_failure_risk     = signal.high_failure_risk,
+            layers_fired          = _layers_fired,
+            layer_scores          = _layer_scores,
+            jury_verdict          = _jury_verdict,
+            jury_confidence       = _jury_conf,
+            gt_source             = _gt_source,
+            gt_confidence         = _gt_conf,
+            gt_override_applied   = _gt_override,
+            gt_verified_answer    = _gt_answer,
+            requires_escalation   = _req_esc,
+            escalation_reason     = _esc_reason,
+            fix_applied           = _fix_applied,
+            fix_strategy          = _fix_strategy,
+            fix_confidence        = _fix_conf,
+            fix_output            = _fix_output,
+        )
+    except Exception as _log_exc:
+        logger.debug("Signal logging failed (non-fatal): %s", _log_exc)
+        _signal_log_id = ""
+
     try:
         import uuid
         from datetime import datetime
         from app.schemas import InferenceRequest, MathematicalMetrics
 
         stored_request_id = str(uuid.uuid4())[:12]
+
+        # Back-fill the real request_id into the signal log we just wrote
+        if _signal_log_id:
+            try:
+                from storage.signal_logger import _get_collection as _slc
+                _sl_col = _slc()
+                if _sl_col is not None:
+                    _sl_col.update_one(
+                        {"log_id": _signal_log_id},
+                        {"$set": {"request_id": stored_request_id}},
+                    )
+            except Exception:
+                pass
+
         if response.explanation_external is not None:
             response.explanation_external.request_id = stored_request_id
         if response.explanation_internal is not None:
@@ -693,6 +804,32 @@ def submit_feedback(
             request_id, body.correct_answer[:60],
         )
 
+    # Update the signal log so this becomes a labeled training example
+    try:
+        from storage.signal_logger import find_log_by_request_id, update_signal_feedback
+        sig_log = find_log_by_request_id(request_id)
+        if sig_log:
+            # fie_was_correct = True when:
+            #   - user says it's correct (FIE didn't wrongly flag it), OR
+            #   - user says it's wrong AND FIE had already flagged + corrected it
+            fie_flagged   = sig_log.get("high_failure_risk", False)
+            fie_corrected = sig_log.get("fix_applied", False)
+            if body.is_correct:
+                # User confirms the answer is right
+                # FIE was correct IF it didn't wrongly apply a fix
+                fie_was_correct = not fie_corrected
+            else:
+                # User says answer was wrong
+                # FIE was correct IF it flagged it (high_failure_risk=True)
+                fie_was_correct = fie_flagged
+            update_signal_feedback(
+                log_id          = sig_log["log_id"],
+                fie_was_correct = fie_was_correct,
+                correct_answer  = body.correct_answer or "",
+            )
+    except Exception as _fe:
+        logger.debug("Signal feedback update failed (non-fatal): %s", _fe)
+
     # Store feedback record for analytics
     feedback_doc = {
         "request_id":    request_id,
@@ -719,6 +856,42 @@ def submit_feedback(
             "Feedback recorded. Thank you for helping improve the system."
         ),
     )
+
+
+@router.get("/monitor/calibration", response_model=dict)
+def get_calibration_stats(
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> dict:
+    """
+    Returns calibration statistics computed from all labeled signal logs.
+
+    Shows:
+    - Overall FIE accuracy (across all feedback-labeled requests)
+    - Per-confidence-bucket accuracy (are high-confidence verdicts actually more accurate?)
+    - Per-layer precision (which DomainCritic layers are actually predictive?)
+
+    Use this endpoint to know which hardcoded weights and thresholds need updating.
+    """
+    require_admin(authorization, x_api_key)
+    from storage.signal_logger import get_calibration_stats
+    return get_calibration_stats()
+
+
+@router.get("/monitor/signal-logs", response_model=list)
+def get_signal_logs(
+    limit: int = 50,
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> list:
+    """
+    Returns the N most recent raw signal logs.
+    Useful for debugging, auditing, and manually reviewing what FIE is capturing.
+    Admin only.
+    """
+    require_admin(authorization, x_api_key)
+    from storage.signal_logger import get_recent_logs
+    return get_recent_logs(limit=min(limit, 500))
 
 
 @router.get("/monitor/status", response_model=dict)

@@ -37,7 +37,7 @@ class OllamaService:
     def timeout(self) -> int:
         return self._settings.ollama_timeout_seconds
 
-    # ── Public API ─────────────────────────────────────────────────────
+    # Public API
 
     def is_available(self) -> bool:
         """Check if Ollama server is running."""
@@ -111,7 +111,7 @@ class OllamaService:
         results = self.fan_out(prompt)
         return [r.output_text for r in results if r.success]
 
-    # ── Internal ───────────────────────────────────────────────────────
+    # Internal
 
     def _call_model(self, model_name: str, prompt: str) -> ModelResponse:
         """Calls a single Ollama model and returns its response."""
@@ -161,5 +161,5 @@ class OllamaService:
             )
 
 
-# ── Module-level singleton ─────────────────────────────────────────────────
+#Module-level singleton 
 ollama_service = OllamaService()

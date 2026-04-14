@@ -129,5 +129,5 @@ class SignalEvolutionTracker:
         }
 
 
-# Singleton — imported directly by routes and failure_agent
+# Singleton 
 evolution_tracker = SignalEvolutionTracker()

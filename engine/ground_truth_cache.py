@@ -1,40 +1,3 @@
-"""
-engine/ground_truth_cache.py — Step 7: Verified Answer Cache
-
-Purpose
--------
-Every time a user submits feedback ("this answer is wrong, the correct one is X"),
-that correction is stored permanently in the ground_truth_cache MongoDB collection.
-
-The next time a similar question arrives, we check this cache FIRST — before
-calling Wikidata, Serper, or any shadow model. A cache hit gives us a confidence
-of 1.0 (human-verified) and avoids external API calls entirely.
-
-Matching strategy
------------------
-We do NOT match on exact question text. We use embedding similarity so
-"Who invented the telephone?" matches "What person invented the telephone?" and
-"Who created the telephone device?".
-
-Similarity threshold: 0.92 (configurable via GROUND_TRUTH_SIMILARITY_THRESHOLD)
-This is intentionally high to prevent false cache hits on similar-but-different questions.
-
-Cache structure (MongoDB collection: ground_truth_cache)
---------------------------------------------------------
-{
-  "_id":              "<sha256 of normalized question>",
-  "question_text":    "Who invented the telephone?",
-  "question_vector":  [0.12, -0.34, ...],   # 384-dim sentence-transformer embedding
-  "verified_answer":  "Alexander Graham Bell",
-  "source":           "user_feedback",        # or "wikidata" or "serper"
-  "confidence":       1.0,
-  "verified_by":      "user@company.com",
-  "verified_at":      "2026-04-08T12:00:00Z",
-  "use_count":        7,
-  "last_used_at":     "2026-04-08T15:30:00Z"
-}
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -108,19 +71,10 @@ def _get_similarity_threshold() -> float:
         return 0.92
 
 
-# ── Public API ───────────────────────────────────────────────────────────────
-
+#Public API 
 def lookup_cache(question: str) -> Optional[CacheHit]:
     """
     Step 7 — Check the verified answer cache for a question.
-
-    Uses embedding cosine similarity to match similar questions.
-    Only returns a result when similarity >= threshold (default 0.92).
-
-    Returns CacheHit if found, None otherwise.
-
-    This is called BEFORE any external verification (Wikidata, Serper).
-    A cache hit short-circuits everything — no external API calls needed.
     """
     if not question or len(question.strip()) < 5:
         return None
@@ -130,17 +84,17 @@ def lookup_cache(question: str) -> Optional[CacheHit]:
         return None  # MongoDB not available — skip cache
 
     try:
-        # First: try exact-ish match via SHA-256 (fastest path)
+        # try exact-ish match via SHA-256 (fastest path)
         exact_id  = _question_id(question)
         exact_doc = col.find_one({"_id": exact_id})
         if exact_doc:
             _increment_use_count(col, exact_id)
             return _doc_to_hit(exact_doc)
 
-        # Second: semantic similarity search across all cached questions
+        # semantic similarity search across all cached questions
         query_vec = _embed_question(question)
         if query_vec is None:
-            return None  # Encoder unavailable — skip semantic search
+            return None  
 
         threshold = _get_similarity_threshold()
         query_arr = np.array(query_vec, dtype=np.float32)
@@ -190,13 +144,6 @@ def save_to_cache(
 ) -> bool:
     """
     Saves a verified answer to the ground truth cache.
-
-    Called from:
-      1. The /feedback endpoint when a user submits a correction (Step 8)
-      2. The ground truth pipeline when Wikidata/Serper provides a verified answer
-         with confidence >= 0.90 (so we cache external verifications too)
-
-    Returns True if saved successfully, False on error.
     """
     col = _get_collection()
     if col is None:

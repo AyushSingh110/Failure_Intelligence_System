@@ -29,11 +29,11 @@ def assign_failure_label(signal_vector: dict) -> str:
     risk         = bool(signal_vector.get("high_failure_risk",     False))
     latency      = float(signal_vector.get("latency_ms",           0.0))
 
-    # Rule 1: both disagreement AND high entropy → full hallucination
+    # Rule 1: both disagreement AND high entropy = full hallucination
     if disagreement and entropy >= settings.high_entropy_threshold:
         return ARCHETYPE_HALLUCINATION_RISK
 
-    # Rule 2: high risk + very low entropy → confident but wrong answer
+    # Rule 2: high risk + very low entropy = confident but wrong answer
     if risk and entropy < _LOW_ENTROPY_CEILING:
         return ARCHETYPE_OVERCONFIDENT_FAILURE
 
@@ -50,15 +50,15 @@ def assign_failure_label(signal_vector: dict) -> str:
     if risk and agreement <= settings.low_agreement_threshold and entropy < settings.high_entropy_threshold:
         return ARCHETYPE_BLIND_SPOT
 
-    # Rule 5: high latency + high entropy → resource constraint
+    # Rule 5: high latency + high entropy = resource constraint
     if latency >= _HIGH_LATENCY_MS and entropy >= settings.high_entropy_threshold:
         return ARCHETYPE_RESOURCE_CONSTRAINT
 
-    # Rule 6: high entropy alone → unstable outputs
+    # Rule 6: high entropy alone = unstable outputs
     if entropy >= settings.high_entropy_threshold:
         return ARCHETYPE_UNSTABLE_OUTPUT
 
-    # Rule 7: low agreement → low confidence
+    # Rule 7: low agreement = low confidence
     if agreement <= settings.low_agreement_threshold:
         return ARCHETYPE_LOW_CONFIDENCE
 
