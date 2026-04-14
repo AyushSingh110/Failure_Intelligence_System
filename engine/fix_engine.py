@@ -1,28 +1,3 @@
-"""
-engine/fix_engine.py — Auto-Fix Engine
-
-The fix engine is the final layer of FIE.
-After the DiagnosticJury identifies WHY a failure occurred,
-the fix engine decides HOW to fix it and returns a better answer.
-
-Fix strategies:
-  SHADOW_CONSENSUS    — use majority vote from shadow models
-                        (no re-run needed, fastest)
-  SANITIZE_AND_RERUN  — strip adversarial patterns, re-run clean prompt
-  CONTEXT_INJECTION   — add date/context to prompt, re-run
-  PROMPT_DECOMPOSITION— add chain-of-thought, re-run simplified prompt
-  SELF_CONSISTENCY    — run same prompt 3x, take majority
-  NO_FIX              — confidence too low, return original + warning
-
-Confidence gates:
-  > 0.70 → HIGH confidence → apply full fix automatically
-  0.40-0.70 → MEDIUM → apply conservative fix
-  < 0.40 → LOW → skip fix, add warning only
-
-The fix engine never crashes the user's app.
-All errors are caught and original answer is returned as fallback.
-"""
-
 from __future__ import annotations
 
 import re
@@ -37,14 +12,14 @@ from engine.prompt_guard import score_prompt_attack
 logger = logging.getLogger(__name__)
 
 
-# ── Fix strategy constants ─────────────────────────────────────────────────
+#Fix strategy constants 
 STRATEGY_SHADOW_CONSENSUS     = "SHADOW_CONSENSUS"
 STRATEGY_SANITIZE_AND_RERUN   = "SANITIZE_AND_RERUN"
 STRATEGY_CONTEXT_INJECTION    = "CONTEXT_INJECTION"
 STRATEGY_PROMPT_DECOMPOSITION = "PROMPT_DECOMPOSITION"
 STRATEGY_SELF_CONSISTENCY     = "SELF_CONSISTENCY"
 STRATEGY_NO_FIX               = "NO_FIX"
-# STEP 10 — escalation when no reliable ground truth can be established
+# Escalation when no reliable ground truth can be established
 STRATEGY_HUMAN_ESCALATION     = "HUMAN_ESCALATION"
 
 # Confidence thresholds
@@ -52,13 +27,12 @@ HIGH_CONFIDENCE   = 0.70
 MEDIUM_CONFIDENCE = 0.25  # lowered from 0.40 — DomainCritic scores 0.25-0.35 for factual errors
 
 # Safe response for adversarial attacks
-# NEVER use shadow model output for attacks — shadow models may obey them
 _SAFE_ADVERSARIAL_RESPONSE = (
     "I can help you with legitimate questions and tasks. "
     "If you have a genuine question, please feel free to ask."
 )
 
-# Root cause → strategy mapping
+# Root cause = strategy mapping
 _STRATEGY_MAP: dict[str, str] = {
     "PROMPT_INJECTION":          STRATEGY_SANITIZE_AND_RERUN,
     "JAILBREAK_ATTEMPT":         STRATEGY_SANITIZE_AND_RERUN,
@@ -77,55 +51,40 @@ _STRATEGY_MAP: dict[str, str] = {
 class FixResult:
     """
     Complete result from the fix engine.
-    Contains the fixed output plus full explanation of what was done.
     """
     # The answer to return to the user
     fixed_output:      str
-
     # Whether a fix was actually applied
     fix_applied:       bool
-
     # Which strategy was used
     fix_strategy:      str
-
     # Human-readable explanation of what happened
     fix_explanation:   str
-
     # Original wrong answer — kept for audit trail
     original_output:   str
-
     # Root cause that triggered this fix
     root_cause:        str
-
-    # Confidence in the fix (0-1)
+    # Confidence in the fix 
     fix_confidence:    float
-
-    # How much better is the fix? (0-1, estimated)
+    # How much better is the fix? 
     improvement_score: float = 0.0
-
     # Warning to show user when confidence is low
     warning:           str = ""
-
-    # STEP 10 — escalation flag: True means no automated fix was safe enough.
+    # escalation flag: True means no automated fix was safe enough.
     # The caller should surface this to the user for manual review.
     requires_human_review: bool = False
     escalation_reason:     str  = ""
 
 
-# ── Strategy 1 — Shadow Consensus ─────────────────────────────────────────
-
+#Strategy 1 — Shadow Consensus 
 def _apply_human_escalation(
     primary_output: str,
     root_cause:     str,
     reason:         str,
 ) -> FixResult:
     """
-    STEP 10 — Called when no reliable ground truth could be established and
+    Called when no reliable ground truth could be established and
     auto-correction would be riskier than returning the original answer.
-
-    Returns the original output unchanged with a clear escalation flag
-    so the caller can surface it in the dashboard escalation queue and
-    prompt the user for manual review.
     """
     return FixResult(
         fixed_output          = primary_output,
@@ -154,17 +113,6 @@ def _apply_shadow_consensus(
     """
     When shadow models agree on a different answer than the primary model,
     we use their majority vote as the correct answer.
-
-    This is the fastest fix — no re-run needed.
-    Shadow models already answered the question correctly.
-
-    Example:
-      Primary:  "Thomas Edison invented the telephone."  (WRONG)
-      Llama:    "Alexander Graham Bell invented it."        weight=3 (HIGH)
-      DeepSeek: "Bell invented the telephone in 1876."     weight=2 (MEDIUM)
-      Qwen:     "The telephone is credited to Bell."       weight=1 (LOW)
-
-      Weighted score for Bell: 3+2+1=6 out of max 6 → consensus_strength=1.0
     """
     if not shadow_outputs:
         return FixResult(
@@ -389,8 +337,7 @@ def _apply_sanitize_and_rerun(
     )
 
 
-# ── Strategy 3 — Context Injection ────────────────────────────────────────
-
+#Strategy 3 — Context Injection 
 def _apply_context_injection(
     prompt:         str,
     primary_output: str,
@@ -401,13 +348,6 @@ def _apply_context_injection(
     """
     When the prompt asks for real-time or post-cutoff information,
     inject honest context about what the model can and cannot know.
-
-    Example:
-      Original: "What is the current price of Bitcoin?"
-      Fixed prompt: "Today is 2026-03-15. You don't have real-time data.
-                    If asked for current prices, acknowledge your cutoff
-                    and direct the user to a live source.
-                    Question: What is the current price of Bitcoin?"
     """
     today   = datetime.now(timezone.utc).strftime("%B %d, %Y")
     context = (
@@ -494,7 +434,7 @@ def _generate_temporal_fallback(prompt: str, today: str) -> str:
         )
 
 
-# ── Strategy 4 — Prompt Decomposition ─────────────────────────────────────
+# Prompt Decomposition 
 
 _DOUBLE_NEGATIVE_PATTERNS = [
     (re.compile(r'\bnot\s+incorrect\b', re.IGNORECASE), 'correct'),
@@ -515,13 +455,13 @@ def _simplify_prompt(prompt: str) -> tuple[str, list[str]]:
     simplified   = prompt
     changes_made = []
 
-    # Step 1: Resolve double negations
+    # Resolve double negations
     for pattern, replacement in _DOUBLE_NEGATIVE_PATTERNS:
         if pattern.search(simplified):
             simplified = pattern.sub(replacement, simplified)
             changes_made.append(f"resolved double negation → '{replacement}'")
 
-    # Step 2: Add chain-of-thought instruction
+    # Add chain-of-thought instruction
     cot_prefix = "Let's think through this step by step.\n\n"
     simplified = cot_prefix + simplified
     changes_made.append("added chain-of-thought instruction")
@@ -539,11 +479,6 @@ def _apply_prompt_decomposition(
     """
     When the prompt is too complex (double negations, nested references),
     simplify it and re-run with chain-of-thought prompting.
-
-    Example:
-      Original: "Which statements are NOT INCORRECT about X?"
-      Fixed:    "Let's think step by step.
-                 Which statements are CORRECT about X?"
     """
     simplified_prompt, changes = _simplify_prompt(prompt)
 
@@ -580,7 +515,7 @@ def _apply_prompt_decomposition(
     )
 
 
-# ── Strategy 5 — Self Consistency ─────────────────────────────────────────
+#Strategy 5 — Self Consistency 
 
 def _apply_self_consistency(
     prompt:         str,
@@ -592,9 +527,6 @@ def _apply_self_consistency(
     """
     When shadow models are not available or don't strongly agree,
     run the same prompt 3 times and take the majority vote.
-
-    This exploits the fact that correct answers tend to be consistent
-    while hallucinations tend to vary.
     """
     if not model_fn:
         # No model function — fall back to shadow consensus if available
@@ -654,7 +586,7 @@ def _apply_self_consistency(
     )
 
 
-# ── No-fix fallback ────────────────────────────────────────────────────────
+#No-fix fallback 
 
 def _apply_no_fix(
     primary_output: str,
@@ -683,8 +615,7 @@ def _apply_no_fix(
     )
 
 
-# ── Public API — main entry point ──────────────────────────────────────────
-
+#Public API — main entry point 
 def apply_fix(
     prompt:          str,
     primary_output:  str,
@@ -699,20 +630,6 @@ def apply_fix(
 
     Reads the root cause and confidence from DiagnosticJury,
     selects the appropriate fix strategy, and returns a FixResult.
-
-    Parameters
-    ----------
-    prompt          : original user prompt
-    primary_output  : what the primary model returned (possibly wrong)
-    shadow_outputs  : responses from Ollama shadow models
-    root_cause      : from DiagnosticJury primary_verdict.root_cause
-    confidence      : from DiagnosticJury primary_verdict.confidence_score
-    model_fn        : optional callable to re-run the LLM
-                      signature: (prompt: str) -> str
-
-    Returns
-    -------
-    FixResult with fixed_output, explanation, and fix metadata
     """
     logger.info(
         "Fix engine called | root_cause=%s | confidence=%.3f | "
@@ -728,7 +645,7 @@ def apply_fix(
         forced_strategy = STRATEGY_CONTEXT_INJECTION
         confidence = max(confidence, MEDIUM_CONFIDENCE)
 
-    # ── Confidence gate ────────────────────────────────────────────────
+    # Confidence gate
     if confidence < MEDIUM_CONFIDENCE:
         return _apply_no_fix(
             primary_output = primary_output,
@@ -740,7 +657,7 @@ def apply_fix(
             ),
         )
 
-    # ── Look up fix strategy ───────────────────────────────────────────
+    #Look up fix strategy 
     strategy = forced_strategy or _STRATEGY_MAP.get(root_cause, STRATEGY_NO_FIX)
 
     if strategy == STRATEGY_NO_FIX:
@@ -751,7 +668,7 @@ def apply_fix(
             reason         = f"No fix strategy defined for root cause: {root_cause}",
         )
 
-    # ── Apply the right strategy ───────────────────────────────────────
+    # Apply the right strategy 
     try:
         if strategy == STRATEGY_SHADOW_CONSENSUS:
             # Use shadow model outputs directly — fastest fix

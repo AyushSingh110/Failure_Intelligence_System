@@ -46,7 +46,7 @@ _TEMPORAL_ROOTS = frozenset({
 })
 
 
-# ── DiagnosticJury ─────────────────────────────────────────────────────────
+# DiagnosticJury 
 
 class DiagnosticJury:
 
@@ -169,14 +169,14 @@ class DiagnosticJury:
         )
 
 
-# ── FailureAgent ───────────────────────────────────────────────────────────
+#FailureAgent 
 
 class FailureAgent:
 
     def __init__(self) -> None:
         self._jury = DiagnosticJury()
 
-    # ── Phase 1 ────────────────────────────────────────────────────────
+    # Phase 1 
 
     def run(
         self,
@@ -200,7 +200,7 @@ class FailureAgent:
             "embedding_distance":    embedding["embedding_distance"],
         }
 
-    # ── Phase 2 ────────────────────────────────────────────────────────
+    # Phase 2 
 
     def run_full(
         self,
@@ -230,7 +230,7 @@ class FailureAgent:
             "trend_summary":         trend,
         }
 
-    # ── Phase 3 ────────────────────────────────────────────────────────
+    # Phase 3 
 
     def run_diagnostic(self, request: DiagnosticRequest) -> DiagnosticResponse:
         """Phase 3: full Phase 1 + Phase 2 + DiagnosticJury reasoning."""
@@ -244,16 +244,16 @@ class FailureAgent:
             else request.model_outputs[0]
         )
 
-        # ── Phase 1 ────────────────────────────────────────────────────
+        #  Phase 1
         signal    = self._build_signal(request.model_outputs)
         archetype = label_failure_archetype(signal)
         embedding = compute_embedding_distance(primary_output, secondary_output)
 
-        # ── Phase 2 ────────────────────────────────────────────────────
+        #  Phase 2
         archetype_registry.assign(signal)
         evolution_tracker.record(signal)
 
-        # ── Phase 3 ────────────────────────────────────────────────────
+        #  Phase 3
         context = DiagnosticContext.build(
             prompt=request.prompt,
             primary_output=primary_output,
@@ -272,12 +272,11 @@ class FailureAgent:
         )
         return attach_explanations_to_diagnostic(response)
 
-    # ── Shared signal builder ──────────────────────────────────────────
+    # Shared signal builder
 
     def _build_signal(self, model_outputs: list[str]) -> FailureSignalVector:
         """
         Builds a FailureSignalVector from all provided model outputs.
-
         All 3 detectors receive the full list:
           - consistency + entropy : use the full list for clustering
           - ensemble              : compares ALL pairwise combinations
@@ -319,6 +318,6 @@ class FailureAgent:
         )
 
 
-# ── Singletons ─────────────────────────────────────────────────────────────
+# Singletons 
 failure_agent   = FailureAgent()
 diagnostic_jury = failure_agent._jury

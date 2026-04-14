@@ -14,33 +14,25 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GroqModelResponse:
     """
-    Single model ka response.
-    Same structure as OllamaModelResponse — easy to swap.
-
-    STEP 2 — model_confidence and confidence_weight added.
-    The fan_out_with_confidence() method asks each model to
-    self-report its certainty. Weights are used in the
-    confidence-weighted consensus fix (Step 3).
+    Single model response.
     """
     model_name:        str
     output_text:       str   = ""
     success:           bool  = False
     latency_ms:        float = 0.0
     error:             str   = ""
-    # STEP 2 additions — confidence signal from the model
+    # additions — confidence signal from the model
     model_confidence:  str   = "MEDIUM"   # "HIGH" | "MEDIUM" | "LOW"
     confidence_weight: float = 2.0        # HIGH=3, MEDIUM=2, LOW=1
 
 
-# STEP 1 — Diverse model families (Meta + DeepSeek + Qwen) to reduce correlated failure.
-# Fallback list if config is not loaded.
+# Diverse model families to reduce correlated failure.
+# Fallback options provided for any model that fails 
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
     "deepseek-r1-distill-llama-70b",
     "qwen-qwq-32b",
 ]
-
-# Models that have been removed from Groq's API — map to active equivalents.
 _MODEL_ALIASES = {
     "mixtral-8x7b-32768":  "llama-3.3-70b-versatile",
     "gemma2-9b-it":        "llama-3.3-70b-versatile",
@@ -48,8 +40,8 @@ _MODEL_ALIASES = {
     "llama-3.2-3b-preview": "llama-3.1-8b-instant",
 }
 
-# STEP 2 — Suffix appended to each prompt in fan_out_with_confidence().
-# We ask the model to rate its own certainty so we can weight its vote.
+#Suffix appended to each prompt in fan_out_with_confidence().
+# ask the model to rate its own certainty so we can weight its vote.
 _CONFIDENCE_SUFFIX = (
     "\n\n---\nAfter your answer add exactly one line in this format:\n"
     "CONFIDENCE: HIGH\n"
@@ -185,7 +177,6 @@ class GroqService:
     def fan_out(self, prompt: str) -> list[GroqModelResponse]:
         """
         Returns list of GroqModelResponse sorted by model name.
-        Failed models bhi include hote hain (success=False).
         """
         results: list[GroqModelResponse] = []
 
@@ -237,19 +228,17 @@ class GroqService:
             temperature=temperature,
         )
 
-    # ── STEP 2: Confidence-signal helpers ─────────────────────────────────
+    # Confidence-signal helpers 
 
     @staticmethod
     def _parse_confidence(raw_text: str) -> tuple[str, str]:
         """
         Strips the CONFIDENCE line from model output and returns
         (cleaned_output, confidence_level).
-
         Model is asked to append "CONFIDENCE: HIGH/MEDIUM/LOW" on
         a new line. This method finds that line, extracts the level,
         and removes it from the output text so the caller gets a
         clean answer.
-
         Returns ("MEDIUM", cleaned_text) if no CONFIDENCE line found.
         """
         lines = raw_text.strip().split("\n")
@@ -271,13 +260,10 @@ class GroqService:
 
     def fan_out_with_confidence(self, prompt: str) -> list[GroqModelResponse]:
         """
-        STEP 2 — Same as fan_out() but appends a confidence-request suffix
-        to the prompt so each shadow model rates its own certainty.
-
+        appends a confidence-request suffix to the prompt so each shadow model rates its own certainty.
         The confidence level is parsed from each response and stored in
         model_confidence and confidence_weight on the GroqModelResponse.
         The output_text is cleaned (confidence line removed).
-
         Used by the monitor endpoint when ground-truth verification is
         active. The confidence weights feed into Step 3 (weighted consensus).
         """
@@ -310,8 +296,7 @@ class GroqService:
 
     def is_available(self) -> bool:
         """
-        Groq API reachable hai kya? Simple health check.
-        Returns True if at least one model responds.
+        Groq API reachable? Simple health check.
         """
         if not self._api_key:
             return False
@@ -329,14 +314,9 @@ class GroqService:
 
 # Singleton instance 
 # Created once when module loads, reused for all requests
-
 _groq_service_instance: Optional[GroqService] = None
 
-
 def get_groq_service() -> Optional[GroqService]:
-    """
-    GroqService ka singleton instance return karta hai.
-    """
     global _groq_service_instance
 
     if _groq_service_instance is None:

@@ -21,7 +21,7 @@ class EmbeddingResult(TypedDict):
     semantic_similarity: float
 
 
-# ── LLM prefix stripper
+# LLM prefix stripper
 
 _ANSWER_PREFIX_PATTERN = re.compile(
     r"^(the answer is|result:|answer:|output:|response:|therefore[,:]?|so[,:]?|"
@@ -36,7 +36,6 @@ def _strip_llm_prefix(text: str) -> str:
 
 
 # Sentence-Transformer 
-
 def _transformer_similarity(text_a: str, text_b: str) -> float | None:
     """
     Encodes both texts with the shared SentenceEncoder and returns

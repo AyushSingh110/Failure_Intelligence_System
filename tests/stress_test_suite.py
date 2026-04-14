@@ -47,13 +47,6 @@ class StressResult:
 
 
 def _login_headers() -> dict[str, str]:
-    """
-    Authenticate against the local backend and return headers for protected routes.
-
-    The stress suite now uses the same authenticated flow as the dashboard so:
-    - clearing /inferences works after auth hardening
-    - generated records are tagged to a real tenant instead of 'anonymous'
-    """
     response = requests.post(
         f"{BASE}/auth/google",
         json={"email": AUTH_EMAIL, "name": AUTH_NAME, "picture": ""},
