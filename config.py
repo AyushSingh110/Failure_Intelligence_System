@@ -53,44 +53,35 @@ class Settings(BaseSettings):
     # To re-enable: set ollama_enabled=True in .env
     ollama_enabled:         bool      = Field(default=False)
 
-    # ── Groq API settings ──────────────────────────────────────────
-    # Free API key: groq.com → Dashboard → API Keys → Create API Key
-    # Free tier: 14,400 requests/day per model
+    #Groq API settings 
     groq_api_key:           str       = Field(default="")
-    # STEP 1 — Three models from different training families to reduce
-    # correlated failure. llama (Meta) + deepseek (DeepSeek R1 RLHF) +
-    # qwen (Alibaba) have different pretraining corpora and RLHF recipes.
     groq_models:            list[str] = Field(default=[
-                                            "llama-3.3-70b-versatile",        # Meta — strong general
-                                            "deepseek-r1-distill-llama-70b",  # DeepSeek R1 — reasoning-tuned
-                                            "qwen-qwq-32b",                   # Alibaba Qwen — different pretraining
+                                            "llama-3.3-70b-versatile",       
+                                            "deepseek-r1-distill-llama-70b",  
+                                            "qwen-qwq-32b",                
                                         ])
     groq_timeout_seconds:   int       = Field(default=30, ge=5, le=120)
     groq_enabled:           bool      = Field(default=True)
 
-    # ── Ground Truth Verification settings ─────────────────────────
-    # Wikidata: free, no API key needed
+    # Ground Truth Verification settings 
     wikidata_enabled:                 bool  = Field(default=True)
     wikidata_timeout_seconds:         int   = Field(default=8, ge=2, le=30)
 
     # Serper: real-time Google search for temporal questions
-    # Free tier: 2,500 searches/month — get key at serper.dev
     serper_api_key:                   str   = Field(default="")
     serper_enabled:                   bool  = Field(default=False)
     serper_timeout_seconds:           int   = Field(default=8, ge=2, le=30)
 
-    # Ground truth cache (MongoDB collection)
+    # Ground truth cache 
     ground_truth_cache_enabled:       bool  = Field(default=True)
     ground_truth_similarity_threshold: float = Field(default=0.92, ge=0.0, le=1.0)
 
     # Confidence weights for shadow model families
-    # HIGH=3, MEDIUM=2, LOW=1 — used in weighted consensus
     confidence_weight_high:           float = Field(default=3.0)
     confidence_weight_medium:         float = Field(default=2.0)
     confidence_weight_low:            float = Field(default=1.0)
 
     # Escalation: when total weighted confidence is below this
-    # threshold, escalate to human review instead of auto-correcting
     escalation_confidence_threshold:  float = Field(default=0.40, ge=0.0, le=1.0)
 
     # Embeddings
