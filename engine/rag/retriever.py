@@ -10,17 +10,6 @@ WIKI_SEARCH = "https://en.wikipedia.org/w/api.php"
 
 
 def _extract_search_query(prompt: str) -> str:
-    """
-    Prompt se short Wikipedia-friendly query extract karta hai.
-    
-    Examples:
-      "What is the boiling point of water at sea level?" 
-        → "boiling point of water"
-      "Who invented the telephone?"
-        → "telephone invention history"
-      "What is the capital of France?"
-        → "France capital"
-    """
     # Remove question words and clean up
     cleaned = re.sub(
         r'^(what\s+is\s+the?|who\s+invented|what\s+are\s+the?|'
@@ -36,18 +25,17 @@ def _extract_search_query(prompt: str) -> str:
 
 def fetch_wikipedia_summary(query: str, *, timeout: int = 6) -> str:
     """
-    Wikipedia se summary fetch karta hai.
-    First tries direct page lookup, then falls back to search API.
+    Fetches a Wikipedia summary for the given query.
     """
     if not query or not query.strip():
         return ""
 
-    # Try 1: Direct lookup with cleaned query
+    #Direct lookup with cleaned query
     direct = _try_direct_lookup(_extract_search_query(query), timeout)
     if direct:
         return direct
 
-    # Try 2: Search API for better results
+    #Search API for better results
     search_result = _try_search_api(query, timeout)
     if search_result:
         return search_result

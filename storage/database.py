@@ -1,25 +1,3 @@
-"""
-storage/database.py — MongoDB Atlas Backend
-
-Replaces the flat JSON vault with MongoDB Atlas.
-
-Collections
------------
-  inferences   : one document per InferenceRequest
-                 same schema as before — drop-in replacement
-
-Public API — identical to the original flat-file version
----------------------------------------------------------
-  initialize_vault()              → connects to MongoDB
-  save_inference(data)            → inserts one document
-  get_all_inferences()            → returns all as InferenceRequest list
-  get_inference_by_id(request_id) → returns one or None
-  delete_inference(request_id)    → deletes one, returns bool
-  flush_vault()                   → no-op (MongoDB writes are immediate)
-
-No changes needed anywhere else in the codebase.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -30,7 +8,7 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# ── Module-level MongoDB client and collection ─────────────────────────────
+#Module-level MongoDB client and collection 
 _client     = None
 _db         = None
 _collection = None
@@ -38,7 +16,7 @@ _fallback_records: dict[str, InferenceRequest] = {}
 _fallback_mode = False
 
 
-# ── Internal helpers ───────────────────────────────────────────────────────
+#Internal helpers 
 
 def _get_collection():
     """Returns the inferences collection, initializing if needed."""
@@ -66,12 +44,11 @@ def _from_doc(doc: dict[str, Any]) -> InferenceRequest | None:
         return None
 
 
-# ── Public API ─────────────────────────────────────────────────────────────
+#Public API 
 
 def initialize_vault() -> None:
     """
     Connects to MongoDB Atlas and initializes the collection.
-    Called once at application startup from main.py lifespan.
     """
     global _client, _db, _collection, _fallback_mode
 
@@ -98,7 +75,7 @@ def initialize_vault() -> None:
         _client = MongoClient(
             settings.mongodb_uri,
             server_api=ServerApi("1"),
-            serverSelectionTimeoutMS=10000,  # 10 seconds
+            serverSelectionTimeoutMS=10000,  
             connectTimeoutMS=10000,
             socketTimeoutMS=10000,
             tls=True,
@@ -142,7 +119,6 @@ def initialize_vault() -> None:
 def flush_vault() -> None:
     """
     No-op for MongoDB — writes are immediate and persistent.
-    Kept for API compatibility with the original flat-file version.
     """
     pass
 
@@ -150,8 +126,6 @@ def flush_vault() -> None:
 def save_inference(data: InferenceRequest) -> bool:
     """
     Inserts one inference record into MongoDB.
-    Returns True on success, False on failure.
-    Uses upsert so duplicate request_ids don't crash.
     """
     try:
         if _fallback_mode:
@@ -176,7 +150,6 @@ def save_inference(data: InferenceRequest) -> bool:
 def get_all_inferences() -> list[InferenceRequest]:
     """
     Returns all stored inference records sorted by timestamp descending.
-    Most recent first — matches the original vault behaviour.
     """
     try:
         if _fallback_mode:
@@ -320,16 +293,11 @@ def delete_inference_for_tenant(request_id: str, tenant_id: str) -> bool:
         return False
 
 
-# ── Step 8: User feedback storage ─────────────────────────────────────────
+# User feedback storage 
 
 def save_feedback(feedback_doc: dict) -> bool:
     """
     Saves a user feedback record to the 'feedback' collection.
-    feedback_doc must contain at least: request_id, tenant_id, is_correct.
-
-    Called from POST /feedback/{request_id} endpoint.
-    Also triggers ground_truth_cache update when is_correct=False
-    and correct_answer is provided.
     """
     try:
         if _fallback_mode or _db is None:

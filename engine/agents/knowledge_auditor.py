@@ -10,13 +10,13 @@ class KnowledgeAuditor:
         from engine.verifier.answer_collector import answer_collector
         from engine.verifier.agreement_checker import agreement_checker
 
-        # Step 1: choose verification models
+        # choose verification models
         models = model_router.get_models()
 
-        # Step 2: collect answers from verifiers
+        # collect answers from verifiers
         answers = answer_collector.collect_answers(prompt)
 
-        # Step 3: analyze agreement
+        # analyze agreement
         result = agreement_checker.check_agreement(model_output, answers)
 
         return result

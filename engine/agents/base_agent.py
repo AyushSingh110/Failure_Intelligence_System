@@ -48,21 +48,10 @@ class BaseJuryAgent(ABC):
     def analyze(self, context: DiagnosticContext) -> AgentVerdict:
         """
         Core analysis method.
-
-        Parameters
-        ----------
-        context : DiagnosticContext
-            All signals and raw data for this inference event.
-
-        Returns
-        -------
-        AgentVerdict
-            Structured diagnosis. Set skipped=True if analysis is not applicable.
         """
         ...
 
     # Helpers available to all subclasses 
-
     def _skip(self, reason: str) -> AgentVerdict:
         """return a skipped verdict with a clean reason string."""
         return AgentVerdict(

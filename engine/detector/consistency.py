@@ -9,7 +9,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# ── Tuning constants ──────────────────────────────────────────────────────
+# Tuning constants
 SEMANTIC_SIMILARITY_THRESHOLD: float = 0.72
 SHORT_ANSWER_THRESHOLD:        int   = 40
 KEYWORD_THRESHOLD:             int   = 10  # outputs shorter than this = keyword answers
@@ -18,14 +18,14 @@ KEYWORD_THRESHOLD:             int   = 10  # outputs shorter than this = keyword
 _SENTENCE_END = re.compile(r'[.!?](?:\s|$)')
 
 
-# ── Public return type ────────────────────────────────────────────────────
+#Public return type
 class ConsistencyResult(TypedDict):
     agreement_score: float
     fsd_score:       float
     answer_counts:   dict[str, int]
 
 
-# ── LLM prefix / suffix normalization ────────────────────────────────────
+#LLM normalization
 _PREFIX_PASS_1 = re.compile(
     r"^("
     r"the (answer|result|correct answer|final answer) is[:\s]?|"
@@ -63,19 +63,10 @@ def _normalize(text: str) -> str:
     return result.lower().strip()
 
 
-# ── Encoding representative ───────────────────────────────────────────────
+# Encoding representative 
 def _encoding_repr(text: str) -> str:
     """
     Returns the text used for semantic encoding.
-
-    Short outputs (< SHORT_ANSWER_THRESHOLD): encode as-is.
-    Long outputs: encode only the first sentence.
-
-    Why: sentence transformers underestimate similarity between short keyword
-    answers ("Paris") and long elaborated answers ("The capital of France is
-    Paris. It's one of the most famous...") because extra content after the
-    first sentence dilutes the core answer vector. Using first sentence
-    ensures long outputs are compared on their actual answer content.
     """
     if len(text) < SHORT_ANSWER_THRESHOLD:
         return text
@@ -90,17 +81,6 @@ def _keyword_matches(short_text: str, other_text: str) -> bool:
     """
     Returns True if short_text (a single keyword answer) appears as a
     whole-word match inside other_text.
-
-    This handles the case where a user's primary model returns a bare keyword
-    ("Paris") while shadow models return full sentences ("The capital of France
-    is Paris."). The encoder cannot reliably compare these due to embedding
-    space asymmetry between keywords and propositions.
-
-    Only applies when short_text is genuinely a keyword (< KEYWORD_THRESHOLD).
-    Uses word-boundary regex to prevent partial matches:
-      'paris' matches 'the capital of france is paris' ✓
-      'paris' does NOT match 'comparison of france' ✓
-      'ran' does NOT match 'france' ✓
     """
     if len(short_text) >= KEYWORD_THRESHOLD:
         return False
@@ -108,24 +88,13 @@ def _keyword_matches(short_text: str, other_text: str) -> bool:
     return bool(re.search(pattern, other_text, re.IGNORECASE))
 
 
-# ── Semantic clustering ───────────────────────────────────────────────────
+#  Semantic clustering 
 def _semantic_cluster(
     normalized_outputs: list[str],
     threshold: float = SEMANTIC_SIMILARITY_THRESHOLD,
 ) -> dict[str, int] | None:
     """
     Groups outputs into semantic clusters using a two-rule approach:
-
-    Rule 1 — Keyword substring: if one output is a short keyword (< 10 chars)
-    and it appears as a whole word in the cluster label → merge.
-    This handles: "Paris" vs "The capital of France is Paris."
-
-    Rule 2 — Cosine similarity on encoding representatives: encode the first
-    sentence of each output and compare. If similarity >= threshold → merge.
-    This handles: two long paraphrases of the same answer.
-
-    Full text is preserved as the cluster label in answer_counts.
-    Only encoding representations are used for similarity computation.
     """
     try:
         from engine.encoder import get_encoder
@@ -194,14 +163,73 @@ def _semantic_cluster(
     }
 
 
-# ── Exact string matching (fallback) ─────────────────────────────────────
+#Exact string matching (fallback) 
 def _exact_cluster(normalized_outputs: list[str]) -> dict[str, int]:
     # Truncate keys to 300 chars to prevent MongoDB field length issues
     truncated = [o[:300] for o in normalized_outputs]
     return dict(Counter(truncated))
 
 
-# ── Public API ────────────────────────────────────────────────────────────
+#Primary-outlier check
+def is_primary_outlier(primary_output: str, shadow_outputs: list[str]) -> bool:
+    """
+    Returns True ONLY when the primary output meaningfully disagrees
+    with the shadow model majority — meaning the primary is the outlier.
+
+    Returns False when:
+      - Fewer than 2 shadow outputs are available (can't establish majority)
+      - Shadow models themselves disagree (shadow agreement < 0.60) — the
+        question is genuinely ambiguous, not necessarily a primary failure
+      - Primary matches the shadow majority semantically
+    """
+    if not shadow_outputs or len(shadow_outputs) < 2:
+        return False
+
+    # Step 1: Compute shadow-only consistency
+    shadow_result    = compute_consistency(shadow_outputs)
+    shadow_agreement = shadow_result["agreement_score"]
+
+    # Step 2: Only meaningful when shadows mostly agree with each other
+    if shadow_agreement < 0.60:
+        # Shadows themselves are confused can't reliably identify a majority or outlier
+        return False
+
+    # Step 3: Find the majority shadow cluster label
+    answer_counts  = shadow_result["answer_counts"]
+    majority_label = max(answer_counts, key=answer_counts.get)
+
+    # Step 4: Check if primary semantically matches the shadow majority
+    normalized_primary = _normalize(primary_output)
+
+    # Keyword substring check (handles "Paris" vs "The capital of France is Paris")
+    if (_keyword_matches(normalized_primary, majority_label)
+            or _keyword_matches(majority_label, normalized_primary)):
+        return False   # primary agrees — not an outlier
+
+    # Semantic embedding check
+    try:
+        from engine.encoder import get_encoder
+        encoder = get_encoder()
+    except Exception:
+        # Encoder unavailable — fall back to exact string check
+        return normalized_primary.strip() != majority_label.strip()
+
+    if not encoder.available:
+        return normalized_primary.strip() != majority_label.strip()
+
+    primary_repr  = _encoding_repr(normalized_primary)
+    majority_repr = _encoding_repr(majority_label)
+
+    try:
+        vecs = encoder.encode_batch([primary_repr, majority_repr])
+        sim  = float(np.dot(vecs[0], vecs[1]))
+        # Primary is an outlier only if it is semantically far from shadow majority
+        return sim < SEMANTIC_SIMILARITY_THRESHOLD
+    except Exception:
+        return normalized_primary.strip() != majority_label.strip()
+
+
+#Public API 
 def compute_consistency(model_outputs: list[str]) -> ConsistencyResult:
     if not model_outputs:
         return ConsistencyResult(agreement_score=0.0, fsd_score=0.0, answer_counts={})
@@ -218,10 +246,6 @@ def compute_consistency(model_outputs: list[str]) -> ConsistencyResult:
     total_samples      = len(normalized_outputs)
 
     # Always run semantic clustering when we have multiple different outputs.
-    # Previously this only ran for long-form outputs (>= 40 chars) but that
-    # missed the case where "paris" (5 chars) and "the capital of france is
-    # paris" (30 chars) are both short yet semantically identical.
-    # The keyword check inside _semantic_cluster handles this correctly.
     answer_counts = _semantic_cluster(normalized_outputs)
 
     if answer_counts is None:

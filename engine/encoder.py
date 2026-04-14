@@ -78,9 +78,9 @@ class SentenceEncoder:
             return self._model
 
         with self._lock:
-            if self._loaded:      # double-checked locking
+            if self._loaded:   
                 return self._model
-            self._loaded = True   # mark before trying to prevent retry storms
+            self._loaded = True   
             try:
                 from sentence_transformers import SentenceTransformer
                 cfg = _lazy_settings()

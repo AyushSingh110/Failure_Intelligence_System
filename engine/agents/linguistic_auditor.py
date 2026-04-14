@@ -221,5 +221,5 @@ class LinguisticAuditor(BaseJuryAgent):
         )
 
 
-# ── Module-level singleton ────────
+#  Module-level singleton 
 linguistic_auditor = LinguisticAuditor()

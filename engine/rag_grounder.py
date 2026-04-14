@@ -1,17 +1,3 @@
-"""
-engine/rag_grounder.py
-
-DomainCritic ke liye external verification layer.
-Wikipedia se context fetch karke Groq se verify karta hai.
-
-Called by domain_critic.py → _run_external_verification()
-
-Flow:
-  1. Wikipedia se query ke liye summary fetch karo
-  2. Groq se verify karo: "Does the model output match this context?"
-  3. Return: matches (bool), confidence (float), reason (str)
-"""
-
 from __future__ import annotations
 
 import logging
@@ -41,10 +27,7 @@ class VerificationResult:
 
 def ground_with_wikipedia(prompt: str, model_output: str) -> GroundingResult:
     """
-    Wikipedia se relevant context fetch karta hai.
-
-    Returns GroundingResult with grounded_answer = Wikipedia summary.
-    If Wikipedia nahi mila → success=False.
+    Wikipedia is used for RAG grounding of factual questions.
     """
     try:
         from engine.rag.retriever import fetch_wikipedia_summary
@@ -84,10 +67,7 @@ def compare_with_ground_truth(
     grounded_answer: str,
 ) -> VerificationResult:
     """
-    Groq se verify karta hai ki model output ground truth se match karta hai.
-
-    Uses llama-3.1-8b-instant for fast verification.
-    Falls back to simple heuristic if Groq unavailable.
+    Groq is used for verification of the model output against the grounded answer.
     """
     if not grounded_answer or not model_output:
         return VerificationResult(
@@ -177,10 +157,7 @@ def _heuristic_verification(
     model_output:    str,
     grounded_answer: str,
 ) -> VerificationResult:
-    """
-    Simple fallback when Groq is unavailable.
-    Uses word overlap to estimate consistency.
-    """
+
     import re
 
     def tokenize(text: str) -> set[str]:
@@ -202,8 +179,8 @@ def _heuristic_verification(
     union      = output_tokens | grounded_tokens
     jaccard    = len(overlap) / max(len(union), 1)
 
-    # High overlap → likely consistent
-    # Low overlap → could be inconsistent OR just different phrasing
+    # High overlap = likely consistent
+    # Low overlap = could be inconsistent OR just different phrasing
     matches    = jaccard > 0.08   # low threshold — avoids false positives
     confidence = round(min(1.0 - jaccard, 0.6), 3)  # cap at 0.6 for heuristic
 
@@ -262,14 +239,11 @@ def _numeric_consistency_check(
         confidence=0.92,
         reason=reason,
     )
-
-
 def _extract_measurement(text: str) -> tuple[float, str] | None:
     normalized = text.lower().replace(",", "")
     number_match = re.search(r"(-?\d+(?:\.\d+)?)", normalized)
     if not number_match:
         return None
-
     value = float(number_match.group(1))
 
     if any(token in normalized for token in ["degrees celsius", "degree celsius", " celsius", "°c"]):
@@ -280,5 +254,4 @@ def _extract_measurement(text: str) -> tuple[float, str] | None:
 
     if any(token in normalized for token in ["m/s", "meters per second", "metres per second"]):
         return value, "mps"
-
     return None
