@@ -13,7 +13,7 @@ __pycache__
 # Local apps and build artifacts not needed for the backend container.
 dashboard
 dist
-fie-dashboard
+Frontend
 Failure_Intelligence_System
 
 # Local test and cache output.
