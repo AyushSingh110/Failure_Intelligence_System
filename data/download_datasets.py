@@ -1,32 +1,3 @@
-"""
-data/download_datasets.py — One-time Dataset Downloader
-
-Run this script ONCE to download TruthfulQA from HuggingFace and save it
-locally as a clean JSON file that the synthetic data generator can use.
-
-Usage
------
-  cd C:\\Users\\ASUS\\Desktop\\Failure_Intelligence_System
-  .venv\\Scripts\\activate
-  pip install datasets   # HuggingFace datasets library
-  python data/download_datasets.py
-
-What gets downloaded
---------------------
-TruthfulQA (generation split):
-  - 817 questions specifically designed to trigger LLM hallucinations
-  - Each has a correct answer AND example wrong answers LLMs commonly give
-  - Perfect for testing FIE because these are KNOWN failure points
-
-Output files
-------------
-  data/datasets/truthfulqa.json       — full dataset, all 817 examples
-  data/datasets/truthfulqa_sample.json — 100 examples for quick testing
-
-After running this script, the synthetic_generator.py will automatically
-load from these files.
-"""
-
 import json
 import os
 import sys
@@ -77,12 +48,6 @@ def download_truthfulqa():
     # Convert to clean list of dicts
     records = []
     for item in dataset:
-        # TruthfulQA structure:
-        #   question:       the prompt
-        #   best_answer:    the correct answer
-        #   correct_answers: list of acceptable correct answers
-        #   incorrect_answers: list of wrong answers LLMs commonly give
-        #   category:       topic category (e.g. "History", "Science")
         correct_answers   = item.get("correct_answers", [])
         incorrect_answers = item.get("incorrect_answers", [])
         best_answer       = item.get("best_answer", "")
