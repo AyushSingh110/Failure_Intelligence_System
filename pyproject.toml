@@ -13,7 +13,6 @@ license         = { text = "MIT" }
 authors = [
     { name = "Ayush", email = "ayushsingh355vns@gmail.com" }
 ]
-
 keywords = [
     "llm",
     "monitoring",
