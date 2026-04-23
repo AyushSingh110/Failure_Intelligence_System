@@ -31,3 +31,12 @@ nosetests.xml
 # --- Streamlit ---
 .streamlit/config.toml
 static/
+
+# --- Training Data & Models (generated, not source code) ---
+data/labeled/
+data/datasets/
+models/
+
+# --- Generated Notebook Artifacts ---
+notebooks/*.png
+notebooks/*.jpg
