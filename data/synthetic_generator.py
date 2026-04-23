@@ -63,7 +63,7 @@ import requests
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 FIE_BASE_URL = "http://localhost:8000/api/v1"
-FIE_API_KEY  = "fie-ser32pz9dw6k2qcq"   # Leave empty if no auth, or paste your key here
+FIE_API_KEY  = "fie-b9t9202fcdeaz0dc"   # Leave empty if no auth, or paste your key here
 
 LABELED_DIR  = os.path.join(os.path.dirname(__file__), "labeled")
 DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")

@@ -114,20 +114,20 @@ H_normalized = H / log₂(total_outputs)
 
 Entropy is used alongside agreement because a 2-vs-2 split (entropy=1.0) is far more alarming than a 3-vs-1 split (entropy=0.41), even though both have low agreement.
 
-### Primary-Outlier Detection
+### Primary-Outlier Detection — POET Algorithm
 
-`high_failure_risk` is not triggered by low overall agreement. It specifically checks whether the **primary model** is the one disagreeing with the shadow majority:
+`high_failure_risk` is set by **POET (Primary Outlier Ensemble Test)** — the core novel algorithm in FIE. It does not check overall ensemble agreement. It specifically checks whether the **primary model** is the one disagreeing with the shadow majority:
 
 ```
-shadow_agreement = agreement among shadows only
+shadow_agreement = agreement among shadows only (primary excluded)
 if shadow_agreement < 0.60 → can't blame primary (shadows confused)
 else:
-    majority = most common shadow answer
+    majority = most common shadow answer cluster
     if primary semantically matches majority → NOT an outlier
     if primary is far from majority (cosine sim < 0.72) → IS an outlier → high_failure_risk = True
 ```
 
-This dropped the false positive rate from 80% to 20%.
+This dropped the false positive rate from 80% to 20% compared to threshold-based ensemble agreement.
 
 ---
 
@@ -550,9 +550,25 @@ Example response (trimmed):
 
 ---
 
+## Benchmark Results
+
+Evaluated on **TruthfulQA** (817 adversarial questions designed to trigger LLM hallucinations). 869 labeled examples generated via the synthetic pipeline.
+
+| Method | Recall | FPR | F1 | AUC-ROC |
+|---|---|---|---|---|
+| POET rule-based (baseline) | 56.4% | 38.7% | 58.7% | — |
+| XGBoost classifier (equal FPR) | **65.5%** | 40.2% | 63.7% | 0.663 |
+| XGBoost classifier (best F1) | 80.5% | 50.6% | **69.7%** | 0.663 |
+
+**Cross-validation (5-fold):** Recall = 63.7% ± 4.0%
+
+**Key finding:** The trained XGBoost classifier achieves +9.1% recall over POET at equal false positive rate. Feature importance analysis shows the Diagnostic Jury verdict is the strongest predictor — confirming that the 3-agent jury adds meaningful signal beyond ensemble disagreement alone.
+
+---
+
 ## For Full Technical Documentation
 
-See [FIE_COMPLETE_TECHNICAL_STORY.md](FIE_COMPLETE_TECHNICAL_STORY.md) — covers every algorithm, formula, pipeline decision, and file in detail.
+See [README_files/FIE_COMPLETE_TECHNICAL_STORY.md](README_files/FIE_COMPLETE_TECHNICAL_STORY.md) — covers every algorithm, formula, pipeline decision, benchmark result, and file in detail.
 
 ---
 
