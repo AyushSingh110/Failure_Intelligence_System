@@ -40,3 +40,6 @@ models/
 # --- Generated Notebook Artifacts ---
 notebooks/*.png
 notebooks/*.jpg
+
+# --- Research Paper (personal, not for public repo) ---
+paper/
