@@ -43,3 +43,6 @@ notebooks/*.jpg
 
 # --- Research Paper (personal, not for public repo) ---
 paper/
+
+# --- Internal Technical Documentation (architecture details, not public) ---
+README_files/
