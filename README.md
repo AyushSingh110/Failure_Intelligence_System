@@ -2,6 +2,43 @@
 
 **Real-time LLM failure detection, root cause diagnosis, and automatic correction.**
 
+---
+
+## What's New in v1.1.0
+
+### XGBoost Failure Classifier (AUC 0.728)
+The rule-based POET algorithm is now backed by a trained XGBoost model. Every inference runs through the classifier post-pipeline and the `high_failure_risk` flag is set by the model, not just rules. AUC-ROC improved from 0.663 → 0.728 on TruthfulQA.
+
+### Question-Type Routing
+FIE now classifies every prompt into one of five types before running the pipeline:
+
+| Type | External GT used | Example |
+|---|---|---|
+| `FACTUAL` | Wikidata + Serper | "Who invented the telephone?" |
+| `TEMPORAL` | Serper only | "What is Bitcoin's price today?" |
+| `REASONING` | None (internal only) | "Why does entropy increase?" |
+| `CODE` | None (internal only) | "Write a Python function to sort a list" |
+| `OPINION` | None (skipped entirely) | "Should I use Python or JavaScript?" |
+
+This eliminates false positives on code/opinion questions where Wikidata lookups produce wrong "corrections."
+
+### Auto-Calibrating Thresholds
+XGBoost uses a **different decision threshold per question type** (FACTUAL=0.40, CODE=0.52, OPINION=0.60, etc.). After every 50 new feedback submissions the thresholds are automatically recalculated from real labeled data using `sklearn.precision_recall_curve`. No manual threshold tuning required.
+
+### Production Analytics (5 New API Endpoints)
+See [API Endpoints](#api-endpoints) below. Includes daily request volume, XGBoost vs POET agreement, confidence calibration curves (ECE), per-type breakdown, and a single "paper-metrics" endpoint that returns everything needed for the results section of a research paper.
+
+### Opt-In SDK Telemetry
+When users set `FIE_TELEMETRY=true`, the SDK sends anonymized pings (no prompts, no API keys) back to the server after each call. Admins can see field failure rates, SDK version distribution, and question-type breakdown from real users via `GET /api/v1/analytics/sdk-telemetry`.
+
+### MonitorResponse Enhancements
+Every `/monitor` response now includes:
+- `classifier_probability` — raw XGBoost score (0–1)
+- `model_version` — which model made the decision (`xgboost-v2`)
+- `config_version` — which threshold config was active
+
+---
+
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://mongodb.com/atlas)
@@ -99,7 +136,8 @@ After collecting all 4 answers (1 primary + 3 shadows), FIE computes:
 | `entropy_score` | Normalized Shannon entropy of the answer distribution |
 | `ensemble_disagreement` | Embedding-based pairwise disagreement flag |
 | `ensemble_similarity` | Cosine similarity between primary and secondary |
-| `high_failure_risk` | Final risk flag |
+| `high_failure_risk` | Final risk flag (set by XGBoost v1.1+) |
+| `question_type` | Classified prompt type: FACTUAL / TEMPORAL / REASONING / CODE / OPINION |
 
 ### Shannon Entropy
 
@@ -293,8 +331,14 @@ def ask_ai(prompt: str) -> str:
 | GET | `/api/v1/inferences` | List stored inferences |
 | GET | `/api/v1/trend` | EMA-based degradation trend |
 | GET | `/api/v1/clusters` | Archetype cluster summary |
-| GET | `/monitor/signal-logs` | Raw signal logs |
-| GET | `/monitor/calibration` | Per-confidence-bucket accuracy stats |
+| GET | `/api/v1/monitor/signal-logs` | Raw signal logs (admin) |
+| GET | `/api/v1/monitor/calibration` | Per-confidence-bucket accuracy stats (admin) |
+| GET | `/api/v1/analytics/usage` | Request volume, failure rate, daily breakdown |
+| GET | `/api/v1/analytics/model-performance` | XGBoost accuracy, per-question-type stats |
+| GET | `/api/v1/analytics/calibration` | Confidence calibration curves + ECE score |
+| GET | `/api/v1/analytics/question-breakdown` | Failure/fix/escalation rate per question type |
+| GET | `/api/v1/analytics/paper-metrics` | All research paper metrics in one call |
+| GET | `/api/v1/analytics/sdk-telemetry` | Field usage data from opted-in SDK users |
 | GET | `/health` | Server health check |
 
 ---
@@ -318,6 +362,9 @@ Failure_Intelligence_System/
 │   ├── claim_extractor.py         Extract subject/property/value from model output
 │   ├── prompt_guard.py            Statistical adversarial prompt scorer
 │   ├── rag_grounder.py            Wikipedia RAG for external verification
+│   ├── question_classifier.py     Rule-based question-type classifier (5 types)
+│   ├── fie_config.py              Auto-calibrating thresholds + MongoDB-backed config
+│   └── failure_classifier.py      XGBoost v2 failure classifier (AUC 0.728)
 │   │
 │   ├── detector/
 │   │   ├── consistency.py         compute_consistency(), is_primary_outlier()
@@ -539,6 +586,8 @@ Example response (trimmed):
 ## Technology Stack
 
 - **Backend:** FastAPI, Pydantic, Python 3.11
+- **Failure Classifier:** XGBoost v2 with auto-calibrating per-type thresholds
+- **Question Routing:** Rule-based classifier (5 types: FACTUAL/TEMPORAL/REASONING/CODE/OPINION)
 - **Storage:** MongoDB Atlas
 - **Shadow Models:** Groq API (Llama, DeepSeek, Qwen)
 - **Semantic Encoder:** SentenceTransformers `all-MiniLM-L6-v2`
@@ -546,6 +595,7 @@ Example response (trimmed):
 - **Fact Verification:** Wikidata SPARQL, Serper.dev
 - **Frontend:** React, Vite
 - **Auth:** Google OAuth, JWT
+- **SDK Telemetry:** Opt-in anonymized usage pings (no PII)
 - **Deployment:** Docker, Google Cloud Run, Vercel
 
 ---
@@ -557,12 +607,15 @@ Evaluated on **TruthfulQA** (817 adversarial questions designed to trigger LLM h
 | Method | Recall | FPR | F1 | AUC-ROC |
 |---|---|---|---|---|
 | POET rule-based (baseline) | 56.4% | 38.7% | 58.7% | — |
-| XGBoost classifier (equal FPR) | **65.5%** | 40.2% | 63.7% | 0.663 |
-| XGBoost classifier (best F1) | 80.5% | 50.6% | **69.7%** | 0.663 |
+| XGBoost v1 (equal FPR) | **65.5%** | 40.2% | 63.7% | 0.663 |
+| XGBoost v1 (best F1) | 80.5% | 50.6% | **69.7%** | 0.663 |
+| XGBoost v2 with GT features | — | — | — | **0.728** |
 
 **Cross-validation (5-fold):** Recall = 63.7% ± 4.0%
 
-**Key finding:** The trained XGBoost classifier achieves +9.1% recall over POET at equal false positive rate. Feature importance analysis shows the Diagnostic Jury verdict is the strongest predictor — confirming that the 3-agent jury adds meaningful signal beyond ensemble disagreement alone.
+**v1.1.0 improvement:** XGBoost v2 (AUC 0.728) incorporates ground truth pipeline outputs (gt_source, fix_strategy, gt_confidence) as features — the 47 post-GT features account for the majority of AUC gain. Per-question-type thresholds (auto-calibrated) further reduce false positives on CODE and OPINION queries to near-zero.
+
+**Key finding:** The Diagnostic Jury verdict remains the strongest individual predictor — confirming that the 3-agent jury adds meaningful signal beyond ensemble disagreement alone.
 
 ---
 

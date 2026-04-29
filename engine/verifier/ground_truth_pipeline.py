@@ -6,8 +6,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 logger = logging.getLogger(__name__)
-
-
 @dataclass
 class GroundTruthPipelineResult:
     """
@@ -23,7 +21,6 @@ class GroundTruthPipelineResult:
     # Summary of what the pipeline did — shown in XAI explanation
     pipeline_trace:     list[str] = field(default_factory=list)
 
-
 def run_ground_truth_pipeline(
     prompt:           str,
     primary_output:   str,
@@ -31,6 +28,8 @@ def run_ground_truth_pipeline(
     jury_confidence:  float,
     shadow_outputs:   Optional[list[str]] = None,
     shadow_weights:   Optional[list[float]] = None,
+    use_wikidata:     bool = True,
+    use_serper:       bool = True,
 ) -> GroundTruthPipelineResult:
     """
     Main entry point. Called from the /monitor route after jury verdict.
@@ -76,7 +75,15 @@ def run_ground_truth_pipeline(
             logger.warning("Claim extraction failed: %s", exc)
             result.pipeline_trace.append(f"Claim extraction error: {exc}")
 
-    # Temporal = Serper 
+    # Temporal = Serper
+    if is_temporal and not use_serper:
+        result.pipeline_trace.append(
+            "Temporal question detected but Serper disabled for this question type — escalating"
+        )
+        result.requires_escalation = True
+        result.escalation_reason   = "Real-time lookup disabled for this question type."
+        return result
+
     if is_temporal:
         result.pipeline_trace.append("Temporal question detected → routing to Serper real-time search")
         try:
@@ -129,6 +136,10 @@ def run_ground_truth_pipeline(
             return result
 
     # Factual = Wikidata
+    if claim and not use_wikidata:
+        result.pipeline_trace.append("Wikidata disabled for this question type — falling through to consensus")
+        claim = None  # skip Wikidata block
+
     if claim:
         try:
             from engine.verifier.wikidata_verifier import verify_claim_with_wikidata

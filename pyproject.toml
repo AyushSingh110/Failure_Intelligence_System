@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "0.3.0"
-description     = "Monitor, diagnose, explain, and auto-correct LLM failures — with ground truth verification, Wikidata/Serper verification, confidence-weighted shadow consensus, and human escalation"
+version         = "1.1.0"
+description     = "Monitor, diagnose, and auto-correct LLM failures — with XGBoost failure classification, question-type routing, auto-calibrating thresholds, Wikidata/Serper ground truth, and production analytics"
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
 license         = { text = "MIT" }
@@ -25,7 +25,12 @@ keywords = [
     "reliability",
     "ai-guardrails",
     "multi-tenant",
-    "oauth"
+    "oauth",
+    "xgboost",
+    "question-classification",
+    "auto-calibration",
+    "ground-truth-verification",
+    "failure-intelligence"
 ]
 
 classifiers = [
