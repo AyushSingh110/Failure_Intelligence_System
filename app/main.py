@@ -30,9 +30,17 @@ def _warm_encoder_in_background() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     #  Startup
-    # Initialize vault
     from storage.database import initialize_vault
     initialize_vault()
+
+    # Load classifier thresholds from MongoDB (hot-configurable, no restart needed)
+    try:
+        from engine.fie_config import load_from_db
+        load_from_db()
+        print("[startup] FIE config loaded.")
+    except Exception as _cfg_exc:
+        print(f"[startup] fie_config load skipped: {_cfg_exc}")
+
     threading.Thread(target=_warm_encoder_in_background, daemon=True).start()
 
     yield

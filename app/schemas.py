@@ -44,6 +44,8 @@ class FailureSignalVector(BaseModel):
     ensemble_disagreement: bool
     ensemble_similarity:  float = Field(..., ge=0.0, le=1.0)
     high_failure_risk:    bool  = False
+    # Question-type classification (set at routing time, before jury)
+    question_type:        str   = "UNKNOWN"   # FACTUAL|TEMPORAL|REASONING|CODE|OPINION|UNKNOWN
 
 
 # ── Phase 2 schemas ───────────────────────────────────────────────────────
@@ -331,3 +333,8 @@ class MonitorResponse(BaseModel):
     ground_truth:          Optional[GroundTruthVerification] = None
     requires_human_review: bool = False
     escalation_reason:     str  = ""
+
+    # Classifier metadata (useful for debugging and research paper)
+    classifier_probability: Optional[float] = None
+    model_version:          str             = "xgboost-v2"
+    config_version:         str             = "default"

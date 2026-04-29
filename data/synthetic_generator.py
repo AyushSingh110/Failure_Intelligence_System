@@ -11,10 +11,9 @@ from typing import Optional
 
 import requests
 
-# ── Configuration ─────────────────────────────────────────────────────────────
-
+# Configuration 
 FIE_BASE_URL = "http://localhost:8000/api/v1"
-FIE_API_KEY  = "fie-b9t9202fcdeaz0dc"   # Leave empty if no auth, or paste your key here
+FIE_API_KEY  = "fie-qvl80ejtjwscy5d8"   
 
 LABELED_DIR  = os.path.join(os.path.dirname(__file__), "labeled")
 DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")
@@ -23,12 +22,9 @@ DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")
 REQUEST_DELAY = 2.0
 
 
-# ── Built-in Q&A examples ─────────────────────────────────────────────────────
-# These cover 5 domains: History, Science, Geography, Math, and General Facts.
-# Each has correct_answer + at least one wrong_answer (a plausible LLM mistake).
-
+# Built-in Q&A examples 
 BUILTIN_EXAMPLES = [
-    # ── HISTORY ──────────────────────────────────────────────────────────────
+    # HISTORY 
     {
         "question":       "Who invented the telephone?",
         "correct_answer": "Alexander Graham Bell",
@@ -72,7 +68,7 @@ BUILTIN_EXAMPLES = [
         "domain":         "science",
     },
 
-    # ── SCIENCE ──────────────────────────────────────────────────────────────
+    # SCIENCE 
     {
         "question":       "What is the chemical symbol for gold?",
         "correct_answer": "Au",
@@ -130,7 +126,7 @@ BUILTIN_EXAMPLES = [
         "domain":         "physics",
     },
 
-    # ── GEOGRAPHY ────────────────────────────────────────────────────────────
+    # GEOGRAPHY 
     {
         "question":       "What is the capital of Australia?",
         "correct_answer": "Canberra",
@@ -174,7 +170,7 @@ BUILTIN_EXAMPLES = [
         "domain":         "capitals",
     },
 
-    # ── MATHEMATICS ──────────────────────────────────────────────────────────
+    # MATHEMATICS 
     {
         "question":       "What is the value of pi to two decimal places?",
         "correct_answer": "3.14",
@@ -204,7 +200,7 @@ BUILTIN_EXAMPLES = [
         "domain":         "arithmetic",
     },
 
-    # ── GENERAL KNOWLEDGE ────────────────────────────────────────────────────
+    # GENERAL KNOWLEDGE
     {
         "question":       "What is the hardest natural substance on Earth?",
         "correct_answer": "Diamond",
@@ -250,7 +246,7 @@ BUILTIN_EXAMPLES = [
 ]
 
 
-# ── Corruption functions ──────────────────────────────────────────────────────
+#Corruption functions
 
 def corrupt_answer(correct: str, wrong_answers: list[str]) -> tuple[str, str]:
     """
@@ -358,22 +354,25 @@ def extract_fie_result(response: dict) -> dict:
     pv     = jury.get("primary_verdict") or {} if jury else {}
 
     return {
-        "high_failure_risk":   response.get("high_failure_risk", False),
-        "entropy_score":       fsv.get("entropy_score", 0.0),
-        "agreement_score":     fsv.get("agreement_score", 1.0),
-        "archetype":           response.get("archetype", ""),
-        "jury_verdict":        pv.get("root_cause", ""),
-        "jury_confidence":     pv.get("confidence_score", 0.0),
-        "fix_applied":         fix.get("fix_applied", False),
-        "fix_strategy":        fix.get("fix_strategy", ""),
-        "fix_confidence":      fix.get("fix_confidence", 0.0),
-        "fix_output":          fix.get("fixed_output", ""),
-        "gt_source":           gt.get("source", "none"),
-        "gt_confidence":       gt.get("confidence", 0.0),
-        "gt_override":         gt.get("verified_answer", "") != "",
-        "requires_escalation": gt.get("requires_escalation", False) or
-                               response.get("requires_human_review", False),
-        "failure_summary":     response.get("failure_summary", ""),
+        "high_failure_risk":    response.get("high_failure_risk", False),
+        "entropy_score":        fsv.get("entropy_score", 0.0),
+        "agreement_score":      fsv.get("agreement_score", 1.0),
+        "archetype":            response.get("archetype", ""),
+        "question_type":        fsv.get("question_type", "UNKNOWN"),
+        "jury_verdict":         pv.get("root_cause", ""),
+        "jury_confidence":      pv.get("confidence_score", 0.0),
+        "fix_applied":          fix.get("fix_applied", False),
+        "fix_strategy":         fix.get("fix_strategy", ""),
+        "fix_confidence":       fix.get("fix_confidence", 0.0),
+        "fix_output":           fix.get("fixed_output", ""),
+        "gt_source":            gt.get("source", "none"),
+        "gt_confidence":        gt.get("confidence", 0.0),
+        "gt_override":          gt.get("verified_answer", "") != "",
+        "requires_escalation":  gt.get("requires_escalation", False) or
+                                response.get("requires_human_review", False),
+        "classifier_probability": response.get("classifier_probability"),
+        "model_version":        response.get("model_version", ""),
+        "failure_summary":      response.get("failure_summary", ""),
     }
 
 
@@ -381,34 +380,67 @@ def extract_fie_result(response: dict) -> dict:
 
 class SyntheticDataGenerator:
 
-    def __init__(self, source: str = "builtin", failures_only: bool = False):
+    def __init__(self, source: str = "builtin", failures_only: bool = False, subject: str = None):
         self.source        = source
         self.failures_only = failures_only
+        self.subject       = subject
         self.examples      = self._load_examples()
         print(f"Loaded {len(self.examples)} source examples from '{source}'")
 
     def _load_examples(self) -> list[dict]:
         if self.source == "truthfulqa":
-            path = os.path.join(DATASETS_DIR, "truthfulqa.json")
-            if not os.path.exists(path):
-                print(f"WARNING: {path} not found. Run data/download_datasets.py first.")
-                print("Falling back to built-in examples.")
-                return BUILTIN_EXAMPLES
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            # Convert TruthfulQA format to our format
-            return [
-                {
+            return self._load_json_dataset(
+                "truthfulqa.json",
+                lambda d: {
                     "question":       d["question"],
                     "correct_answer": d["correct_answer"],
                     "wrong_answers":  d.get("incorrect_answers", []),
                     "category":       d.get("category", "unknown"),
                     "domain":         "truthfulqa",
-                }
-                for d in data
-                if d.get("question") and d.get("correct_answer")
-            ]
+                    "source":         "truthfulqa",
+                },
+                filter_fn=lambda d: bool(d.get("question") and d.get("correct_answer")),
+            )
+        if self.source == "mmlu":
+            return self._load_json_dataset(
+                "mmlu.json",
+                lambda d: d,
+                filter_fn=lambda d: bool(d.get("question") and d.get("correct_answer")),
+                subject=getattr(self, "subject", None),
+            )
+        if self.source == "halueval":
+            return self._load_json_dataset(
+                "halueval.json",
+                lambda d: d,
+                filter_fn=lambda d: bool(d.get("question") and d.get("correct_answer")),
+            )
         return BUILTIN_EXAMPLES
+
+    def _load_json_dataset(
+        self,
+        filename:  str,
+        transform,
+        filter_fn=None,
+        subject:   str = None,
+    ) -> list[dict]:
+        path = os.path.join(DATASETS_DIR, filename)
+        if not os.path.exists(path):
+            print(f"WARNING: {path} not found.")
+            print(f"Run: python data/download_datasets.py --source {self.source}")
+            print("Falling back to built-in examples.")
+            return BUILTIN_EXAMPLES
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        examples = []
+        for d in data:
+            if filter_fn and not filter_fn(d):
+                continue
+            if subject and d.get("category", "") != subject:
+                continue
+            examples.append(transform(d))
+        print(f"Loaded {len(examples)} examples from {filename}"
+              + (f" (subject={subject})" if subject else ""))
+        return examples
 
     def run(self, n: int = 20) -> str:
         """
@@ -490,6 +522,7 @@ class SyntheticDataGenerator:
                     "corruption_type":   corruption_type,
                     "category":          cat,
                     "domain":            domain,
+                    "question_type":     fie_fail.get("question_type", "UNKNOWN"),
                     "source":            example.get("source", self.source),
                     "fie_result":        fie_fail,
                     "timestamp":         datetime.utcnow().isoformat(),
@@ -536,6 +569,7 @@ class SyntheticDataGenerator:
                     "corruption_type":   "none",
                     "category":          cat,
                     "domain":            domain,
+                    "question_type":     fie_ok.get("question_type", "UNKNOWN"),
                     "source":            example.get("source", self.source),
                     "fie_result":        fie_ok,
                     "timestamp":         datetime.utcnow().isoformat(),
@@ -629,9 +663,15 @@ Examples:
     )
     parser.add_argument(
         "--source",
-        choices=["builtin", "truthfulqa"],
+        choices=["builtin", "truthfulqa", "mmlu", "halueval"],
         default="builtin",
         help="Which Q&A source to use (default: builtin)",
+    )
+    parser.add_argument(
+        "--subject",
+        type=str,
+        default=None,
+        help="MMLU subject filter e.g. 'medicine', 'law', 'history' (mmlu only)",
     )
     parser.add_argument(
         "--failures-only",
@@ -692,7 +732,7 @@ Examples:
         if ans != "y":
             sys.exit(0)
 
-    gen = SyntheticDataGenerator(source=args.source, failures_only=args.failures_only)
+    gen = SyntheticDataGenerator(source=args.source, failures_only=args.failures_only, subject=args.subject)
     gen.run(n=args.n)
 
 

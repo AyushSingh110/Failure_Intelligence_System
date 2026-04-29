@@ -25,31 +25,35 @@ def _get_collection():
 
 
 def log_signal(
-    request_id:           str,
-    prompt:               str,
-    primary_output:       str,
-    shadow_outputs:       list[str],
-    shadow_confidences:   list[str],
-    shadow_weights:       list[float],
-    entropy_score:        float,
-    agreement_score:      float,
-    fsd_score:            float,
-    ensemble_disagreement: bool,
-    high_failure_risk:    bool,
-    layers_fired:         list[str],
-    layer_scores:         dict[str, float],
-    jury_verdict:         str,
-    jury_confidence:      float,
-    gt_source:            str,
-    gt_confidence:        float,
-    gt_override_applied:  bool,
-    gt_verified_answer:   str,
-    requires_escalation:  bool,
-    escalation_reason:    str,
-    fix_applied:          bool,
-    fix_strategy:         str,
-    fix_confidence:       float,
-    fix_output:           str,
+    request_id:             str,
+    prompt:                 str,
+    primary_output:         str,
+    shadow_outputs:         list[str],
+    shadow_confidences:     list[str],
+    shadow_weights:         list[float],
+    entropy_score:          float,
+    agreement_score:        float,
+    fsd_score:              float,
+    ensemble_disagreement:  bool,
+    high_failure_risk:      bool,
+    classifier_probability: Optional[float],
+    question_type:          str,
+    model_version:          str,
+    config_version:         str,
+    layers_fired:           list[str],
+    layer_scores:           dict[str, float],
+    jury_verdict:           str,
+    jury_confidence:        float,
+    gt_source:              str,
+    gt_confidence:          float,
+    gt_override_applied:    bool,
+    gt_verified_answer:     str,
+    requires_escalation:    bool,
+    escalation_reason:      str,
+    fix_applied:            bool,
+    fix_strategy:           str,
+    fix_confidence:         float,
+    fix_output:             str,
 ) -> str:
     """
     Saves a complete raw signal snapshot to the signal_logs collection.
@@ -74,11 +78,17 @@ def log_signal(
         "shadow_weights":       shadow_weights,
 
         # FSV — raw signal features
-        "entropy_score":        round(entropy_score, 6),
-        "agreement_score":      round(agreement_score, 6),
-        "fsd_score":            round(fsd_score, 6),
-        "ensemble_disagreement": ensemble_disagreement,
-        "high_failure_risk":    high_failure_risk,
+        "entropy_score":           round(entropy_score, 6),
+        "agreement_score":         round(agreement_score, 6),
+        "fsd_score":               round(fsd_score, 6),
+        "ensemble_disagreement":   ensemble_disagreement,
+        "high_failure_risk":       high_failure_risk,
+        "classifier_probability":  round(classifier_probability, 6) if classifier_probability is not None else None,
+
+        # Question-type classification and model versioning
+        "question_type":           question_type,
+        "model_version":           model_version,
+        "config_version":          config_version,
 
         # DomainCritic layer detail
         "layers_fired":         layers_fired,
@@ -116,11 +126,13 @@ def log_signal(
 
         col.insert_one(doc)
 
-        # Index on request_id and timestamp for fast lookups + range queries
-        col.create_index("request_id", background=True)
-        col.create_index("timestamp",  background=True)
+        # Indexes for fast lookups, range queries, and per-type calibration
+        col.create_index("request_id",      background=True)
+        col.create_index("timestamp",       background=True)
         col.create_index("feedback_received", background=True)
-        col.create_index("jury_verdict",      background=True)
+        col.create_index("jury_verdict",    background=True)
+        col.create_index("question_type",   background=True)
+        col.create_index("model_version",   background=True)
 
         logger.debug("Signal logged | log_id=%s request_id=%s", log_id, request_id)
 

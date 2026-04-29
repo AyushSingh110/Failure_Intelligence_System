@@ -1,0 +1,83 @@
+{
+  "training_date": "2026-04-29T14:03:31.353739",
+  "dataset": {
+    "total_records": 1757,
+    "failures": 880,
+    "correct": 877,
+    "train_size": 1405,
+    "test_size": 352,
+    "source_counts": {
+      "truthfulqa": 849,
+      "mmlu": 490,
+      "halueval": 398,
+      "builtin": 20
+    }
+  },
+  "poet_baseline": {
+    "recall": 0.564,
+    "specificity": 0.613,
+    "fpr": 0.387,
+    "f1": 0.5875
+  },
+  "single_xgboost": {
+    "recall": 0.7159,
+    "specificity": 0.4602,
+    "fpr": 0.5398,
+    "f1": 0.6348,
+    "auc_roc": 0.6494,
+    "cv_recall_mean": 0.6443,
+    "cv_recall_std": 0.0308,
+    "cv_f1_mean": 0.6263,
+    "cv_auc_mean": 0.6773,
+    "cv_auc_std": 0.0288,
+    "best_iteration": 55
+  },
+  "ensemble_xgboost": {
+    "recall": 0.3466,
+    "specificity": 0.8466,
+    "fpr": 0.1534,
+    "f1": 0.4621,
+    "auc_roc": 0.652,
+    "n_source_models": 3,
+    "per_source": {
+      "truthfulqa": {
+        "n": 849,
+        "recall": 0.8353,
+        "specificity": 0.4706,
+        "f1": 0.7065,
+        "auc": 0.6511,
+        "best_iter": 33
+      },
+      "mmlu": {
+        "n": 490,
+        "recall": 0.6531,
+        "specificity": 0.449,
+        "f1": 0.5926,
+        "auc": 0.5843,
+        "best_iter": 12
+      },
+      "halueval": {
+        "n": 398,
+        "recall": 1.0,
+        "specificity": 0.9,
+        "f1": 0.9524,
+        "auc": 0.9484,
+        "best_iter": 139
+      }
+    }
+  },
+  "threshold_tuning": {
+    "best_f1": {
+      "threshold": 0.3024,
+      "recall": 0.9886,
+      "fpr": 0.9205,
+      "f1": 0.6797
+    },
+    "poet_matched_fpr": {
+      "threshold": 0.5224,
+      "recall": 0.6364,
+      "fpr": 0.3864,
+      "f1": 0.6292
+    }
+  }
+}
