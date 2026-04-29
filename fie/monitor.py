@@ -49,15 +49,8 @@ def monitor(
 
             @functools.wraps(func)
             def monitor_wrapper(*args, **kwargs):
-                """
-                Fast path:
-                1. Primary model call karo
-                2. Answer immediately return karo
-                3. Background mein FIE check karo
-                """
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
-
                 # Call primary model
                 start      = time.time()
                 result     = func(*args, **kwargs)
@@ -78,6 +71,15 @@ def monitor(
                         if alert_slack and fie_result.get("high_failure_risk"):
                             _fire_slack_alert(alert_slack, fie_result,
                                               prompt_str, primary_output, _model_name)
+                        # Opt-in telemetry — anonymized, fire-and-forget
+                        fsv = fie_result.get("failure_signal_vector") or {}
+                        client._send_telemetry("monitor_call", {
+                            "high_failure_risk": fie_result.get("high_failure_risk", False),
+                            "fix_applied":       (fie_result.get("fix_result") or {}).get("fix_applied", False),
+                            "question_type":     fsv.get("question_type", "UNKNOWN"),
+                            "model_version":     fie_result.get("model_version", ""),
+                            "mode":              "monitor",
+                        })
 
                 t = threading.Thread(target=_background_check, daemon=True)
                 t.start()
@@ -130,6 +132,17 @@ def monitor(
                 # Process FIE result
                 if fie_result:
                     _log_result(fie_result, _model_name, latency_ms, log_results)
+
+                    # Opt-in telemetry — anonymized, fire-and-forget
+                    fsv = fie_result.get("failure_signal_vector") or {}
+                    fix_r = fie_result.get("fix_result") or {}
+                    client._send_telemetry("monitor_call", {
+                        "high_failure_risk": fie_result.get("high_failure_risk", False),
+                        "fix_applied":       fix_r.get("fix_applied", False),
+                        "question_type":     fsv.get("question_type", "UNKNOWN"),
+                        "model_version":     fie_result.get("model_version", ""),
+                        "mode":              "correct",
+                    })
 
                     # Check if fix was applied
                     fix_result   = fie_result.get("fix_result") or {}

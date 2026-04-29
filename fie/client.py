@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import threading
 from typing import Optional
 
 import requests
@@ -8,6 +10,9 @@ import requests
 from fie.config import FIEConfig
 
 logger = logging.getLogger("fie")
+
+# Package version (bumped on each release) 
+SDK_VERSION = "1.1.0"
 
 
 class FIEClient:
@@ -144,12 +149,10 @@ class FIEClient:
             logger.warning("[FIE] get_trend() error: %s", exc)
             return {}
 
-    # Health check 
+    # Health check
 
     def health_check(self) -> bool:
-        """
-        Returns True if FIE server is reachable and healthy.
-        """
+        """Returns True if FIE server is reachable and healthy."""
         try:
             r = self._session.get(
                 f"{self._config.fie_url}/health",
@@ -158,3 +161,82 @@ class FIEClient:
             return r.status_code == 200
         except Exception:
             return False
+
+    # Analytics
+
+    def get_usage(self, days: int = 7) -> dict:
+        """Request volume and failure detection rate for the past N days."""
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/analytics/usage",
+                params  = {"days": days},
+                timeout = 15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] get_usage() error: %s", exc)
+            return {}
+
+    def get_model_performance(self) -> dict:
+        """XGBoost accuracy, per-question-type breakdown, model version distribution."""
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/analytics/model-performance",
+                timeout = 15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] get_model_performance() error: %s", exc)
+            return {}
+
+    def get_calibration(self, question_type: str = "all") -> dict:
+        """Confidence calibration curves (predicted vs actual accuracy per bucket)."""
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/analytics/calibration",
+                params  = {"question_type": question_type},
+                timeout = 15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] get_calibration() error: %s", exc)
+            return {}
+
+    def get_paper_metrics(self) -> dict:
+        """All research paper metrics in one call."""
+        try:
+            r = self._session.get(
+                f"{self._config.fie_url}/api/v1/analytics/paper-metrics",
+                timeout = 15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.warning("[FIE] get_paper_metrics() error: %s", exc)
+            return {}
+
+    # Telemetry (opt-in, anonymized)
+
+    def _send_telemetry(self, event: str, payload: dict) -> None:
+        """
+        Fire-and-forget anonymized usage ping to the FIE server.
+        Only sent when FIE_TELEMETRY=true in the environment.
+        The server stores aggregated counts — no prompt text, no API keys.
+        """
+        if os.getenv("FIE_TELEMETRY", "false").lower() not in ("1", "true", "yes"):
+            return
+
+        def _post():
+            try:
+                self._session.post(
+                    f"{self._config.fie_url}/api/v1/telemetry",
+                    json    = {"event": event, "sdk_version": SDK_VERSION, **payload},
+                    timeout = 3,
+                )
+            except Exception:
+                pass  # telemetry failure must never affect the user
+
+        threading.Thread(target=_post, daemon=True).start()
