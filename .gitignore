@@ -32,10 +32,12 @@ nosetests.xml
 .streamlit/config.toml
 static/
 
-# --- Training Data & Models (generated, not source code) ---
+# --- Training Data (large raw datasets, not source code) ---
 data/labeled/
 data/datasets/
-models/
+
+# --- Notebook comparison artifacts ---
+notebooks/comparison_plots/
 
 # --- Generated Notebook Artifacts ---
 notebooks/*.png
