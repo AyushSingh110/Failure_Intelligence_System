@@ -7,16 +7,24 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Paths 
-_HERE       = os.path.dirname(os.path.dirname(__file__))          # project root
-_MODEL_PATH = os.path.join(_HERE, "models", "failure_classifier_v2.pkl")
-_COLS_PATH  = os.path.join(_HERE, "models", "feature_columns_v2.pkl")
+# Paths — v3 takes priority, falls back to v2
+_HERE         = os.path.dirname(os.path.dirname(__file__))
+_MODEL_V3     = os.path.join(_HERE, "models", "failure_classifier_v3.pkl")
+_COLS_V3      = os.path.join(_HERE, "models", "feature_columns_v3.pkl")
+_MODEL_V2     = os.path.join(_HERE, "models", "failure_classifier_v2.pkl")
+_COLS_V2      = os.path.join(_HERE, "models", "feature_columns_v2.pkl")
 
-# Decision threshold 
+_MODEL_PATH   = _MODEL_V3 if os.path.exists(_MODEL_V3) else _MODEL_V2
+_COLS_PATH    = _COLS_V3  if os.path.exists(_COLS_V3)  else _COLS_V2
+_USING_V3     = os.path.exists(_MODEL_V3)
+
+# Decision threshold
 CLASSIFIER_THRESHOLD: float = 0.423
 
-# Feature names for one-hot encoding — must match synthetic_generator.py training
-_CATS = ["archetype", "jury_verdict", "fix_strategy", "gt_source"]
+# v3 adds question_type as a categorical feature
+_CATS_V3 = ["archetype", "jury_verdict", "fix_strategy", "gt_source", "question_type"]
+_CATS_V2 = ["archetype", "jury_verdict", "fix_strategy", "gt_source"]
+_CATS    = _CATS_V3 if _USING_V3 else _CATS_V2
 
 # ── Lazy singleton ────────────────────────────────────────────────────────────
 _model     = None
@@ -60,7 +68,7 @@ def predict(
     jury_confidence:     float,
     fix_confidence:      float,
     gt_confidence:       float,
-    high_failure_risk:   bool,    # POET's decision — used as an *input feature*
+    high_failure_risk:   bool,
     fix_applied:         bool,
     requires_escalation: bool,
     gt_override:         bool,
@@ -68,6 +76,7 @@ def predict(
     jury_verdict_str:    str,
     fix_strategy:        str,
     gt_source:           str,
+    question_type:       str = "UNKNOWN",
 ) -> tuple[bool, float]:
     """
     Runs the XGBoost v2 classifier.
@@ -100,6 +109,7 @@ def predict(
             "jury_verdict"       : jury_verdict_str or "NONE",
             "fix_strategy"       : fix_strategy     or "NONE",
             "gt_source"          : gt_source        or "none",
+            "question_type"      : question_type    or "UNKNOWN",
         }
 
         df     = pd.DataFrame([row])

@@ -316,7 +316,18 @@ def monitor(
     if current_user:
         try:
             from app.auth import increment_usage
-            increment_usage(current_user["tenant_id"])
+            allowed = increment_usage(current_user["tenant_id"])
+            if not allowed:
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        f"Usage limit reached for your plan "
+                        f"({current_user.get('calls_limit', 1000)} calls/month). "
+                        "Upgrade your plan or contact support."
+                    ),
+                )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.warning("Failed to update usage counters: %s", exc)
 
@@ -653,6 +664,7 @@ def monitor(
             jury_verdict_str    = _jury_verd_str,
             fix_strategy        = _fix_strategy_xgb,
             gt_source           = _gt_source_xgb,
+            question_type       = _question_type,
         )
 
         # Use per-question-type threshold from fie_config (auto-calibrated)
@@ -944,6 +956,39 @@ def submit_feedback(
             "Feedback recorded. Thank you for helping improve the system."
         ),
     )
+
+
+@router.get("/monitor/model-info", response_model=dict)
+def model_info() -> dict:
+    """
+    Returns the currently loaded classifier model, its training date,
+    AUC on held-out set, current per-question-type thresholds, and
+    config version. No auth required — safe to expose publicly.
+    """
+    from engine.fie_config import (
+        get_all_thresholds, get_config_version,
+        MODEL_VERSION, MODEL_TRAINED, RECALIBRATION_INTERVAL,
+    )
+    from engine.failure_classifier import _model, CLASSIFIER_THRESHOLD
+
+    model_loaded = _model is not None
+    return {
+        "model_version":        MODEL_VERSION,
+        "model_trained":        MODEL_TRAINED,
+        "model_loaded":         model_loaded,
+        "fallback_mode":        "POET rule-based" if not model_loaded else "XGBoost",
+        "auc_held_out":         0.728 if MODEL_VERSION == "xgboost-v2" else None,
+        "default_threshold":    CLASSIFIER_THRESHOLD,
+        "thresholds_per_type":  get_all_thresholds(),
+        "config_version":       get_config_version(),
+        "recalibration_interval": RECALIBRATION_INTERVAL,
+        "features": [
+            "agreement_score", "entropy_score", "jury_confidence",
+            "fix_confidence", "gt_confidence", "high_failure_risk",
+            "fix_applied", "requires_escalation", "gt_override",
+            "archetype", "jury_verdict", "fix_strategy", "gt_source",
+        ],
+    }
 
 
 @router.get("/monitor/calibration", response_model=dict)
