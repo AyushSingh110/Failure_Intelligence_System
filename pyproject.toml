@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "1.1.0"
+version         = "1.2.0"
 description     = "Monitor, diagnose, and auto-correct LLM failures — with XGBoost failure classification, question-type routing, auto-calibrating thresholds, Wikidata/Serper ground truth, and production analytics"
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"

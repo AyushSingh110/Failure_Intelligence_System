@@ -19,7 +19,7 @@ _COLS_PATH    = _COLS_V3  if os.path.exists(_COLS_V3)  else _COLS_V2
 _USING_V3     = os.path.exists(_MODEL_V3)
 
 # Decision threshold
-CLASSIFIER_THRESHOLD: float = 0.423
+CLASSIFIER_THRESHOLD: float = 0.522
 
 # v3 adds question_type as a categorical feature
 _CATS_V3 = ["archetype", "jury_verdict", "fix_strategy", "gt_source", "question_type"]
