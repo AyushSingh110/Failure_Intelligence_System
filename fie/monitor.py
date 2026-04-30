@@ -9,6 +9,7 @@ from typing import Callable, Optional
 
 from fie.client import FIEClient
 from fie.config import get_config
+from fie.local_predictor import predict_local
 
 logger = logging.getLogger("fie")
 
@@ -40,9 +41,37 @@ def monitor(
 
     def decorator(func: Callable) -> Callable:
 
+        _model_name = model_name or func.__name__
+
+        # MODE 0: LOCAL (no server, rule-based POET predictor)
+        if effective_mode == "local":
+
+            @functools.wraps(func)
+            def local_wrapper(*args, **kwargs):
+                prompt     = kwargs.get("prompt") or (args[0] if args else "")
+                prompt_str = str(prompt) if prompt else ""
+
+                result         = func(*args, **kwargs)
+                primary_output = result if isinstance(result, str) else str(result)
+
+                prediction = predict_local(prompt_str, primary_output)
+
+                if log_results:
+                    risk_label = "⚠ SUSPICIOUS" if prediction.is_suspicious else "✓ STABLE"
+                    logger.info(
+                        "[FIE:local] %s | %s | qt=%s | confidence=%.2f | signals=%s",
+                        _model_name, risk_label,
+                        prediction.question_type,
+                        prediction.confidence,
+                        prediction.signals,
+                    )
+
+                return result  # local mode never modifies the output
+
+            return local_wrapper
+
         config      = get_config(fie_url=fie_url, api_key=api_key)
         client      = FIEClient(config)
-        _model_name = model_name or func.__name__
 
         # MODE 1: MONITOR (fast async)
         if effective_mode == "monitor":
