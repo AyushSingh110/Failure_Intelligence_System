@@ -37,8 +37,16 @@ response = ask_ai("Who invented the telephone?")
 
 | Mode | Behavior |
 | --- | --- |
+| `local` | **No server needed** — rule-based heuristics run on your machine instantly |
 | `monitor` | Non-blocking — FIE checks in background, original answer returned immediately |
 | `correct` | Synchronous — FIE verifies and returns corrected answer if failure detected |
+
+```python
+# Try it instantly with no server or API key
+@monitor(mode="local")
+def ask_ai(prompt: str) -> str:
+    return your_llm(prompt)
+```
 
 ### Get an API Key
 
@@ -157,6 +165,18 @@ curl -X POST http://localhost:8000/api/v1/monitor \
     "primary_model_name": "gpt-4",
     "run_full_jury": true
   }'
+```
+
+---
+
+## Running Tests
+
+```bash
+# Offline unit tests — no server, no API key needed (28 tests)
+pytest tests/test_core.py -v
+
+# Covers: question classifier, XGBoost fallback, per-type thresholds,
+#         SDK local predictor, entropy detector, SDK config
 ```
 
 ---

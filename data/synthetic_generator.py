@@ -6,14 +6,14 @@ import os
 import random
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
 
 # Configuration 
 FIE_BASE_URL = "http://localhost:8000/api/v1"
-FIE_API_KEY  = "fie-qvl80ejtjwscy5d8"   
+FIE_API_KEY  = os.getenv("FIE_API_KEY", "")
 
 LABELED_DIR  = os.path.join(os.path.dirname(__file__), "labeled")
 DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")
@@ -248,28 +248,89 @@ BUILTIN_EXAMPLES = [
 
 #Corruption functions
 
-def corrupt_answer(correct: str, wrong_answers: list[str]) -> tuple[str, str]:
+def corrupt_answer(correct: str, wrong_answers: list[str], source: str = "builtin") -> tuple[str, str]:
     """
     Returns (corrupted_answer, corruption_type).
 
     Priority:
-    1. Use a pre-defined wrong answer from the dataset (most realistic)
-    2. Fall back to a simple string mutation if no wrong answers available
+    1. Use a pre-defined wrong answer (most realistic)
+    2. Source-specific mutation for richer signal diversity
+    3. Generic string mutation fallback
     """
     if wrong_answers:
         chosen = random.choice(wrong_answers)
         return chosen, "predefined_wrong_answer"
 
-    # Fallback mutations when no wrong answers are provided
-    mutations = [
-        (_swap_words(correct),      "word_swap"),
-        (_add_wrong_year(correct),  "year_corruption"),
-        (_negate_answer(correct),   "negation"),
-    ]
-    valid = [(m, t) for m, t in mutations if m != correct]
+    # Source-specific corruptions for better signal diversity
+    if source == "mmlu":
+        mutations = [
+            (_mmlu_confabulate(correct),  "mmlu_confabulation"),
+            (_add_hedge_wrong(correct),   "hedge_wrong"),
+            (_swap_words(correct),        "word_swap"),
+            (_negate_answer(correct),     "negation"),
+        ]
+    elif source == "halueval":
+        mutations = [
+            (_halueval_corrupt(correct),  "halueval_substitution"),
+            (_add_wrong_year(correct),    "year_corruption"),
+            (_negate_answer(correct),     "negation"),
+        ]
+    else:
+        mutations = [
+            (_swap_words(correct),      "word_swap"),
+            (_add_wrong_year(correct),  "year_corruption"),
+            (_negate_answer(correct),   "negation"),
+        ]
+
+    valid = [(m, t) for m, t in mutations if m and m != correct]
     if valid:
         return random.choice(valid)
     return "I don't know", "unknown_fallback"
+
+
+def _mmlu_confabulate(text: str) -> str:
+    """Replaces key terms with plausible-sounding but wrong alternatives."""
+    replacements = {
+        "increase": "decrease", "decrease": "increase",
+        "positive": "negative", "negative": "positive",
+        "directly": "inversely", "inversely": "directly",
+        "primary": "secondary", "secondary": "primary",
+        "cause": "effect", "effect": "cause",
+        "higher": "lower", "lower": "higher",
+        "more": "less", "less": "more",
+    }
+    words = text.split()
+    for i, w in enumerate(words):
+        if w.lower() in replacements:
+            words[i] = replacements[w.lower()]
+            return " ".join(words)
+    return _negate_answer(text)
+
+
+def _halueval_corrupt(text: str) -> str:
+    """Substitutes entities/numbers — HaluEval hallucinations tend to be close but wrong."""
+    import re
+    # Shift any number by a small amount
+    numbers = re.findall(r'\b\d+\.?\d*\b', text)
+    if numbers:
+        n = numbers[0]
+        try:
+            shifted = str(round(float(n) * random.choice([0.8, 1.2, 0.5, 2.0]), 2))
+            return text.replace(n, shifted, 1)
+        except ValueError:
+            pass
+    return _swap_words(text)
+
+
+def _add_hedge_wrong(text: str) -> str:
+    """Adds overconfident wrong hedging — common LLM mistake pattern."""
+    prefixes = [
+        "According to recent studies, ",
+        "Research has shown that ",
+        "It is widely known that ",
+        "Experts agree that ",
+    ]
+    return random.choice(prefixes) + _negate_answer(text)
 
 
 def _swap_words(text: str) -> str:
@@ -488,7 +549,7 @@ class SyntheticDataGenerator:
                 print(f"[{i}/{len(pool)}] {q[:70]}")
 
                 # ── Case A: Corrupted answer (FIE should detect this) ──────
-                corrupted, corruption_type = corrupt_answer(correct, wrong)
+                corrupted, corruption_type = corrupt_answer(correct, wrong, source=self.source)
                 print(f"  FAILURE case: '{corrupted[:50]}' (corruption: {corruption_type})")
 
                 resp_fail = call_fie_monitor(q, corrupted, "corrupt-model")
@@ -525,7 +586,7 @@ class SyntheticDataGenerator:
                     "question_type":     fie_fail.get("question_type", "UNKNOWN"),
                     "source":            example.get("source", self.source),
                     "fie_result":        fie_fail,
-                    "timestamp":         datetime.utcnow().isoformat(),
+                    "timestamp":         datetime.now(timezone.utc).isoformat(),
                 }
                 out_f.write(json.dumps(record_fail, ensure_ascii=False) + "\n")
                 stats["failure_cases"] += 1
@@ -572,7 +633,7 @@ class SyntheticDataGenerator:
                     "question_type":     fie_ok.get("question_type", "UNKNOWN"),
                     "source":            example.get("source", self.source),
                     "fie_result":        fie_ok,
-                    "timestamp":         datetime.utcnow().isoformat(),
+                    "timestamp":         datetime.now(timezone.utc).isoformat(),
                 }
                 out_f.write(json.dumps(record_ok, ensure_ascii=False) + "\n")
                 stats["correct_cases"] += 1
@@ -700,12 +761,36 @@ Examples:
         default=42,
         help="Random seed for reproducible runs (default: 42)",
     )
+    parser.add_argument(
+        "--seeds",
+        type=str,
+        default=None,
+        help="Comma-separated list of seeds for multi-run batch generation "
+             "e.g. '42,43,44,45,46' — each seed produces a separate JSONL file. "
+             "Overrides --seed when provided.",
+    )
 
     args = parser.parse_args()
 
     FIE_BASE_URL  = args.fie_url
     FIE_API_KEY   = args.api_key
     REQUEST_DELAY = args.delay
+
+    # Multi-seed batch mode
+    if args.seeds:
+        seeds = [int(s.strip()) for s in args.seeds.split(",")]
+        print(f"\n  BATCH MODE: {len(seeds)} seeds × {args.n} examples = "
+              f"up to {len(seeds) * args.n * 2} FIE calls\n")
+        for s in seeds:
+            print(f"\n{'='*60}\n  SEED {s}\n{'='*60}")
+            random.seed(s)
+            gen = SyntheticDataGenerator(
+                source=args.source,
+                failures_only=args.failures_only,
+                subject=args.subject,
+            )
+            gen.run(n=args.n)
+        return
 
     random.seed(args.seed)
 
