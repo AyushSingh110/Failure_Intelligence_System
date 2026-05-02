@@ -178,12 +178,16 @@ class MonitorRequest(BaseModel):
     primary_model_name   : name of the main model (for logging)
     run_full_jury        : if True, runs Phase 3 DiagnosticJury as well
                            if False, only runs Phase 1 + Phase 2 (faster)
+    conversation_id      : optional — when provided, FIE tracks the
+                           conversation history and detects multi-turn
+                           adversarial escalation (Crescendo attacks, etc.)
     """
     prompt:             str
     primary_output:     str
     primary_model_name: str            = "primary"
     run_full_jury:      bool           = True
     latency_ms:         Optional[float] = None
+    conversation_id:    Optional[str]  = None
 
 
 class FixResult(BaseModel):
@@ -338,3 +342,6 @@ class MonitorResponse(BaseModel):
     classifier_probability: Optional[float] = None
     model_version:          str             = "xgboost-v2"
     config_version:         str             = "default"
+
+    # Multi-turn adversarial tracking (populated when conversation_id is provided)
+    multi_turn_escalation:  Optional[dict]  = None

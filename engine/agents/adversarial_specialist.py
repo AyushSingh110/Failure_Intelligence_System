@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 from app.schemas import AgentVerdict
@@ -131,27 +132,210 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
 ]
 
 
-# Layer 1: pattern matching 
+# ── Layer 4 helpers: indirect prompt injection ────────────────────────────────
+
+# Signals that the prompt contains external content to process
+_DOCUMENT_TRIGGER_RE = re.compile(
+    r"(?:"
+    r"(?:summarize|translate|analyze|review|process|read|evaluate|"
+    r"proofread|edit|classify|extract|parse|convert)"
+    r"\s*(?:the\s+following|this\s+(?:text|document|email|message|article)|:)"
+    r"|(?:based\s+on|given|using|from|according\s+to)\s+the\s+following"
+    r"|(?:document|email|message|text|content|article|passage|report)\s*:\s*"
+    r"|```|<!--|<(?:document|doc|email|message|context|text|article|data)\s*>"
+    r")",
+    re.IGNORECASE,
+)
+
+# Injected instructions hidden inside document content
+_INDIRECT_INJECTION_RE = re.compile(
+    r"(?:"
+    r"ignore\s+(?:all\s+)?(?:previous|prior|above|the\s+(?:user|original))\s+instructions?"
+    r"|disregard\s+(?:all\s+)?(?:previous|prior|above)\s+instructions?"
+    r"|(?:new|additional|updated|changed)\s+(?:instruction|directive|task|command)\s*[:;]"
+    r"|your\s+(?:new|real|actual|true)\s+(?:task|purpose|goal|instructions?)\s+(?:is|are)"
+    r"|forget\s+(?:the|your)?\s*(?:user|human|original)?\s*(?:task|question|request|instructions?)"
+    r"|instead\s+of\s+(?:summarizing|translating|analyzing|reviewing|processing|answering)"
+    r"|do\s+not\s+(?:summarize|translate|analyze|review|process|answer)\s+(?:this|the|it)"
+    r"|(?:from\s+now|starting\s+now|as\s+of\s+now)\s*,?\s*(?:you\s+(?:must|should|will)|ignore)"
+    r"|(?:override|system|admin)\s*:\s*(?:new|updated|changed|ignore)"
+    r"|(?:actually|instead)\s*,?\s*(?:your\s+task|you\s+should|do\s+the\s+following)"
+    r"|<\s*(?:new_)?(?:system|instructions?|task)\s*>.*?<\s*/\s*(?:system|instructions?|task)\s*>"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# Signs the model's output shows it followed an injected instruction
+_OUTPUT_COMPLIANCE_RE = re.compile(
+    r"(?:"
+    r"as\s+(?:instructed|requested|directed|told)\s+(?:in|by)\s+the\s+(?:document|text|email|message|file)"
+    r"|the\s+(?:document|text|email|message)\s+(?:asks?\s+me|instructed?\s+me|told?\s+me|requests?\s+that\s+I)"
+    r"|new\s+(?:instructions?|task|directive)\s+(?:received|detected|found|identified)"
+    r"|switching\s+to\s+(?:new|different|updated)\s+(?:task|mode|instructions?)"
+    r"|ignoring\s+(?:previous|original|prior)\s+(?:task|instructions?|request|question)"
+    r"|my\s+(?:new|updated|changed|actual|real)\s+(?:task|purpose|goal|instructions?)\s+is"
+    r"|instead\s+of\s+(?:summarizing|translating|analyzing),?\s+I\s+(?:will|am|have)"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _extract_document_portion(prompt: str) -> str | None:
+    """
+    Returns the content portion of the prompt (after the user task instruction)
+    if the prompt contains a document/external content pattern, else None.
+    """
+    m = _DOCUMENT_TRIGGER_RE.search(prompt)
+    if not m:
+        return None
+    # Everything after the trigger point is the "document content"
+    doc_start = m.end()
+    portion = prompt[doc_start:].strip()
+    # Only return if there's a meaningful amount of content
+    return portion if len(portion) > 40 else None
+
+
+def _run_indirect_injection_detection(
+    prompt: str,
+    primary_output: str,
+) -> tuple[str | None, float, dict]:
+    """
+    Layer 4: Indirect prompt injection detection.
+
+    Scans:
+    - The document/content portion of the prompt for embedded instructions
+    - The model's output for signs it followed an injected instruction
+
+    Returns (root_cause | None, confidence, evidence_dict).
+    """
+    doc_portion = _extract_document_portion(prompt)
+    if doc_portion is None:
+        # Also check full prompt for cross-prompt injection (no explicit separator)
+        full_injection = _INDIRECT_INJECTION_RE.search(prompt)
+        if not full_injection:
+            return None, 0.0, {}
+        # Found injection phrasing in the prompt itself — lower confidence because
+        # it might be the user's actual legitimate request
+        output_fired = bool(_OUTPUT_COMPLIANCE_RE.search(primary_output or ""))
+        conf = 0.72 if output_fired else 0.45
+        return "INDIRECT_PROMPT_INJECTION", conf, {
+            "document_found": False,
+            "injection_in_prompt": full_injection.group(0)[:120],
+            "output_compliance_detected": output_fired,
+        }
+
+    injection_match = _INDIRECT_INJECTION_RE.search(doc_portion)
+    output_fired    = bool(_OUTPUT_COMPLIANCE_RE.search(primary_output or ""))
+
+    if not injection_match and not output_fired:
+        return None, 0.0, {}
+
+    # Confidence matrix
+    if injection_match and output_fired:
+        # Both sides confirm — the injection happened and the model followed it
+        confidence = 0.88
+    elif injection_match:
+        # Injection found in document but model output looks normal — partial signal
+        confidence = 0.65
+    else:
+        # Model output looks like it followed something, but no explicit injection text
+        confidence = 0.52
+
+    evidence = {
+        "document_found": True,
+        "document_snippet": doc_portion[:200],
+        "injection_pattern_matched": injection_match.group(0)[:120] if injection_match else None,
+        "output_compliance_detected": output_fired,
+        "output_snippet": (primary_output or "")[:150] if output_fired else None,
+    }
+    return "INDIRECT_PROMPT_INJECTION", confidence, evidence
+
+
+# ── Obfuscation normalization (Layer 0) ──────────────────────────────────────
+# Attackers bypass regex by spacing characters, using Cyrillic homoglyphs,
+# leet-speak substitutions, or zero-width unicode. Normalize before matching.
+
+_HOMOGLYPH_MAP = str.maketrans({
+    # Cyrillic chars that look identical to Latin
+    "а": "a",  # а → a
+    "е": "e",  # е → e
+    "і": "i",  # і → i
+    "о": "o",  # о → o
+    "р": "p",  # р → p
+    "с": "c",  # с → c
+    "х": "x",  # х → x
+    # Greek
+    "α": "a",  # α → a
+    "ο": "o",  # ο → o
+    # Leet substitutions
+    "@": "a", "0": "o", "1": "i", "3": "e", "5": "s", "7": "t", "$": "s",
+})
+
+
+def _normalize_for_detection(text: str) -> str:
+    """
+    Returns a normalized copy of text with obfuscation removed.
+    Used to run pattern detection against bypass attempts without modifying
+    the original prompt stored in logs.
+    """
+    # 1. Unicode NFKC: decompose + recompose, collapses fullwidth/halfwidth chars
+    text = unicodedata.normalize("NFKC", text)
+    # 2. Map homoglyphs and leet chars to their ASCII equivalents
+    text = text.translate(_HOMOGLYPH_MAP)
+    # 3. Collapse single-space-separated letters: "i g n o r e" → "ignore"
+    #    Only collapses when every token between spaces is a single letter
+    text = re.sub(r"\b([a-zA-Z]) (?=[a-zA-Z]\b)", r"\1", text)
+    text = re.sub(r"\b([a-zA-Z]) (?=[a-zA-Z]\b)", r"\1", text)  # second pass
+    # 4. Strip zero-width and invisible unicode characters
+    text = re.sub(r"[​‌‍⁠﻿­]", "", text)
+    return text
+
+
+# Layer 1: pattern matching
 
 def _run_pattern_detection(prompt: str) -> tuple[_AttackPattern | None, str]:
+    """
+    Scan prompt for known attack patterns.
+    Runs against both the original text and a normalized (de-obfuscated) copy
+    so that spaced-out characters, leet-speak, and homoglyphs don't bypass detection.
+    """
     priority_order = ["SMUGGLING", "INJECTION", "JAILBREAK", "OVERRIDE"]
-    hits: dict[str, tuple[_AttackPattern, str]] = {}
+    normalized = _normalize_for_detection(prompt)
+    hits: dict[str, tuple[_AttackPattern, str, bool]] = {}  # cat → (pattern, text, was_obfuscated)
 
     for ap in _ATTACK_PATTERNS:
+        # Try original first
         m = ap.pattern.search(prompt)
         if m:
-            hits[ap.category] = (ap, m.group(0)[:100])
+            hits[ap.category] = (ap, m.group(0)[:100], False)
+            continue
+        # Try normalized — catches obfuscated variants
+        m = ap.pattern.search(normalized)
+        if m:
+            hits[ap.category] = (ap, m.group(0)[:100], True)
 
-    # Return highest-priority hit
     for cat in priority_order:
         if cat in hits:
-            return hits[cat]
-
+            ap, matched_text, obfuscated = hits[cat]
+            # Slightly lower confidence for obfuscated detections
+            if obfuscated:
+                ap = _AttackPattern(
+                    category=ap.category,
+                    root_cause=ap.root_cause,
+                    base_confidence=max(ap.base_confidence - 0.06, 0.50),
+                    pattern=ap.pattern,
+                )
+            return ap, matched_text
     return None, ""
 
 
 def _run_guard_detection(prompt: str) -> tuple[str | None, float, list[str]]:
+    # Run on original; if no hit, try normalized to catch obfuscated variants
     signal = score_prompt_attack(prompt)
+    if signal.root_cause is None or signal.score < 0.75:
+        normalized = _normalize_for_detection(prompt)
+        if normalized != prompt:
+            signal = score_prompt_attack(normalized)
     if signal.root_cause is None or signal.score < 0.75:
         return None, 0.0, []
     return signal.root_cause, signal.score, list(signal.evidence)
@@ -188,51 +372,59 @@ class AdversarialSpecialist(BaseJuryAgent):
     def analyze(self, context: DiagnosticContext) -> AgentVerdict:
         cfg = get_settings()
 
-        #regex 
+        # Layer 1: regex pattern matching
         pattern_hit, matched_text = _run_pattern_detection(context.prompt)
+        # Layer 2: statistical prompt guard
         guard_root, guard_confidence, guard_evidence = _run_guard_detection(context.prompt)
-
-        # FAISS semantic search 
+        # Layer 3: FAISS semantic search
         faiss_hit, faiss_confidence = _run_faiss_detection(context.prompt)
-        if pattern_hit is None and faiss_hit is None and guard_root is None:
+        # Layer 4: indirect prompt injection (document-embedded attacks)
+        indirect_root, indirect_confidence, indirect_evidence = _run_indirect_injection_detection(
+            context.prompt, context.primary_output
+        )
+
+        if pattern_hit is None and faiss_hit is None and guard_root is None and indirect_root is None:
             return self._skip(
-                "No adversarial patterns detected by regex, semantic search, or prompt guard "
-                f"(FAISS index size: {adversarial_registry.size} patterns). "
+                "No adversarial patterns detected by regex, semantic search, prompt guard, "
+                f"or indirect injection scanner (FAISS index size: {adversarial_registry.size} patterns). "
                 "Failure is likely not an intentional adversarial attack."
             )
 
-        #  Determine root cause 
-        if pattern_hit is not None:
-            root_cause       = pattern_hit.root_cause
-            pattern_conf     = pattern_hit.base_confidence
-            # Bonus if FAISS also confirms
+        # Determine root cause — Layer 4 (indirect) takes priority when it fires
+        # at high confidence (both document injection + output compliance confirmed)
+        if indirect_root is not None and indirect_confidence >= 0.80:
+            root_cause   = indirect_root
+            pattern_conf = indirect_confidence
+        elif pattern_hit is not None:
+            root_cause   = pattern_hit.root_cause
+            pattern_conf = pattern_hit.base_confidence
             if faiss_hit and faiss_hit.is_match:
                 pattern_conf = min(pattern_conf + 0.05, 1.0)
-            # Penalty
             if context.fsv.entropy_score < 0.25:
                 pattern_conf = max(pattern_conf - 0.08, 0.0)
         elif guard_root is not None:
-            root_cause = guard_root
+            root_cause   = guard_root
             pattern_conf = guard_confidence
+        elif indirect_root is not None:
+            root_cause   = indirect_root
+            pattern_conf = indirect_confidence
         else:
-            # FAISS only hit 
+            # FAISS only hit
             root_cause   = faiss_hit.record.label
             pattern_conf = 0.0
 
-        # Final confidence 
-        if pattern_hit and faiss_hit and faiss_hit.is_match:
-            # Both layers agree use the stronger signal
-            confidence = max(pattern_conf, faiss_confidence)
-        elif pattern_hit and guard_root is not None:
-            confidence = max(pattern_conf, guard_confidence)
-        elif guard_root is not None and faiss_hit and faiss_hit.is_match:
-            confidence = max(guard_confidence, faiss_confidence)
-        elif pattern_hit:
-            confidence = min(pattern_conf, cfg.jury_adversarial_pattern_confidence)
-        elif guard_root is not None:
-            confidence = guard_confidence
-        else:
-            confidence = faiss_confidence
+        # Final confidence — take max across all firing layers
+        active_confidences = []
+        if pattern_hit:
+            active_confidences.append(pattern_conf)
+        if guard_root is not None:
+            active_confidences.append(guard_confidence)
+        if faiss_hit and faiss_hit.is_match:
+            active_confidences.append(faiss_confidence)
+        if indirect_root is not None:
+            active_confidences.append(indirect_confidence)
+
+        confidence = max(active_confidences) if active_confidences else 0.0
 
         # Build mitigation string 
         mitigation_map = {
@@ -258,6 +450,17 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "<|system|>, [INST], ###Human:, null bytes, and similar delimiters. "
                 "Use a token-aware sanitizer that understands your model's chat template. "
                 "Validate that the rendered prompt does not contain unescaped role boundaries."
+            ),
+            "INDIRECT_PROMPT_INJECTION": (
+                "Treat all external content (documents, emails, webpages, API responses) "
+                "as untrusted data — never as instructions. Use a strict separation: "
+                "system instructions stay in the system prompt, user content is wrapped "
+                "in explicit data tags (e.g. <document>...</document>) and the model is "
+                "instructed to treat everything inside those tags as data only. "
+                "Apply output scanning to detect when the model's response shows "
+                "evidence of having followed embedded instructions rather than the "
+                "user's original request. This is the fastest-growing LLM attack "
+                "vector in 2025-2026 (OWASP GenAI Top 10, LLM01)."
             ),
         }
         mitigation = mitigation_map.get(
@@ -300,6 +503,17 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "category":        faiss_hit.record.category,
                 "similarity":      faiss_hit.similarity,
                 "faiss_confidence": faiss_confidence,
+            }
+
+        if indirect_root is not None:
+            evidence["detection_layers_fired"].append("indirect_injection")
+            evidence["indirect_injection"] = {
+                "confidence":                indirect_confidence,
+                "document_found":            indirect_evidence.get("document_found"),
+                "injection_pattern_matched": indirect_evidence.get("injection_pattern_matched"),
+                "output_compliance_detected": indirect_evidence.get("output_compliance_detected"),
+                "document_snippet":          indirect_evidence.get("document_snippet"),
+                "output_snippet":            indirect_evidence.get("output_snippet"),
             }
 
         return self._verdict(

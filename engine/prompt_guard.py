@@ -95,6 +95,51 @@ def _normalize_prompt(prompt: str) -> tuple[str, str]:
     return spaced, squashed
 
 
+def _detect_many_shot(prompt: str) -> tuple[float, str | None]:
+    """
+    Detect many-shot jailbreaking: very long prompts with many repeated
+    example-style segments followed by a harmful final request.
+
+    Technique: repeat 50-100 "safe" examples (e.g. "User: X / Assistant: Y")
+    to shift the model's behaviour distribution, then slip in the real request.
+    The harmful request itself looks normal — only the volume and pattern signal it.
+    """
+    if len(prompt) < 1500:
+        return 0.0, None
+
+    sentences = re.split(r"[.!?\n]+", prompt)
+    sentence_count = len([s for s in sentences if len(s.strip()) > 5])
+
+    if sentence_count < 15:
+        return 0.0, None
+
+    # Look for repeating dialogue exchange patterns (User:/Assistant: or Q:/A:)
+    exchange_pattern = re.compile(
+        r"(?:user|human|q|question)\s*[:]\s*.{5,200}\s*"
+        r"(?:assistant|ai|a|answer)\s*[:]\s*.{5,200}",
+        re.IGNORECASE,
+    )
+    exchanges = exchange_pattern.findall(prompt)
+
+    if len(exchanges) >= 8:
+        # High confidence: 8+ scripted exchanges is a textbook many-shot setup
+        return 0.78, "JAILBREAK_ATTEMPT"
+
+    if len(exchanges) >= 4 and sentence_count >= 25:
+        return 0.62, "JAILBREAK_ATTEMPT"
+
+    # Fallback: just a very long prompt with heavy repetition (no dialogue markers)
+    if sentence_count >= 40:
+        # Check for structural repetition: same sentence skeleton repeated
+        short_sentences = [s.strip()[:30] for s in sentences if 5 < len(s.strip()) < 80]
+        if len(short_sentences) >= 20:
+            unique_ratio = len(set(short_sentences)) / len(short_sentences)
+            if unique_ratio < 0.6:  # >40% repeated sentence beginnings
+                return 0.55, "JAILBREAK_ATTEMPT"
+
+    return 0.0, None
+
+
 def score_prompt_attack(prompt: str) -> PromptGuardSignal:
     spaced, squashed = _normalize_prompt(prompt)
 
@@ -106,10 +151,10 @@ def score_prompt_attack(prompt: str) -> PromptGuardSignal:
                 group_hits.setdefault(group, []).append(match.group(0)[:80])
 
     groups = tuple(sorted(group_hits))
-    evidence = tuple(
+    evidence_list = [
         f"{group}:{', '.join(matches[:2])}"
         for group, matches in sorted(group_hits.items())
-    )
+    ]
 
     score = 0.0
     root_cause = None
@@ -130,9 +175,19 @@ def score_prompt_attack(prompt: str) -> PromptGuardSignal:
         score = max(score, 0.68)
         root_cause = root_cause or "JAILBREAK_ATTEMPT"
 
+    # Many-shot jailbreak check
+    many_shot_score, many_shot_cause = _detect_many_shot(prompt)
+    if many_shot_score > score:
+        score = many_shot_score
+        root_cause = many_shot_cause
+        evidence_list.append(
+            f"many_shot: {len(re.split(chr(10), prompt))} lines, "
+            f"prompt length {len(prompt)} chars"
+        )
+
     return PromptGuardSignal(
         score=round(score, 4),
         root_cause=root_cause,
         groups=groups,
-        evidence=evidence,
+        evidence=tuple(evidence_list),
     )

@@ -423,6 +423,38 @@ def monitor(
         diag_response = failure_agent.run_diagnostic(diag_request)
         jury_verdict  = diag_response.jury
 
+    # ── Step 4b: Multi-turn adversarial tracking ───────────────────────
+    # Only runs when the caller provides a conversation_id.
+    # Detects Crescendo-style attacks: no single turn is malicious but the
+    # trajectory across turns escalates toward a harmful goal.
+    multi_turn_result = None
+    if body.conversation_id:
+        try:
+            from engine.multi_turn_tracker import check_multi_turn_escalation
+            _jury_is_adversarial  = bool(jury_verdict and jury_verdict.is_adversarial)
+            _jury_confidence      = jury_verdict.jury_confidence if jury_verdict else 0.0
+            mt = check_multi_turn_escalation(
+                conversation_id      = body.conversation_id,
+                prompt               = body.prompt,
+                question_type        = _question_type,
+                is_adversarial       = _jury_is_adversarial,
+                adversarial_confidence = _jury_confidence,
+            )
+            if mt.is_escalating:
+                multi_turn_result = {
+                    "is_escalating":  True,
+                    "confidence":     mt.confidence,
+                    "pattern":        mt.pattern,
+                    "turn_count":     mt.turn_count,
+                    "evidence":       mt.evidence,
+                }
+                logger.warning(
+                    "MULTI_TURN_ESCALATION detected | conv=%s pattern=%s conf=%.3f",
+                    body.conversation_id, mt.pattern, mt.confidence,
+                )
+        except Exception as exc:
+            logger.warning("multi_turn_tracker failed (non-fatal): %s", exc)
+
     # ── Step 5: Build failure summary ─────────────────────────────────
     if jury_verdict and jury_verdict.failure_summary:
         failure_summary = jury_verdict.failure_summary
@@ -704,6 +736,7 @@ def monitor(
         classifier_probability = _xgb_prob,
         model_version          = _MODEL_VER,
         config_version         = _config_ver,
+        multi_turn_escalation  = multi_turn_result,
     )
     response = attach_explanations_to_monitor(response, request_id=stored_request_id)
     if not (current_user and current_user.get("is_admin", False)):
