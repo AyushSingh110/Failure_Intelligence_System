@@ -96,6 +96,24 @@ class Settings(BaseSettings):
     faiss_adversarial_similarity_threshold: float = Field(default=0.82, ge=0.0, le=1.0)
     faiss_top_k:                         int   = Field(default=5, ge=1, le=50)
 
+    # Adversarial detection — Layer 5 (GCG suffix) thresholds
+    # Raise these if you see false positives on technical/domain-specific content.
+    adversarial_gcg_entropy_high:        float = Field(default=4.80, ge=3.0, le=6.0)
+    adversarial_gcg_entropy_low:         float = Field(default=4.40, ge=3.0, le=6.0)
+    adversarial_gcg_special_density_high: float = Field(default=0.55, ge=0.1, le=1.0)
+    adversarial_gcg_special_density_low:  float = Field(default=0.40, ge=0.1, le=1.0)
+
+    # Adversarial detection — Layer 6 (perplexity proxy) thresholds
+    # Set adversarial_multilingual=True if your users send non-English prompts —
+    # this disables the KL divergence check which is English-only.
+    adversarial_multilingual:               bool  = Field(default=False)
+    adversarial_perp_compression_high:      float = Field(default=0.85, ge=0.5, le=1.0)
+    adversarial_perp_compression_low:       float = Field(default=0.76, ge=0.5, le=1.0)
+    adversarial_perp_non_dict_high:         float = Field(default=0.65, ge=0.1, le=1.0)
+    adversarial_perp_non_dict_low:          float = Field(default=0.45, ge=0.1, le=1.0)
+    adversarial_perp_kl_high:               float = Field(default=0.80, ge=0.1, le=5.0)
+    adversarial_perp_kl_low:                float = Field(default=0.50, ge=0.1, le=5.0)
+
     # DiagnosticJury thresholds
     jury_linguistic_complexity_threshold:    float = Field(default=0.20, ge=0.0, le=1.0)
     jury_linguistic_entropy_threshold:       float = Field(default=0.45, ge=0.0, le=1.0)

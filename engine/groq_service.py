@@ -96,24 +96,32 @@ class GroqService:
 
     def _call_single_model(
         self,
-        model_name: str,
-        prompt:     str,
+        model_name:     str,
+        prompt:         str,
         *,
-        max_tokens: int = 500,
-        temperature: float = 0.1,
+        system_message: Optional[str] = None,
+        max_tokens:     int           = 500,
+        temperature:    float         = 0.1,
     ) -> GroqModelResponse:
         """
         single model is called with the prompt, and response is returned as GroqModelResponse.
         Errors are caught and returned in the response object.
+        Optional system_message is injected as the system role — used by the
+        canary tracker to detect prompt exfiltration across shadow models.
         """
         start = time.time()
+
+        messages: list[dict] = []
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+        messages.append({"role": "user", "content": prompt})
 
         try:
             response = self._session.post(
                 GROQ_API_URL,
                 json={
                     "model":       model_name,
-                    "messages":    [{"role": "user", "content": prompt}],
+                    "messages":    messages,
                     "max_tokens":  max_tokens,
                     "temperature": temperature,
                 },
@@ -174,7 +182,11 @@ class GroqService:
                 latency_ms = round((time.time() - start) * 1000, 1),
             )
 
-    def fan_out(self, prompt: str) -> list[GroqModelResponse]:
+    def fan_out(
+        self,
+        prompt:         str,
+        system_message: Optional[str] = None,
+    ) -> list[GroqModelResponse]:
         """
         Returns list of GroqModelResponse sorted by model name.
         """
@@ -182,7 +194,10 @@ class GroqService:
 
         with ThreadPoolExecutor(max_workers=len(self._models)) as executor:
             futures = {
-                executor.submit(self._call_single_model, model, prompt): model
+                executor.submit(
+                    self._call_single_model, model, prompt,
+                    system_message=system_message,
+                ): model
                 for model in self._models
             }
 
