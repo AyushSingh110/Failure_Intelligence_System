@@ -146,9 +146,9 @@ class TestFIEConfig:
         from engine.fie_config import get_threshold
         assert get_threshold("factual") == get_threshold("FACTUAL")
 
-    def test_model_version_is_v3(self):
+    def test_model_version_is_v4(self):
         from engine.fie_config import MODEL_VERSION
-        assert MODEL_VERSION == "xgboost-v3"
+        assert MODEL_VERSION == "xgboost-v4"
 
 
 # ── SDK Local Predictor ───────────────────────────────────────────────────────

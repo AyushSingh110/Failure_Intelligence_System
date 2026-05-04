@@ -7,21 +7,31 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Paths — v3 takes priority, falls back to v2
+# Paths — v4 takes priority, falls back to v3, then v2
 _HERE         = os.path.dirname(os.path.dirname(__file__))
+_MODEL_V4     = os.path.join(_HERE, "models", "failure_classifier_v4.pkl")
+_COLS_V4      = os.path.join(_HERE, "models", "feature_columns_v4.pkl")
 _MODEL_V3     = os.path.join(_HERE, "models", "failure_classifier_v3.pkl")
 _COLS_V3      = os.path.join(_HERE, "models", "feature_columns_v3.pkl")
 _MODEL_V2     = os.path.join(_HERE, "models", "failure_classifier_v2.pkl")
 _COLS_V2      = os.path.join(_HERE, "models", "feature_columns_v2.pkl")
 
-_MODEL_PATH   = _MODEL_V3 if os.path.exists(_MODEL_V3) else _MODEL_V2
-_COLS_PATH    = _COLS_V3  if os.path.exists(_COLS_V3)  else _COLS_V2
-_USING_V3     = os.path.exists(_MODEL_V3)
+if os.path.exists(_MODEL_V4):
+    _MODEL_PATH, _COLS_PATH = _MODEL_V4, _COLS_V4
+    _VERSION    = "v4"
+elif os.path.exists(_MODEL_V3):
+    _MODEL_PATH, _COLS_PATH = _MODEL_V3, _COLS_V3
+    _VERSION    = "v3"
+else:
+    _MODEL_PATH, _COLS_PATH = _MODEL_V2, _COLS_V2
+    _VERSION    = "v2"
 
-# Decision threshold
+_USING_V3 = _VERSION in ("v3", "v4")  # both v3 and v4 share the same feature schema
+
+# Decision threshold — tuned on v4 validation set
 CLASSIFIER_THRESHOLD: float = 0.522
 
-# v3 adds question_type as a categorical feature
+# v3/v4 feature schema: adds question_type as a categorical feature
 _CATS_V3 = ["archetype", "jury_verdict", "fix_strategy", "gt_source", "question_type"]
 _CATS_V2 = ["archetype", "jury_verdict", "fix_strategy", "gt_source"]
 _CATS    = _CATS_V3 if _USING_V3 else _CATS_V2
@@ -50,10 +60,9 @@ def _load() -> None:
         import joblib
         _model     = joblib.load(_MODEL_PATH)
         _feat_cols = joblib.load(_COLS_PATH)
-        version = "v3" if _USING_V3 else "v2"
         logger.info(
             "FIE failure_classifier_%s loaded (%d features, threshold=%.3f)",
-            version, len(_feat_cols), CLASSIFIER_THRESHOLD,
+            _VERSION, len(_feat_cols), CLASSIFIER_THRESHOLD,
         )
     except Exception as exc:
         logger.warning(
