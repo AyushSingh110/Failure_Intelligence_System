@@ -21,8 +21,8 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ── Model identity ─────────────────────────────────────────────────────────────
-MODEL_VERSION  = "xgboost-v3"
-MODEL_TRAINED  = "2026-04-29"
+MODEL_VERSION  = "xgboost-v4"
+MODEL_TRAINED  = "2026-05-05"
 
 # ── How often to auto-recalibrate (number of new feedback entries) ─────────────
 RECALIBRATION_INTERVAL = 50

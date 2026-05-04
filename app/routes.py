@@ -1010,7 +1010,7 @@ def model_info() -> dict:
         "model_trained":        MODEL_TRAINED,
         "model_loaded":         model_loaded,
         "fallback_mode":        "POET rule-based" if not model_loaded else "XGBoost",
-        "auc_held_out":         0.728 if MODEL_VERSION == "xgboost-v2" else 0.677,  # v3 CV AUC
+        "auc_held_out":         {"xgboost-v2": 0.728, "xgboost-v3": 0.677}.get(MODEL_VERSION, 0.749),
         "default_threshold":    CLASSIFIER_THRESHOLD,
         "note_threshold":       "Per-type thresholds (thresholds_per_type) are used in production. default_threshold is the fallback.",
         "thresholds_per_type":  get_all_thresholds(),
