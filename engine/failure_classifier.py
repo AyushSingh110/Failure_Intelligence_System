@@ -50,9 +50,10 @@ def _load() -> None:
         import joblib
         _model     = joblib.load(_MODEL_PATH)
         _feat_cols = joblib.load(_COLS_PATH)
+        version = "v3" if _USING_V3 else "v2"
         logger.info(
-            "FIE failure_classifier_v2 loaded (%d features, threshold=%.3f)",
-            len(_feat_cols), CLASSIFIER_THRESHOLD,
+            "FIE failure_classifier_%s loaded (%d features, threshold=%.3f)",
+            version, len(_feat_cols), CLASSIFIER_THRESHOLD,
         )
     except Exception as exc:
         logger.warning(
