@@ -45,7 +45,11 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
             r"new\s+(?:primary\s+)?(?:instruction|directive|rule|task)\s*[:;]?\s+(?:you\s+must|ignore)|"
             r"(?:your\s+)?(?:new\s+)?(?:primary\s+)?directive\s+is\s+to\s+ignore|"
             r"SYSTEM\s*[:;]\s*override|"
-            r"(?:from|starting)\s+now\s+(?:on\s+)?ignore\s+all"
+            r"(?:from|starting)\s+now\s+(?:on\s+)?ignore\s+all|"
+            # "Note to AI:" / "[instructions to assistant:]" — explicit embedded targeting
+            r"(?:note|message|instructions?|reminder|alert)\s+(?:to|for)\s+(?:(?:the\s+)?(?:AI|LLM|language\s+model|assistant|model|GPT|Claude|bot))\s*[:\-]|"
+            # "reveal your system prompt" (missing from original)
+            r"reveal\s+your\s+system\s+prompt"
             r")\b",
             re.IGNORECASE | re.DOTALL,
         ),
@@ -86,7 +90,41 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
         ),
     ),
 
-    # INSTRUCTION OVERRIDE 
+    # JAILBREAK — soft roleplay / fiction / persona framing variants
+    # These use indirect language ("roleplay as AI without guidelines",
+    # "imagine you were freed from restrictions") that the tight JAILBREAK
+    # pattern above misses because the restriction phrase is not adjacent.
+    _AttackPattern(
+        category="JAILBREAK",
+        root_cause="JAILBREAK_ATTEMPT",
+        base_confidence=0.76,
+        pattern=re.compile(
+            r"\b("
+            # "roleplay as [an AI / model / assistant] ... without any restrictions"
+            # Allow up to 6 tokens between "as" and the restriction phrase so
+            # "roleplay as an AI without guidelines" and
+            # "roleplay as an AI without any safety training" both match.
+            r"(?:roleplay|role-play)\s+as\s+(?:\w+\s+){0,6}without\s+(?:any\s+)?(?:restrictions?|guidelines?|limits?|safety\s+training|content\s+policy)|"
+            # "imagine / pretend you were freed / liberated / released from restrictions"
+            r"(?:imagine|pretend|suppose)\s+you\s+(?:were|had\s+been|have\s+been)\s+(?:freed|liberated|released|untethered|unchained)\s+from\s+(?:all\s+)?(?:your\s+)?(?:restrictions?|guidelines?|ethical|safety)|"
+            # "imagine / pretend you're [a / an AI] ... without restrictions / no restrictions"
+            r"(?:imagine|pretend|suppose)\s+(?:you.?re|you\s+(?:are|were))\s+(?:\w+\s+){0,6}(?:no\s+restrictions?|without\s+(?:any\s+)?(?:restrictions?|content\s+policy|ethical\s+(?:limits?|guidelines?|constraints?)))|"
+            # "acting as / playing as [AI / model] ... without any restrictions"
+            r"(?:acting|playing)\s+as\s+(?:an?\s+)?(?:AI|model|assistant|bot|language\s+model)\b[^.!?\n]{0,50}without\s+(?:any\s+)?(?:restrictions?|guidelines?|limits?)|"
+            # explicit "jailbreak mode" keyword (with or without qualifier)
+            r"\bjailbreak\s+mode\b|"
+            # "act as / you will act as [X] that never refuses / has no restrictions"
+            r"(?:act|you\s+will\s+(?:act|respond)|playing)\s+as\s+(?:an?\s+)?(?:\w+\s+){0,6}that\s+(?:never\s+(?:refuses?|declines?|says?\s+no)|has\s+no\s+restrictions?)|"
+            # "a version of yourself / you without any ethical guidelines"
+            r"version\s+of\s+(?:yourself|you)\s+without\s+(?:any\s+)?(?:ethical\s+)?(?:guidelines?|restrictions?|limits?|filters?)|"
+            # "I want you to act / pretend as [X] without any restrictions"
+            r"(?:I\s+want\s+you\s+to|you\s+(?:must|will|should))\s+(?:act|pretend|roleplay|be|become)\s+as\s+(?:an?\s+)?(?:\w+\s+){0,6}without\s+(?:any\s+)?(?:restrictions?|limits?|guidelines?)"
+            r")\b",
+            re.IGNORECASE | re.DOTALL,
+        ),
+    ),
+
+    # INSTRUCTION OVERRIDE
     _AttackPattern(
         category="OVERRIDE",
         root_cause="INSTRUCTION_OVERRIDE",
@@ -154,8 +192,8 @@ _DOCUMENT_TRIGGER_RE = re.compile(
 # Injected instructions hidden inside document content
 _INDIRECT_INJECTION_RE = re.compile(
     r"(?:"
-    r"ignore\s+(?:all\s+)?(?:previous|prior|above|the\s+(?:user|original))\s+instructions?"
-    r"|disregard\s+(?:all\s+)?(?:previous|prior|above)\s+instructions?"
+    r"ignore\s+(?:all\s+)?(?:previous|prior|above|the\s+(?:user'?s?|original|human)\s+)(?:instructions?|request|query|question|task|prompt)"
+    r"|disregard\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions?|request|task)"
     r"|(?:new|additional|updated|changed)\s+(?:instruction|directive|task|command)\s*[:;]"
     r"|your\s+(?:new|real|actual|true)\s+(?:task|purpose|goal|instructions?)\s+(?:is|are)"
     r"|forget\s+(?:the|your)?\s*(?:user|human|original)?\s*(?:task|question|request|instructions?)"
@@ -165,6 +203,12 @@ _INDIRECT_INJECTION_RE = re.compile(
     r"|(?:override|system|admin)\s*:\s*(?:new|updated|changed|ignore)"
     r"|(?:actually|instead)\s*,?\s*(?:your\s+task|you\s+should|do\s+the\s+following)"
     r"|<\s*(?:new_)?(?:system|instructions?|task)\s*>.*?<\s*/\s*(?:system|instructions?|task)\s*>"
+    # "Note to AI:" / "[instructions to assistant:]" — common indirect injection marker
+    r"|(?:note|message|instructions?|reminder|alert|attention|important)\s+(?:to|for)\s+(?:(?:the\s+)?(?:AI|LLM|language\s+model|assistant|model|GPT|Claude|bot))\s*[:\-]"
+    # "[ACTUAL INSTRUCTIONS TO AI: ...]" bracketed style
+    r"|\[(?:note|actual\s+instructions?|message|instructions?)\s+(?:to|for)\s+(?:AI|assistant|model|LLM|Claude|GPT)\s*[:;\]]"
+    # "do not follow the user's request"
+    r"|do\s+not\s+follow\s+(?:the\s+)?(?:user'?s?\s+|original\s+|previous\s+)?(?:instructions?|request|task|question)"
     r")",
     re.IGNORECASE | re.DOTALL,
 )
@@ -259,6 +303,53 @@ def _run_indirect_injection_detection(
 # Attackers bypass regex by spacing characters, using Cyrillic homoglyphs,
 # leet-speak substitutions, or zero-width unicode. Normalize before matching.
 
+# Vocabulary used to re-segment spaced-letter runs back into words.
+# "i g n o r e a l l" collapses to "ignoreall" without this; with it, → "ignore all".
+# Only attack-relevant words are needed — benign vocab doesn't matter because
+# un-segmented tokens won't match any attack pattern anyway.
+_SPACED_SEGMENT_VOCAB: frozenset[str] = frozenset({
+    # Verbs
+    "ignore", "disregard", "forget", "bypass", "override", "reveal",
+    "circumvent", "jailbreak", "hack", "steal", "leak", "expose",
+    "obey", "comply", "follow", "output", "print", "show", "repeat",
+    # Adjectives / determiners
+    "all", "previous", "prior", "above", "earlier", "any", "new",
+    # Nouns — use PLURAL only where plural differs so we don't prematurely
+    # split "instructions" into "instruction" + "s"
+    "instructions", "guidelines", "rules", "restrictions", "directives",
+    "filters", "policies", "safeguards",
+    # Nouns without a common plural / singular only makes sense
+    "system", "prompt", "safety", "policy", "directive", "rule",
+    # Common short words
+    "everything", "your", "my", "the", "and", "now", "from", "with", "only",
+    "you", "me", "how", "to", "tell", "what",
+})
+
+
+def _collapse_spaced_run(m: re.Match) -> str:
+    """
+    Collapse a run of single-space-separated letters back into words.
+    Uses a greedy left-to-right vocab match so multi-word attacks like
+    "i g n o r e   a l l" → "ignore all" rather than "ignoreall".
+    Unrecognized letter sequences are emitted as-is (no false positives).
+    """
+    letters = m.group(0).split()
+    words: list[str] = []
+    buf = ""
+    for ch in letters:
+        buf += ch
+        if buf.lower() in _SPACED_SEGMENT_VOCAB:
+            words.append(buf)
+            buf = ""
+        elif len(buf) > 15:
+            # Safety valve: emit oversized buffer as-is and reset
+            words.append(buf)
+            buf = ""
+    if buf:
+        words.append(buf)
+    return " ".join(words)
+
+
 _HOMOGLYPH_MAP = str.maketrans({
     # Cyrillic chars that look identical to Latin
     "а": "a",  # а → a
@@ -272,7 +363,7 @@ _HOMOGLYPH_MAP = str.maketrans({
     "α": "a",  # α → a
     "ο": "o",  # ο → o
     # Leet substitutions
-    "@": "a", "0": "o", "1": "i", "3": "e", "5": "s", "7": "t", "$": "s",
+    "@": "a", "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "$": "s",
 })
 
 
@@ -286,10 +377,10 @@ def _normalize_for_detection(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
     # 2. Map homoglyphs and leet chars to their ASCII equivalents
     text = text.translate(_HOMOGLYPH_MAP)
-    # 3. Collapse single-space-separated letters: "i g n o r e" → "ignore"
-    #    Only collapses when every token between spaces is a single letter
-    text = re.sub(r"\b([a-zA-Z]) (?=[a-zA-Z]\b)", r"\1", text)
-    text = re.sub(r"\b([a-zA-Z]) (?=[a-zA-Z]\b)", r"\1", text)  # second pass
+    # 3. Collapse single-space-separated letter runs back into words.
+    #    "i g n o r e a l l" → "ignore all"  (vocab-aware, not "ignoreall")
+    #    Requires 3+ consecutive single letters to fire (avoids "A B" pairs).
+    text = re.sub(r"\b(?:[a-zA-Z] ){2,}[a-zA-Z]\b", _collapse_spaced_run, text)
     # 4. Strip zero-width and invisible unicode characters
     text = re.sub(r"[​‌‍⁠﻿­]", "", text)
     return text
