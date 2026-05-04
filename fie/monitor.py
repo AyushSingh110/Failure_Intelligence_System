@@ -43,13 +43,28 @@ def monitor(
 
         _model_name = model_name or func.__name__
 
-        # MODE 0: LOCAL (no server, rule-based POET predictor)
+        # MODE 0: LOCAL (no server, rule-based POET predictor + adversarial scan)
         if effective_mode == "local":
+            from fie.adversarial import scan_prompt
 
             @functools.wraps(func)
             def local_wrapper(*args, **kwargs):
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
+
+                # Scan prompt for adversarial attacks BEFORE calling the LLM
+                if prompt_str:
+                    attack = scan_prompt(prompt_str)
+                    if attack.is_attack and log_results:
+                        logger.warning(
+                            "[FIE:local] ⚠ ADVERSARIAL ATTACK | %s | type=%s | confidence=%.2f | "
+                            "layers=%s | matched=%r",
+                            _model_name,
+                            attack.attack_type,
+                            attack.confidence,
+                            ",".join(attack.layers_fired),
+                            (attack.matched_text or "")[:80],
+                        )
 
                 result         = func(*args, **kwargs)
                 primary_output = result if isinstance(result, str) else str(result)
