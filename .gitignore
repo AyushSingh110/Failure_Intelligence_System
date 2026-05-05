@@ -83,3 +83,4 @@ nosetests.xml
 # --- Streamlit ---
 .streamlit/config.toml
 static/
+docs/
