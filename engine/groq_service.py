@@ -273,17 +273,18 @@ class GroqService:
         cleaned = "\n".join(clean_lines).strip()
         return confidence, cleaned
 
-    def fan_out_with_confidence(self, prompt: str) -> list[GroqModelResponse]:
+    def fan_out_with_confidence(
+        self,
+        prompt:         str,
+        system_message: Optional[str] = None,
+    ) -> list[GroqModelResponse]:
         """
-        appends a confidence-request suffix to the prompt so each shadow model rates its own certainty.
-        The confidence level is parsed from each response and stored in
-        model_confidence and confidence_weight on the GroqModelResponse.
-        The output_text is cleaned (confidence line removed).
-        Used by the monitor endpoint when ground-truth verification is
-        active. The confidence weights feed into Step 3 (weighted consensus).
+        Appends a confidence-request suffix to the prompt so each shadow model
+        rates its own certainty. Pass system_message to inject a canary token
+        into the shadow models' system prompt for exfiltration detection.
         """
         confidenced_prompt = prompt + _CONFIDENCE_SUFFIX
-        raw_results = self.fan_out(confidenced_prompt)
+        raw_results = self.fan_out(confidenced_prompt, system_message=system_message)
 
         enriched: list[GroqModelResponse] = []
         for r in raw_results:
