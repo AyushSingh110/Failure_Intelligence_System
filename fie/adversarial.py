@@ -723,7 +723,11 @@ def _load_pair_classifier() -> bool:
         import joblib
         from sentence_transformers import SentenceTransformer
 
-        _models_dir = Path(__file__).parent.parent / "models"
+        # Look inside the installed package first (fie/models/), then fall back
+        # to the repo root models/ directory for local development.
+        _pkg_models  = Path(__file__).parent / "models"
+        _repo_models = Path(__file__).parent.parent / "models"
+        _models_dir  = _pkg_models if (_pkg_models / "pair_intent_classifier.pkl").exists() else _repo_models
         clf_path    = _models_dir / "pair_intent_classifier.pkl"
         meta_path   = _models_dir / "pair_intent_meta.json"
 
