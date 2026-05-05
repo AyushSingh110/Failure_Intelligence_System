@@ -502,7 +502,7 @@ def _print_results(summary: dict) -> None:
 
     _section("Tier 1 Package (scan_prompt — offline, 5 layers)", summary["package_tier"])
     if "server_tier" in summary:
-        _section("Tier 2 Server (/diagnose — 8 layers)", summary["server_tier"])
+        _section("Tier 2 Server (/diagnose — 9 layers)", summary["server_tier"])
 
     print("  Tier 1 compliance checklist:")
     cl = summary["meta"]["tier1_checklist"]
