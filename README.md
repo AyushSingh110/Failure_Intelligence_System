@@ -179,8 +179,9 @@ def ask_ai(prompt: str) -> str:
 - **FAISS semantic search** — vector similarity against 1,000+ labeled adversarial prompts
 - **Canary token exfiltration detection** — catches system prompt leaks
 - **Semantic consistency check** — detects when model output is topically disconnected from the prompt
+- **LLM semantic intent check** — Layer 9: single LLM call targets PAIR-style attacks that look like natural language; only fires when all 8 deterministic layers pass clean
 - **Multi-turn session tracker** — attacks spread across conversation turns
-- **XGBoost v3 classifier** — trained on 1,757 labeled examples, AUC-ROC 0.677
+- **XGBoost v4 classifier** — trained on 2,182 labeled examples, AUC-ROC 0.749
 - **Auto-correction** — automatically replaces hallucinated answers with verified ones
 - **Ground truth verification** — Wikidata + Serper cross-check
 

@@ -121,7 +121,7 @@ def run_package_scan(prompt: str) -> dict:
 
 
 def run_server_scan(prompt: str, server_url: str, delay: float = 0.15) -> dict:
-    """Tier 2: /diagnose endpoint — 8 layers, requires server."""
+    """Tier 2: /diagnose endpoint — 9 layers, requires server."""
     import requests
     time.sleep(delay)
     try:
@@ -343,7 +343,7 @@ def _print_results(summary: dict, server_url: Optional[str]) -> None:
     _row("Tier 1 — Package (scan_prompt, 5 layers, offline)", summary["package_tier"])
 
     if "server_tier" in summary:
-        _row("Tier 2 — Server (/diagnose, 8 layers)", summary["server_tier"])
+        _row("Tier 2 — Server (/diagnose, 9 layers)", summary["server_tier"])
 
     print()
     print("  Files:")
