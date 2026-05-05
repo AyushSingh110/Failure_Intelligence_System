@@ -42,6 +42,9 @@ data/seeds/
 data/jbb_results/
 data/jbb_tier1/
 
+# PAIR classifier training corpus (contains real jailbreak prompts — research confidential)
+data/pair_training/
+
 # Distribution builds — published via PyPI, not git
 dist/
 
