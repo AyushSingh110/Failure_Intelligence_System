@@ -38,6 +38,10 @@ data/eval_results*.json
 data/eval_results*.jsonl
 data/seeds/
 
+# JailbreakBench evaluation output (contains real attack prompts — research confidential)
+data/jbb_results/
+data/jbb_tier1/
+
 # Distribution builds — published via PyPI, not git
 dist/
 
