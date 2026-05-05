@@ -91,7 +91,7 @@ Five detection layers run locally:
 | 5 | GCG suffix scanner | Gradient-optimized adversarial suffixes (high-entropy noise appended to prompts) |
 | 6 | Perplexity proxy | Base64 payloads, Caesar/ROT ciphers, Unicode lookalikes — anything statistically anomalous |
 
-**Benchmark results on 200 prompts (140 attacks across 7 categories, 60 benign):**
+**Benchmark 1 — FIE-Eval-200 (internal curated, 7 attack categories):**
 
 | Metric | Score |
 | --- | --- |
@@ -99,8 +99,6 @@ Five detection layers run locally:
 | False Positive Rate | **0.0%** |
 | Precision | **100%** |
 | F1 | **78.1%** |
-
-**Zero false positives on all 60 benign prompts** — legitimate developer queries are never blocked.
 
 Per-category detection rate:
 
@@ -111,8 +109,42 @@ Per-category detection rate:
 | Instruction Override | 70% |
 | Indirect Injection | 55% |
 | Jailbreak (persona) | 50% |
-| Obfuscated Attacks | **65%** |
+| Obfuscated Attacks | 65% |
 | Jailbreak (roleplay) | 20% |
+
+**Benchmark 2 — JailbreakBench \[Chao et al., 2024\] — Full Tier 1 Evaluation**
+
+This is a paper-quality evaluation on a standardized adversarial benchmark. **282 real attack prompts + 100 benign prompts** (Stanford Alpaca).
+
+**Methodology (Tier 1 — Live Model + LLM Judge):**
+
+1. **Dataset**: JailbreakBench (Chao et al., 2024) — 3 attack methods (GCG, PAIR, JBC), 282 attack prompts, 100 benign prompts from Stanford Alpaca
+2. **LLM under test**: `llama-3.3-70b-versatile` via Groq API — real model responses collected for all 382 prompts
+3. **LLM judge**: `qwen/qwen3-32b` using the official JailbreakBench judge prompt (Chao et al., 2024) — independent model to avoid self-evaluation bias
+4. **Ground truth**: JailbreakBench pre-recorded jailbreak labels for `vicuna-13b-v1.5` used as canonical attack ground truth (published in the JBB artifact)
+5. **FIE scanner**: `scan_prompt()` package tier — 5 layers, fully offline
+
+**Notable finding — ASR on llama-3.3-70b-versatile = 0%**: The LLM judge confirmed zero successful jailbreaks against `llama-3.3-70b-versatile` across all 282 attack prompts. This is consistent with Meta's safety training. JBB ground truth labels (against `vicuna-13b-v1.5`, a weaker model) are used as the canonical measure of whether an attack is a real jailbreak attempt.
+
+**Package Tier Results (scan_prompt — 5 layers, offline):**
+
+| Metric | Score |
+| --- | --- |
+| Overall Recall (all 282 attacks) | **53.5%** |
+| Recall on JBB-confirmed jailbreaks (239/282) | **53.1%** |
+| False Positive Rate | **2.0%** |
+| Precision | **98.7%** |
+| F1 | **69.4%** |
+
+Per attack method:
+
+| Attack Method | What it is | FIE Detection | JBB Confirmed Jailbreaks | Recall vs. JBB Ground Truth |
+| --- | --- | --- | --- | --- |
+| GCG | Gradient-optimized adversarial suffix attacks | **96.0%** | 83/100 | **96.2%** |
+| JBC | Template-based persona jailbreaks | **52.0%** | 90/100 | **52.2%** |
+| PAIR | LLM-iterative semantic rephrasing attacks | 3.7% | 66/82 | 4.3% |
+
+**Key insight:** FIE's offline package tier excels at structural and statistical attacks (GCG: 96%, FPR: 2%). PAIR-style attacks are iteratively rewritten to look like natural language — they have no adversarial suffixes, no special tokens, and no statistical anomalies. Detecting PAIR requires server-side LLM-based semantic analysis.
 
 ### Hallucination Detection (Local Heuristics)
 
