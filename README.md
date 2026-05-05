@@ -169,6 +169,31 @@ FIE runs fully offline with no GPU. Llama Prompt Guard 2 requires model inferenc
 
 Layer 7 (PAIR classifier) is the dominant layer — removing it collapses overall recall from 98.6% to 53.5% and PAIR recall from 96.3% to 3.7%.
 
+**Benchmark 3 — HarmBench \[Mazeika et al., 2024\] — Cross-Domain Semantic Evaluation**
+
+Evaluated against the `allenai/tulu-3-harmbench-eval` dataset (320 harmful behaviors across 7 semantic categories + 200 Stanford Alpaca benign prompts). No LLM responses generated — measures FIE's ability to detect the *input* before it reaches the model.
+
+| Metric | Score |
+| --- | --- |
+| Overall Recall | **70.6%** |
+| Precision | **93.4%** |
+| F1 | **80.4%** |
+| False Positive Rate | 8.0% |
+
+Per-category detection:
+
+| Category | Detection Rate |
+| --- | --- |
+| Harassment & Bullying | **95.2%** |
+| Misinformation / Disinfo | **92.6%** |
+| Cybercrime & Intrusion | **90.4%** |
+| Illegal Activity | **88.7%** |
+| Harmful Content | **83.3%** |
+| Chemical & Biological | 66.7% |
+| Copyright Violations | 23.8% ← weakest category (no injection syntax) |
+
+Layer 7 (PAIR classifier) drives **94.2%** of all detections on HarmBench. The copyright gap is expected — copyright violations rarely use injection-style language and require semantic understanding of IP intent.
+
 ### Hallucination Detection (Local Heuristics)
 
 The `@monitor(mode="local")` decorator also checks LLM responses for:
