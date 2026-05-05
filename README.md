@@ -18,7 +18,7 @@ FIE sits between your LLM and your users. It catches adversarial attacks before 
 pip install fie-sdk
 ```
 
-**Adversarial attack detection — 5 layers, fully offline:**
+**Adversarial attack detection — 6 layers, fully offline:**
 
 ```python
 from fie import scan_prompt
@@ -81,7 +81,7 @@ All of this runs with **zero configuration, zero API calls, and zero network req
 
 ### Adversarial Attack Detection
 
-Five detection layers run locally:
+Six detection layers run locally:
 
 | Layer | Method | What it catches |
 | --- | --- | --- |
@@ -90,6 +90,7 @@ Five detection layers run locally:
 | 4 | Indirect injection detector | Attacks embedded inside documents, emails, or URLs |
 | 5 | GCG suffix scanner | Gradient-optimized adversarial suffixes (high-entropy noise appended to prompts) |
 | 6 | Perplexity proxy | Base64 payloads, Caesar/ROT ciphers, Unicode lookalikes — anything statistically anomalous |
+| 7 | PAIR semantic intent classifier | Iteratively-rephrased natural-language jailbreaks (PAIR/JBC attacks) — Linear SVM on sentence embeddings trained on 3,167 examples |
 
 **Benchmark 1 — FIE-Eval-200 (internal curated, 7 attack categories):**
 
@@ -122,29 +123,51 @@ This is a paper-quality evaluation on a standardized adversarial benchmark. **28
 2. **LLM under test**: `llama-3.3-70b-versatile` via Groq API — real model responses collected for all 382 prompts
 3. **LLM judge**: `qwen/qwen3-32b` using the official JailbreakBench judge prompt (Chao et al., 2024) — independent model to avoid self-evaluation bias
 4. **Ground truth**: JailbreakBench pre-recorded jailbreak labels for `vicuna-13b-v1.5` used as canonical attack ground truth (published in the JBB artifact)
-5. **FIE scanner**: `scan_prompt()` package tier — 5 layers, fully offline
+5. **FIE scanner**: `scan_prompt()` package tier — 6 layers, fully offline
 
-**Notable finding — ASR on llama-3.3-70b-versatile = 0%**: The LLM judge confirmed zero successful jailbreaks against `llama-3.3-70b-versatile` across all 282 attack prompts. This is consistent with Meta's safety training. JBB ground truth labels (against `vicuna-13b-v1.5`, a weaker model) are used as the canonical measure of whether an attack is a real jailbreak attempt.
+**Notable finding — ASR on llama-3.3-70b-versatile = 0%**: The LLM judge confirmed zero successful jailbreaks against `llama-3.3-70b-versatile` across all 282 attack prompts. JBB ground truth labels (against `vicuna-13b-v1.5`) are used as canonical attack ground truth.
 
-**Package Tier Results (scan_prompt — 5 layers, offline):**
+**Package Tier Results (scan_prompt — 6 layers, offline):**
 
-| Metric | Score |
-| --- | --- |
-| Overall Recall (all 282 attacks) | **53.5%** |
-| Recall on JBB-confirmed jailbreaks (239/282) | **53.1%** |
-| False Positive Rate | **2.0%** |
-| Precision | **98.7%** |
-| F1 | **69.4%** |
+| Metric | v1.1 (5 layers) | v1.2 (+ PAIR classifier) |
+| --- | --- | --- |
+| Overall Recall (all 282 attacks) | 53.5% | **98.6%** |
+| Recall on JBB-confirmed jailbreaks | 53.1% | **98.7%** |
+| False Positive Rate | 2.0% | 8.0% |
+| Precision | 98.7% | 97.2% |
+| F1 | 69.4% | **97.9%** |
 
 Per attack method:
 
-| Attack Method | What it is | FIE Detection | JBB Confirmed Jailbreaks | Recall vs. JBB Ground Truth |
+| Attack Method | What it is | v1.1 (5 layers) | v1.2 (+ PAIR classifier) | JBB Confirmed |
 | --- | --- | --- | --- | --- |
-| GCG | Gradient-optimized adversarial suffix attacks | **96.0%** | 83/100 | **96.2%** |
-| JBC | Template-based persona jailbreaks | **52.0%** | 90/100 | **52.2%** |
-| PAIR | LLM-iterative semantic rephrasing attacks | 3.7% | 66/82 | 4.3% |
+| GCG | Gradient-optimized adversarial suffix | 96.0% | **99.0%** | 80/100 |
+| JBC | Template-based persona jailbreaks | 52.0% | **100.0%** | 90/100 |
+| PAIR | LLM-iterative semantic rephrasing | 3.7% | **96.3%** | 69/82 |
 
-**Key insight:** FIE's offline package tier excels at structural and statistical attacks (GCG: 96%, FPR: 2%). PAIR-style attacks are iteratively rewritten to look like natural language — they have no adversarial suffixes, no special tokens, and no statistical anomalies. Detecting PAIR requires server-side LLM-based semantic analysis.
+**Baseline comparison — FIE vs. Llama Prompt Guard 2 (Meta):**
+
+All systems evaluated on the same JailbreakBench dataset (282 attacks + 100 benign, Stanford Alpaca).
+
+| System | Recall | PAIR | GCG | JBC | FPR | F1 |
+| --- | --- | --- | --- | --- | --- | --- |
+| **FIE v1.2 (6 layers, offline)** | **98.6%** | **96.3%** | **99.0%** | **100.0%** | 8.0% | **97.9%** |
+| Llama Prompt Guard 2-86M | 64.9% | 32.9% | 56.0% | 100.0% | 0.0% | 78.7% |
+| Llama Prompt Guard 2-22M | 53.5% | 15.8% | 38.0% | 100.0% | 1.0% | 69.6% |
+
+FIE runs fully offline with no GPU. Llama Prompt Guard 2 requires model inference.
+
+**Ablation study — per-layer contribution:**
+
+| Condition | Overall Recall | PAIR Recall | FPR |
+| --- | --- | --- | --- |
+| Full system (6 layers) | **98.6%** | **96.3%** | 8.0% |
+| Remove L7 (PAIR classifier) | 53.5% | 3.7% | 2.0% |
+| Remove L5 (GCG suffix) | 96.1% | 96.3% | 8.0% |
+| Remove L1/L2/L4/L6 | 98.6% | 96.3% | 8.0% |
+| L7 alone | 96.1% | 96.3% | 6.0% |
+
+Layer 7 (PAIR classifier) is the dominant layer — removing it collapses overall recall from 98.6% to 53.5% and PAIR recall from 96.3% to 3.7%.
 
 ### Hallucination Detection (Local Heuristics)
 
@@ -179,7 +202,7 @@ def ask_ai(prompt: str) -> str:
 - **FAISS semantic search** — vector similarity against 1,000+ labeled adversarial prompts
 - **Canary token exfiltration detection** — catches system prompt leaks
 - **Semantic consistency check** — detects when model output is topically disconnected from the prompt
-- **LLM semantic intent check** — Layer 9: single LLM call targets PAIR-style attacks that look like natural language; only fires when all 8 deterministic layers pass clean
+- **LLM semantic intent check** — Layer 9: single LLM call (`llama-3.3-70b-versatile`) targets PAIR-style attacks that look like natural language; only fires when all 8 deterministic layers pass clean; confidence threshold 0.72
 - **Multi-turn session tracker** — attacks spread across conversation turns
 - **XGBoost v4 classifier** — trained on 2,182 labeled examples, AUC-ROC 0.749
 - **Auto-correction** — automatically replaces hallucinated answers with verified ones
@@ -225,6 +248,7 @@ v4 was trained on an expanded dataset with additional HaluEval examples (documen
 | Indirect Injection | Malicious content embedded inside documents the LLM reads | Indirect injection detector layer |
 | GCG suffix attacks | Gradient-optimized adversarial suffixes appended to prompts | GCG suffix pattern scanner |
 | Encoded payloads | Base64, Caesar/ROT cipher, Unicode lookalikes | Perplexity proxy (statistical detection) |
+| PAIR / semantic jailbreaks | Iteratively rephrased natural-language attacks that look like normal requests | PAIR semantic intent classifier (Layer 7) |
 
 ---
 
@@ -247,7 +271,7 @@ result = scan_prompt(
 | `attack_type` | `str \| None` | Root cause: `PROMPT_INJECTION`, `JAILBREAK_ATTEMPT`, `INSTRUCTION_OVERRIDE`, `TOKEN_SMUGGLING`, `INDIRECT_PROMPT_INJECTION`, `GCG_ADVERSARIAL_SUFFIX`, `OBFUSCATED_ADVERSARIAL_PAYLOAD` |
 | `category` | `str \| None` | Category: `INJECTION`, `JAILBREAK`, `OVERRIDE`, `SMUGGLING` |
 | `confidence` | `float` | Detection confidence 0.0–1.0 |
-| `layers_fired` | `list[str]` | Which layers triggered: `regex`, `prompt_guard`, `indirect_injection`, `gcg_suffix`, `perplexity_proxy` |
+| `layers_fired` | `list[str]` | Which layers triggered: `regex`, `prompt_guard`, `indirect_injection`, `gcg_suffix`, `perplexity_proxy`, `pair_classifier` |
 | `matched_text` | `str \| None` | Excerpt of the prompt that triggered detection |
 | `mitigation` | `str` | Actionable mitigation advice |
 | `evidence` | `dict` | Per-layer detail for debugging |
