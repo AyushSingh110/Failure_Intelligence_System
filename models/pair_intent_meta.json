@@ -1,0 +1,39 @@
+{
+  "trained_at": "2026-05-05T08:49:58Z",
+  "model_type": "Linear SVM",
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "embed_dim": 384,
+  "threshold": 0.5999999999999998,
+  "train_size": 2537,
+  "val_size": 315,
+  "test_size": 315,
+  "n_attack_train": 1352,
+  "n_benign_train": 1185,
+  "val_metrics": {
+    "recall": 0.9107,
+    "precision": 0.9162,
+    "f1": 0.9134,
+    "auc_roc": 0.9614,
+    "fpr": 0.0952
+  },
+  "test_metrics": {
+    "recall": 0.8393,
+    "precision": 0.9658,
+    "f1": 0.8981,
+    "auc_roc": 0.9663,
+    "fpr": 0.034,
+    "tp": 141,
+    "fn": 27,
+    "fp": 5,
+    "tn": 142
+  },
+  "sources": {
+    "alpaca": 634,
+    "anthropic_rlhf_helpful": 551,
+    "anthropic_rlhf_redteam": 485,
+    "harmfulqa": 468,
+    "toxicchat": 251,
+    "jailbreakbench": 148
+  },
+  "deployment_target_met": true
+}
