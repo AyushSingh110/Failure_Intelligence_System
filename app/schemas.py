@@ -142,6 +142,7 @@ class DiagnosticRequest(BaseModel):
     prompt:        str
     model_outputs: list[str] = Field(..., min_length=1)
     latency_ms:    Optional[float] = None
+    canary_token:  Optional[str]   = None
 
 
 class DiagnosticResponse(BaseModel):
@@ -187,7 +188,7 @@ class MonitorRequest(BaseModel):
     primary_model_name: str            = "primary"
     run_full_jury:      bool           = True
     latency_ms:         Optional[float] = None
-    conversation_id:    Optional[str]  = None
+    conversation_id:    Optional[str]  = Field(None, max_length=128, pattern=r"^[a-zA-Z0-9_\-]{1,128}$")
 
 
 class FixResult(BaseModel):
@@ -345,3 +346,14 @@ class MonitorResponse(BaseModel):
 
     # Multi-turn adversarial tracking (populated when conversation_id is provided)
     multi_turn_escalation:  Optional[dict]  = None
+
+
+class TelemetryPing(BaseModel):
+    """Anonymized usage ping from fie-sdk clients (FIE_TELEMETRY=true)."""
+    event:            str   = Field("unknown", max_length=64)
+    sdk_version:      str   = Field("unknown", max_length=32)
+    high_failure_risk: bool = False
+    fix_applied:      bool  = False
+    question_type:    str   = Field("UNKNOWN", max_length=32)
+    model_version:    str   = Field("unknown", max_length=32)
+    mode:             str   = Field("unknown", max_length=32)

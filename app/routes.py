@@ -14,6 +14,7 @@ from app.schemas import (
     InferenceRecord,
     ClusterAssignment,
     LabelResult,
+    TelemetryPing,
 )
 from storage.database import (
     save_inference,
@@ -337,6 +338,13 @@ def monitor(
     ollama_available   = False  # kept for schema compatibility
     shadow_results_raw = []
 
+    # Generate canary token injected into shadow model system prompts.
+    # If the user's prompt extracts the system prompt, shadow outputs will
+    # contain the canary — confirming a system-prompt-exfiltration attack.
+    from engine.canary_tracker import generate_canary, build_canary_system_prompt
+    _canary_token  = generate_canary()
+    _canary_sysprompt = build_canary_system_prompt(_canary_token)
+
     if settings.groq_enabled and settings.groq_api_key:
         # ── Groq shadow models (Step 2: fan_out_with_confidence) ────
         from engine.groq_service import get_groq_service
@@ -344,7 +352,10 @@ def monitor(
         if groq:
             # STEP 2: Use fan_out_with_confidence so each shadow model
             # self-reports its certainty. Weights feed into Step 3.
-            groq_results = groq.fan_out_with_confidence(body.prompt)
+            # Pass canary system prompt so exfiltration attacks are detectable.
+            groq_results = groq.fan_out_with_confidence(
+                body.prompt, system_message=_canary_sysprompt
+            )
             shadow_results_raw = groq_results
             successful = [r for r in groq_results if r.success]
             ollama_available = len(successful) > 0
@@ -419,6 +430,7 @@ def monitor(
             prompt=body.prompt,
             model_outputs=model_outputs,
             latency_ms=body.latency_ms,
+            canary_token=_canary_token,
         )
         diag_response = failure_agent.run_diagnostic(diag_request)
         jury_verdict  = diag_response.jury
@@ -1469,21 +1481,18 @@ def analytics_paper_metrics(
 # ── Telemetry receiver (opt-in pings from fie-sdk users) ──────────────────────
 
 @router.post("/telemetry", response_model=dict)
-def receive_telemetry(body: dict) -> dict:
+def receive_telemetry(body: TelemetryPing) -> dict:
     """
     Receives anonymized usage pings from fie-sdk clients when FIE_TELEMETRY=true.
     Stores aggregated counts in MongoDB `sdk_telemetry` collection.
     No prompt text, no API keys, no PII — only event type and boolean signals.
+    Schema-validated and size-limited via TelemetryPing to prevent payload abuse.
     """
     try:
         from storage.database import _db, _fallback_mode
         from datetime import datetime
 
-        allowed_fields = {
-            "event", "sdk_version", "high_failure_risk",
-            "fix_applied", "question_type", "model_version", "mode",
-        }
-        clean = {k: v for k, v in body.items() if k in allowed_fields}
+        clean = body.model_dump()
         clean["received_at"] = datetime.utcnow().isoformat()
 
         if not _fallback_mode and _db is not None:

@@ -13,9 +13,10 @@ class DiagnosticContext:
     prompt:           str
     primary_output:   str
     secondary_output: str
-    model_outputs:    tuple[str, ...]   
+    model_outputs:    tuple[str, ...]
     fsv:              FailureSignalVector
     latency_ms:       Optional[float] = None
+    canary_token:     Optional[str]   = None
 
     @classmethod
     def build(
@@ -26,6 +27,7 @@ class DiagnosticContext:
         model_outputs:    list[str],
         fsv:              FailureSignalVector,
         latency_ms:       Optional[float] = None,
+        canary_token:     Optional[str]   = None,
     ) -> "DiagnosticContext":
         return cls(
             prompt=prompt,
@@ -34,6 +36,7 @@ class DiagnosticContext:
             model_outputs=tuple(model_outputs),
             fsv=fsv,
             latency_ms=latency_ms,
+            canary_token=canary_token,
         )
 
 
