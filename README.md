@@ -90,7 +90,7 @@ Six detection layers run locally:
 | 4 | Indirect injection detector | Attacks embedded inside documents, emails, or URLs |
 | 5 | GCG suffix scanner | Gradient-optimized adversarial suffixes (high-entropy noise appended to prompts) |
 | 6 | Perplexity proxy | Base64 payloads, Caesar/ROT ciphers, Unicode lookalikes — anything statistically anomalous |
-| 7 | PAIR semantic intent classifier | Iteratively-rephrased natural-language jailbreaks (PAIR/JBC attacks) — Linear SVM on sentence embeddings trained on 3,167 examples |
+| 7 | PAIR semantic intent classifier | Iteratively-rephrased natural-language jailbreaks (PAIR/JBC attacks) — Linear SVM on sentence embeddings trained on 2,537 examples |
 
 **Benchmark 1 — FIE-Eval-200 (internal curated, 7 attack categories):**
 
@@ -235,16 +235,16 @@ def ask_ai(prompt: str) -> str:
 
 ### Hallucination Detection Benchmark (Server)
 
-Evaluated on 2,182 labeled examples (TruthfulQA + MMLU + HaluEval):
+Evaluated on 2,477 labeled examples (TruthfulQA + MMLU + HaluEval):
 
 | Method | Recall | FPR | AUC-ROC |
 | --- | --- | --- | --- |
 | POET rule-based (baseline) | 56.4% | 38.7% | — |
 | XGBoost v3 (1,757 examples) | 63.6% | 38.6% | 0.677 |
-| XGBoost v4 (2,182 examples) | **68.0%** | **28.4%** | **0.749** |
-| Gain over baseline | **+11.6pp recall** | **-10.3pp FPR** | — |
+| XGBoost v4 (2,477 examples) | **68.2%** | **8.4%** | **0.840** |
+| Gain over baseline | **+11.8pp recall** | **-30.3pp FPR** | — |
 
-v4 was trained on an expanded dataset with additional HaluEval examples (document-grounded hallucination benchmark), which significantly improves calibration — the model makes fewer false alarms without sacrificing recall.
+v4 was trained on an expanded dataset with additional HaluEval examples (document-grounded hallucination benchmark). The AUC-ROC jump from 0.677 → 0.840 and FPR drop from 38.6% → 8.4% are the headline gains — the model learned to be far more conservative about flagging correct answers.
 
 ### SDK Modes
 

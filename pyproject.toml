@@ -54,6 +54,13 @@ dependencies = [
 fie = "fie.__main__:main"
 
 [project.optional-dependencies]
+ml = [
+    "scikit-learn>=1.3",
+    "xgboost>=2.0",
+    "joblib>=1.3",
+    "pandas>=2.0",
+    "sentence-transformers>=2.7",
+]
 dev = [
     "pytest>=7.0",
     "httpx>=0.24.0",

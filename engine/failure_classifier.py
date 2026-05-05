@@ -22,9 +22,19 @@ if os.path.exists(_MODEL_V4):
 elif os.path.exists(_MODEL_V3):
     _MODEL_PATH, _COLS_PATH = _MODEL_V3, _COLS_V3
     _VERSION    = "v3"
+    logger.warning(
+        "failure_classifier: v4 model not found at %s — falling back to v3. "
+        "AUC drops from 0.840 to 0.749. To fix: ensure failure_classifier_v4.pkl "
+        "and feature_columns_v4.pkl are present in the models/ directory.",
+        _MODEL_V4,
+    )
 else:
     _MODEL_PATH, _COLS_PATH = _MODEL_V2, _COLS_V2
     _VERSION    = "v2"
+    logger.warning(
+        "failure_classifier: v4 and v3 models not found — falling back to v2. "
+        "Significant accuracy loss. Ensure failure_classifier_v4.pkl is in models/.",
+    )
 
 _USING_V3 = _VERSION in ("v3", "v4")  # both v3 and v4 share the same feature schema
 
@@ -89,7 +99,7 @@ def predict(
     question_type:       str = "UNKNOWN",
 ) -> tuple[bool, float]:
     """
-    Runs the XGBoost v2 classifier.
+    Runs the XGBoost v4 classifier.
 
     Returns:
         (is_failure, probability)

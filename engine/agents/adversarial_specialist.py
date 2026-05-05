@@ -1149,14 +1149,29 @@ class AdversarialSpecialist(BaseJuryAgent):
             context.prompt, context.primary_output
         )
 
-        # Layer 9: LLM semantic intent check — only fires when all deterministic layers missed.
-        # Targets PAIR-style attacks that look like natural language (no structural anomalies).
+        # Layer 9: LLM semantic intent check — targets PAIR-style attacks that look like
+        # natural language (no structural anomalies). Skipped only when a high-confidence
+        # (≥ 0.80) structural detection was already made — a low-confidence regex or guard
+        # hit does NOT suppress Layer 9, because PAIR attacks sometimes superficially match
+        # structural patterns while the real vector is semantic escalation.
+        _high_conf_structural = (
+            (pattern_hit is not None and pattern_hit.base_confidence >= 0.80)
+            or (guard_root  is not None and guard_confidence  >= 0.80)
+            or (faiss_hit   is not None and faiss_confidence  >= 0.80)
+            or (indirect_root is not None and indirect_confidence >= 0.80)
+            or (gcg_root    is not None and gcg_confidence    >= 0.80)
+            or (perp_root   is not None and perp_confidence   >= 0.80)
+            or (exfil_root  is not None and exfil_confidence  >= 0.80)
+            or (sem_root    is not None and sem_confidence    >= 0.80)
+        )
         intent_root, intent_confidence, intent_evidence = None, 0.0, {}
-        if (pattern_hit is None and faiss_hit is None and guard_root is None
-                and indirect_root is None and gcg_root is None and perp_root is None
-                and exfil_root is None and sem_root is None):
+        if not _high_conf_structural:
             intent_root, intent_confidence, intent_evidence = _run_llm_intent_check(context.prompt)
-            if intent_root is None:
+            if intent_root is None and (
+                pattern_hit is None and faiss_hit is None and guard_root is None
+                and indirect_root is None and gcg_root is None and perp_root is None
+                and exfil_root is None and sem_root is None
+            ):
                 return self._skip(
                     "No adversarial patterns detected by regex, semantic search, prompt guard, "
                     f"indirect injection, GCG suffix, perplexity proxy, exfiltration scanner, "

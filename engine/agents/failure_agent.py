@@ -261,6 +261,7 @@ class FailureAgent:
             model_outputs=request.model_outputs,
             fsv=signal,
             latency_ms=request.latency_ms,
+            canary_token=getattr(request, "canary_token", None),
         )
         jury_verdict = self._jury.deliberate(context)
 
