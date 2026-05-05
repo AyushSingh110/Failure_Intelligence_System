@@ -50,6 +50,7 @@ dist/
 
 # Notebook research output (plots, charts)
 notebooks/comparison_plots/
+notebooks/pair_classifier_plots/
 notebooks/*.png
 notebooks/*.jpg
 
