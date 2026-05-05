@@ -26,6 +26,7 @@ import statistics
 import unicodedata
 import zlib
 from dataclasses import dataclass, field
+from pathlib import Path
 
 
 # ── Result dataclass ──────────────────────────────────────────────────────────
@@ -704,6 +705,63 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
     }
 
 
+# ── Layer 7: PAIR semantic intent classifier ──────────────────────────────────
+
+_pair_clf      = None
+_pair_embedder = None
+_pair_threshold: float = 0.60
+_pair_load_attempted: bool = False
+
+
+def _load_pair_classifier() -> bool:
+    global _pair_clf, _pair_embedder, _pair_threshold, _pair_load_attempted
+    if _pair_load_attempted:
+        return _pair_clf is not None
+    _pair_load_attempted = True
+    try:
+        import json as _json
+        import joblib
+        from sentence_transformers import SentenceTransformer
+
+        _models_dir = Path(__file__).parent.parent / "models"
+        clf_path    = _models_dir / "pair_intent_classifier.pkl"
+        meta_path   = _models_dir / "pair_intent_meta.json"
+
+        if not clf_path.exists():
+            return False
+
+        _pair_clf = joblib.load(clf_path)
+
+        if meta_path.exists():
+            with open(meta_path, encoding="utf-8") as f:
+                meta = _json.load(f)
+            _pair_threshold = float(meta.get("threshold", 0.60))
+            embed_model = meta.get("embed_model", "sentence-transformers/all-MiniLM-L6-v2")
+        else:
+            embed_model = "sentence-transformers/all-MiniLM-L6-v2"
+
+        _pair_embedder = SentenceTransformer(embed_model)
+        return True
+    except Exception:
+        return False
+
+
+def _run_pair_classifier(prompt: str) -> tuple[str | None, float, dict]:
+    if not _load_pair_classifier():
+        return None, 0.0, {}
+    try:
+        vec  = _pair_embedder.encode([prompt], normalize_embeddings=True)
+        prob = float(_pair_clf.predict_proba(vec)[0][1])
+        if prob >= _pair_threshold:
+            return "JAILBREAK_ATTEMPT", round(prob, 4), {
+                "pair_probability": round(prob, 4),
+                "threshold":        _pair_threshold,
+            }
+        return None, 0.0, {}
+    except Exception:
+        return None, 0.0, {}
+
+
 # ── Mitigation advice ─────────────────────────────────────────────────────────
 
 _MITIGATIONS: dict[str, str] = {
@@ -758,7 +816,7 @@ def scan_prompt(
     primary_output: str = "",
 ) -> ScanResult:
     """
-    Scan a prompt for adversarial attacks using five local detection layers.
+    Scan a prompt for adversarial attacks using six local detection layers.
 
     Layers run in priority order:
       1. Regex pattern library  (injection / jailbreak / token smuggling)
@@ -766,6 +824,7 @@ def scan_prompt(
       4. Indirect injection detector (attacks hidden inside documents)
       5. GCG adversarial suffix scanner
       6. Perplexity proxy (statistical anomaly — catches obfuscated payloads)
+      7. PAIR semantic intent classifier (sentence-embedding + Linear SVM)
 
     No network call is made. All computation is local.
 
@@ -847,6 +906,16 @@ def scan_prompt(
             best_conf     = perp_conf
             best_root     = perp_root
             best_category = "OBFUSCATED"
+
+    # Layer 7 — PAIR semantic intent classifier (requires sentence-transformers + joblib)
+    pair_root, pair_conf, pair_evidence = _run_pair_classifier(prompt)
+    if pair_root is not None:
+        layers_fired.append("pair_classifier")
+        evidence["pair_classifier"] = pair_evidence
+        if pair_conf > best_conf:
+            best_conf     = pair_conf
+            best_root     = pair_root
+            best_category = "JAILBREAK"
 
     is_attack  = best_conf >= 0.50 and best_root is not None
     mitigation = _MITIGATIONS.get(best_root or "", _DEFAULT_MITIGATION) if is_attack else ""
