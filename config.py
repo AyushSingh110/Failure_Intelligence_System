@@ -127,6 +127,11 @@ class Settings(BaseSettings):
     dashboard_auto_refresh_seconds: int = Field(default=10, ge=5, le=300)
     dashboard_max_chart_records:    int = Field(default=500, ge=10)
 
+    # Email notifications (SendGrid)
+    sendgrid_api_key:   str  = Field(default="")
+    notification_email: str  = Field(default="")   # alert recipient
+    fie_from_email:     str  = Field(default="noreply@failure-intelligence.io")
+
     # Validators
     @field_validator("debug", mode="before")
     @classmethod

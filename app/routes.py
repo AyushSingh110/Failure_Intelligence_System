@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 
 logger = logging.getLogger(__name__)
 
@@ -876,6 +876,38 @@ def monitor(
         if response.explanation_internal is not None:
             response.explanation_internal.request_id = stored_request_id
 
+        # ── Email notifications (fire-and-forget, never blocks the pipeline) ──
+        try:
+            from app.notifications import notify_attack_detected, notify_human_review
+            _notif_tenant = current_user["tenant_id"] if current_user else "anonymous"
+            _notif_email  = current_user.get("email") if current_user else None
+
+            _is_attack = bool(jury_verdict and jury_verdict.is_adversarial)
+            if _is_attack:
+                notify_attack_detected(
+                    tenant_id   = _notif_tenant,
+                    attack_type = (
+                        jury_verdict.adversarial_verdict.attack_type
+                        if jury_verdict and jury_verdict.adversarial_verdict else "UNKNOWN"
+                    ),
+                    confidence  = jury_verdict.jury_confidence if jury_verdict else 0.0,
+                    prompt      = body.prompt or "",
+                    model_name  = body.primary_model_name,
+                    request_id  = stored_request_id,
+                    to          = _notif_email,
+                )
+            elif requires_human_review:
+                notify_human_review(
+                    tenant_id         = _notif_tenant,
+                    request_id        = stored_request_id,
+                    escalation_reason = escalation_reason_str,
+                    prompt            = body.prompt or "",
+                    model_name        = body.primary_model_name,
+                    to                = _notif_email,
+                )
+        except Exception as _notif_exc:
+            logger.debug("Notification send failed (non-fatal): %s", _notif_exc)
+
         inference_record = InferenceRequest(
             request_id    = stored_request_id,
             tenant_id     = current_user["tenant_id"] if current_user else "anonymous",
@@ -1599,3 +1631,78 @@ def analytics_sdk_telemetry(
         }
     except Exception as exc:
         return {"error": str(exc)}
+
+
+# ── Weekly digest notification ────────────────────────────────────────────────
+
+@router.post("/notifications/digest", response_model=dict)
+def send_weekly_digest(
+    days:          int  = Query(default=7, ge=1, le=90),
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+) -> dict:
+    """
+    Compile a usage digest for the authenticated tenant and email it via SendGrid.
+    Call this on a schedule (e.g. weekly cron) or on-demand.
+    Returns a summary dict regardless of email status.
+    """
+    from app.auth_guard import resolve_user
+    from app.notifications import notify_weekly_digest
+
+    current_user = resolve_user(authorization, x_api_key)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    try:
+        from storage.database import get_inferences_for_tenant
+        inferences = get_inferences_for_tenant(current_user["tenant_id"])
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    from datetime import datetime, timedelta
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    period = [
+        r for r in inferences
+        if r.timestamp and r.timestamp >= cutoff
+    ] if inferences else []
+
+    total       = len(period)
+    high_risk   = sum(1 for r in period if (r.metrics.entropy if r.metrics else 0) > 0.75)
+    attacks     = sum(1 for r in period if getattr(r, "is_adversarial", False))
+    fix_applied = sum(1 for r in period if getattr(r, "fix_applied", False))
+    escalations = sum(1 for r in period if getattr(r, "requires_escalation", False))
+
+    archetype_counts: dict = {}
+    for r in period:
+        a = getattr(r, "archetype", "STABLE") or "STABLE"
+        archetype_counts[a] = archetype_counts.get(a, 0) + 1
+    top_archetype = max(archetype_counts, key=archetype_counts.get) if archetype_counts else "STABLE"
+
+    notify_weekly_digest(
+        tenant_id     = current_user["tenant_id"],
+        total         = total,
+        high_risk     = high_risk,
+        attacks       = attacks,
+        fix_applied   = fix_applied,
+        escalations   = escalations,
+        top_archetype = top_archetype,
+        period_days   = days,
+        to            = current_user.get("email"),
+    )
+
+    return {
+        "status":        "digest_sent",
+        "period_days":   days,
+        "total":         total,
+        "high_risk":     high_risk,
+        "attacks":       attacks,
+        "fix_applied":   fix_applied,
+        "escalations":   escalations,
+        "top_archetype": top_archetype,
+        "recipient":     current_user.get("email", "—"),
+        "note": (
+            "Email delivery requires SENDGRID_API_KEY and NOTIFICATION_EMAIL in .env. "
+            "Stats are returned regardless."
+        ),
+    }
