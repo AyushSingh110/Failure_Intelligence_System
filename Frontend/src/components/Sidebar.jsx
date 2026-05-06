@@ -1,5 +1,5 @@
 //sidebar.jsx
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { clearSession, getSession } from '../lib/auth'
 
 const NAV = [
@@ -89,7 +89,7 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     clearSession()
-    navigate('/login')
+    navigate('/')
   }
 
   return (
@@ -140,6 +140,20 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+
+      {/* Back to landing */}
+      <Link to="/" style={{
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '0 20px 16px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '10px', color: 'var(--text-muted)',
+        textDecoration: 'none', transition: 'color .2s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-cyan)'}
+      onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+      >
+        ← Home
+      </Link>
 
       {/* Section label */}
       <div style={{
