@@ -12,7 +12,7 @@ from fie.config import FIEConfig
 logger = logging.getLogger("fie")
 
 # Package version (bumped on each release) 
-SDK_VERSION = "1.1.0"
+SDK_VERSION = "1.4.1"
 
 
 class FIEClient:
