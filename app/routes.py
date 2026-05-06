@@ -1,7 +1,24 @@
 import logging
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 logger = logging.getLogger(__name__)
+
+# Rate limiter — imported from main; gracefully absent if slowapi not installed
+try:
+    from app.main import _limiter as limiter
+    from slowapi import _rate_limit_exceeded_handler  # noqa: F401
+    _has_limiter = limiter is not None
+except Exception:
+    limiter = None
+    _has_limiter = False
+
+def _rate_limit(rate: str):
+    """Decorator factory: applies slowapi limit when available, no-op otherwise."""
+    def decorator(func):
+        if _has_limiter and limiter is not None:
+            return limiter.limit(rate)(func)
+        return func
+    return decorator
 
 from app.schemas import (
     InferenceRequest,
@@ -293,7 +310,9 @@ from app.schemas import MonitorRequest, MonitorResponse, OllamaModelResult
 from engine.explainability.explanation_builder import attach_explanations_to_monitor
 
 @router.post("/monitor", response_model=MonitorResponse)
+@_rate_limit("60/minute")
 def monitor(
+    request: Request,
     body: MonitorRequest,
     authorization: str | None = Header(None),
     x_api_key: str | None = Header(None, alias="X-API-Key"),
@@ -1481,7 +1500,8 @@ def analytics_paper_metrics(
 # ── Telemetry receiver (opt-in pings from fie-sdk users) ──────────────────────
 
 @router.post("/telemetry", response_model=dict)
-def receive_telemetry(body: TelemetryPing) -> dict:
+@_rate_limit("30/minute")
+def receive_telemetry(request: Request, body: TelemetryPing) -> dict:
     """
     Receives anonymized usage pings from fie-sdk clients when FIE_TELEMETRY=true.
     Stores aggregated counts in MongoDB `sdk_telemetry` collection.

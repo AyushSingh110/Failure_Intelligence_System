@@ -1,6 +1,7 @@
 # Core API server
 fastapi
 uvicorn[standard]==0.29.0
+slowapi
 
 # Validation and settings
 pydantic
