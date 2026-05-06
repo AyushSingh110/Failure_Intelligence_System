@@ -110,7 +110,7 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
     )
 
 
-# ── Phase 1 endpoints ─────────────────────────────────────────────────────
+# Phase 1 endpoints 
 
 @router.post("/track", response_model=TrackResponse)
 def track_inference(request: InferenceRequest) -> TrackResponse:
@@ -250,7 +250,7 @@ def clear_all_inferences(
     return {"status": "cleared", "deleted_count": count}
 
 
-# ── Phase 2 endpoints ─────────────────────────────────────────────────────
+# ── Phase 2 endpoints 
 
 @router.post("/analyze/v2", response_model=ArchetypeAnalysisResponse)
 def analyze_v2(body: AnalyzeRequest) -> ArchetypeAnalysisResponse:
@@ -287,7 +287,7 @@ def reset_clusters() -> dict:
     return {"status": "reset", "message": "Archetype registry cleared"}
 
 
-# ── Phase 3 endpoint ──────────────────────────────────────────────────────
+#Phase 3 endpoint 
 
 from app.schemas import DiagnosticRequest, DiagnosticResponse
 
@@ -401,7 +401,7 @@ def monitor(
             "Add GROQ_API_KEY=gsk_xxx to .env file."
         )
 
-    # ── Step 2: Build full model_outputs list ──────────────────────────
+    # Step 2: Build full model_outputs list
     # Primary output always goes first (index 0)
     model_outputs = [body.primary_output]
 
@@ -425,7 +425,7 @@ def monitor(
         for r in shadow_results_raw
     ]
 
-    # ── Step 3: Run FIE pipeline ───────────────────────────────────────
+    # Step 3: Run FIE pipeline 
     signal    = _build_failure_signal(model_outputs)
     archetype = label_failure_archetype(signal)
     primary   = model_outputs[0]
@@ -442,7 +442,7 @@ def monitor(
     archetype_registry.assign(signal)
     evolution_tracker.record(signal)
 
-    # ── Step 4: Optionally run DiagnosticJury ──────────────────────────
+    # Step 4: Optionally run DiagnosticJury
     jury_verdict = None
     if body.run_full_jury:
         diag_request = DiagnosticRequest(
@@ -454,7 +454,7 @@ def monitor(
         diag_response = failure_agent.run_diagnostic(diag_request)
         jury_verdict  = diag_response.jury
 
-    # ── Step 4b: Multi-turn adversarial tracking ───────────────────────
+    # Step 4b: Multi-turn adversarial tracking ───────────────────────
     # Only runs when the caller provides a conversation_id.
     # Detects Crescendo-style attacks: no single turn is malicious but the
     # trajectory across turns escalates toward a harmful goal.
@@ -486,7 +486,31 @@ def monitor(
         except Exception as exc:
             logger.warning("multi_turn_tracker failed (non-fatal): %s", exc)
 
-    # ── Step 5: Build failure summary ─────────────────────────────────
+    # Step 4c: Model extraction detection ───────────────────────────────────
+    extraction_result = None
+    try:
+        from engine.model_extraction_tracker import check_model_extraction
+        _tenant = current_user["tenant_id"] if current_user else "anonymous"
+        ext = check_model_extraction(
+            tenant_id       = _tenant,
+            prompt          = body.prompt or "",
+            conversation_id = body.conversation_id,
+        )
+        if ext.is_extracting:
+            extraction_result = {
+                "is_extracting": True,
+                "confidence":    ext.confidence,
+                "pattern":       ext.pattern,
+                "evidence":      ext.evidence,
+            }
+            logger.warning(
+                "MODEL_EXTRACTION | tenant=%s | pattern=%s | conf=%.3f",
+                _tenant, ext.pattern, ext.confidence,
+            )
+    except Exception as exc:
+        logger.debug("model_extraction_tracker failed (non-fatal): %s", exc)
+
+    # Step 5: Build failure summary ─────────────────────────────────
     if jury_verdict and jury_verdict.failure_summary:
         failure_summary = jury_verdict.failure_summary
     elif signal.high_failure_risk:
@@ -498,7 +522,7 @@ def monitor(
     else:
         failure_summary = f"Model outputs are stable — archetype: {archetype}"
 
-    # ── Step 5b: Ground Truth Pipeline + Auto-fix engine ───────────────────
+    # Step 5b: Ground Truth Pipeline + Auto-fix engine ───────────────────
     # Steps 4–10: verify claim → wikidata → serper → cache → escalate/fix
     fix_result_schema = None
     gt_result_schema  = None
@@ -539,7 +563,7 @@ def monitor(
                     f"Auto-fix skipped: question_type={_question_type} does not use external GT."
                 )
 
-            # ── Steps 4–10: Ground Truth Pipeline ─────────────────────────
+            # Steps 4–10: Ground Truth Pipeline 
             from engine.verifier.ground_truth_pipeline import run_ground_truth_pipeline
             gt = run_ground_truth_pipeline(
                 prompt          = body.prompt,
@@ -565,7 +589,7 @@ def monitor(
                 gt.source, gt.requires_escalation, gt.confidence,
             )
 
-            # ── Step 10: Escalation check ──────────────────────────────────
+            # Step 10: Escalation check 
             if gt.requires_escalation:
                 requires_human_review = True
                 escalation_reason_str = gt.escalation_reason
