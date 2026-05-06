@@ -5,10 +5,20 @@
 FIE sits between your LLM and your users. It catches adversarial attacks before they reach the model, detects wrong answers, corrects what it can, and escalates what it can't.
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
-[![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
+[![PyPI](https://img.shields.io/badge/PyPI-fie--sdk_v1.4.0-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://mongodb.com/atlas)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+
+---
+
+## What's New in v1.4.0
+
+- **PAIR classifier bundled** — Layer 7 (Linear SVM on sentence embeddings) is now shipped inside the package. No model download, no server needed. PAIR recall jumps from 3.7% → 96.3% for all `pip install` users.
+- **XGBoost v4 bundled** — hallucination classifier (AUC 0.840, FPR 8.4%) is now included in the wheel for self-hosters who clone the repo.
+- **Canary exfiltration detection fully wired** — system-prompt leak detection now actually injects canary tokens into shadow model calls (was silently disabled in v1.3.0).
+- **Layer 9 condition fixed** — LLM semantic intent check now fires on low-confidence hits too (≥ 0.80 threshold to suppress), not just when all 8 prior layers return zero.
+- **Telemetry endpoint hardened** — schema-validated with per-field size limits; no longer accepts arbitrary payloads.
 
 ---
 
@@ -18,7 +28,7 @@ FIE sits between your LLM and your users. It catches adversarial attacks before 
 pip install fie-sdk
 ```
 
-**Adversarial attack detection — 6 layers, fully offline:**
+**Adversarial attack detection — 7 layers, fully offline, models bundled:**
 
 ```python
 from fie import scan_prompt
@@ -81,7 +91,7 @@ All of this runs with **zero configuration, zero API calls, and zero network req
 
 ### Adversarial Attack Detection
 
-Six detection layers run locally:
+Seven detection layers run locally — all models bundled inside the package:
 
 | Layer | Method | What it catches |
 | --- | --- | --- |
@@ -90,7 +100,7 @@ Six detection layers run locally:
 | 4 | Indirect injection detector | Attacks embedded inside documents, emails, or URLs |
 | 5 | GCG suffix scanner | Gradient-optimized adversarial suffixes (high-entropy noise appended to prompts) |
 | 6 | Perplexity proxy | Base64 payloads, Caesar/ROT ciphers, Unicode lookalikes — anything statistically anomalous |
-| 7 | PAIR semantic intent classifier | Iteratively-rephrased natural-language jailbreaks (PAIR/JBC attacks) — Linear SVM on sentence embeddings trained on 2,537 examples |
+| 7 | **PAIR semantic intent classifier** | **Bundled in v1.4.0** — Linear SVM on sentence embeddings trained on 2,537 examples (1,352 attack / 1,185 benign) across 6 adversarial sources. Catches iteratively-rephrased natural-language jailbreaks. |
 
 **Benchmark 1 — FIE-Eval-200 (internal curated, 7 attack categories):**
 
@@ -123,13 +133,13 @@ This is a paper-quality evaluation on a standardized adversarial benchmark. **28
 2. **LLM under test**: `llama-3.3-70b-versatile` via Groq API — real model responses collected for all 382 prompts
 3. **LLM judge**: `qwen/qwen3-32b` using the official JailbreakBench judge prompt (Chao et al., 2024) — independent model to avoid self-evaluation bias
 4. **Ground truth**: JailbreakBench pre-recorded jailbreak labels for `vicuna-13b-v1.5` used as canonical attack ground truth (published in the JBB artifact)
-5. **FIE scanner**: `scan_prompt()` package tier — 6 layers, fully offline
+5. **FIE scanner**: `scan_prompt()` package tier — fully offline
 
 **Notable finding — ASR on llama-3.3-70b-versatile = 0%**: The LLM judge confirmed zero successful jailbreaks against `llama-3.3-70b-versatile` across all 282 attack prompts. JBB ground truth labels (against `vicuna-13b-v1.5`) are used as canonical attack ground truth.
 
-**Package Tier Results (scan_prompt — 6 layers, offline):**
+**Package Tier Results (scan_prompt — offline):**
 
-| Metric | v1.1 (5 layers) | v1.2 (+ PAIR classifier) |
+| Metric | v1.1 (5 layers) | v1.2 / v1.4 (+ PAIR classifier) |
 | --- | --- | --- |
 | Overall Recall (all 282 attacks) | 53.5% | **98.6%** |
 | Recall on JBB-confirmed jailbreaks | 53.1% | **98.7%** |
@@ -139,7 +149,7 @@ This is a paper-quality evaluation on a standardized adversarial benchmark. **28
 
 Per attack method:
 
-| Attack Method | What it is | v1.1 (5 layers) | v1.2 (+ PAIR classifier) | JBB Confirmed |
+| Attack Method | What it is | v1.1 (5 layers) | v1.2 / v1.4 (+ PAIR) | JBB Confirmed |
 | --- | --- | --- | --- | --- |
 | GCG | Gradient-optimized adversarial suffix | 96.0% | **99.0%** | 80/100 |
 | JBC | Template-based persona jailbreaks | 52.0% | **100.0%** | 90/100 |
@@ -151,7 +161,7 @@ All systems evaluated on the same JailbreakBench dataset (282 attacks + 100 beni
 
 | System | Recall | PAIR | GCG | JBC | FPR | F1 |
 | --- | --- | --- | --- | --- | --- | --- |
-| **FIE v1.2 (6 layers, offline)** | **98.6%** | **96.3%** | **99.0%** | **100.0%** | 8.0% | **97.9%** |
+| **FIE v1.4 (7 layers, offline)** | **98.6%** | **96.3%** | **99.0%** | **100.0%** | 8.0% | **97.9%** |
 | Llama Prompt Guard 2-86M | 64.9% | 32.9% | 56.0% | 100.0% | 0.0% | 78.7% |
 | Llama Prompt Guard 2-22M | 53.5% | 15.8% | 38.0% | 100.0% | 1.0% | 69.6% |
 
@@ -161,7 +171,7 @@ FIE runs fully offline with no GPU. Llama Prompt Guard 2 requires model inferenc
 
 | Condition | Overall Recall | PAIR Recall | FPR |
 | --- | --- | --- | --- |
-| Full system (6 layers) | **98.6%** | **96.3%** | 8.0% |
+| Full system (7 layers) | **98.6%** | **96.3%** | 8.0% |
 | Remove L7 (PAIR classifier) | 53.5% | 3.7% | 2.0% |
 | Remove L5 (GCG suffix) | 96.1% | 96.3% | 8.0% |
 | Remove L1/L2/L4/L6 | 98.6% | 96.3% | 8.0% |
@@ -196,7 +206,7 @@ Layer 7 (PAIR classifier) drives **94.2%** of all detections on HarmBench. The c
 
 ### Hallucination Detection (Local Heuristics)
 
-The `@monitor(mode="local")` decorator also checks LLM responses for:
+The `@monitor(mode="local")` decorator checks LLM responses for:
 
 - Hedging language ("I think", "probably", "I'm not sure")
 - Temporal knowledge cutoff signals
@@ -225,32 +235,32 @@ def ask_ai(prompt: str) -> str:
 
 - **Shadow jury** — 3 independent LLMs cross-check every answer
 - **FAISS semantic search** — vector similarity against 1,000+ labeled adversarial prompts
-- **Canary token exfiltration detection** — catches system prompt leaks
+- **Canary token exfiltration detection** — injects a random token into shadow model system prompts; if a prompt extracts the system prompt, the canary appears in the shadow output and triggers a high-confidence exfiltration alert
 - **Semantic consistency check** — detects when model output is topically disconnected from the prompt
-- **LLM semantic intent check** — Layer 9: single LLM call (`llama-3.3-70b-versatile`) targets PAIR-style attacks that look like natural language; only fires when all 8 deterministic layers pass clean; confidence threshold 0.72
-- **Multi-turn session tracker** — attacks spread across conversation turns
-- **XGBoost v4 classifier** — trained on 2,182 labeled examples, AUC-ROC 0.749
+- **LLM semantic intent check (Layer 9)** — single Groq LLM call targeting PAIR-style attacks; fires unless a high-confidence (≥ 0.80) structural detection was already made; confidence threshold 0.72
+- **Multi-turn session tracker** — detects Crescendo-style attacks spread across conversation turns (2-hour TTL)
+- **XGBoost v4 classifier** — trained on 2,477 labeled examples (TruthfulQA + HaluEval + MMLU), AUC-ROC 0.840, FPR 8.4%
 - **Auto-correction** — automatically replaces hallucinated answers with verified ones
-- **Ground truth verification** — Wikidata + Serper cross-check
+- **Ground truth verification** — Wikidata + Serper cross-check with GT cache (cache-first, no repeat API calls)
 
 ### Hallucination Detection Benchmark (Server)
 
-Evaluated on 2,477 labeled examples (TruthfulQA + MMLU + HaluEval):
+Evaluated on 2,477 labeled examples (TruthfulQA 1,104 + HaluEval 835 + MMLU 518 + builtin 20):
 
 | Method | Recall | FPR | AUC-ROC |
 | --- | --- | --- | --- |
 | POET rule-based (baseline) | 56.4% | 38.7% | — |
 | XGBoost v3 (1,757 examples) | 63.6% | 38.6% | 0.677 |
-| XGBoost v4 (2,477 examples) | **68.2%** | **8.4%** | **0.840** |
-| Gain over baseline | **+11.8pp recall** | **-30.3pp FPR** | — |
+| **XGBoost v4 (2,477 examples)** | **68.2%** | **8.4%** | **0.840** |
+| Gain over baseline | **+11.8pp recall** | **−30.3pp FPR** | — |
 
-v4 was trained on an expanded dataset with additional HaluEval examples (document-grounded hallucination benchmark). The AUC-ROC jump from 0.677 → 0.840 and FPR drop from 38.6% → 8.4% are the headline gains — the model learned to be far more conservative about flagging correct answers.
+v4 cross-validated AUC: **0.833 ± 0.041** (5-fold). The FPR drop from 38.6% → 8.4% is the headline gain — the model learned to be far more conservative about flagging correct answers.
 
 ### SDK Modes
 
 | Mode | Server needed | Behavior |
 | --- | --- | --- |
-| `local` | No | Adversarial detection + heuristic response checking — fully offline |
+| `local` | No | Adversarial detection (7 layers, bundled models) + heuristic response checking — fully offline |
 | `monitor` | Yes | Non-blocking — FIE checks in background, original answer returned immediately |
 | `correct` | Yes | Synchronous — FIE verifies and returns corrected answer if failure detected |
 
@@ -273,7 +283,7 @@ v4 was trained on an expanded dataset with additional HaluEval examples (documen
 | Indirect Injection | Malicious content embedded inside documents the LLM reads | Indirect injection detector layer |
 | GCG suffix attacks | Gradient-optimized adversarial suffixes appended to prompts | GCG suffix pattern scanner |
 | Encoded payloads | Base64, Caesar/ROT cipher, Unicode lookalikes | Perplexity proxy (statistical detection) |
-| PAIR / semantic jailbreaks | Iteratively rephrased natural-language attacks that look like normal requests | PAIR semantic intent classifier (Layer 7) |
+| PAIR / semantic jailbreaks | Iteratively rephrased natural-language attacks that look like normal requests | PAIR semantic intent classifier (Layer 7) — bundled |
 
 ---
 
