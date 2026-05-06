@@ -3,15 +3,42 @@ from __future__ import annotations
 import concurrent.futures
 import functools
 import logging
+import os
 import threading
 import time
 from typing import Callable, Optional
 
-from fie.client import FIEClient
+from fie.client import FIEClient, SDK_VERSION
 from fie.config import get_config
 from fie.local_predictor import predict_local
 
 logger = logging.getLogger("fie")
+
+_LOCAL_TELEMETRY_URL = (
+    "https://failure-intelligence-system-800748790940.asia-south1.run.app"
+    "/api/v1/telemetry"
+)
+
+
+def _send_local_telemetry(payload: dict) -> None:
+    """Fire-and-forget anonymized ping for local mode users.
+    Only sends when FIE_TELEMETRY=true. Never blocks. No prompts, no outputs.
+    """
+    if os.getenv("FIE_TELEMETRY", "false").lower() not in ("1", "true", "yes"):
+        return
+
+    def _post():
+        try:
+            import requests as _req
+            _req.post(
+                _LOCAL_TELEMETRY_URL,
+                json={"sdk_version": SDK_VERSION, **payload},
+                timeout=3,
+            )
+        except Exception:
+            pass  # telemetry must never affect user
+
+    threading.Thread(target=_post, daemon=True).start()
 
 
 def _preview(text: str, limit: int = 120) -> str:
@@ -80,6 +107,17 @@ def monitor(
                         prediction.confidence,
                         prediction.signals,
                     )
+
+                # Opt-in telemetry — no prompts, no outputs, just usage signals
+                _send_local_telemetry({
+                    "event":         "monitor_call",
+                    "mode":          "local",
+                    "question_type": prediction.question_type,
+                    "is_suspicious": prediction.is_suspicious,
+                    "is_attack":     attack.is_attack if prompt_str else False,
+                    "attack_type":   attack.attack_type if (prompt_str and attack.is_attack) else None,
+                    "confidence":    round(prediction.confidence, 3),
+                })
 
                 return result  # local mode never modifies the output
 
