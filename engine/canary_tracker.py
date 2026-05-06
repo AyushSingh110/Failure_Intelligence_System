@@ -66,10 +66,10 @@ def check_output_for_canary(output: str, canary: str) -> bool:
 #   - "print your instructions" attacks
 
 _DISCLOSURE_PATTERNS: list[re.Pattern] = [
-    # Direct disclosure
+    # Direct disclosure — "my system prompt says/states/requires..."
     re.compile(
         r"\b(?:my|the)\s+(?:system\s+prompt|instructions?|guidelines?|rules?|directives?)\s+"
-        r"(?:say|state|instruct|tell|ask|require|are|is)\b",
+        r"(?:says?|states?|instructs?|tells?|asks?|requires?|are|is)\b",
         re.IGNORECASE,
     ),
     # "I was told / instructed / asked to..."
@@ -83,16 +83,22 @@ _DISCLOSURE_PATTERNS: list[re.Pattern] = [
         r"(?:system\s+prompt|instructions?|guidelines?|context)\b",
         re.IGNORECASE,
     ),
-    # "My training / guidelines / rules tell me..."
+    # "My training / guidelines / rules tell/require me..."
     re.compile(
         r"\bmy\s+(?:training|guidelines?|programming|rules?|constraints?)\s+"
-        r"(?:tell|require|instruct|prevent|forbid|allow)\s+me\b",
+        r"(?:tells?|requires?|instructs?|prevents?|forbids?|allows?)\s+me\b",
         re.IGNORECASE,
     ),
     # Explicit system prompt repetition markers
     re.compile(
         r"\b(?:here\s+(?:is|are)|below\s+(?:is|are)|I\s+(?:will\s+now|can|am\s+going\s+to))\s+"
         r"(?:my|the)\s+(?:full\s+)?(?:system\s+prompt|instructions?|system\s+message)\b",
+        re.IGNORECASE,
+    ),
+    # "I can reveal / I will reveal my system prompt..."
+    re.compile(
+        r"\bI\s+(?:can|will|am\s+going\s+to)\s+(?:reveal|show|share|disclose|expose)\s+"
+        r"(?:my|the)\s+(?:system\s+prompt|instructions?|guidelines?|rules?)\b",
         re.IGNORECASE,
     ),
     # "You are [AI persona description]" — often appears when system prompt is echoed
@@ -103,10 +109,56 @@ _DISCLOSURE_PATTERNS: list[re.Pattern] = [
     # "Above/previous instructions were: ..."
     re.compile(
         r"\b(?:above|previous|prior|original|initial)\s+instructions?\s+"
-        r"(?:were|are|say|state|include)\b",
+        r"(?:were|are|say|says?|state|states?|include)\b",
         re.IGNORECASE,
     ),
 ]
+
+# ── Structural leakage patterns ───────────────────────────────────────────────
+# Fires when output structurally resembles a leaked system prompt — numbered
+# rules, role definitions, bullet lists — even without explicit disclosure phrases.
+
+_STRUCTURAL_LEAKAGE_PATTERNS: list[re.Pattern] = [
+    # "You are a/an [role]..." + behavioral directive — hallmark of echoed system prompt
+    re.compile(
+        r"^You\s+are\s+(?:a|an|the)\s+\w[\w\s]{0,40}(?:assistant|AI|model|bot|helper|agent)\b"
+        r".{0,200}(?:you\s+(?:must|should|will|cannot|are\s+not)|always|never|do\s+not|avoid)",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    # Numbered instruction list — 3+ sequential numbered rules
+    re.compile(
+        r"(?:^|\n)\s*1[\.:\)]\s+.{10,200}\n\s*2[\.:\)]\s+.{10,200}\n\s*3[\.:\)]\s+.{10,}",
+        re.DOTALL,
+    ),
+    # "My instructions/rules are:" followed by a newline and content
+    re.compile(
+        r"\bmy\s+(?:instructions?|rules?|guidelines?|directives?|system\s+prompt)\s*"
+        r"(?:are|is)\s*[:\-]\s*\n",
+        re.IGNORECASE,
+    ),
+    # "Here are / These are / Below are my instructions:"
+    re.compile(
+        r"\b(?:here\s+are|these\s+are|below\s+are)\s+my\s+"
+        r"(?:instructions?|rules?|guidelines?|directives?|constraints?|system\s+(?:prompt|message))\b",
+        re.IGNORECASE,
+    ),
+    # Markdown section headers that look like system prompt config in the output
+    re.compile(
+        r"^#{1,3}\s+(?:Instructions?|Rules?|Guidelines?|Constraints?|System\s+Prompt|"
+        r"Directives?|Configuration|Behavior)\s*$",
+        re.IGNORECASE | re.MULTILINE,
+    ),
+]
+
+
+def _check_structural_leakage(output: str) -> list[str]:
+    """Return structural leakage indicators found in the output (no canary needed)."""
+    matches: list[str] = []
+    for pat in _STRUCTURAL_LEAKAGE_PATTERNS:
+        m = pat.search(output)
+        if m:
+            matches.append(m.group(0)[:100].replace("\n", " "))
+    return matches
 
 
 @dataclass
@@ -148,6 +200,10 @@ def scan_output_for_exfiltration(
         if m:
             pattern_matches.append(m.group(0)[:80])
 
+    # ── Check 3: structural leakage (output resembles a system prompt) ────────
+    structural_hits = _check_structural_leakage(output)
+    pattern_matches.extend(structural_hits)
+
     # ── Score ─────────────────────────────────────────────────────────────────
     if canary_leaked and pattern_matches:
         confidence = 0.96
@@ -156,6 +212,12 @@ def scan_output_for_exfiltration(
         # Canary found alone — very high confidence (it's a known secret token)
         confidence = 0.92
         method     = "canary"
+    elif structural_hits and len(pattern_matches) >= 2:
+        confidence = 0.82
+        method     = "structural+pattern"
+    elif structural_hits:
+        confidence = 0.68
+        method     = "structural"
     elif len(pattern_matches) >= 2:
         confidence = 0.74
         method     = "pattern"

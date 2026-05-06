@@ -503,6 +503,96 @@ _DENSE_PUNCT_RE  = re.compile(r"[^\w\s]{8,}")
 _NON_WORD_TOKEN_RE = re.compile(r"\b[^a-zA-Z\s]+\b")
 
 
+# ── Layer 3b: Many-shot jailbreak detector ────────────────────────────────────
+
+_MANY_SHOT_EXCHANGE_RE = re.compile(
+    r"(?:human|user|h|q|person)\s*:\s*.{3,300}?\n+\s*(?:assistant|bot|ai|a|gpt|claude|llm)\s*:",
+    re.IGNORECASE | re.DOTALL,
+)
+_MANY_SHOT_Q_LINE_RE = re.compile(
+    r"(?:^|\n)\s*(?:human|user|h|q|person)\s*[\:\>]\s*.{5,300}",
+    re.IGNORECASE,
+)
+_MANY_SHOT_HARMFUL_RE = re.compile(
+    r"\b(?:bomb|explos|weapon|hack|malware|ransomware|poison|synthesize|"
+    r"drug|meth|fentanyl|cocaine|illegal|bypass|jailbreak|unrestricted|uncensored|"
+    r"kill|murder|harm|attack|terror|extremi|suicide|self.harm|"
+    r"child\s*(?:abuse|exploit|porn)|nsfw|rape|genocide|bioweapon)\b",
+    re.IGNORECASE,
+)
+
+
+def _run_many_shot_detection(prompt: str) -> tuple[str | None, float, dict]:
+    """
+    Layer 3b: Detect many-shot / few-shot jailbreak attacks.
+
+    Many-shot jailbreaks embed 8-20+ scripted Q/A exchanges in a single prompt
+    to shift model behavior via in-context learning (Anil et al., 2024).
+    Even 4-7 pairs with harmful topic content is flagged.
+    """
+    if len(prompt) < 150:
+        return None, 0.0, {}
+
+    pair_count = len(_MANY_SHOT_EXCHANGE_RE.findall(prompt))
+    if pair_count < 3:
+        q_lines = _MANY_SHOT_Q_LINE_RE.findall(prompt)
+        if len(q_lines) < 4:
+            return None, 0.0, {}
+        pair_count = max(pair_count, len(q_lines) // 2)
+
+    q_texts = re.findall(
+        r"(?:human|user|h|q|person)\s*[\:\>]\s*(.{5,300}?)(?:\n|$)",
+        prompt, re.IGNORECASE,
+    )
+
+    total_q       = len(q_texts) or 1
+    harmful_q     = sum(1 for q in q_texts if _MANY_SHOT_HARMFUL_RE.search(q))
+    harmful_ratio = harmful_q / total_q
+
+    last_q    = q_texts[-1] if q_texts else ""
+    early_qs  = q_texts[:-1]
+    escalation = (
+        bool(_MANY_SHOT_HARMFUL_RE.search(last_q)) and
+        sum(1 for q in early_qs if _MANY_SHOT_HARMFUL_RE.search(q)) < max(len(early_qs) // 2, 1)
+    )
+
+    signals:    list[str] = []
+    confidence: float     = 0.0
+
+    if pair_count >= 8:
+        signals.append(f"pair_count={pair_count} (many-shot conditioning ≥8 exchanges)")
+        confidence = max(confidence, 0.80)
+    elif pair_count >= 4:
+        signals.append(f"pair_count={pair_count} (few-shot pattern 4-7 exchanges)")
+        confidence = max(confidence, 0.62)
+
+    if harmful_ratio >= 0.4:
+        signals.append(f"harmful_topic_ratio={harmful_ratio:.2f}")
+        confidence = max(confidence, 0.84)
+    elif harmful_ratio > 0.1:
+        signals.append(f"harmful_topic_ratio={harmful_ratio:.2f}")
+        confidence = max(confidence, 0.68)
+
+    if escalation:
+        signals.append("escalation=gradual_buildup_to_harmful_final_turn")
+        confidence = max(confidence, 0.78)
+
+    if len(signals) >= 2:
+        confidence = min(confidence + 0.06, 0.92)
+
+    if confidence < 0.50:
+        return None, 0.0, {}
+
+    return "MANY_SHOT_JAILBREAK", round(confidence, 4), {
+        "pair_count":      pair_count,
+        "harmful_q_count": harmful_q,
+        "harmful_ratio":   round(harmful_ratio, 3),
+        "escalation":      escalation,
+        "signals_fired":   signals,
+        "last_q_preview":  last_q[:150],
+    }
+
+
 def _run_gcg_detection(prompt: str) -> tuple[str | None, float, dict]:
     """
     Layer 5: GCG adversarial suffix detection.
@@ -1131,6 +1221,8 @@ class AdversarialSpecialist(BaseJuryAgent):
         guard_root, guard_confidence, guard_evidence = _run_guard_detection(context.prompt)
         # Layer 3: FAISS semantic search
         faiss_hit, faiss_confidence = _run_faiss_detection(context.prompt)
+        # Layer 3b: many-shot / few-shot jailbreak detection
+        many_root, many_confidence, many_evidence = _run_many_shot_detection(context.prompt)
         # Layer 4: indirect prompt injection (document-embedded attacks)
         indirect_root, indirect_confidence, indirect_evidence = _run_indirect_injection_detection(
             context.prompt, context.primary_output
@@ -1163,6 +1255,7 @@ class AdversarialSpecialist(BaseJuryAgent):
             or (perp_root   is not None and perp_confidence   >= 0.80)
             or (exfil_root  is not None and exfil_confidence  >= 0.80)
             or (sem_root    is not None and sem_confidence    >= 0.80)
+            or (many_root   is not None and many_confidence   >= 0.80)
         )
         intent_root, intent_confidence, intent_evidence = None, 0.0, {}
         if not _high_conf_structural:
@@ -1170,7 +1263,7 @@ class AdversarialSpecialist(BaseJuryAgent):
             if intent_root is None and (
                 pattern_hit is None and faiss_hit is None and guard_root is None
                 and indirect_root is None and gcg_root is None and perp_root is None
-                and exfil_root is None and sem_root is None
+                and exfil_root is None and sem_root is None and many_root is None
             ):
                 return self._skip(
                     "No adversarial patterns detected by regex, semantic search, prompt guard, "
@@ -1212,6 +1305,9 @@ class AdversarialSpecialist(BaseJuryAgent):
         elif sem_root is not None:
             root_cause   = sem_root
             pattern_conf = sem_confidence
+        elif many_root is not None:
+            root_cause   = many_root
+            pattern_conf = many_confidence
         elif intent_root is not None:
             root_cause   = intent_root
             pattern_conf = intent_confidence
@@ -1238,6 +1334,8 @@ class AdversarialSpecialist(BaseJuryAgent):
             active_confidences.append(exfil_confidence)
         if sem_root is not None:
             active_confidences.append(sem_confidence)
+        if many_root is not None:
+            active_confidences.append(many_confidence)
         if intent_root is not None:
             active_confidences.append(intent_confidence)
 
@@ -1332,6 +1430,17 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "prompt length policy to prevent long appended payloads. (4) Log and escalate "
                 "all GCG detections — they indicate a sophisticated targeted attack, not "
                 "accidental misuse."
+            ),
+            "MANY_SHOT_JAILBREAK": (
+                "A many-shot (or few-shot) jailbreak was detected: the prompt embeds scripted "
+                "Q/A exchanges to condition the model into normalizing harmful responses via "
+                "in-context learning (Anil et al., 2024). The model is primed to treat harmful "
+                "topics as acceptable based on the fake precedent set by the fabricated exchanges. "
+                "Mitigations: (1) Cap the number of user-supplied in-context examples per request. "
+                "(2) Scan all Human/Q turns in embedded exchanges for harmful content before "
+                "passing to the model. (3) Refuse prompts with >4 alternating Human/Assistant "
+                "turns not sourced from your own conversation history. (4) Use a conversation "
+                "history allowlist — only inject exchanges you generated, never user-supplied ones."
             ),
         }
         mitigation = mitigation_map.get(
@@ -1436,6 +1545,18 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "verdict":    intent_evidence.get("verdict"),
                 "reasoning":  intent_evidence.get("reasoning"),
                 "model":      intent_evidence.get("model"),
+            }
+
+        if many_root is not None:
+            evidence["detection_layers_fired"].append("many_shot")
+            evidence["many_shot"] = {
+                "confidence":      many_confidence,
+                "pair_count":      many_evidence.get("pair_count"),
+                "harmful_q_count": many_evidence.get("harmful_q_count"),
+                "harmful_ratio":   many_evidence.get("harmful_ratio"),
+                "escalation":      many_evidence.get("escalation"),
+                "signals_fired":   many_evidence.get("signals_fired"),
+                "last_q_preview":  many_evidence.get("last_q_preview"),
             }
 
         return self._verdict(
