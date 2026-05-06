@@ -24,3 +24,6 @@ numpy
 faiss-cpu
 sentence-transformers
 
+# Email notifications
+sendgrid>=6.10
+
