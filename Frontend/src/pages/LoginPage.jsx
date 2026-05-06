@@ -1,6 +1,6 @@
 // LoginPage.jsx
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   getGoogleAuthUrl,
   getGoogleRedirectUri,
@@ -139,10 +139,22 @@ export default function LoginPage() {
           position: 'relative',
         }} className="hidden-mobile">
 
-          {/* Top — Logo */}
+          {/* Top — Logo + back link */}
           <div className="fade-in d1" style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
+          <Link to="/" style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '11px', color: 'var(--text-muted)',
+            textDecoration: 'none', transition: 'color .2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-cyan)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            ← Back to home
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '30px', height: '30px',
               borderRadius: '8px',
@@ -159,6 +171,7 @@ export default function LoginPage() {
               fontSize: '12px', fontWeight: 500,
               color: 'var(--text-secondary)',
             }}>Failure Intelligence Engine</span>
+          </div>
           </div>
 
           {/* Middle — Headline */}
@@ -246,7 +259,7 @@ export default function LoginPage() {
             <span style={{
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '11px', color: 'var(--text-muted)',
-            }}>v0.1.0 · All systems operational</span>
+            }}>v1.4.0 · All systems operational</span>
           </div>
         </div>
 
