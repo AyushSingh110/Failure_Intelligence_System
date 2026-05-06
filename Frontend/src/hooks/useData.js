@@ -7,9 +7,9 @@ import { api } from '../lib/api'
 import { getSession } from '../lib/auth'
 
 export function useInferences() {
-  const [data, setData] = useState([])
+  const [data, setData]       = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError]     = useState(null)
 
   const fetch = useCallback(async () => {
     try {
@@ -34,7 +34,7 @@ export function useInferences() {
 }
 
 export function useTrend() {
-  const [data, setData] = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
 
   const fetch = useCallback(async () => {
@@ -61,30 +61,38 @@ export function useTrend() {
 export function computeKPIs(inferences) {
   if (!inferences.length) {
     return {
-      total: 0,
-      highRisk: 0,
-      riskPct: 0,
-      avgEntropy: 0,
-      avgAgreement: 0,
+      total: 0, highRisk: 0, riskPct: 0,
+      avgEntropy: 0, avgAgreement: 0,
+      attacks: 0, fixApplied: 0,
+      avgConfidence: 0, lastSeen: null,
     }
   }
 
-  const metrics = inferences.map((record) => record.metrics || {})
-  const entropies = metrics.map((metric) => metric.entropy || 0).filter(Boolean)
-  const agreements = metrics.map((metric) => metric.agreement_score || 0).filter(Boolean)
+  const metrics    = inferences.map(r => r.metrics || {})
+  const entropies  = metrics.map(m => m.entropy || 0).filter(Boolean)
+  const agreements = metrics.map(m => m.agreement_score || 0).filter(Boolean)
+  const confs      = metrics.map(m => m.confidence || m.classifier_confidence || 0).filter(Boolean)
 
-  const highRisk = inferences.filter((record) => (record.metrics?.entropy || 0) > 0.75).length
+  const highRisk   = inferences.filter(r => (r.metrics?.entropy || 0) > 0.75).length
+  const attacks    = inferences.filter(r => r.is_adversarial === true || r.adversarial?.is_attack === true).length
+  const fixApplied = inferences.filter(r => r.fix_applied === true || r.correction_applied === true).length
+
+  const sorted  = [...inferences].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+  const lastSeen = sorted[0]?.timestamp ? new Date(sorted[0].timestamp) : null
 
   return {
     total: inferences.length,
     highRisk,
     riskPct: Math.round((highRisk / inferences.length) * 100),
     avgEntropy: entropies.length
-      ? +(entropies.reduce((sum, value) => sum + value, 0) / entropies.length).toFixed(3)
-      : 0,
+      ? +(entropies.reduce((s, v) => s + v, 0) / entropies.length).toFixed(3) : 0,
     avgAgreement: agreements.length
-      ? +(agreements.reduce((sum, value) => sum + value, 0) / agreements.length).toFixed(3)
-      : 0,
+      ? +(agreements.reduce((s, v) => s + v, 0) / agreements.length).toFixed(3) : 0,
+    avgConfidence: confs.length
+      ? +(confs.reduce((s, v) => s + v, 0) / confs.length).toFixed(3) : 0,
+    attacks,
+    fixApplied,
+    lastSeen,
   }
 }
 
@@ -95,7 +103,7 @@ export function buildTimeSeries(inferences) {
 
   return sorted.map((record, index) => ({
     index: index + 1,
-    entropy: +(record.metrics?.entropy || 0).toFixed(3),
+    entropy:   +(record.metrics?.entropy || 0).toFixed(3),
     agreement: +(record.metrics?.agreement_score || 0).toFixed(3),
     time: record.timestamp
       ? new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
