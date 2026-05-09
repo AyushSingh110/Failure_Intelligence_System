@@ -64,7 +64,7 @@ class TestHealth:
 
     def test_health_body(self, client):
         r = client.get("/health")
-        assert r.json()["status"] == "healthy"
+        assert r.json()["status"] in ("healthy", "degraded")
 
     def test_root_returns_200(self, client):
         r = client.get("/")

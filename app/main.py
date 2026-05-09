@@ -135,13 +135,8 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict:
     """Liveness probe — returns component status for uptime monitors."""
-    from storage.database import get_db
-    db_ok = False
-    try:
-        db = get_db()
-        db_ok = db is not None
-    except Exception:
-        pass
+    from storage import database as _db_module
+    db_ok = not _db_module._fallback_mode and _db_module._db is not None
 
     components = {
         "api":      "ok",
