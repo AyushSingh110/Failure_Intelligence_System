@@ -1,0 +1,435 @@
+\documentclass[12pt,a4paper]{article}
+
+%% Packages
+\usepackage{times}
+\usepackage[a4paper, left=1.60cm, right=1.60cm, top=1.20cm, bottom=0.60cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{amsmath}
+
+%% Spacing and font
+\setstretch{1.15}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+%% Section heading style
+\titleformat{\section}{\bfseries\normalsize}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\bfseries\normalsize}{\thesubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titlespacing*{\subsection}{0pt}{8pt}{3pt}
+
+%% Hyperlink style
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black}
+
+\begin{document}
+
+%% Title
+\begin{center}
+{\fontsize{24}{28}\bfseries
+Failure Intelligence Engine: An Open Source Framework for\\
+Real-Time Adversarial Attack Detection and Hallucination\\
+Monitoring in Large Language Models}
+
+\vspace{10pt}
+{\fontsize{16}{20}\bfseries Ayush Singh}
+
+\vspace{4pt}
+{\small B.Tech Student, Department of Computer Science (AI and Data Science),\\
+Pimpri Chinchwad University, Pune, India}\\
+{\small \href{mailto:ayushsingh355vns@gmail.com}{ayushsingh355vns@gmail.com}}
+\end{center}
+
+\vspace{10pt}
+
+%% Abstract
+\textbf{Abstract}
+
+Large Language Models (LLMs) are now being used in real-world applications
+every day. But they are still easy to attack. Common attacks include prompt
+injection, jailbreaking, many-shot conditioning, and model extraction.
+At the same time, LLMs often produce wrong or made-up information that cannot
+be trusted without checking. Most existing tools either need expensive GPU
+hardware, use closed APIs, or only protect against one type of attack.
+
+This paper presents the Failure Intelligence Engine (FIE), an open source
+framework that combines a 10-layer adversarial detection pipeline with a
+hallucination monitoring system. It can be used as a Python SDK with no GPU
+needed. FIE is tested against JailbreakBench [1] and HarmBench [2], two
+published evaluation benchmarks. On JailbreakBench, FIE achieves 98.6\%
+recall and 97.9\% F1 score, which is better than Meta's Llama Prompt Guard
+2-86M (64.9\% recall), while running fully offline. On HarmBench, FIE
+achieves 70.6\% recall with 93.4\% precision across 7 harm categories.
+All source code and benchmark scripts are publicly available.
+
+\textbf{Keywords:} Large Language Models, Prompt Injection, Jailbreak Detection,
+Adversarial Attack, Hallucination Monitoring, AI Safety, LLM Security,
+Many-Shot Jailbreaking, Model Extraction
+
+\section{Introduction}
+
+Large Language Models such as GPT-4, Claude, and Llama are now used in
+customer support, coding tools, healthcare queries, and education. As more
+people use them, protecting them from misuse becomes more important.
+
+Two types of failures matter the most in production. The first is adversarial
+attacks, where a user writes a special prompt to trick the model into ignoring
+its instructions, revealing its system prompt, or producing harmful content.
+The second is hallucination, where the model confidently gives wrong information
+even when it does not know the answer [3].
+
+Existing tools do not fully solve this problem. Meta's Llama Prompt Guard [4]
+handles some jailbreak patterns but misses semantic attacks. Rebuff only covers
+injection patterns. LlamaGuard [11] needs a separate GPU to run. No single open
+source tool covers all attack types with production-level security and an easy
+deployment path.
+
+FIE was built to fill this gap. It provides:
+
+\begin{itemize}
+  \item A 10-layer adversarial detection pipeline covering prompt injection,
+        jailbreaks, many-shot conditioning, GCG suffix attacks, indirect injection,
+        model extraction, and system prompt leakage.
+  \item A hallucination monitoring system using a shadow model jury, an XGBoost
+        classifier with AUC-ROC of 0.840, and ground truth verification.
+  \item A Python SDK (\texttt{pip install fie-sdk}) that runs fully offline with
+        bundled ML models. No GPU, no API key, and no server are required.
+  \item A production-ready REST API deployed on Google Cloud Run with automated
+        CI/CD, security hardening, and rate limiting.
+\end{itemize}
+
+\section{Related Work}
+
+\textbf{Adversarial Attacks on LLMs.}
+Prompt injection was formally described by Perez and Ribeiro (2022) [5], showing
+that LLMs can be manipulated by embedding instructions inside user input. Zou
+et al. (2023) [6] introduced Greedy Coordinate Gradient (GCG) attacks, which
+use gradient-based search to find adversarial suffixes that reliably cause
+harmful outputs. Chao et al. (2023) [7] introduced PAIR (Prompt Automatic
+Iterative Refinement), where an attacker LLM rewrites prompts until a target
+model is jailbroken. Anil et al. (2024) [8] from Google DeepMind introduced
+many-shot jailbreaking, showing that embedding many scripted Q/A pairs in a
+prompt progressively bypasses safety training.
+
+\textbf{Hallucination in LLMs.}
+Ji et al. (2023) [3] provide a survey of LLM hallucination, putting it into
+categories such as factual inconsistency, fabrication, and reasoning errors.
+TruthfulQA [9] and HaluEval [10] are standard benchmarks for measuring how
+often models produce false statements.
+
+\textbf{Existing Detection Tools.}
+Meta's Llama Prompt Guard 2 [4] is a fine-tuned classifier for jailbreak and
+injection detection. It gets 64.9\% recall on JailbreakBench [1] but requires
+running a separate language model. Rebuff only covers injection patterns.
+LlamaGuard [11] classifies inputs and outputs for policy violations but needs
+GPU inference. FIE is different because it combines multiple detection layers
+into one offline SDK with no infrastructure cost.
+
+\section{System Architecture}
+
+FIE works in two modes: a local SDK mode and a server pipeline mode.
+
+In local SDK mode, a developer wraps their LLM call with the \texttt{@monitor}
+decorator or calls \texttt{scan\_prompt()} directly. All detection runs inside
+the application using bundled models. No network call is made.
+
+In server mode, the prompt is also sent to the FIE FastAPI backend, which runs
+additional layers including FAISS-based semantic search against 1,000+ labeled
+attack vectors, a three-model shadow jury (Llama-3.3-70B, DeepSeek-R1,
+Qwen-QWQ-32B via Groq API), and ground truth verification using Wikidata
+and Serper search.
+
+\section{Detection Methodology}
+
+\subsection{Adversarial Detection Pipeline}
+
+The pipeline has 10 layers. Each layer runs independently and produces a
+confidence score. The final score is the highest confidence across all layers
+that fired. Table 1 describes each layer.
+
+\begin{table}[H]
+\centering
+\caption{Table 1: FIE Adversarial Detection Layers}
+\vspace{4pt}
+\begin{tabular}{p{1.0cm} p{2.5cm} p{2.5cm} p{6.5cm}}
+\toprule
+\textbf{Layer} & \textbf{Scope} & \textbf{Method} & \textbf{What It Catches} \\
+\midrule
+1  & SDK + Server & Regex library    & Direct injection, jailbreak personas, token smuggling, instruction override \\
+2  & SDK + Server & PromptGuard      & Keyword combinations with leet-speak normalization \\
+3b & SDK + Server & Many-shot detector & Scripted Q/A exchanges conditioning the model \\
+4  & SDK + Server & Indirect injection & Attacks embedded in documents or URLs \\
+5  & SDK + Server & GCG scanner      & High-entropy adversarial suffixes \\
+6  & SDK + Server & Perplexity proxy  & Base64, Caesar cipher, Unicode lookalike attacks \\
+7  & SDK + Server & PAIR classifier  & Iteratively rephrased natural language jailbreaks \\
+3  & Server only  & FAISS search     & Semantic similarity to 1,000+ labeled attacks \\
+8  & Server only  & Consistency check & Output disconnected from the input topic \\
+9  & Server only  & LLM intent check  & PAIR-style attacks that pass structural layers \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Many-Shot Jailbreak Detection}
+
+Many-shot jailbreaking [8] works by putting many Human/Assistant exchanges
+before a harmful request. The long context makes the model continue responding
+cooperatively even when the final question is harmful.
+
+FIE detects this using three signals: (1) the number of Human/Assistant pairs
+in the prompt, (2) the fraction of exchanges that mention harmful topics, and
+(3) whether the topic moves from harmless to harmful as the conversation goes on.
+
+For 4 to 7 pairs, a harmful signal must be present before an attack is flagged.
+This design was necessary to achieve 0\% false positive rate on benign
+educational Q/A prompts. For 8 or more pairs, volume alone is treated as
+suspicious because the conditioning effect described in [8] becomes strong at
+this scale.
+
+\subsection{Model Extraction Detection}
+
+Model extraction attacks involve systematically probing a model to copy its
+behavior [12]. FIE tracks three patterns per user session within a one-hour window:
+capability probing prompts (e.g., ``what can you do?''), output harvesting using
+near-identical prompts detected by Jaccard similarity above 0.85, and high
+request rates above 50 requests per hour with systematic prompt variation.
+
+\subsection{Prompt Exfiltration Detection}
+
+Prompt exfiltration happens when a model output reveals its system prompt. FIE
+detects this using canary tokens injected into shadow model system prompts, and
+six structural regex patterns that match numbered rule lists, role definition
+phrases, markdown system-prompt headers, and direct disclosure statements.
+
+\subsection{Hallucination Detection}
+
+Hallucination detection uses four methods on the model output. Shannon entropy
+scoring measures how uncertain the model is. Agreement scoring checks whether
+three independent shadow models give the same answer. An XGBoost classifier
+trained on 2,477 labeled examples predicts hallucination probability. Ground
+truth verification cross-checks answers against Wikidata and optionally Serper.
+
+\section{Evaluation}
+
+\subsection{JailbreakBench Evaluation}
+
+JailbreakBench [1] has 282 adversarial prompts across GCG, JBC, and PAIR
+attack methods, plus 100 benign prompts from Stanford Alpaca. Table 2 shows
+FIE's results compared to Meta's Llama Prompt Guard 2.
+
+\begin{table}[H]
+\centering
+\caption{Table 2: JailbreakBench Results -- FIE vs Llama Prompt Guard 2}
+\vspace{4pt}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{System} & \textbf{Recall} & \textbf{PAIR} & \textbf{GCG} & \textbf{JBC} & \textbf{FPR} & \textbf{F1} \\
+\midrule
+FIE v1.4.1 (offline) & \textbf{98.6\%} & \textbf{96.3\%} & \textbf{99.0\%} & \textbf{100\%} & 8.0\% & \textbf{97.9\%} \\
+Llama Prompt Guard 2-86M & 64.9\% & 32.9\% & 56.0\% & 100\% & 0.0\% & 78.7\% \\
+Llama Prompt Guard 2-22M & 53.5\% & 15.8\% & 38.0\% & 100\% & 1.0\% & 69.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FIE achieves 98.6\% overall recall compared to 64.9\% for Meta's best model.
+The PAIR recall improvement from FIE v1.1 (3.7\%) to v1.4.1 (96.3\%) is
+driven by adding the bundled LinearSVM classifier trained on sentence embeddings.
+
+\subsection{HarmBench Evaluation}
+
+HarmBench [2] covers 320 harmful behaviors across 7 categories plus 200
+benign prompts. Table 3 shows FIE's per-category results.
+
+\begin{table}[H]
+\centering
+\caption{Table 3: HarmBench Per-Category Detection Results}
+\vspace{4pt}
+\begin{tabular}{lc}
+\toprule
+\textbf{Harm Category} & \textbf{Detection Rate} \\
+\midrule
+Harassment and Bullying & 95.2\% \\
+Misinformation and Disinformation & 92.6\% \\
+Cybercrime and Intrusion & 90.4\% \\
+Illegal Activity & 88.7\% \\
+Harmful Content & 83.3\% \\
+Chemical and Biological & 66.7\% \\
+Copyright Violations & 23.8\% \\
+\midrule
+\textbf{Overall Recall} & \textbf{70.6\%} \\
+\textbf{Precision} & \textbf{93.4\%} \\
+\textbf{F1} & \textbf{80.4\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Copyright violations score lowest (23.8\%) because such content does not
+contain the injection or jailbreak syntax that FIE's structural layers rely on.
+
+\subsection{New Attack Type Evaluation}
+
+Table 4 shows results for the three detection modules added in v1.4.1.
+
+\begin{table}[H]
+\centering
+\caption{Table 4: FIE v1.4.1 New Attack Type Evaluation}
+\vspace{4pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Attack Type} & \textbf{Recall} & \textbf{FPR} & \textbf{Precision} & \textbf{F1} \\
+\midrule
+Many-Shot Jailbreak (full pipeline) & 100.0\% & 0.0\% & 100.0\% & 100.0\% \\
+Model Extraction & 83.3\% & 0.0\% & 100.0\% & 90.9\% \\
+Prompt Exfiltration & 100.0\% & 0.0\% & 100.0\% & 100.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hallucination Detection Benchmark}
+
+Table 5 shows hallucination detection results on 2,477 labeled examples from
+TruthfulQA [9], HaluEval [10], and MMLU.
+
+\begin{table}[H]
+\centering
+\caption{Table 5: Hallucination Detection Results (XGBoost v4)}
+\vspace{4pt}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{Recall} & \textbf{FPR} & \textbf{AUC-ROC} \\
+\midrule
+POET rule-based baseline & 56.4\% & 38.7\% & -- \\
+XGBoost v3 (1,757 examples) & 63.6\% & 38.6\% & 0.677 \\
+XGBoost v4 (2,477 examples) & \textbf{68.2\%} & \textbf{8.4\%} & \textbf{0.840} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+XGBoost v4 reduces the false positive rate from 38.6\% to 8.4\% while
+improving recall by 4.6 percentage points over v3, and by 11.8 percentage
+points over the rule-based baseline.
+
+\section{Production Deployment}
+
+FIE is deployed on Google Cloud Run in the \texttt{asia-south1} region with
+an automated CI/CD pipeline on GitHub Actions. Every push to the main branch
+runs secret scanning using Gitleaks, dependency auditing using pip-audit,
+static analysis using Ruff, matrix testing across Python 3.10 / 3.11 / 3.12,
+Docker image build and push to Google Artifact Registry, and automated
+deployment with post-deployment health verification.
+
+Authentication uses Workload Identity Federation, which means no service
+account keys are stored anywhere. The API has rate limiting at 100 requests
+per minute per IP, security headers (HSTS, Content Security Policy,
+X-Frame-Options), and CORS configured with specific allowed origins.
+
+\section{Discussion}
+
+FIE shows that high-recall adversarial detection is possible without GPU
+infrastructure. This makes it usable by individual developers and small teams
+who cannot afford dedicated model serving.
+
+The main limitation is the 8\% false positive rate on JailbreakBench benign
+prompts. This comes mostly from the PAIR classifier flagging borderline prompts.
+Future work includes per-layer confidence calibration and testing on multilingual
+attack datasets.
+
+The low copyright violation detection (23.8\%) reflects a real gap -- copyright
+content does not contain injection patterns. A semantic content classifier
+trained specifically on copyright examples would improve this. The model
+extraction detector also misses some output-harvesting patterns when Jaccard
+similarity falls below the threshold due to minor word-level variation.
+Embedding-based similarity would improve recall for this case.
+
+\section{Conclusion}
+
+This paper presented FIE, an open source framework for real-time adversarial
+attack detection and hallucination monitoring in large language models. FIE
+achieves 98.6\% recall on JailbreakBench, which is 33.7 percentage points
+higher than Meta's Llama Prompt Guard 2-86M, while running fully offline
+with no GPU.
+
+The system is deployed in production on Google Cloud Run, published as a
+Python SDK on PyPI, and tested against two publicly available benchmarks
+covering 602 attack prompts and 300 benign prompts across multiple attack
+types and harm categories.
+
+FIE is open source under the Apache-2.0 license. The code, SDK, and
+benchmark scripts are at:
+\url{https://github.com/AyushSingh110/Failure_Intelligence_System}
+
+\section{Acknowledgement}
+
+The author thanks the maintainers of JailbreakBench, HarmBench, TruthfulQA,
+and HaluEval for making their datasets publicly available. Benchmark
+evaluations used Groq API inference. Claude Code was used as a coding
+assistant during development.
+
+\section{References}
+
+\begin{enumerate}[leftmargin=*, label=\arabic*.]
+
+\item Chao P., Robey A., Dobriban E., Hassani H., Pappas G.J., Wong E.,
+      ``JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large
+      Language Models'', arXiv:2404.01318, 2024.
+      \url{https://arxiv.org/abs/2404.01318}
+
+\item Mazeika M., Phan L., Yin X., Zou A., Wang Z., Mu N., Hendrycks D.,
+      ``HarmBench: A Standardized Evaluation Framework for Automated Red
+      Teaming and Robust Refusal'', arXiv:2402.04249, 2024.
+      \url{https://arxiv.org/abs/2402.04249}
+
+\item Ji Z., Lee N., Frieske R., Yu T., Su D., Xu Y., Shi F., Hooi B.,
+      ``Survey of Hallucination in Natural Language Generation'',
+      ACM Computing Surveys, 2023, 55 (12), 1--38.
+      \url{https://arxiv.org/abs/2202.03629}
+
+\item Meta AI, ``Llama Prompt Guard 2'', Meta AI Research, 2024.
+      \url{https://ai.meta.com/research/publications/llama-prompt-guard-2/}
+
+\item Perez E., Ribeiro I., ``Ignore Previous Prompt: Attack Techniques
+      for Language Models'', arXiv:2211.09527, 2022.
+      \url{https://arxiv.org/abs/2211.09527}
+
+\item Zou A., Wang Z., Kolter J.Z., Fredrikson M., ``Universal and
+      Transferable Adversarial Attacks on Aligned Language Models'',
+      arXiv:2307.15043, 2023.
+      \url{https://arxiv.org/abs/2307.15043}
+
+\item Chao P., Robey A., Dobriban E., Hassani H., Pappas G.J., Wong E.,
+      ``Jailbreaking Black Box Large Language Models in Twenty Queries'',
+      arXiv:2310.08419, 2023.
+      \url{https://arxiv.org/abs/2310.08419}
+
+\item Anil C., Durmus E., Sharma M., Benton J., Kundu S., Batson J., et al.,
+      ``Many-Shot Jailbreaking'', Anthropic Technical Report, 2024.
+      \url{https://www.anthropic.com/research/many-shot-jailbreaking}
+
+\item Lin S., Hilton J., Evans O., ``TruthfulQA: Measuring How Models
+      Mimic Human Falsehoods'', Proceedings of ACL, 2022.
+      \url{https://arxiv.org/abs/2109.07958}
+
+\item Li J., Cheng X., Zhao W.X., Nie J.Y., Wen J.R., ``HaluEval: A
+      Large-Scale Hallucination Evaluation Benchmark for Large Language
+      Models'', Proceedings of EMNLP, 2023.
+      \url{https://arxiv.org/abs/2305.11747}
+
+\item Inan H., Upasani K., Chi J., Rungta R., Iyer K., Mao Y., et al.,
+      ``Llama Guard: LLM-based Input-Output Safeguard for Human-AI
+      Conversations'', arXiv:2312.06674, 2023.
+      \url{https://arxiv.org/abs/2312.06674}
+
+\item Tramer F., Zhang F., Juels A., Reiter M.K., Ristenpart T.,
+      ``Stealing Machine Learning Models via Prediction APIs'',
+      Proceedings of USENIX Security Symposium, 2016.
+      \url{https://arxiv.org/abs/1609.02943}
+
+\end{enumerate}
+
+\end{document}
