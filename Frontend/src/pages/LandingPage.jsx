@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { isLoggedIn } from '../lib/auth'
 
 const CODE = `from fie import monitor
@@ -56,8 +56,13 @@ const STEPS = [
 ]
 
 export default function LandingPage() {
-  const loggedIn      = isLoggedIn()
+  const navigate = useNavigate()
+  const loggedIn = isLoggedIn()
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (loggedIn) navigate('/dashboard', { replace: true })
+  }, [loggedIn, navigate])
 
   const copy = () => {
     navigator.clipboard.writeText('pip install fie-sdk')
