@@ -6,6 +6,7 @@ import threading
 import uuid
 import time
 import logging
+import os
 
 logger = logging.getLogger("fie.server")
 
@@ -24,6 +25,12 @@ except ImportError:
     _rate_limiting_available = False
 
 settings = get_settings()
+
+# Allowed origins: env-configurable, defaults to localhost in dev
+_ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:3000,http://localhost:8000",
+).split(",") if o.strip()]
 
 
 def _warm_encoder_in_background() -> None:
@@ -79,9 +86,10 @@ if _rate_limiting_available:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Tenant-ID"],
 )
 
 app.include_router(router, prefix="/api/v1")
@@ -89,20 +97,29 @@ app.include_router(auth_router, prefix="/api/v1")
 
 
 @app.middleware("http")
-async def request_id_logging(request: Request, call_next):
-    """Inject a unique request_id into every request for log correlation."""
+async def security_and_logging(request: Request, call_next):
+    """Security headers + request-ID logging on every response."""
     rid = request.headers.get("X-Request-ID") or str(uuid.uuid4())[:8]
     request.state.request_id = rid
     start = time.perf_counter()
     response = await call_next(request)
     elapsed = round((time.perf_counter() - start) * 1000, 1)
-    # Skip noisy health checks
+
+    # ── Security headers ────────────────────────────────────────────────
+    response.headers["X-Request-ID"] = rid
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Tight CSP for API server (no HTML pages served, only JSON)
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+
     if request.url.path not in ("/health", "/"):
         logger.info(
             "rid=%s method=%s path=%s status=%d latency=%.1fms",
             rid, request.method, request.url.path, response.status_code, elapsed,
         )
-    response.headers["X-Request-ID"] = rid
     return response
 
 
@@ -116,5 +133,23 @@ def root() -> dict[str, str]:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "healthy"}
+def health() -> dict:
+    """Liveness probe — returns component status for uptime monitors."""
+    from storage.database import get_db
+    db_ok = False
+    try:
+        db = get_db()
+        db_ok = db is not None
+    except Exception:
+        pass
+
+    components = {
+        "api":      "ok",
+        "database": "ok" if db_ok else "degraded",
+    }
+    overall = "healthy" if all(v == "ok" for v in components.values()) else "degraded"
+    return {
+        "status":     overall,
+        "version":    settings.app_version,
+        "components": components,
+    }
