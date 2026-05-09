@@ -52,7 +52,7 @@ def monitor(
     model_name:    Optional[str] = None,
     alert_slack:   Optional[str] = None,
     run_full_jury: bool          = True,
-    mode:          str           = "monitor", 
+    mode:          str           = "monitor",
     log_results:   bool          = True,
 
     async_mode:    Optional[bool] = None,

@@ -20,7 +20,7 @@ class ExtractedClaim:
     raw_text: str
 
 
-# Extraction prompt 
+# Extraction prompt
 _EXTRACTION_PROMPT = """\
 You are a fact extraction system. Read the question and the answer below, then extract the MAIN factual claim.
 
@@ -84,9 +84,9 @@ def extract_claim(text: str, question: str = "") -> Optional[ExtractedClaim]:
             prompt = _EXTRACTION_PROMPT_NO_QUESTION.format(text=text[:500])
         response = groq.complete(
             prompt,
-            model_name  = "llama-3.1-8b-instant",  
+            model_name  = "llama-3.1-8b-instant",
             max_tokens  = 80,
-            temperature = 0.0,                     
+            temperature = 0.0,
         )
 
         if not response.success or not response.output_text:

@@ -136,7 +136,7 @@ def compute_disagreement(
     # Filter out blank outputs — a model that returned nothing is not useful
     valid_outputs = [o for o in model_outputs if o.strip()]
 
-    # Edge cases 
+    # Edge cases
     if len(valid_outputs) == 0:
         return EnsembleResult(
             disagreement=False,
@@ -154,7 +154,7 @@ def compute_disagreement(
             n_pairs=0,
         )
 
-    # All pairwise similarities 
+    # All pairwise similarities
     pair_scores: list[float] = []
 
     for out_a, out_b in combinations(valid_outputs, 2):

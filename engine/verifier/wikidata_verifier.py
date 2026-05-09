@@ -37,7 +37,7 @@ class WikidataResult:
     entity_label:   str   = ""
     entity_desc:    str   = ""
     wikidata_value: str   = ""
-    matches_claim:  bool  = True   
+    matches_claim:  bool  = True
     confidence:     float = 0.0
     source:         str   = "Wikidata"
     error:          str   = ""
@@ -49,12 +49,12 @@ _INVENTION_PROPERTIES = frozenset({
     "discovered_by", "developer", "manufacturer", "author", "composer",
 })
 
-# Entity description keywords that suggest a creative work 
+# Entity description keywords that suggest a creative work
 _CREATIVE_WORK_SIGNALS = (
     "single by", "song by", "album by", "film by", "movie by",
     "television series", "tv series", "video game", "novel by",
     "book by", "play by", "musical", "opera", "podcast",
-    "2010", "2011", "2012", "2013", "2014", "2015", 
+    "2010", "2011", "2012", "2013", "2014", "2015",
 )
 
 
@@ -144,14 +144,14 @@ def _search_entity_with_context(
         if not _is_creative_work_entity(desc, property_name):
             return hit  # first non-creative-work result from enriched query
 
-    #plain subject with top 5 candidates, skip creative works 
+    #plain subject with top 5 candidates, skip creative works
     candidates = _fetch_search_results(subject, limit=5, timeout=timeout, headers=headers)
     for hit in candidates:
         desc = hit.get("description", "")
         if not _is_creative_work_entity(desc, property_name):
             return hit
 
-    # absolute fallback  first plain result 
+    # absolute fallback  first plain result
     if candidates:
         return candidates[0]
 

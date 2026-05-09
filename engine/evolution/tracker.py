@@ -77,7 +77,7 @@ class SignalEvolutionTracker:
     def current_window_size(self) -> int:
         return self._count
 
-    # Public EMA metrics 
+    # Public EMA metrics
 
     def average_entropy(self) -> float:
         return round(self._entropy_ema.value, 4)
@@ -129,5 +129,5 @@ class SignalEvolutionTracker:
         }
 
 
-# Singleton 
+# Singleton
 evolution_tracker = SignalEvolutionTracker()

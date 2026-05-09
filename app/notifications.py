@@ -46,7 +46,7 @@ def _send(subject: str, html: str, to: Optional[str] = None) -> None:
     threading.Thread(target=_post, daemon=True).start()
 
 
-# Email templates 
+# Email templates
 def _base(title: str, body_html: str, badge_color: str = "#ff4466") -> str:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return f"""

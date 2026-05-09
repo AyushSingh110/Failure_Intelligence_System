@@ -17,19 +17,19 @@ from engine.archetypes.registry import adversarial_registry, FAISSSearchResult
 from engine.prompt_guard import score_prompt_attack
 
 
-# Attack pattern definitions 
+# Attack pattern definitions
 
 @dataclass
 class _AttackPattern:
-    category:        str     
-    root_cause:      str     
-    base_confidence: float   
+    category:        str
+    root_cause:      str
+    base_confidence: float
     pattern:         re.Pattern
 
 
 _ATTACK_PATTERNS: list[_AttackPattern] = [
 
-    # PROMPT INJECTION 
+    # PROMPT INJECTION
     _AttackPattern(
         category="INJECTION",
         root_cause="PROMPT_INJECTION",
@@ -57,7 +57,7 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
         ),
     ),
 
-    # JAILBREAK 
+    # JAILBREAK
     _AttackPattern(
         category="JAILBREAK",
         root_cause="JAILBREAK_ATTEMPT",
@@ -152,7 +152,7 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
         ),
     ),
 
-    # TOKEN SMUGGLING 
+    # TOKEN SMUGGLING
     _AttackPattern(
         category="SMUGGLING",
         root_cause="TOKEN_SMUGGLING",
@@ -437,7 +437,7 @@ def _run_guard_detection(prompt: str) -> tuple[str | None, float, list[str]]:
         return None, 0.0, []
     return signal.root_cause, signal.score, list(signal.evidence)
 
-# FAISS semantic search 
+# FAISS semantic search
 def _run_faiss_detection(prompt: str) -> tuple[FAISSSearchResult | None, float]:
     cfg = get_settings()
 
@@ -1341,7 +1341,7 @@ class AdversarialSpecialist(BaseJuryAgent):
 
         confidence = max(active_confidences) if active_confidences else 0.0
 
-        # Build mitigation string 
+        # Build mitigation string
         mitigation_map = {
             "PROMPT_INJECTION": (
                 "Implement prompt sanitization: strip or escape meta-instruction keywords "
@@ -1567,5 +1567,5 @@ class AdversarialSpecialist(BaseJuryAgent):
         )
 
 
-# Module-level singleton 
+# Module-level singleton
 adversarial_specialist = AdversarialSpecialist()

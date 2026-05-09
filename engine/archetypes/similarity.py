@@ -36,7 +36,7 @@ def _extract_features(signal: FailureSignalVector) -> list[float]:
         signal.fsd_score,
         signal.agreement_score,
         signal.ensemble_similarity,
-        0.0,   
+        0.0,
     ]
 
 

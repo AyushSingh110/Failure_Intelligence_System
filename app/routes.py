@@ -73,7 +73,7 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
         consistency["answer_counts"],
         len(model_outputs),
     )
-    ensemble      = compute_disagreement(model_outputs)   
+    ensemble      = compute_disagreement(model_outputs)
 
     ensemble_fires = (
         ensemble["disagreement"] is True
@@ -110,7 +110,7 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
     )
 
 
-# Phase 1 endpoints 
+# Phase 1 endpoints
 
 @router.post("/track", response_model=TrackResponse)
 def track_inference(request: InferenceRequest) -> TrackResponse:
@@ -250,7 +250,7 @@ def clear_all_inferences(
     return {"status": "cleared", "deleted_count": count}
 
 
-# ── Phase 2 endpoints 
+# ── Phase 2 endpoints
 
 @router.post("/analyze/v2", response_model=ArchetypeAnalysisResponse)
 def analyze_v2(body: AnalyzeRequest) -> ArchetypeAnalysisResponse:
@@ -287,7 +287,7 @@ def reset_clusters() -> dict:
     return {"status": "reset", "message": "Archetype registry cleared"}
 
 
-#Phase 3 endpoint 
+#Phase 3 endpoint
 
 from app.schemas import DiagnosticRequest, DiagnosticResponse
 
@@ -425,7 +425,7 @@ def monitor(
         for r in shadow_results_raw
     ]
 
-    # Step 3: Run FIE pipeline 
+    # Step 3: Run FIE pipeline
     signal    = _build_failure_signal(model_outputs)
     archetype = label_failure_archetype(signal)
     primary   = model_outputs[0]
@@ -563,7 +563,7 @@ def monitor(
                     f"Auto-fix skipped: question_type={_question_type} does not use external GT."
                 )
 
-            # Steps 4–10: Ground Truth Pipeline 
+            # Steps 4–10: Ground Truth Pipeline
             from engine.verifier.ground_truth_pipeline import run_ground_truth_pipeline
             gt = run_ground_truth_pipeline(
                 prompt          = body.prompt,
@@ -589,7 +589,7 @@ def monitor(
                 gt.source, gt.requires_escalation, gt.confidence,
             )
 
-            # Step 10: Escalation check 
+            # Step 10: Escalation check
             if gt.requires_escalation:
                 requires_human_review = True
                 escalation_reason_str = gt.escalation_reason

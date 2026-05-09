@@ -11,7 +11,7 @@ from fie.config import FIEConfig
 
 logger = logging.getLogger("fie")
 
-# Package version (bumped on each release) 
+# Package version (bumped on each release)
 SDK_VERSION = "1.4.1"
 
 
@@ -29,7 +29,7 @@ class FIEClient:
                 "Content-Type": "application/json",
             })
 
-    #Core: monitor endpoint 
+    #Core: monitor endpoint
 
     def monitor(
         self,
@@ -71,7 +71,7 @@ class FIEClient:
             logger.warning("[FIE] monitor() error: %s", exc)
             return {}
 
-    #Feedback / Ground Truth 
+    #Feedback / Ground Truth
 
     def submit_feedback(
         self,
@@ -106,7 +106,7 @@ class FIEClient:
             logger.warning("[FIE] submit_feedback() error: %s", exc)
             return {}
 
-    #Inference lookup 
+    #Inference lookup
 
     def get_inference(self, request_id: str) -> dict:
         """

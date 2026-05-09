@@ -63,7 +63,7 @@ def _normalize(text: str) -> str:
     return result.lower().strip()
 
 
-# Encoding representative 
+# Encoding representative
 def _encoding_repr(text: str) -> str:
     """
     Returns the text used for semantic encoding.
@@ -88,7 +88,7 @@ def _keyword_matches(short_text: str, other_text: str) -> bool:
     return bool(re.search(pattern, other_text, re.IGNORECASE))
 
 
-#  Semantic clustering 
+#  Semantic clustering
 def _semantic_cluster(
     normalized_outputs: list[str],
     threshold: float = SEMANTIC_SIMILARITY_THRESHOLD,
@@ -163,7 +163,7 @@ def _semantic_cluster(
     }
 
 
-#Exact string matching (fallback) 
+#Exact string matching (fallback)
 def _exact_cluster(normalized_outputs: list[str]) -> dict[str, int]:
     # Truncate keys to 300 chars to prevent MongoDB field length issues
     truncated = [o[:300] for o in normalized_outputs]
@@ -229,7 +229,7 @@ def is_primary_outlier(primary_output: str, shadow_outputs: list[str]) -> bool:
         return normalized_primary.strip() != majority_label.strip()
 
 
-#Public API 
+#Public API
 def compute_consistency(model_outputs: list[str]) -> ConsistencyResult:
     if not model_outputs:
         return ConsistencyResult(agreement_score=0.0, fsd_score=0.0, answer_counts={})

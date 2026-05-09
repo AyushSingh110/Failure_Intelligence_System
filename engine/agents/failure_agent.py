@@ -46,7 +46,7 @@ _TEMPORAL_ROOTS = frozenset({
 })
 
 
-# DiagnosticJury 
+# DiagnosticJury
 
 class DiagnosticJury:
 
@@ -169,14 +169,14 @@ class DiagnosticJury:
         )
 
 
-#FailureAgent 
+#FailureAgent
 
 class FailureAgent:
 
     def __init__(self) -> None:
         self._jury = DiagnosticJury()
 
-    # Phase 1 
+    # Phase 1
 
     def run(
         self,
@@ -200,7 +200,7 @@ class FailureAgent:
             "embedding_distance":    embedding["embedding_distance"],
         }
 
-    # Phase 2 
+    # Phase 2
 
     def run_full(
         self,
@@ -230,7 +230,7 @@ class FailureAgent:
             "trend_summary":         trend,
         }
 
-    # Phase 3 
+    # Phase 3
 
     def run_diagnostic(self, request: DiagnosticRequest) -> DiagnosticResponse:
         """Phase 3: full Phase 1 + Phase 2 + DiagnosticJury reasoning."""
@@ -319,6 +319,6 @@ class FailureAgent:
         )
 
 
-# Singletons 
+# Singletons
 failure_agent   = FailureAgent()
 diagnostic_jury = failure_agent._jury

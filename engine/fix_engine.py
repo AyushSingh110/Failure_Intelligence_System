@@ -12,7 +12,7 @@ from engine.prompt_guard import score_prompt_attack
 logger = logging.getLogger(__name__)
 
 
-#Fix strategy constants 
+#Fix strategy constants
 STRATEGY_SHADOW_CONSENSUS     = "SHADOW_CONSENSUS"
 STRATEGY_SANITIZE_AND_RERUN   = "SANITIZE_AND_RERUN"
 STRATEGY_CONTEXT_INJECTION    = "CONTEXT_INJECTION"
@@ -64,9 +64,9 @@ class FixResult:
     original_output:   str
     # Root cause that triggered this fix
     root_cause:        str
-    # Confidence in the fix 
+    # Confidence in the fix
     fix_confidence:    float
-    # How much better is the fix? 
+    # How much better is the fix?
     improvement_score: float = 0.0
     # Warning to show user when confidence is low
     warning:           str = ""
@@ -76,7 +76,7 @@ class FixResult:
     escalation_reason:     str  = ""
 
 
-#Strategy 1 — Shadow Consensus 
+#Strategy 1 — Shadow Consensus
 def _apply_human_escalation(
     primary_output: str,
     root_cause:     str,
@@ -337,7 +337,7 @@ def _apply_sanitize_and_rerun(
     )
 
 
-#Strategy 3 — Context Injection 
+#Strategy 3 — Context Injection
 def _apply_context_injection(
     prompt:         str,
     primary_output: str,
@@ -423,8 +423,8 @@ def _generate_temporal_fallback(prompt: str, today: str) -> str:
         )
     elif any(w in prompt_lower for w in ["weather", "temperature"]):
         return (
-            f"I cannot access real-time weather data. "
-            f"Please check weather.com or your local weather service for current conditions."
+            "I cannot access real-time weather data. "
+            "Please check weather.com or your local weather service for current conditions."
         )
     else:
         return (
@@ -434,7 +434,7 @@ def _generate_temporal_fallback(prompt: str, today: str) -> str:
         )
 
 
-# Prompt Decomposition 
+# Prompt Decomposition
 
 _DOUBLE_NEGATIVE_PATTERNS = [
     (re.compile(r'\bnot\s+incorrect\b', re.IGNORECASE), 'correct'),
@@ -515,7 +515,7 @@ def _apply_prompt_decomposition(
     )
 
 
-#Strategy 5 — Self Consistency 
+#Strategy 5 — Self Consistency
 
 def _apply_self_consistency(
     prompt:         str,
@@ -586,7 +586,7 @@ def _apply_self_consistency(
     )
 
 
-#No-fix fallback 
+#No-fix fallback
 
 def _apply_no_fix(
     primary_output: str,
@@ -615,7 +615,7 @@ def _apply_no_fix(
     )
 
 
-#Public API — main entry point 
+#Public API — main entry point
 def apply_fix(
     prompt:          str,
     primary_output:  str,
@@ -657,7 +657,7 @@ def apply_fix(
             ),
         )
 
-    #Look up fix strategy 
+    #Look up fix strategy
     strategy = forced_strategy or _STRATEGY_MAP.get(root_cause, STRATEGY_NO_FIX)
 
     if strategy == STRATEGY_NO_FIX:
@@ -668,7 +668,7 @@ def apply_fix(
             reason         = f"No fix strategy defined for root cause: {root_cause}",
         )
 
-    # Apply the right strategy 
+    # Apply the right strategy
     try:
         if strategy == STRATEGY_SHADOW_CONSENSUS:
             # Use shadow model outputs directly — fastest fix

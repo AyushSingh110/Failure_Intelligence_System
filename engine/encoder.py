@@ -8,7 +8,7 @@ import numpy as np
 
 from config import get_settings
 
-logger   = settings = None 
+logger   = settings = None
 
 
 def _lazy_settings():
@@ -70,7 +70,7 @@ class SentenceEncoder:
             logging.getLogger(__name__).warning("Encoding failed: %s", exc)
             return np.zeros((len(texts), cfg.embedding_dimension), dtype=np.float32)
 
-    # ── Internal 
+    # ── Internal
 
     def _get_model(self):
         """Lazy-loads the SentenceTransformer model exactly once."""
@@ -78,9 +78,9 @@ class SentenceEncoder:
             return self._model
 
         with self._lock:
-            if self._loaded:   
+            if self._loaded:
                 return self._model
-            self._loaded = True   
+            self._loaded = True
             try:
                 from sentence_transformers import SentenceTransformer
                 cfg = _lazy_settings()
