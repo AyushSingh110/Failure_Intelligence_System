@@ -9,6 +9,8 @@ FIE sits between your LLM and your users. It catches adversarial attacks before 
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://mongodb.com/atlas)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![CI](https://github.com/AyushSingh110/Failure_Intelligence_System/actions/workflows/ci.yml/badge.svg)](https://github.com/AyushSingh110/Failure_Intelligence_System/actions/workflows/ci.yml)
+[![Deployed on Cloud Run](https://img.shields.io/badge/Deployed-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
 
 ---
 
@@ -501,6 +503,52 @@ pytest tests/test_core.py -v
 # Covers: question classifier, XGBoost fallback, per-type thresholds,
 #         SDK local predictor, entropy detector, SDK config
 ```
+
+---
+
+## CI/CD Pipeline
+
+Every push to `main` runs the full pipeline automatically:
+
+```text
+push to main
+    ├── secret-scan      (gitleaks — scans all commits for hardcoded secrets)
+    ├── dependency-audit (pip-audit — checks for known CVEs in dependencies)
+    ├── lint             (ruff — style and correctness checks)
+    │
+    └── test (Python 3.10 / 3.11 / 3.12 matrix)
+            ├── offline unit tests
+            ├── integration tests
+            ├── adversarial smoke tests (many-shot, prompt leakage, injection)
+            ├── package (wheel build + verification)
+            ├── health-check (live server smoke test)
+            │
+            └── deploy → Google Cloud Run (asia-south1)
+                    only runs on push to main, never on PRs
+```
+
+PRs get full CI (test, lint, security scan) but **never trigger a deploy** — only merged code ships.
+
+To roll back a deployment:
+
+```bash
+gcloud run deploy failure-intelligence-system \
+  --image asia-south1-docker.pkg.dev/failure-intelligence-system/cloud-run-source-deploy/backend:PREVIOUS_SHA \
+  --region asia-south1
+```
+
+---
+
+## Security
+
+The server is hardened with:
+
+- **Rate limiting** — 100 req/min per IP (global), 30 req/min on auth endpoints, 20 req/min on scan endpoints via SlowAPI
+- **Security headers** — HSTS, CSP (`default-src 'none'`), X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy, Permissions-Policy
+- **CORS** — configurable allowed origins via `CORS_ALLOWED_ORIGINS` env var (no wildcard in production)
+- **Secret scanning** — gitleaks runs on every push via GitHub Actions
+- **Dependency auditing** — pip-audit checks for CVEs on every push
+- **Workload Identity Federation** — GCP authentication uses keyless OIDC (no service account JSON keys stored anywhere)
 
 ---
 
