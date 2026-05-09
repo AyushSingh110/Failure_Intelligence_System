@@ -24,6 +24,9 @@ numpy
 faiss-cpu
 sentence-transformers
 
+# Agentic pipeline orchestration
+langgraph>=0.2.0
+
 # Email notifications
 sendgrid>=6.10
 

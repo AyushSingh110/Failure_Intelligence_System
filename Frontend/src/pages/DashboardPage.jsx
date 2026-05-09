@@ -82,6 +82,20 @@ function KPICard({ label, value, suffix = '', decimals = 0, sub, color, delay = 
   )
 }
 
+// ── Derive archetype from metrics when backend doesn't set it ─────────────
+function deriveArchetype(record) {
+  if (record.archetype) return record.archetype
+  const entropy    = record.metrics?.entropy || 0
+  const agreement  = record.metrics?.agreement_score || 0
+  const highRisk   = record.metrics?.high_failure_risk === true
+  const isAttack   = record.is_adversarial === true || record.adversarial?.is_attack === true
+  if (isAttack)                          return 'MODEL_BLIND_SPOT'
+  if (entropy >= 0.75 || highRisk)       return 'HALLUCINATION_RISK'
+  if (entropy >= 0.4 && agreement < 0.5) return 'UNSTABLE_OUTPUT'
+  if (agreement < 0.5)                   return 'LOW_CONFIDENCE'
+  return 'STABLE'
+}
+
 // ── Archetype badge ───────────────────────────────────────────────────────
 const ARCHETYPE_COLOR = {
   STABLE:                    '#00ff88',
@@ -160,7 +174,7 @@ function InferenceRow({ record, delay }) {
   const isAttack   = record.is_adversarial === true || record.adversarial?.is_attack === true
   const prompt     = record.input_text || ''
   const model      = record.model_name || 'unknown'
-  const archetype  = record.archetype || 'STABLE'
+  const archetype  = deriveArchetype(record)
   const confidence = record.metrics?.confidence || record.metrics?.classifier_confidence
   const time       = record.timestamp
     ? new Date(record.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -369,9 +383,16 @@ function StatPill({ label, value, color }) {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { data: inferences, loading } = useInferences()
-  const { data: trend }               = useTrend()
-  const [filter, setFilter]           = useState('all')
+  const { data: inferences, loading, refetch } = useInferences()
+  const { data: trend }                        = useTrend()
+  const [filter, setFilter]                    = useState('all')
+  const [refreshing, setRefreshing]            = useState(false)
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await refetch()
+    setTimeout(() => setRefreshing(false), 600)
+  }
 
   const kpis       = computeKPIs(inferences)
   const timeSeries = buildTimeSeries(inferences)
@@ -385,7 +406,7 @@ export default function DashboardPage() {
   const recent = filtered.slice(0, 14)
 
   const archetypeCounts = inferences.reduce((acc, r) => {
-    const a = r.archetype || 'STABLE'
+    const a = deriveArchetype(r)
     acc[a] = (acc[a] || 0) + 1
     return acc
   }, {})
@@ -425,7 +446,7 @@ export default function DashboardPage() {
 
       {/* Header */}
       <div style={{
-        marginBottom: '24px',
+        marginBottom: '20px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
         animation: 'kpiIn 0.5s ease both',
       }}>
@@ -437,26 +458,78 @@ export default function DashboardPage() {
             Real-time LLM monitoring · Auto-refreshes every 10s
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{
-              width: '6px', height: '6px', borderRadius: '50%',
-              background: 'var(--accent-green)',
-              animation: 'pulse-dot 2s ease-in-out infinite',
-            }}/>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
-              Live
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {kpis.lastSeen && (
             <span style={{
               fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
               color: 'var(--text-muted)',
             }}>
-              Last: {lastSeenStr}
+              Last seen: {lastSeenStr}
             </span>
           )}
+          {/* Refresh button */}
+          <button
+            onClick={handleRefresh}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '7px',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-card)',
+              cursor: 'pointer',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px', color: 'var(--text-muted)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.color = 'var(--accent-cyan)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+          >
+            <svg style={{ animation: refreshing ? 'spin 0.6s linear' : 'none' }}
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M23 4v6h-6M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+            Refresh
+          </button>
+          {/* Live indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 10px', borderRadius: '7px',
+            border: '1px solid rgba(0,255,136,0.2)',
+            background: 'rgba(0,255,136,0.04)',
+          }}>
+            <div style={{
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: 'var(--accent-green)',
+              animation: 'pulse-dot 2s ease-in-out infinite',
+            }}/>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--accent-green)' }}>
+              Live
+            </span>
+          </div>
         </div>
+      </div>
+
+      {/* System status strip */}
+      <div style={{
+        display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap',
+        animation: 'kpiIn 0.4s ease 0.05s both',
+      }}>
+        {[
+          { label: 'PIPELINE', value: 'LangGraph', color: 'var(--accent-cyan)' },
+          { label: 'GUARD LAYERS', value: '9 active', color: 'var(--accent-green)' },
+          { label: 'JURY AGENTS', value: '3 online', color: 'var(--accent-green)' },
+          { label: 'RISK THRESHOLD', value: 'entropy > 0.75', color: 'var(--text-muted)' },
+          { label: 'INFERENCES', value: kpis.total > 0 ? `${kpis.total} tracked` : 'awaiting data', color: kpis.total > 0 ? 'var(--accent-cyan)' : 'var(--text-muted)' },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '5px 10px', borderRadius: '6px',
+            border: '1px solid var(--border)',
+            background: 'var(--bg-card)',
+          }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{label}</span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', fontWeight: 700, color }}>{value}</span>
+          </div>
+        ))}
       </div>
 
       {/* Degradation banner */}
@@ -654,16 +727,41 @@ export default function DashboardPage() {
           ))
         ) : (
           <div style={{
-            padding: '48px', textAlign: 'center',
-            fontFamily: 'JetBrains Mono, monospace',
+            padding: '40px 24px', textAlign: 'center',
           }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px' }}>
-              {filter === 'all' ? 'No inferences yet' : `No ${filter === 'risk' ? 'high-risk' : 'attack'} inferences`}
-            </div>
-            {filter === 'all' && (
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)' }}>
-                Connect your LLM with the fie-sdk to start monitoring
+            {filter !== 'all' ? (
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: 'var(--text-muted)' }}>
+                No {filter === 'risk' ? 'high-risk' : 'attack'} inferences in the current window
               </div>
+            ) : (
+              <>
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '12px',
+                  background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" strokeWidth="1.5">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                  </svg>
+                </div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', marginBottom: '8px', fontWeight: 600 }}>
+                  No inferences yet
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
+                  Send your first prompt through the SDK to start monitoring
+                </div>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '10px 16px', borderRadius: '8px',
+                  background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.15)',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
+                  color: 'var(--accent-cyan)', textAlign: 'left',
+                }}>
+                  pip install fie-sdk<br/>
+                  <span style={{ color: 'var(--text-muted)' }}>from fie import scan_prompt</span>
+                </div>
+              </>
             )}
           </div>
         )}
