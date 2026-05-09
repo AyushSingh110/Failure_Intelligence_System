@@ -20,8 +20,9 @@ function getCurrentRedirectUri() {
   if (typeof window === 'undefined') {
     return import.meta.env.VITE_REDIRECT_URI || ''
   }
-
-  return window.location.origin
+  // Must include /login so Google redirects back to the page
+  // that actually processes the ?code= callback — not the landing page.
+  return window.location.origin + '/login'
 }
 
 export function getGoogleRedirectUri() {
