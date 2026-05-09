@@ -7,7 +7,7 @@ from typing import Optional
 from app.schemas import AgentVerdict, FailureSignalVector
 
 
-# Context container 
+# Context container
 @dataclass(frozen=True)
 class DiagnosticContext:
     prompt:           str
@@ -40,7 +40,7 @@ class DiagnosticContext:
         )
 
 
-#Base agent 
+#Base agent
 
 class BaseJuryAgent(ABC):
     "Abstract base class for all DiagnosticJury agents"
@@ -54,7 +54,7 @@ class BaseJuryAgent(ABC):
         """
         ...
 
-    # Helpers available to all subclasses 
+    # Helpers available to all subclasses
     def _skip(self, reason: str) -> AgentVerdict:
         """return a skipped verdict with a clean reason string."""
         return AgentVerdict(

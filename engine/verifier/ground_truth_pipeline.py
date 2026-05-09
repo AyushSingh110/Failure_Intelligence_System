@@ -37,7 +37,7 @@ def run_ground_truth_pipeline(
     result = GroundTruthPipelineResult()
     result.pipeline_trace = []
 
-    # Cache lookup 
+    # Cache lookup
     try:
         from engine.ground_truth_cache import lookup_cache
         cache_hit = lookup_cache(prompt)
@@ -57,7 +57,7 @@ def run_ground_truth_pipeline(
         logger.warning("GT cache lookup failed: %s", exc)
         result.pipeline_trace.append(f"Cache lookup error: {exc}")
 
-    #Claim extraction 
+    #Claim extraction
     claim = None
     is_temporal = _is_temporal_root_cause(root_cause) and not _is_permanent_fact(prompt)
 
@@ -202,7 +202,7 @@ def run_ground_truth_pipeline(
             logger.warning("Wikidata verification failed: %s", exc)
             result.pipeline_trace.append(f"Wikidata error: {exc}")
 
-    # All verification sources exhausted 
+    # All verification sources exhausted
     # Decide based on consensus_strength whether to auto-correct or escalate
     consensus_strength = _compute_consensus_strength(shadow_outputs, shadow_weights)
     result.pipeline_trace.append(
@@ -275,7 +275,7 @@ def _is_meaningful_override(correct_value: str) -> bool:
         # Must start with uppercase to be a proper noun
         if not correct_value[0].isupper():
             return False
-        # Reject obvious sentence fragments 
+        # Reject obvious sentence fragments
         lower = correct_value.lower()
         bad_fragments = {
             "alchemist", "inventor", "chemist", "scientist", "engineer",

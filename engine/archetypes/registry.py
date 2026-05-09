@@ -15,14 +15,14 @@ from engine.encoder import get_encoder
 logger = logging.getLogger(__name__)
 
 
-# Data types 
+# Data types
 
 @dataclass
 class AdversarialRecord:
     prompt:   str
-    label:    str      
-    category: str      
-    source:   str      
+    label:    str
+    category: str
+    source:   str
 
 
 @dataclass
@@ -140,7 +140,7 @@ class AdversarialRegistry:
         self._faiss_ok = False
         self._initialized = False
 
-    # Public API 
+    # Public API
 
     @property
     def size(self) -> int:
@@ -267,7 +267,7 @@ class AdversarialRegistry:
         self._seeded = True
         logger.info("FAISS seeded with %d adversarial patterns", len(_SEED_CORPUS))
 
-    # ── Internal 
+    # ── Internal
 
     def _initialize_once(self) -> None:
         if self._initialized:

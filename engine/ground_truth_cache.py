@@ -71,7 +71,7 @@ def _get_similarity_threshold() -> float:
         return 0.92
 
 
-#Public API 
+#Public API
 def lookup_cache(question: str) -> Optional[CacheHit]:
     """
     Step 7 — Check the verified answer cache for a question.
@@ -94,7 +94,7 @@ def lookup_cache(question: str) -> Optional[CacheHit]:
         # semantic similarity search across all cached questions
         query_vec = _embed_question(question)
         if query_vec is None:
-            return None  
+            return None
 
         threshold = _get_similarity_threshold()
         query_arr = np.array(query_vec, dtype=np.float32)

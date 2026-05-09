@@ -161,5 +161,5 @@ class OllamaService:
             )
 
 
-#Module-level singleton 
+#Module-level singleton
 ollama_service = OllamaService()

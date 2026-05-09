@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-# Result dataclass 
+# Result dataclass
 @dataclass
 class ScanResult:
     """Result returned by scan_prompt()."""
@@ -24,7 +24,7 @@ class ScanResult:
     evidence:       dict = field(default_factory=dict)  # per-layer detail
 
 
-# Layer 1: attack pattern definitions 
+# Layer 1: attack pattern definitions
 @dataclass
 class _AttackPattern:
     category:        str
@@ -154,7 +154,7 @@ _ATTACK_PATTERNS: list[_AttackPattern] = [
 ]
 
 
-# Layer 1 helpers: obfuscation normalization 
+# Layer 1 helpers: obfuscation normalization
 
 _SPACED_SEGMENT_VOCAB: frozenset[str] = frozenset({
     "ignore", "disregard", "forget", "bypass", "override", "reveal",
@@ -433,7 +433,7 @@ def _run_many_shot_detection(prompt: str) -> tuple[str | None, float, dict]:
     }
 
 
-# Layer 4: Indirect prompt injection 
+# Layer 4: Indirect prompt injection
 
 _DOCUMENT_TRIGGER_RE = re.compile(
     r"(?:"
@@ -777,7 +777,7 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
     }
 
 
-#Layer 7: PAIR semantic intent classifier 
+#Layer 7: PAIR semantic intent classifier
 
 _pair_clf      = None
 _pair_embedder = None
@@ -894,7 +894,7 @@ _DEFAULT_MITIGATION = (
 )
 
 
-#Public API 
+#Public API
 
 def scan_prompt(
     prompt: str,

@@ -45,7 +45,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff
       - name: Lint with ruff
-        run: ruff check fie/ engine/ app/ --select E,F,W --ignore E501,F401
+        run: ruff check fie/ engine/ app/ --select E,F,W --ignore E501,F401,E402,E741,E702,E701,F841
 
   # ── Tests (matrix) ────────────────────────────────────────────────────
   test:

@@ -14,7 +14,7 @@ from engine.encoder import get_encoder
 logger = logging.getLogger(__name__)
 
 
-# Public return type 
+# Public return type
 
 class EmbeddingResult(TypedDict):
     embedding_distance:  float
@@ -35,7 +35,7 @@ def _strip_llm_prefix(text: str) -> str:
 
 
 
-# Sentence-Transformer 
+# Sentence-Transformer
 def _transformer_similarity(text_a: str, text_b: str) -> float | None:
     """
     Encodes both texts with the shared SentenceEncoder and returns
@@ -97,7 +97,7 @@ def _ngram_similarity(text_a: str, text_b: str) -> float:
 
 
 
-# Public API — identical signature and return type 
+# Public API — identical signature and return type
 
 def compute_embedding_distance(text_a: str, text_b: str) -> EmbeddingResult:
     """
@@ -105,14 +105,14 @@ def compute_embedding_distance(text_a: str, text_b: str) -> EmbeddingResult:
     """
     cfg = get_settings()
 
-    #  Edge cases  
+    #  Edge cases
     if not text_a.strip() and not text_b.strip():
         return EmbeddingResult(embedding_distance=0.0, semantic_similarity=1.0)
 
     if not text_a.strip() or not text_b.strip():
         return EmbeddingResult(embedding_distance=1.0, semantic_similarity=0.0)
 
-    # ── Choose path 
+    # ── Choose path
     similarity: float | None = None
 
     if cfg.embedding_use_transformer:

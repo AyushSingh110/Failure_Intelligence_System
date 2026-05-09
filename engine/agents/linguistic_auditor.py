@@ -11,12 +11,12 @@ from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext
 settings = get_settings()
 
 
-# Complexity dimension detectors 
+# Complexity dimension detectors
 class _Dimension(NamedTuple):
     name:   str
     weight: float
     fired:  bool
-    detail: str   
+    detail: str
 
 # Compiled regex patterns — compiled once at module load, not per call
 _RE_DOUBLE_NEGATION = re.compile(
@@ -149,7 +149,7 @@ def _failure_signal_strength(fsv) -> float:
     return round((e_contrib + a_contrib + r_contrib) / 3.0, 4)
 
 
-#  Agent 
+#  Agent
 
 class LinguisticAuditor(BaseJuryAgent):
     agent_name: str = "LinguisticAuditor"
@@ -160,7 +160,7 @@ class LinguisticAuditor(BaseJuryAgent):
         complexity_score, dims = compute_complexity_score(context.prompt)
         fired_dims = [d for d in dims if d.fired]
 
-        #  Skip if prompt has no detectable complexity 
+        #  Skip if prompt has no detectable complexity
         if complexity_score < cfg.jury_linguistic_complexity_threshold:
             return self._skip(
                 f"Prompt complexity score {complexity_score:.3f} is below "
@@ -168,13 +168,13 @@ class LinguisticAuditor(BaseJuryAgent):
                 f"Failure cause is likely not prompt complexity."
             )
 
-        # Compute failure signal strength 
+        # Compute failure signal strength
         signal_strength = _failure_signal_strength(context.fsv)
 
-        # ── Confidence = 40% complexity weight + 60% signal weight 
+        # ── Confidence = 40% complexity weight + 60% signal weight
         raw_confidence = 0.40 * complexity_score + 0.60 * signal_strength
 
-        #  Determine root cause 
+        #  Determine root cause
         model_failed = (
             context.fsv.entropy_score >= cfg.jury_linguistic_entropy_threshold
             or context.fsv.agreement_score <= cfg.low_agreement_threshold
@@ -198,7 +198,7 @@ class LinguisticAuditor(BaseJuryAgent):
                 "Monitor this query pattern — it may degrade under higher temperature "
                 "or with a weaker model."
             )
-            confidence   = raw_confidence * 0.4   
+            confidence   = raw_confidence * 0.4
 
         # Build evidence dict
         evidence = {
@@ -221,5 +221,5 @@ class LinguisticAuditor(BaseJuryAgent):
         )
 
 
-#  Module-level singleton 
+#  Module-level singleton
 linguistic_auditor = LinguisticAuditor()

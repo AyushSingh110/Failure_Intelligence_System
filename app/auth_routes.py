@@ -24,7 +24,7 @@ GOOGLE_TOKEN_URL     = "https://oauth2.googleapis.com/token"
 GOOGLE_USER_URL      = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
-# Schemas 
+# Schemas
 
 class GoogleCallbackRequest(BaseModel):
     code:         str
@@ -57,7 +57,7 @@ class UserInfo(BaseModel):
     calls_limit: int
 
 
-# Endpoints 
+# Endpoints
 @router.post("/google-callback", response_model=LoginResponse)
 def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
     """

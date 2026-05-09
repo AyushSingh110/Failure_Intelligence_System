@@ -27,7 +27,7 @@ class GroqModelResponse:
 
 
 # Diverse model families to reduce correlated failure.
-# Fallback options provided for any model that fails 
+# Fallback options provided for any model that fails
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
     "deepseek-r1-distill-llama-70b",
@@ -243,7 +243,7 @@ class GroqService:
             temperature=temperature,
         )
 
-    # Confidence-signal helpers 
+    # Confidence-signal helpers
 
     @staticmethod
     def _parse_confidence(raw_text: str) -> tuple[str, str]:
@@ -328,7 +328,7 @@ class GroqService:
             return False
 
 
-# Singleton instance 
+# Singleton instance
 # Created once when module loads, reused for all requests
 _groq_service_instance: Optional[GroqService] = None
 
