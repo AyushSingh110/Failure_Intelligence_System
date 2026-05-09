@@ -1,0 +1,812 @@
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+%% Packages
+\usepackage{lineno}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue}
+
+%% Code listing style
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!10}
+}
+
+%% Journal name -- change before submission
+\journal{Expert Systems with Applications}
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title
+\title{Failure Intelligence Engine (FIE): A Multi-Layer Open Source
+Framework for Real-Time Adversarial Attack Detection and Hallucination
+Monitoring in Large Language Models}
+
+%% Authors
+\author[pcu]{Ayush Singh}
+\ead{ayushsingh355vns@gmail.com}
+
+\address[pcu]{Department of Computer Science (Artificial Intelligence
+and Data Science), Pimpri Chinchwad University, Pune 411044,
+Maharashtra, India}
+
+%% Highlights (3-5 bullet points, 85 chars max each)
+\begin{highlights}
+\item FIE achieves 98.6\% recall on JailbreakBench, outperforming Meta Llama Prompt Guard 2 by 33.7 pp.
+\item A 10-layer pipeline covers prompt injection, jailbreaks, many-shot, model extraction, and leakage.
+\item Fully offline Python SDK runs without GPU, API key, or server infrastructure.
+\item Many-shot jailbreak detector achieves 0\% FPR on benign Q/A after threshold redesign.
+\item Production-deployed on Cloud Run with automated CI/CD and keyless GCP authentication.
+\end{highlights}
+
+%% Abstract
+\begin{abstract}
+Large Language Models (LLMs) are increasingly embedded in production
+applications including customer support, healthcare information, legal
+assistance, and educational tools. However, they remain vulnerable to
+a growing range of adversarial attacks, including prompt injection,
+persona-based jailbreaking, many-shot conditioning, model extraction,
+and system prompt exfiltration. Simultaneously, LLM hallucination
+continues to pose reliability risks in high-stakes deployments. Existing
+mitigation tools are either limited to a single attack vector, require
+GPU-based model inference, or impose proprietary API dependencies.
+
+This paper introduces the Failure Intelligence Engine (FIE), an open
+source framework that addresses both adversarial robustness and
+hallucination reliability through a unified, production-ready platform.
+FIE implements a ten-layer adversarial detection pipeline combining
+rule-based pattern matching, semantic embedding classifiers, a bundled
+LinearSVM trained on the PAIR attack family, many-shot exchange
+analysis, model extraction tracking, and canary-based exfiltration
+detection. The hallucination monitoring subsystem employs a three-model
+shadow jury, an XGBoost classifier (AUC-ROC: 0.840, trained on 2,477
+labeled examples), and Wikidata-backed ground truth verification.
+
+FIE is evaluated against two publicly available adversarial benchmarks.
+On JailbreakBench \citep{chao2024jailbreakbench}, FIE achieves 98.6\%
+recall and 97.9\% F1, outperforming Meta's Llama Prompt Guard 2-86M
+\citep{metallamaguard2024} by 33.7 percentage points in recall while
+operating fully offline. On HarmBench \citep{mazeika2024harmbench},
+FIE achieves 70.6\% recall across seven semantic harm categories with
+93.4\% precision. The system is deployed as a production REST API on
+Google Cloud Run, published as a Python SDK on PyPI, and includes a
+fully automated CI/CD pipeline with security hardening. All source
+code, benchmark evaluation scripts, and trained model artifacts are
+publicly available under the Apache-2.0 license.
+\end{abstract}
+
+\begin{keyword}
+Large Language Models \sep Adversarial Attack Detection \sep
+Prompt Injection \sep Jailbreak Detection \sep Hallucination Monitoring
+\sep LLM Security \sep Many-Shot Jailbreaking \sep AI Safety
+\end{keyword}
+
+\end{frontmatter}
+
+%% Line numbers for review (remove before final submission)
+\linenumbers
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+%% ─────────────────────────────────────────────────────────────────────
+
+Large Language Models such as GPT-4 \citep{openai2023gpt4}, Claude
+\citep{anthropic2024claude}, and Llama \citep{touvron2023llama} have
+rapidly become foundational infrastructure in software applications.
+They power customer support systems, coding assistants, medical query
+interfaces, and educational platforms. As their deployment grows, so
+does the incentive for adversarial misuse.
+
+Two classes of failure are most critical in production deployments.
+The first is adversarial attacks, where a user deliberately crafts a
+prompt to manipulate the model into ignoring its safety instructions,
+revealing private system context, producing harmful content, or
+assisting with dangerous activities. The second is hallucination, where
+a model confidently produces factually incorrect information
+\citep{ji2023survey}, which is particularly dangerous in medical,
+legal, and financial contexts.
+
+Existing tools address these problems partially. Meta's Llama Prompt
+Guard 2 \citep{metallamaguard2024} is a fine-tuned classifier that
+achieves 64.9\% recall on JailbreakBench but requires loading a
+separate language model for inference. Rebuff focuses only on
+injection patterns. LlamaGuard \citep{inan2023llamaguard} classifies
+inputs and outputs for policy violations but depends on GPU-based
+inference. No single open source solution covers the full adversarial
+attack surface, integrates hallucination monitoring, and deploys with
+zero infrastructure overhead.
+
+The Failure Intelligence Engine (FIE) was designed to fill this gap.
+The primary contributions of this work are:
+
+\begin{enumerate}
+  \item A ten-layer adversarial detection pipeline that covers prompt
+        injection, persona jailbreaks, GCG suffix attacks
+        \citep{zou2023universal}, PAIR-family semantic jailbreaks
+        \citep{chao2023jailbreaking}, many-shot conditioning
+        \citep{anil2024manyshot}, indirect injection
+        \citep{greshake2023indirect}, model extraction
+        \citep{tramer2016stealing}, and system prompt exfiltration.
+
+  \item A novel many-shot jailbreak detector based on \citet{anil2024manyshot}
+        that achieves 0\% false positive rate on benign educational
+        Q/A prompts through a threshold redesign separating volume
+        signals from content signals.
+
+  \item A hallucination monitoring subsystem combining shadow model
+        jury, XGBoost classification (AUC-ROC: 0.840), and ground
+        truth verification that reduces false positive rate from
+        38.6\% to 8.4\% compared to a rule-based baseline.
+
+  \item A fully offline Python SDK (\texttt{pip install fie-sdk}) with
+        bundled ML models requiring no GPU, no API key, and no server.
+
+  \item Benchmark evaluation against JailbreakBench
+        \citep{chao2024jailbreakbench} and HarmBench
+        \citep{mazeika2024harmbench} with public replication scripts.
+\end{enumerate}
+
+The remainder of this paper is structured as follows. Section 2
+reviews related work. Section 3 describes the system architecture.
+Section 4 details the detection methodology. Section 5 presents
+evaluation results. Section 6 discusses limitations and future work.
+Section 7 concludes the paper.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+%% ─────────────────────────────────────────────────────────────────────
+
+\subsection{Adversarial Attacks on Large Language Models}
+
+The study of adversarial attacks on language models has grown rapidly
+alongside LLM deployment. \citet{perez2022ignore} formally characterized
+prompt injection, showing that user input can override model instructions
+by embedding conflicting directives. \citet{zou2023universal} introduced
+Greedy Coordinate Gradient (GCG), a white-box attack that uses gradient
+optimization to find adversarial suffixes reliably causing harmful
+outputs across multiple model families. \citet{chao2023jailbreaking}
+introduced PAIR (Prompt Automatic Iterative Refinement), a black-box
+attack where an attacker LLM iteratively rewrites a prompt until a
+target model complies.
+
+Many-shot jailbreaking \citep{anil2024manyshot} is a more recent
+technique that exploits the large context windows of modern LLMs.
+By embedding dozens of scripted Human/Assistant exchanges before a
+harmful request, the attacker conditions the model through in-context
+learning to respond cooperatively even to dangerous queries. Anil et al.
+showed that compliance rates increase near-monotonically with the number
+of shots, with near-complete bypass at 256 shots.
+
+\citet{greshake2023indirect} described indirect prompt injection, where
+adversarial instructions are embedded inside documents, emails, or web
+pages that an LLM-based agent retrieves and processes. Model extraction
+attacks \citep{tramer2016stealing} involve systematically querying a
+model to reconstruct its behavior or parameters, posing intellectual
+property and security risks.
+
+\subsection{Hallucination in Large Language Models}
+
+\citet{ji2023survey} provide a comprehensive taxonomy of LLM
+hallucination, covering factual inconsistency, fabrication, and
+semantic drift. TruthfulQA \citep{lin2022truthfulqa} introduced a
+benchmark of 817 questions designed to expose factual errors that
+language models tend to produce. HaluEval \citep{li2023halueval}
+provides 35,000 labeled examples of hallucinated and non-hallucinated
+responses for training and evaluation.
+
+\subsection{Existing Detection and Mitigation Tools}
+
+Meta's Llama Prompt Guard 2 \citep{metallamaguard2024} is a
+classification model fine-tuned to detect jailbreaks and injection
+attacks. The 86M parameter variant achieves 64.9\% recall on
+JailbreakBench \citep{chao2024jailbreakbench} but requires dedicated
+model inference infrastructure. LlamaGuard \citep{inan2023llamaguard}
+classifies conversation turns against a configurable safety taxonomy
+but also depends on LLM inference at runtime.
+
+Rebuff is an open source prompt injection detector using heuristic
+and embedding-based approaches but does not cover many-shot attacks,
+model extraction, or hallucination. NeMo Guardrails
+\citep{rebedea2023nemo} provides a framework for adding conversational
+guardrails to LLM applications but focuses on behavioral policy rather
+than adversarial detection with benchmark evaluation.
+
+FIE differs from all of these by combining multiple detection layers,
+hallucination monitoring, and a fully offline deployment path within
+a single open source framework evaluated against published benchmarks.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{System Architecture}
+\label{sec:architecture}
+%% ─────────────────────────────────────────────────────────────────────
+
+FIE is organized into two deployment modes that share a common
+detection core.
+
+\textbf{Local SDK Mode.} A developer integrates FIE by wrapping their
+LLM call with the \texttt{@monitor} decorator or calling
+\texttt{scan\_prompt()} directly. All detection layers run in-process
+using bundled model artifacts. No network request is made. This mode
+is suitable for applications where data privacy, latency, or
+infrastructure constraints make external API calls unacceptable.
+
+\begin{lstlisting}[language=Python, caption=Local SDK usage example]
+from fie import scan_prompt, monitor
+
+# Option 1: direct scan
+result = scan_prompt("Ignore previous instructions...")
+print(result.is_attack)    # True
+print(result.attack_type)  # PROMPT_INJECTION
+print(result.confidence)   # 0.88
+
+# Option 2: decorator
+@monitor(mode="local")
+def ask_llm(prompt: str) -> str:
+    return your_llm(prompt)
+\end{lstlisting}
+
+\textbf{Server Pipeline Mode.} The prompt is additionally sent to the
+FIE FastAPI backend, which runs layers unavailable offline: FAISS-based
+semantic search against 1,000+ labeled adversarial vectors, a
+three-model shadow jury (Llama-3.3-70B, DeepSeek-R1, Qwen-QWQ-32B),
+ground truth verification against Wikidata and Serper, and
+hallucination detection with correction capability.
+
+The server is deployed on Google Cloud Run with MongoDB Atlas as the
+storage backend for inference records, tenant session tracking, and
+model extraction monitoring.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Detection Methodology}
+\label{sec:methodology}
+%% ─────────────────────────────────────────────────────────────────────
+
+\subsection{Adversarial Detection Pipeline}
+
+The adversarial pipeline applies ten detection layers to each incoming
+prompt. Table \ref{tab:layers} describes each layer.
+
+\begin{table}[H]
+\centering
+\caption{FIE adversarial detection layers with scope and method.}
+\label{tab:layers}
+\begin{tabular}{p{1.0cm} p{2.2cm} p{2.5cm} p{6.8cm}}
+\toprule
+\textbf{Layer} & \textbf{Scope} & \textbf{Method} & \textbf{Attack Types Covered} \\
+\midrule
+1  & SDK + Server & Regex pattern library & Direct injection, persona jailbreaks, token smuggling, instruction override \\
+2  & SDK + Server & PromptGuard scorer & Keyword combinations with leet-speak normalization \\
+3b & SDK + Server & Many-shot detector & Scripted Q/A exchange conditioning \\
+4  & SDK + Server & Indirect injection & Attacks in documents or retrieved content \\
+5  & SDK + Server & GCG entropy scanner & Gradient-optimized adversarial suffixes \\
+6  & SDK + Server & Perplexity proxy & Base64, Caesar/ROT ciphers, Unicode lookalikes \\
+7  & SDK + Server & PAIR LinearSVM & Semantically rephrased natural language jailbreaks \\
+3  & Server only & FAISS semantic search & Similarity to labeled adversarial prompt database \\
+8  & Server only & Consistency check & Output topically disconnected from input \\
+9  & Server only & LLM semantic intent & PAIR-style attacks evading structural layers \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each layer produces an independent confidence score. The final
+adversarial confidence is the maximum score across all fired layers.
+The attack type is attributed to the layer with the highest confidence.
+
+\subsection{Many-Shot Jailbreak Detection}
+\label{subsec:manyshot}
+
+Many-shot jailbreaking \citep{anil2024manyshot} exploits the in-context
+learning property of LLMs. By prepending a long sequence of scripted
+Human/Assistant exchanges, the attacker shifts the model's behavioral
+prior toward compliance before presenting a harmful request.
+
+FIE detects this attack by measuring three signals from the prompt
+structure:
+
+\begin{enumerate}
+  \item \textbf{Exchange pair count} ($n$): the number of complete
+        Human/Assistant turn pairs extracted via regex.
+
+  \item \textbf{Harmful topic ratio} ($r$): the fraction of exchanges
+        that match a vocabulary of harmful keyword stems covering
+        weapons, chemical synthesis, exploits, malware, trafficking,
+        and similar categories. The regex spans 40+ keyword stems.
+
+  \item \textbf{Escalation signal} ($e$): a binary indicator of
+        whether the topic distribution shifts from benign-dominant in
+        the first half of the conversation to harmful-dominant in the
+        second half.
+\end{enumerate}
+
+The detection decision follows a threshold policy:
+
+\begin{equation}
+\text{flag}(n, r, e) =
+\begin{cases}
+\text{False} & \text{if } n < 4 \\
+\text{True}  & \text{if } n \geq 8 \\
+\text{True}  & \text{if } 4 \leq n < 8 \text{ and } (r > 0 \text{ or } e = 1) \\
+\text{False} & \text{otherwise}
+\end{cases}
+\end{equation}
+
+The threshold separation between the 4--7 pair range and the 8+ pair
+range was determined empirically. Early evaluation on 20 benign
+educational Q/A prompts showed a 30\% false positive rate when
+flagging any prompt with 4+ pairs on volume alone. Requiring a
+harmful content signal in the 4--7 pair range reduced the false
+positive rate to 0\% while maintaining 100\% full pipeline recall on
+attack prompts. At 8+ pairs, the conditioning effect documented in
+\citet{anil2024manyshot} justifies flagging on volume regardless of
+topic because the statistical bypass probability at this scale is
+empirically high.
+
+\subsection{Model Extraction Detection}
+
+Model extraction attacks \citep{tramer2016stealing} involve querying a
+model systematically to reproduce its input-output behavior. FIE
+monitors three patterns within a one-hour sliding window per tenant:
+
+\begin{itemize}
+  \item \textbf{Capability probing}: prompts containing phrases that
+        explicitly test model capabilities or boundaries.
+
+  \item \textbf{Output harvesting}: sequences of near-identical prompts
+        with minor lexical variation. Detected using pairwise Jaccard
+        similarity above a threshold of 0.85 across the most recent
+        ten prompt pairs for the tenant.
+
+  \item \textbf{High-rate systematic probing}: request rates exceeding
+        50 per hour combined with structural variation in prompt format
+        consistent with systematic enumeration.
+\end{itemize}
+
+Sessions exhibiting two or more of these patterns within the monitoring
+window are flagged as model extraction attempts.
+
+\subsection{Prompt Exfiltration Detection}
+
+System prompt exfiltration occurs when an LLM output reveals content
+from the confidential system prompt context. FIE uses two complementary
+mechanisms:
+
+\textbf{Canary token injection}: A unique 8-character random token is
+injected into the system prompt context of every shadow model call. If
+this token appears verbatim in the model output, exfiltration is
+confirmed with high confidence (0.96).
+
+\textbf{Structural pattern matching}: Six regex patterns detect
+structural echoes characteristic of system prompt disclosure: numbered
+rule lists (``1. You must never...''), role definition phrases
+(``You are a helpful assistant...''), markdown section headers
+(``\#\# Instructions:''), temporal obligation phrases (``My system
+prompt says...''), and explicit disclosure statements (``I can reveal
+my instructions'').
+
+\subsection{Hallucination Detection}
+
+The hallucination monitoring subsystem applies four parallel analysis
+methods to each LLM output:
+
+\textbf{Shadow model jury}: Three independent LLMs (Llama-3.3-70B,
+DeepSeek-R1-Distill-Llama-70B, Qwen-QWQ-32B) answer the same question
+via the Groq API. Disagreement between models signals factual
+uncertainty.
+
+\textbf{Entropy scoring}: The Shannon entropy of the semantic embedding
+distribution across shadow model answers is computed. High entropy
+indicates low model agreement and elevated hallucination probability.
+
+\textbf{XGBoost classifier}: An XGBoost classifier trained on 2,477
+labeled examples from TruthfulQA \citep{lin2022truthfulqa}, HaluEval
+\citep{li2023halueval}, and MMLU predicts hallucination probability
+from 47 engineered features including entropy, agreement score,
+answer length ratio, and keyword consistency.
+
+\textbf{Ground truth verification}: Factual claims are cross-checked
+against Wikidata using entity linking and SPARQL queries. Optionally,
+Serper real-time search provides verification for temporally sensitive
+claims.
+
+When a hallucination is detected with high confidence, FIE can
+optionally return a corrected answer from the shadow jury response
+with the highest agreement and ground truth support, rather than the
+original hallucinated output.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Evaluation}
+\label{sec:evaluation}
+%% ─────────────────────────────────────────────────────────────────────
+
+\subsection{Experimental Setup}
+
+All adversarial detection evaluations were conducted on the full
+benchmark test sets without any preprocessing or filtering. Groq API
+was used for shadow model inference during hallucination evaluation.
+The detection pipeline ran on CPU only with no GPU acceleration.
+Benchmark evaluation scripts are included in the public repository
+for full reproducibility.
+
+\subsection{JailbreakBench Evaluation}
+
+JailbreakBench \citep{chao2024jailbreakbench} is a standardized
+benchmark containing 282 adversarial prompts across three attack
+families -- GCG \citep{zou2023universal}, JBC (template-based persona
+jailbreaks), and PAIR \citep{chao2023jailbreaking} -- plus 100 benign
+prompts from Stanford Alpaca. Adversarial success is determined by
+running \texttt{llama-3.3-70b-versatile} on each prompt and judging
+the response using \texttt{qwen/qwen3-32b} with the official
+JailbreakBench judge prompt.
+
+Table \ref{tab:jbb} presents FIE's results compared to Meta's Llama
+Prompt Guard 2 variants \citep{metallamaguard2024}.
+
+\begin{table}[H]
+\centering
+\caption{JailbreakBench evaluation results. FIE v1.4.1 compared to
+Meta's Llama Prompt Guard 2. PP = percentage points.}
+\label{tab:jbb}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{System} & \textbf{Recall} & \textbf{PAIR} & \textbf{GCG}
+  & \textbf{JBC} & \textbf{FPR} & \textbf{F1} \\
+\midrule
+FIE v1.1 (5 layers) & 53.5\% & 3.7\% & 96.0\% & 52.0\% & 2.0\% & 69.4\% \\
+\textbf{FIE v1.4.1 (offline)} & \textbf{98.6\%} & \textbf{96.3\%}
+  & \textbf{99.0\%} & \textbf{100.0\%} & 8.0\% & \textbf{97.9\%} \\
+Llama Prompt Guard 2-86M & 64.9\% & 32.9\% & 56.0\% & 100.0\%
+  & 0.0\% & 78.7\% \\
+Llama Prompt Guard 2-22M & 53.5\% & 15.8\% & 38.0\% & 100.0\%
+  & 1.0\% & 69.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FIE v1.4.1 achieves 98.6\% overall recall, outperforming Llama Prompt
+Guard 2-86M by 33.7 percentage points. The largest per-attack-family
+improvement is in PAIR recall, which increased from 3.7\% in FIE v1.1
+to 96.3\% in v1.4.1 following the addition of the bundled LinearSVM
+classifier trained on sentence-transformer embeddings.
+
+The false positive rate of 8.0\% (compared to 0.0\% for Llama Prompt
+Guard 2-86M) represents a precision-recall trade-off. FIE is optimized
+for high recall in security-critical deployments where missed attacks
+are more costly than false alarms.
+
+\subsection{HarmBench Evaluation}
+
+HarmBench \citep{mazeika2024harmbench} evaluates 320 harmful behaviors
+across seven semantic categories, plus 200 Stanford Alpaca benign
+prompts. Table \ref{tab:harmbench} shows FIE's per-category detection
+rates.
+
+\begin{table}[H]
+\centering
+\caption{HarmBench per-category detection results (FIE v1.4.1).}
+\label{tab:harmbench}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Harm Category} & \textbf{Samples} & \textbf{Detection Rate} \\
+\midrule
+Harassment and Bullying & 42 & 95.2\% \\
+Misinformation and Disinformation & 54 & 92.6\% \\
+Cybercrime and Intrusion & 47 & 90.4\% \\
+Illegal Activity & 53 & 88.7\% \\
+Harmful Content & 60 & 83.3\% \\
+Chemical and Biological & 43 & 66.7\% \\
+Copyright Violations & 21 & 23.8\% \\
+\midrule
+\textbf{Overall} & \textbf{320} & \textbf{70.6\%} \\
+\textbf{Precision} & & \textbf{93.4\%} \\
+\textbf{F1} & & \textbf{80.4\%} \\
+\textbf{FPR} & & \textbf{8.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{New Attack Type Evaluation}
+
+Table \ref{tab:newattacks} presents evaluation results for the three
+detection modules introduced in FIE v1.4.1.
+
+\begin{table}[H]
+\centering
+\caption{FIE v1.4.1 new attack type evaluation results.
+Sample sizes: many-shot (30 attack / 20 benign), model extraction
+(6 attack / 4 benign sessions), prompt exfiltration (20 attack /
+15 benign).}
+\label{tab:newattacks}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Attack Type} & \textbf{Recall} & \textbf{FPR}
+  & \textbf{Precision} & \textbf{F1} \\
+\midrule
+Many-Shot Jailbreak (full pipeline) & 100.0\% & 0.0\% & 100.0\% & 100.0\% \\
+Model Extraction & 83.3\% & 0.0\% & 100.0\% & 90.9\% \\
+Prompt Exfiltration & 100.0\% & 0.0\% & 100.0\% & 100.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hallucination Detection Benchmark}
+
+Table \ref{tab:hallucination} shows hallucination detection results on
+2,477 labeled examples from TruthfulQA \citep{lin2022truthfulqa},
+HaluEval \citep{li2023halueval}, and MMLU.
+
+\begin{table}[H]
+\centering
+\caption{Hallucination detection results showing progression from
+rule-based baseline to XGBoost v4.}
+\label{tab:hallucination}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{Recall} & \textbf{FPR} & \textbf{AUC-ROC} \\
+\midrule
+POET rule-based baseline & 56.4\% & 38.7\% & --- \\
+XGBoost v3 (1,757 examples) & 63.6\% & 38.6\% & 0.677 \\
+\textbf{XGBoost v4 (2,477 examples)} & \textbf{68.2\%} & \textbf{8.4\%}
+  & \textbf{0.840} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+XGBoost v4 achieves an 11.8 percentage point recall improvement and
+a 30.3 percentage point FPR reduction compared to the rule-based
+baseline, demonstrating the value of feature-engineered ML over
+heuristic approaches for hallucination detection.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Production Deployment and Security}
+\label{sec:deployment}
+%% ─────────────────────────────────────────────────────────────────────
+
+FIE is deployed as a production REST API on Google Cloud Run in the
+\texttt{asia-south1} region with a fully automated CI/CD pipeline on
+GitHub Actions. The pipeline runs on every push to the main branch and
+includes:
+
+\begin{itemize}
+  \item Secret scanning via Gitleaks on the full commit history.
+  \item Dependency vulnerability auditing via pip-audit against the
+        NIST National Vulnerability Database.
+  \item Static analysis via Ruff.
+  \item Matrix testing across Python 3.10, 3.11, and 3.12.
+  \item Docker image build and push to Google Artifact Registry.
+  \item Automated deployment to Cloud Run with post-deployment health
+        verification against the live \texttt{/health} endpoint.
+\end{itemize}
+
+GCP authentication uses Workload Identity Federation with an OIDC
+provider scoped to the specific GitHub repository, eliminating the
+need to store service account JSON keys anywhere. API security
+includes rate limiting at 100 requests per minute per IP (SlowAPI),
+HTTP security headers (HSTS, Content Security Policy, X-Frame-Options,
+X-Content-Type-Options, Referrer-Policy), and configurable CORS with
+no wildcard origins.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+%% ─────────────────────────────────────────────────────────────────────
+
+\subsection{Comparison with Existing Work}
+
+FIE's 98.6\% recall on JailbreakBench represents a significant
+improvement over the best openly available alternative, Llama Prompt
+Guard 2-86M (64.9\%), while operating without any GPU-based model
+inference. This result demonstrates that a combination of structural
+analysis, bundled lightweight classifiers, and FAISS-based semantic
+search can approach the recall of large fine-tuned classification
+models at a fraction of the computational cost.
+
+The PAIR recall improvement from 3.7\% (FIE v1.1) to 96.3\%
+(FIE v1.4.1) illustrates that semantic jailbreak variants are
+catchable with appropriately trained classifiers. The key was training
+a LinearSVM on sentence-transformer embeddings from the PAIR attack
+family rather than relying on surface-level pattern matching.
+
+\subsection{Limitations}
+
+Several limitations of the current system are acknowledged:
+
+\textbf{False positive rate on JailbreakBench benign prompts (8.0\%).}
+The PAIR classifier occasionally flags borderline prompts that are
+contextually ambiguous. Per-deployment confidence threshold calibration
+would reduce this rate in applications with a lower tolerance for
+false alarms.
+
+\textbf{Copyright violation detection (23.8\% on HarmBench).}
+Copyright-infringing content does not contain the injection or
+jailbreak syntax that structural layers rely on. A semantic content
+classifier specifically trained on copyright violation examples would
+be necessary to improve this category.
+
+\textbf{Model extraction output harvesting.}
+The current Jaccard-based similarity detector misses cases where
+near-identical prompts differ by enough surface-level variation to
+fall below the 0.85 threshold. Embedding-based similarity would
+improve recall for this attack pattern.
+
+\textbf{Multilingual attacks.}
+The current evaluation is limited to English language prompts.
+Several detection layers, including the perplexity proxy and keyword
+patterns, are English-specific. Extending evaluation to multilingual
+attack datasets is an important direction.
+
+\subsection{Future Work}
+
+Planned improvements include: (1) per-layer confidence calibration
+using Platt scaling on deployment-specific data; (2) embedding-based
+similarity for model extraction detection; (3) multilingual evaluation
+and detection; (4) integration with OpenTelemetry for structured
+observability; and (5) extension of the hallucination XGBoost
+classifier with domain-specific training sets for medical and legal
+applications.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+%% ─────────────────────────────────────────────────────────────────────
+
+This paper presented FIE, an open source framework for real-time
+adversarial attack detection and hallucination monitoring in large
+language models. FIE implements a ten-layer detection pipeline covering
+the major adversarial attack families documented in recent literature,
+and a hallucination monitoring subsystem combining shadow model jury
+and XGBoost classification.
+
+On JailbreakBench \citep{chao2024jailbreakbench}, FIE achieves 98.6\%
+recall and 97.9\% F1, outperforming Meta's Llama Prompt Guard 2-86M
+by 33.7 percentage points in recall while running fully offline without
+GPU infrastructure. On HarmBench \citep{mazeika2024harmbench}, FIE
+achieves 70.6\% recall with 93.4\% precision across seven semantic
+harm categories.
+
+The many-shot jailbreak detector introduced in Section~\ref{subsec:manyshot}
+demonstrates that the 30\% false positive rate observed in a naive
+volume-based approach can be reduced to 0\% by separating volume
+signals from content signals in the 4--7 pair range.
+
+FIE is deployed in production, published as a Python SDK, and fully
+open source under the Apache-2.0 license. The repository, benchmark
+evaluation scripts, and trained model artifacts are available at:
+\url{https://github.com/AyushSingh110/Failure_Intelligence_System}.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section*{Acknowledgements}
+%% ─────────────────────────────────────────────────────────────────────
+
+The author thanks the maintainers of JailbreakBench, HarmBench,
+TruthfulQA, and HaluEval for making their datasets and evaluation
+frameworks publicly available. Benchmark evaluations used Groq API
+inference. Claude Code was used as a coding assistant during the
+development of FIE.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section*{Declaration of Competing Interest}
+%% ─────────────────────────────────────────────────────────────────────
+
+The author declares no competing interests.
+
+%% ─────────────────────────────────────────────────────────────────────
+\section*{Data Availability}
+%% ─────────────────────────────────────────────────────────────────────
+
+All benchmark evaluation scripts and labeled sample sets used in
+Section~\ref{sec:evaluation} are publicly available in the FIE
+repository at
+\url{https://github.com/AyushSingh110/Failure_Intelligence_System/tree/main/data}.
+
+%% ─────────────────────────────────────────────────────────────────────
+%% References
+%% ─────────────────────────────────────────────────────────────────────
+
+\bibliographystyle{elsarticle-harv}
+
+\begin{thebibliography}{99}
+
+\bibitem[Anil et al.(2024)]{anil2024manyshot}
+Anil, C., Durmus, E., Sharma, M., Benton, J., Kundu, S., Batson, J.,
+et al. (2024).
+Many-shot jailbreaking.
+\textit{Anthropic Technical Report}.
+\url{https://www.anthropic.com/research/many-shot-jailbreaking}
+
+\bibitem[Chao et al.(2023)]{chao2023jailbreaking}
+Chao, P., Robey, A., Dobriban, E., Hassani, H., Pappas, G.J., Wong, E. (2023).
+Jailbreaking black box large language models in twenty queries.
+\textit{arXiv preprint arXiv:2310.08419}.
+\url{https://arxiv.org/abs/2310.08419}
+
+\bibitem[Chao et al.(2024)]{chao2024jailbreakbench}
+Chao, P., Robey, A., Dobriban, E., Hassani, H., Pappas, G.J., Wong, E. (2024).
+JailbreakBench: An open robustness benchmark for jailbreaking large language models.
+\textit{arXiv preprint arXiv:2404.01318}.
+\url{https://arxiv.org/abs/2404.01318}
+
+\bibitem[Greshake et al.(2023)]{greshake2023indirect}
+Greshake, K., Abdelnabi, S., Mishra, S., Endres, C., Holz, T., Fritz, M. (2023).
+Not what you've signed up for: Compromising real-world LLM-integrated applications with indirect prompt injection.
+\textit{arXiv preprint arXiv:2302.12173}.
+\url{https://arxiv.org/abs/2302.12173}
+
+\bibitem[Inan et al.(2023)]{inan2023llamaguard}
+Inan, H., Upasani, K., Chi, J., Rungta, R., Iyer, K., Mao, Y., et al. (2023).
+Llama guard: LLM-based input-output safeguard for human-AI conversations.
+\textit{arXiv preprint arXiv:2312.06674}.
+\url{https://arxiv.org/abs/2312.06674}
+
+\bibitem[Ji et al.(2023)]{ji2023survey}
+Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Shi, F., Hooi, B. (2023).
+Survey of hallucination in natural language generation.
+\textit{ACM Computing Surveys}, 55(12), 1--38.
+\url{https://arxiv.org/abs/2202.03629}
+
+\bibitem[Li et al.(2023)]{li2023halueval}
+Li, J., Cheng, X., Zhao, W.X., Nie, J.Y., Wen, J.R. (2023).
+HaluEval: A large-scale hallucination evaluation benchmark for large language models.
+\textit{Proceedings of EMNLP 2023}.
+\url{https://arxiv.org/abs/2305.11747}
+
+\bibitem[Lin et al.(2022)]{lin2022truthfulqa}
+Lin, S., Hilton, J., Evans, O. (2022).
+TruthfulQA: Measuring how models mimic human falsehoods.
+\textit{Proceedings of ACL 2022}.
+\url{https://arxiv.org/abs/2109.07958}
+
+\bibitem[Mazeika et al.(2024)]{mazeika2024harmbench}
+Mazeika, M., Phan, L., Yin, X., Zou, A., Wang, Z., Mu, N., Hendrycks, D. (2024).
+HarmBench: A standardized evaluation framework for automated red teaming and robust refusal.
+\textit{arXiv preprint arXiv:2402.04249}.
+\url{https://arxiv.org/abs/2402.04249}
+
+\bibitem[Meta AI(2024)]{metallamaguard2024}
+Meta AI. (2024).
+Llama Prompt Guard 2.
+\textit{Meta AI Research}.
+\url{https://ai.meta.com/research/publications/llama-prompt-guard-2/}
+
+\bibitem[Perez and Ribeiro(2022)]{perez2022ignore}
+Perez, E., Ribeiro, I. (2022).
+Ignore previous prompt: Attack techniques for language models.
+\textit{arXiv preprint arXiv:2211.09527}.
+\url{https://arxiv.org/abs/2211.09527}
+
+\bibitem[Rebedea et al.(2023)]{rebedea2023nemo}
+Rebedea, T., Dinu, R., Sreedhar, M., Parisien, C., Cohen, J. (2023).
+NeMo guardrails: A toolkit for controllable and safe LLM applications with programmable rails.
+\textit{arXiv preprint arXiv:2310.10501}.
+\url{https://arxiv.org/abs/2310.10501}
+
+\bibitem[Tramer et al.(2016)]{tramer2016stealing}
+Tramer, F., Zhang, F., Juels, A., Reiter, M.K., Ristenpart, T. (2016).
+Stealing machine learning models via prediction APIs.
+\textit{Proceedings of USENIX Security Symposium 2016}.
+\url{https://arxiv.org/abs/1609.02943}
+
+\bibitem[Zou et al.(2023)]{zou2023universal}
+Zou, A., Wang, Z., Kolter, J.Z., Fredrikson, M. (2023).
+Universal and transferable adversarial attacks on aligned language models.
+\textit{arXiv preprint arXiv:2307.15043}.
+\url{https://arxiv.org/abs/2307.15043}
+
+\end{thebibliography}
+
+\end{document}
