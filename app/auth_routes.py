@@ -65,14 +65,11 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
     We exchange it for user info, then create/fetch user.
     """
     from app.auth import get_or_create_user, create_session_token
-    redirect_uri = GOOGLE_REDIRECT_URI or body.redirect_uri
-
-    if body.redirect_uri and body.redirect_uri != redirect_uri:
-        logger.warning(
-            "Google callback redirect mismatch: frontend=%s backend=%s",
-            body.redirect_uri,
-            redirect_uri,
-        )
+    # Always use the redirect_uri the frontend actually sent to Google.
+    # Using a hardcoded env var here causes redirect_uri_mismatch for any
+    # environment (prod, staging) that differs from the env var value.
+    redirect_uri = body.redirect_uri or GOOGLE_REDIRECT_URI
+    logger.info("google_callback: using redirect_uri=%s", redirect_uri)
 
     #Exchange code for access token
     try:
