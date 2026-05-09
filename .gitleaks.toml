@@ -1,0 +1,20 @@
+title = "Failure Intelligence Engine — gitleaks config"
+
+# Ignore placeholder secrets in documentation and example files.
+# These are clearly fake keys used to illustrate API usage — not real credentials.
+[allowlist]
+  description = "Documentation placeholders and test fixtures"
+  paths = [
+    '''(?i)(^|[\\/])readme''',
+    '''(?i)\.md$''',
+    '''(?i)(^|[\\/])docs[\\/]''',
+    '''(?i)(^|[\\/])tests[\\/]''',
+  ]
+  regexes = [
+    '''fie-your-key''',
+    '''fie-example''',
+    '''fie-test''',
+    '''EXAMPLE_KEY''',
+    '''your[-_]key''',
+    '''<YOUR[-_]API[-_]KEY>''',
+  ]

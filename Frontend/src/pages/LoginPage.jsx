@@ -19,7 +19,7 @@ export default function LoginPage() {
   useEffect(() => {
     const hasCode = new URLSearchParams(window.location.search).has('code')
     if (!hasCode && isLoggedIn()) {
-      navigate('/', { replace: true })
+      navigate('/dashboard', { replace: true })
     }
   }, [navigate])
 
@@ -58,7 +58,7 @@ export default function LoginPage() {
         const saved = localStorage.getItem('fie_session')
         if (!saved) throw new Error('Session could not be saved.')
         window.history.replaceState(null, '', window.location.pathname)
-        navigate('/', { replace: true })
+        navigate('/dashboard', { replace: true })
       })
       .catch(err => {
         setError(err.message || 'Authentication failed. Please try again.')

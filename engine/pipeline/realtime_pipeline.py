@@ -1,24 +1,14 @@
-from engine.models.ollama_client import generate_llama_response
-from engine.agents.knowledge_auditor import knowledge_auditor
+"""
+Thin wrapper kept for backwards compatibility.
+All logic has moved to langgraph_pipeline.run_pipeline().
+"""
+from engine.pipeline.langgraph_pipeline import run_pipeline
 
 
-def run_realtime_pipeline(prompt):
-
-    print("Generating response from Llama3...")
-
-    model_output = generate_llama_response(prompt)
-
-    print("Model Output:")
-    print(model_output)
-
-    print("Running Knowledge Auditor...")
-
-    verification = knowledge_auditor.audit(
+def run_realtime_pipeline(prompt: str, model_outputs: list[str] | None = None) -> dict:
+    outputs = model_outputs or []
+    return run_pipeline(
         prompt=prompt,
-        model_output=model_output
+        model_outputs=outputs,
+        primary_output=outputs[0] if outputs else "",
     )
-
-    print("Verification Result:")
-    print(verification)
-
-    return verification
