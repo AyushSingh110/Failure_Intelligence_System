@@ -198,7 +198,7 @@ jobs:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       REGION: asia-south1
       SERVICE: failure-intelligence-system
-      IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/fie/backend
+      IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/backend
 
     steps:
       - uses: actions/checkout@v4
