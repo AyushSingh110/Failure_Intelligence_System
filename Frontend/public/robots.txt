@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://failure-intelligence-system-800748790940.asia-south1.run.app/sitemap.xml
