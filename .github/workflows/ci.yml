@@ -183,3 +183,63 @@ jobs:
           assert data['status'] in ('healthy', 'degraded'), f'Unexpected status: {data}'
           print('Health check passed')
           "
+
+  # ── CD: Deploy to Google Cloud Run (main branch only) ─────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test, package, health-check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: asia-south1
+      SERVICE: failure-intelligence-system
+      IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/fie/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ env.IMAGE }}:${{ github.sha }} -t ${{ env.IMAGE }}:latest .
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image ${{ env.IMAGE }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "MONGODB_URI=${{ secrets.MONGODB_URI }},GROQ_API_KEY=${{ secrets.GROQ_API_KEY }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }},CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" \
+            --quiet
+
+      - name: Verify deployment health
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          echo "Deployed to: $URL"
+          curl -sf "$URL/health" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          print('Post-deploy health:', data)
+          assert data['status'] in ('healthy', 'degraded'), f'Bad status: {data}'
+          print('Deployment verified OK')
+          "
