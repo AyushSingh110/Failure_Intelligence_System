@@ -158,6 +158,54 @@ def list_inferences(
     return get_inferences_for_tenant(user["tenant_id"])
 
 
+@router.get("/inferences/export/csv")
+def export_inferences_csv(
+    authorization: str | None = Header(None),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+):
+    """Download all inferences as a CSV file."""
+    import csv, io
+    from fastapi.responses import StreamingResponse
+
+    user = require_user(authorization, x_api_key)
+    records = (
+        get_all_inferences_admin()
+        if user.get("is_admin", False)
+        else get_inferences_for_tenant(user["tenant_id"])
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "request_id", "timestamp", "model_name", "input_text", "output_text",
+        "entropy", "agreement_score", "high_failure_risk", "is_adversarial",
+        "archetype", "latency_ms", "tenant_id",
+    ])
+    for r in records:
+        m = r.metrics or {}
+        writer.writerow([
+            r.request_id,
+            r.timestamp.isoformat() if r.timestamp else "",
+            r.model_name or "",
+            (r.input_text or "").replace("\n", " "),
+            (r.output_text or "").replace("\n", " "),
+            getattr(m, "entropy", "") if hasattr(m, "entropy") else m.get("entropy", "") if isinstance(m, dict) else "",
+            getattr(m, "agreement_score", "") if hasattr(m, "agreement_score") else m.get("agreement_score", "") if isinstance(m, dict) else "",
+            getattr(m, "high_failure_risk", "") if hasattr(m, "high_failure_risk") else "",
+            getattr(r, "is_adversarial", False),
+            getattr(r, "archetype", ""),
+            r.latency_ms or "",
+            r.tenant_id or "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=fie_inferences.csv"},
+    )
+
+
 @router.get("/inferences/grouped/by-question", response_model=dict)
 def get_inferences_grouped_by_question(
     authorization: str | None = Header(None),
@@ -441,6 +489,25 @@ def monitor(
     # Update archetype registry and EMA tracker
     archetype_registry.assign(signal)
     evolution_tracker.record(signal)
+
+    # Spike alert — fire when EMA high-risk rate crosses 40%
+    try:
+        from app.notifications import notify_degradation_spike
+        _trend_snap = evolution_tracker.trend_summary()
+        _risk_rate  = _trend_snap.get("ema_high_risk_rate", 0.0)
+        if _risk_rate >= 0.40:
+            _notif_t  = current_user["tenant_id"] if current_user else "anonymous"
+            _notif_em = current_user.get("email") if current_user else None
+            notify_degradation_spike(
+                tenant_id   = _notif_t,
+                risk_pct    = _risk_rate * 100,
+                ema_entropy = _trend_snap.get("ema_entropy", 0.0),
+                velocity    = _trend_snap.get("degradation_velocity", 0.0),
+                total       = _trend_snap.get("signals_count", 0),
+                to          = _notif_em,
+            )
+    except Exception as _spike_exc:
+        logger.debug("Spike notification failed (non-fatal): %s", _spike_exc)
 
     # Step 4: Optionally run DiagnosticJury
     jury_verdict = None

@@ -5,6 +5,8 @@ import {
   Tooltip, ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area,
 } from 'recharts'
 import { useInferences, useTrend, computeKPIs, buildTimeSeries } from '../hooks/useData.js'
+import { api } from '../lib/api.js'
+import { getSession } from '../lib/auth.js'
 
 // ── Animated counter ──────────────────────────────────────────────────────
 function Counter({ to, suffix = '', decimals = 0, duration = 1200 }) {
@@ -387,11 +389,31 @@ export default function DashboardPage() {
   const { data: trend }                        = useTrend()
   const [filter, setFilter]                    = useState('all')
   const [refreshing, setRefreshing]            = useState(false)
+  const [exporting, setExporting]              = useState(false)
 
   const handleRefresh = async () => {
     setRefreshing(true)
     await refetch()
     setTimeout(() => setRefreshing(false), 600)
+  }
+
+  const handleExport = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const session = getSession()
+      const blob = await api.exportCsv(session?.token)
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `fie_inferences_${new Date().toISOString().slice(0,10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Export failed:', e)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const kpis       = computeKPIs(inferences)
@@ -424,25 +446,57 @@ export default function DashboardPage() {
     : '—'
 
   if (loading) return (
-    <div style={{
-      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'JetBrains Mono, monospace', fontSize: '13px',
-      color: 'var(--text-muted)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <svg style={{ animation: 'spin 1s linear infinite' }} width="16" height="16"
-          viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="rgba(0,212,255,0.2)" strokeWidth="2"/>
-          <path d="M12 2a10 10 0 0 1 10 10"
-            stroke="var(--accent-cyan)" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-        Loading...
-      </div>
+    <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position: 600px 0; }
+        }
+      `}</style>
+      {(() => {
+        const skel = (w, h, mb = 0, delay = '0s') => ({
+          width: w, height: h, borderRadius: 8, marginBottom: mb,
+          background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%)',
+          backgroundSize: '600px 100%',
+          animation: `shimmer 1.6s ease-in-out infinite ${delay}`,
+        })
+        return (
+          <>
+            {/* Header */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={skel('180px', '22px', 8)} />
+              <div style={skel('280px', '14px')} />
+            </div>
+            {/* Status strip */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              {[80,100,90,130,110].map((w,i) => (
+                <div key={i} style={skel(`${w}px`, '28px', 0, `${i*0.08}s`)} />
+              ))}
+            </div>
+            {/* KPI rows */}
+            {[0, 1].map(row => (
+              <div key={row} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+                {[0,1,2].map(i => (
+                  <div key={i} style={{ ...skel('100%', '96px', 0, `${(row*3+i)*0.06}s`), borderRadius: 12 }} />
+                ))}
+              </div>
+            ))}
+            {/* Charts */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 260px', gap: 14, marginBottom: 20, marginTop: 12 }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{ ...skel('100%', '240px', 0, `${i*0.1}s`), borderRadius: 12 }} />
+              ))}
+            </div>
+            {/* Feed */}
+            <div style={{ ...skel('100%', '320px'), borderRadius: 12 }} />
+          </>
+        )
+      })()}
     </div>
   )
 
   return (
-    <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+    <div className="dash-page" style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
 
       {/* Header */}
       <div style={{
@@ -466,6 +520,31 @@ export default function DashboardPage() {
             }}>
               Last seen: {lastSeenStr}
             </span>
+          )}
+          {/* Export CSV button */}
+          {inferences.length > 0 && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 12px', borderRadius: '7px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-card)',
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '11px', color: 'var(--text-muted)',
+                transition: 'all 0.15s ease',
+                opacity: exporting ? 0.6 : 1,
+              }}
+              onMouseEnter={e => { if (!exporting) { e.currentTarget.style.borderColor = 'var(--accent-green)'; e.currentTarget.style.color = 'var(--accent-green)' } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
           )}
           {/* Refresh button */}
           <button
@@ -553,7 +632,7 @@ export default function DashboardPage() {
       )}
 
       {/* KPI row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+      <div className="dash-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
         <KPICard
           label="TOTAL INFERENCES"
           value={kpis.total} suffix="" decimals={0}
@@ -575,7 +654,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
+      <div className="dash-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
         <KPICard
           label="AVG ENTROPY"
           value={kpis.avgEntropy} suffix="" decimals={3}
@@ -597,7 +676,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts + Health panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 260px', gap: '14px', marginBottom: '20px' }}>
+      <div className="dash-chart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 260px', gap: '14px', marginBottom: '20px' }}>
 
         {/* Signal time series */}
         <div style={{

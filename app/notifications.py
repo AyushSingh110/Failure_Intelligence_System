@@ -180,6 +180,53 @@ def notify_human_review(
     )
 
 
+_spike_last_sent: dict[str, float] = {}  # tenant_id → epoch seconds
+
+def notify_degradation_spike(
+    *,
+    tenant_id:    str,
+    risk_pct:     float,
+    ema_entropy:  float,
+    velocity:     float,
+    total:        int,
+    to:           Optional[str] = None,
+) -> None:
+    """
+    Alert when high-risk rate spikes above 40%.
+    Rate-limited to once per hour per tenant to avoid spam.
+    """
+    import time
+    now = time.monotonic()
+    if now - _spike_last_sent.get(tenant_id, 0) < 3600:
+        return
+    _spike_last_sent[tenant_id] = now
+
+    def _row(key, val):
+        return f'<div class="row"><span class="key">{key}</span><span class="val">{val}</span></div>'
+
+    body = f"""
+    <h2>Failure rate spike detected</h2>
+    <p style="font-size:13px;color:#8ba4bc;margin:0 0 16px">
+      Your model's high-risk rate has exceeded the alert threshold.
+      Immediate investigation is recommended.
+    </p>
+    {_row("TENANT",        tenant_id)}
+    {_row("HIGH-RISK RATE", f"{risk_pct:.1f}%")}
+    {_row("EMA ENTROPY",    f"{ema_entropy:.4f}")}
+    {_row("DEG. VELOCITY",  f"{velocity:.4f}")}
+    {_row("TOTAL INFERENCES", str(total))}
+    <p style="font-size:13px;color:#5c7a99;margin:16px 0 0">
+      <a href="https://failure-intelligence-system.pages.dev/alerts">View alerts dashboard →</a>
+    </p>
+    """
+
+    _send(
+        subject = f"[FIE] ⚠ Failure spike — {risk_pct:.0f}% high-risk rate for {tenant_id}",
+        html    = _base("FAILURE SPIKE", body, badge_color="#ffaa00"),
+        to      = to,
+    )
+
+
 def notify_weekly_digest(
     *,
     tenant_id:      str,
