@@ -218,6 +218,12 @@ export default function LandingPage() {
   const [statsRef, statsVisible] = useScrollReveal()
 
   useEffect(() => {
+    // If Google OAuth redirected here instead of /login, forward everything to /login
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('code')) {
+      navigate('/login' + window.location.search, { replace: true })
+      return
+    }
     if (loggedIn) navigate('/dashboard', { replace: true })
   }, [loggedIn, navigate])
 
