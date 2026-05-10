@@ -1,5 +1,8 @@
+import csv
+import io
 import logging
 from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
@@ -164,9 +167,6 @@ def export_inferences_csv(
     x_api_key: str | None = Header(None, alias="X-API-Key"),
 ):
     """Download all inferences as a CSV file."""
-    import csv, io
-    from fastapi.responses import StreamingResponse
-
     user = require_user(authorization, x_api_key)
     records = (
         get_all_inferences_admin()
