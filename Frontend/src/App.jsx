@@ -8,8 +8,9 @@ import AnalyzePage   from './pages/Analyzepage'
 import DiagnosePage  from './pages/Diagnosepage'
 import AlertsPage    from './pages/AlertsPage'
 import VaultPage     from './pages/Vaultpage'
-import SettingsPage  from './pages/Settingspage'
-import Layout        from './components/Layout'
+import SettingsPage   from './pages/Settingspage'
+import AnalyticsPage  from './pages/AnalyticsPage'
+import Layout         from './components/Layout'
 
 function Protected({ children }) {
   const [authed, setAuthed] = useState(() => isLoggedIn())
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
         <Route path="/analyze"   element={<Protected><AnalyzePage /></Protected>} />
         <Route path="/diagnose"  element={<Protected><DiagnosePage /></Protected>} />
+        <Route path="/analytics" element={<Protected><AnalyticsPage /></Protected>} />
         <Route path="/alerts"    element={<Protected><AlertsPage /></Protected>} />
         <Route path="/vault"     element={<Protected><VaultPage /></Protected>} />
         <Route path="/settings"  element={<Protected><SettingsPage /></Protected>} />

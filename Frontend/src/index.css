@@ -118,6 +118,56 @@ body {
   .hidden-mobile { display: none !important; }
 }
 
+/* ── Mobile layout overrides ───────────────────────────────────────── */
+@media (max-width: 900px) {
+  /* Stack dashboard KPI grids to single column */
+  .dash-kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* Stack charts to single column */
+  .dash-chart-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Reduce padding on small screens */
+  .dash-page {
+    padding: 16px !important;
+  }
+  /* Analytics 4-col → 2-col */
+  .analytics-kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .dash-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .analytics-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Sidebar collapses — layout becomes vertical */
+  .layout-root {
+    flex-direction: column !important;
+  }
+  .layout-sidebar {
+    width: 100% !important;
+    min-width: unset !important;
+    height: auto !important;
+    position: relative !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    padding: 12px 16px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  .layout-sidebar nav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+}
+
 @keyframes kpiIn {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }

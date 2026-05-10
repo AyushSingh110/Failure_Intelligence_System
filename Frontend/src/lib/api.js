@@ -51,4 +51,13 @@ export const api = {
   // Diagnose
   runDiagnose: (body, token) =>
     request('POST', '/diagnose', body, token),
+
+  // Export
+  exportCsv: async (token) => {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    const res = await fetch(`${BASE}/inferences/export/csv`, { headers })
+    if (!res.ok) throw new Error('Export failed')
+    return res.blob()
+  },
 }
