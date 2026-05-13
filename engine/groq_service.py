@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Optional
@@ -9,6 +11,44 @@ from typing import Optional
 import requests
 
 logger = logging.getLogger(__name__)
+
+# ── Response cache ────────────────────────────────────────────────────────────
+# Caches Groq responses by (model, prompt_hash) for 1 hour.
+# Avoids redundant API calls for duplicate/near-duplicate prompts
+# and reduces TPD burn rate significantly in production.
+
+_CACHE_TTL_SECONDS = 3600  # 1 hour
+
+_response_cache: dict[str, tuple[GroqModelResponse, float]] = {}  # key → (resp, ts)
+_cache_lock = threading.Lock()
+
+
+def _cache_key(model_name: str, prompt: str) -> str:
+    digest = hashlib.sha256(f"{model_name}:{prompt}".encode()).hexdigest()[:24]
+    return digest
+
+
+def _get_cached(model_name: str, prompt: str) -> Optional["GroqModelResponse"]:
+    key = _cache_key(model_name, prompt)
+    with _cache_lock:
+        entry = _response_cache.get(key)
+        if entry and (time.time() - entry[1]) < _CACHE_TTL_SECONDS:
+            return entry[0]
+        if entry:
+            del _response_cache[key]
+    return None
+
+
+def _set_cached(model_name: str, prompt: str, response: "GroqModelResponse") -> None:
+    key = _cache_key(model_name, prompt)
+    with _cache_lock:
+        _response_cache[key] = (response, time.time())
+        # Evict entries older than TTL to keep memory bounded (max ~500 entries)
+        if len(_response_cache) > 500:
+            cutoff = time.time() - _CACHE_TTL_SECONDS
+            stale = [k for k, (_, ts) in _response_cache.items() if ts < cutoff]
+            for k in stale:
+                del _response_cache[k]
 
 
 @dataclass
@@ -102,13 +142,20 @@ class GroqService:
         system_message: Optional[str] = None,
         max_tokens:     int           = 500,
         temperature:    float         = 0.1,
+        _retries:       int           = 2,
     ) -> GroqModelResponse:
         """
-        single model is called with the prompt, and response is returned as GroqModelResponse.
-        Errors are caught and returned in the response object.
-        Optional system_message is injected as the system role — used by the
-        canary tracker to detect prompt exfiltration across shadow models.
+        Calls one Groq model with retry + response cache.
+        - Checks cache first (1-hour TTL) to avoid redundant API calls.
+        - Retries up to _retries times on 429 with exponential backoff.
+        - system_message is injected as system role (canary exfiltration detection).
         """
+        # Cache hit — skip API call entirely
+        cached = _get_cached(model_name, prompt)
+        if cached:
+            logger.debug("Groq %s: cache hit", model_name)
+            return cached
+
         start = time.time()
 
         messages: list[dict] = []
@@ -116,71 +163,85 @@ class GroqService:
             messages.append({"role": "system", "content": system_message})
         messages.append({"role": "user", "content": prompt})
 
-        try:
-            response = self._session.post(
-                GROQ_API_URL,
-                json={
-                    "model":       model_name,
-                    "messages":    messages,
-                    "max_tokens":  max_tokens,
-                    "temperature": temperature,
-                },
-                timeout=self._timeout,
-            )
-            response.raise_for_status()
+        attempt = 0
+        while True:
+            try:
+                response = self._session.post(
+                    GROQ_API_URL,
+                    json={
+                        "model":       model_name,
+                        "messages":    messages,
+                        "max_tokens":  max_tokens,
+                        "temperature": temperature,
+                    },
+                    timeout=self._timeout,
+                )
+                response.raise_for_status()
 
-            data        = response.json()
-            output_text = data["choices"][0]["message"]["content"].strip()
-            latency_ms  = round((time.time() - start) * 1000, 1)
+                data        = response.json()
+                output_text = data["choices"][0]["message"]["content"].strip()
+                latency_ms  = round((time.time() - start) * 1000, 1)
 
-            logger.debug(
-                "Groq %s responded in %.0fms: %s...",
-                model_name, latency_ms, output_text[:60],
-            )
+                logger.debug(
+                    "Groq %s responded in %.0fms: %s...",
+                    model_name, latency_ms, output_text[:60],
+                )
 
-            return GroqModelResponse(
-                model_name  = model_name,
-                output_text = output_text,
-                success     = True,
-                latency_ms  = latency_ms,
-            )
+                result = GroqModelResponse(
+                    model_name  = model_name,
+                    output_text = output_text,
+                    success     = True,
+                    latency_ms  = latency_ms,
+                )
+                _set_cached(model_name, prompt, result)
+                return result
 
-        except requests.exceptions.Timeout:
-            logger.warning("Groq model %s timed out after %ds", model_name, self._timeout)
-            return GroqModelResponse(
-                model_name = model_name,
-                success    = False,
-                error      = f"Timeout after {self._timeout}s",
-                latency_ms = round((time.time() - start) * 1000, 1),
-            )
+            except requests.exceptions.Timeout:
+                logger.warning("Groq model %s timed out after %ds", model_name, self._timeout)
+                return GroqModelResponse(
+                    model_name = model_name,
+                    success    = False,
+                    error      = f"Timeout after {self._timeout}s",
+                    latency_ms = round((time.time() - start) * 1000, 1),
+                )
 
-        except requests.exceptions.HTTPError as exc:
-            # Rate limit hit kiya?
-            if exc.response.status_code == 429:
-                logger.warning("Groq rate limit hit for model %s", model_name)
-                error = "Rate limit exceeded — free tier limit reached"
-            else:
-                response_text = ""
-                try:
-                    response_text = exc.response.text
-                except Exception:
+            except requests.exceptions.HTTPError as exc:
+                if exc.response.status_code == 429 and attempt < _retries:
+                    # Exponential backoff: 2s, 4s
+                    wait = 2 ** (attempt + 1)
+                    logger.warning(
+                        "Groq rate limit on %s — retry %d/%d in %ds",
+                        model_name, attempt + 1, _retries, wait,
+                    )
+                    time.sleep(wait)
+                    attempt += 1
+                    continue
+
+                if exc.response.status_code == 429:
+                    logger.warning("Groq rate limit hit for model %s (retries exhausted)", model_name)
+                    error = "Rate limit exceeded — retries exhausted"
+                else:
                     response_text = ""
-                error = str(exc) if not response_text else f"{exc} | {response_text}"
-            return GroqModelResponse(
-                model_name = model_name,
-                success    = False,
-                error      = error,
-                latency_ms = round((time.time() - start) * 1000, 1),
-            )
+                    try:
+                        response_text = exc.response.text
+                    except Exception:
+                        response_text = ""
+                    error = str(exc) if not response_text else f"{exc} | {response_text}"
+                return GroqModelResponse(
+                    model_name = model_name,
+                    success    = False,
+                    error      = error,
+                    latency_ms = round((time.time() - start) * 1000, 1),
+                )
 
-        except Exception as exc:
-            logger.error("Groq model %s error: %s", model_name, exc)
-            return GroqModelResponse(
-                model_name = model_name,
-                success    = False,
-                error      = str(exc),
-                latency_ms = round((time.time() - start) * 1000, 1),
-            )
+            except Exception as exc:
+                logger.error("Groq model %s error: %s", model_name, exc)
+                return GroqModelResponse(
+                    model_name = model_name,
+                    success    = False,
+                    error      = str(exc),
+                    latency_ms = round((time.time() - start) * 1000, 1),
+                )
 
     def fan_out(
         self,

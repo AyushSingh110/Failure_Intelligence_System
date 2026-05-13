@@ -148,3 +148,88 @@ def health() -> dict:
         "version":    settings.app_version,
         "components": components,
     }
+
+
+@app.get("/health/deep")
+def health_deep() -> dict:
+    """
+    Deep health check — actively pings all critical dependencies.
+    Returns per-component status, latency, and error detail.
+    Use for readiness probes and on-call dashboards.
+    """
+    import time
+    results: dict = {}
+
+    # MongoDB
+    try:
+        from storage import database as _db_module
+        t0 = time.time()
+        if _db_module._db is not None:
+            _db_module._db.command("ping")
+            results["mongodb"] = {"status": "ok", "latency_ms": round((time.time() - t0) * 1000, 1)}
+        else:
+            results["mongodb"] = {"status": "degraded", "error": "not connected"}
+    except Exception as exc:
+        results["mongodb"] = {"status": "down", "error": str(exc)[:120]}
+
+    # Groq
+    try:
+        from engine.groq_service import get_groq_service
+        t0 = time.time()
+        groq = get_groq_service()
+        if groq and groq._api_key:
+            r = groq._call_single_model("llama-3.1-8b-instant", "Say ok", max_tokens=5)
+            if r.success:
+                results["groq"] = {"status": "ok", "latency_ms": r.latency_ms}
+            else:
+                results["groq"] = {"status": "degraded", "error": r.error[:120]}
+        else:
+            results["groq"] = {"status": "not_configured"}
+    except Exception as exc:
+        results["groq"] = {"status": "down", "error": str(exc)[:120]}
+
+    # FAISS index
+    try:
+        from engine.archetypes.registry import adversarial_registry
+        size = adversarial_registry.size
+        results["faiss"] = {
+            "status":  "ok" if size > 0 else "degraded",
+            "vectors": size,
+        }
+    except Exception as exc:
+        results["faiss"] = {"status": "down", "error": str(exc)[:120]}
+
+    # Sentence encoder
+    try:
+        from engine.encoder import get_encoder
+        encoder = get_encoder()
+        results["encoder"] = {
+            "status":    "ok" if encoder.available else "degraded",
+            "backend":   "transformer" if encoder.available else "ngram_fallback",
+        }
+    except Exception as exc:
+        results["encoder"] = {"status": "down", "error": str(exc)[:120]}
+
+    # XGBoost classifier
+    try:
+        from engine.failure_classifier import _model
+        results["xgboost"] = {
+            "status": "ok" if _model is not None else "degraded",
+            "mode":   "xgboost" if _model is not None else "rule_based_fallback",
+        }
+    except Exception as exc:
+        results["xgboost"] = {"status": "down", "error": str(exc)[:120]}
+
+    overall = (
+        "healthy"
+        if all(v.get("status") == "ok" for v in results.values())
+        else "degraded"
+        if any(v.get("status") in ("ok", "degraded") for v in results.values())
+        else "down"
+    )
+
+    return {
+        "status":     overall,
+        "version":    settings.app_version,
+        "components": results,
+    }

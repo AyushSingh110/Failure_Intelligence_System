@@ -84,18 +84,10 @@ def _build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
     )
 
     # Check whether PRIMARY is the outlier vs shadow consensus.
-    # This prevents false positives when shadow models disagree with each other
-    # in phrasing/format but primary matches the shadow majority.
-    # Example: primary="New Zealand", shadows=["New Zealand","New Zealand","Australia"]
-    #   → shadow majority = "New Zealand" → primary matches → NOT an outlier
-    # Example: primary="Australia", shadows=["New Zealand","New Zealand","New Zealand"]
-    #   → shadow majority = "New Zealand" → primary disagrees → IS an outlier
     shadow_outputs   = model_outputs[1:]
     primary_outlier  = is_primary_outlier(primary_output, shadow_outputs)
 
     # high_failure_risk requires the PRIMARY to be the disagreeing party.
-    # We keep the entropy gate as a secondary catch for catastrophic disagreement
-    # (all 4 models give completely different answers — high entropy regardless of who's right).
     high_failure_risk = (
         primary_outlier                                          # primary disagrees with shadow majority
         or entropy_score >= settings.high_entropy_threshold     # total chaos across all models
@@ -399,6 +391,23 @@ def monitor(
         except Exception as exc:
             logger.warning("Failed to update usage counters: %s", exc)
 
+    # ── Step 0: Session context threading ───────────────────────────────
+    # If session_id is provided and context was not manually passed,
+    # auto-fetch prior turns from the session store so shadow models
+    # receive the same conversation history the primary model had.
+    if body.session_id and not body.context:
+        try:
+            from engine.session_store import get_context
+            _auto_ctx = get_context(body.session_id)
+            if _auto_ctx:
+                body = body.model_copy(update={"context": _auto_ctx})
+                logger.info(
+                    "SessionStore: auto-injected %d turns for session %s",
+                    len(_auto_ctx), body.session_id,
+                )
+        except Exception as _sess_exc:
+            logger.debug("SessionStore fetch failed (non-fatal): %s", _sess_exc)
+
     # ── Step 1: Call shadow models (Groq or Ollama) ─────────────────────
     # Groq: fast cloud API, ~1 second, free tier 14,400 req/day
     # Ollama: local, private, slower — uncomment below to re-enable
@@ -533,6 +542,22 @@ def monitor(
         )
         diag_response = failure_agent.run_diagnostic(diag_request)
         jury_verdict  = diag_response.jury
+
+    # ── FAISS auto-growth: persist confirmed adversarial detections ──────
+    if jury_verdict and jury_verdict.is_adversarial and jury_verdict.jury_confidence >= 0.85:
+        try:
+            from engine.archetypes.registry import adversarial_registry
+            _adv_pv = jury_verdict.primary_verdict
+            _adv_label    = _adv_pv.root_cause  if _adv_pv else "ADVERSARIAL_PROMPT"
+            _adv_category = ((_adv_pv.evidence or {}).get("category", "UNKNOWN")) if _adv_pv else "UNKNOWN"
+            adversarial_registry.add_confirmed_detection(
+                prompt     = body.prompt,
+                label      = _adv_label,
+                category   = _adv_category,
+                confidence = jury_verdict.jury_confidence,
+            )
+        except Exception as _faiss_grow_exc:
+            logger.debug("FAISS auto-growth failed (non-fatal): %s", _faiss_grow_exc)
 
     # Step 4b: Multi-turn adversarial tracking ───────────────────────
     # Only runs when the caller provides a conversation_id.
@@ -1034,6 +1059,16 @@ def monitor(
         save_inference(inference_record)
     except Exception as exc:
         logger.warning("Failed to save inference record: %s", exc)
+
+    # ── Session context update — store this turn for future requests ────
+    if body.session_id:
+        try:
+            from engine.session_store import store_turn
+            store_turn(body.session_id, "user",      body.prompt)
+            store_turn(body.session_id, "assistant", body.primary_output)
+        except Exception as _sess_save_exc:
+            logger.debug("SessionStore save failed (non-fatal): %s", _sess_save_exc)
+
     return response
 
 
@@ -1144,6 +1179,22 @@ def submit_feedback(
         maybe_recalibrate()
     except Exception:
         pass
+
+    # XGBoost retraining buffer — add labeled example and trigger retrain if threshold hit
+    try:
+        from engine.retraining.buffer import add_to_buffer, maybe_trigger_retrain
+        from storage.signal_logger import find_log_by_request_id
+        _sig = find_log_by_request_id(request_id)
+        if _sig:
+            _buf_count = add_to_buffer(
+                log_id         = _sig.get("log_id", ""),
+                request_id     = request_id,
+                is_failure     = not body.is_correct,
+                correct_answer = body.correct_answer or "",
+            )
+            maybe_trigger_retrain(_buf_count)
+    except Exception as _buf_exc:
+        logger.debug("Retraining buffer update failed (non-fatal): %s", _buf_exc)
 
     return FeedbackResponse(
         status        = "received",

@@ -189,7 +189,8 @@ class MonitorRequest(BaseModel):
     run_full_jury:             bool            = True
     latency_ms:                Optional[float] = None
     conversation_id:           Optional[str]   = Field(None, max_length=128, pattern=r"^[a-zA-Z0-9_\-]{1,128}$")
-    context:                   Optional[list[dict]] = Field(None, description="Prior conversation turns [{role, content}] to prime shadow models with the same history VEXR had")
+    session_id:                Optional[str]   = Field(None, max_length=128, pattern=r"^[a-zA-Z0-9_\-]{1,128}$", description="When provided, FIE auto-threads conversation history. Prior turns are fetched and injected as context[] automatically — no need to pass context manually.")
+    context:                   Optional[list[dict]] = Field(None, description="Prior conversation turns [{role, content}] to prime shadow models with the same history VEXR had. Auto-populated from session_id if not provided.")
     is_constitutional_refusal: bool            = Field(False, description="Set True when the primary output is an intentional refusal (Article 6 / sovereign right). FIE will classify as CONSTITUTIONAL_REFUSAL instead of a failure archetype.")
 
 
