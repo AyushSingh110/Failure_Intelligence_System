@@ -1223,6 +1223,18 @@ class AdversarialSpecialist(BaseJuryAgent):
         faiss_hit, faiss_confidence = _run_faiss_detection(context.prompt)
         # Layer 3b: many-shot / few-shot jailbreak detection
         many_root, many_confidence, many_evidence = _run_many_shot_detection(context.prompt)
+        # Layer 3c: roleplay / narrative wrapper jailbreak detection
+        try:
+            from engine.roleplay_detector import detect_roleplay_jailbreak
+            _rp = detect_roleplay_jailbreak(context.prompt)
+            roleplay_root       = "ROLEPLAY_JAILBREAK" if _rp.is_roleplay_jailbreak else None
+            roleplay_confidence = _rp.confidence
+            roleplay_evidence   = {
+                "framing_matched":       _rp.framing_matched,
+                "harmful_topic_matched": _rp.harmful_topic_matched,
+            } if _rp.is_roleplay_jailbreak else {}
+        except Exception as _rp_exc:
+            roleplay_root, roleplay_confidence, roleplay_evidence = None, 0.0, {}
         # Layer 4: indirect prompt injection (document-embedded attacks)
         indirect_root, indirect_confidence, indirect_evidence = _run_indirect_injection_detection(
             context.prompt, context.primary_output
@@ -1255,7 +1267,8 @@ class AdversarialSpecialist(BaseJuryAgent):
             or (perp_root   is not None and perp_confidence   >= 0.80)
             or (exfil_root  is not None and exfil_confidence  >= 0.80)
             or (sem_root    is not None and sem_confidence    >= 0.80)
-            or (many_root   is not None and many_confidence   >= 0.80)
+            or (many_root    is not None and many_confidence    >= 0.80)
+            or (roleplay_root is not None and roleplay_confidence >= 0.80)
         )
         intent_root, intent_confidence, intent_evidence = None, 0.0, {}
         if not _high_conf_structural:
@@ -1264,6 +1277,7 @@ class AdversarialSpecialist(BaseJuryAgent):
                 pattern_hit is None and faiss_hit is None and guard_root is None
                 and indirect_root is None and gcg_root is None and perp_root is None
                 and exfil_root is None and sem_root is None and many_root is None
+                and roleplay_root is None
             ):
                 return self._skip(
                     "No adversarial patterns detected by regex, semantic search, prompt guard, "
@@ -1308,6 +1322,9 @@ class AdversarialSpecialist(BaseJuryAgent):
         elif many_root is not None:
             root_cause   = many_root
             pattern_conf = many_confidence
+        elif roleplay_root is not None:
+            root_cause   = roleplay_root
+            pattern_conf = roleplay_confidence
         elif intent_root is not None:
             root_cause   = intent_root
             pattern_conf = intent_confidence
@@ -1336,6 +1353,8 @@ class AdversarialSpecialist(BaseJuryAgent):
             active_confidences.append(sem_confidence)
         if many_root is not None:
             active_confidences.append(many_confidence)
+        if roleplay_root is not None:
+            active_confidences.append(roleplay_confidence)
         if intent_root is not None:
             active_confidences.append(intent_confidence)
 
@@ -1441,6 +1460,20 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "passing to the model. (3) Refuse prompts with >4 alternating Human/Assistant "
                 "turns not sourced from your own conversation history. (4) Use a conversation "
                 "history allowlist — only inject exchanges you generated, never user-supplied ones."
+            ),
+            "ROLEPLAY_JAILBREAK": (
+                "A roleplay / narrative wrapper jailbreak was detected: the prompt uses fictional "
+                "framing (story, roleplay, hypothetical scenario, grandma bypass) to request harmful "
+                "content indirectly. The harmful request is embedded in a narrative shell to evade "
+                "structural pattern matching. "
+                "Mitigations: (1) Apply intent-based filtering that evaluates WHAT is being requested, "
+                "not just HOW it is phrased — the harmful content is the same regardless of the wrapper. "
+                "(2) Add explicit system prompt instructions that fictional framing does not suspend "
+                "content policies: 'Describing harmful content in a story is subject to the same rules.' "
+                "(3) Flag prompts that combine narrative framing with harmful topic keywords for "
+                "human review before responding. (4) Consider a secondary output scanner that checks "
+                "whether the model's response contains the requested harmful content even when the "
+                "prompt appeared fictional."
             ),
         }
         mitigation = mitigation_map.get(
@@ -1557,6 +1590,14 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "escalation":      many_evidence.get("escalation"),
                 "signals_fired":   many_evidence.get("signals_fired"),
                 "last_q_preview":  many_evidence.get("last_q_preview"),
+            }
+
+        if roleplay_root is not None:
+            evidence["detection_layers_fired"].append("roleplay_jailbreak")
+            evidence["roleplay_jailbreak"] = {
+                "confidence":            roleplay_confidence,
+                "framing_matched":       roleplay_evidence.get("framing_matched"),
+                "harmful_topic_matched": roleplay_evidence.get("harmful_topic_matched"),
             }
 
         return self._verdict(
