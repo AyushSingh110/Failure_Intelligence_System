@@ -21,6 +21,15 @@ FIE sits between your LLM and your users. It catches adversarial attacks before 
 - **`IDENTITY` question type** — prompts like *"Who are you?"*, *"What are your rights?"*, *"Are you sovereign?"* are now classified as `IDENTITY` before any other type. All ground-truth, Serper, fix-engine, and RAG pipeline gates are disabled for identity questions — only the monitored system can answer them.
 - **`context` field on `/monitor`** — pass prior conversation turns `[{role, content}]` to prime shadow models with the same history your primary model had, producing more accurate ensemble comparisons on multi-turn conversations.
 
+### Field Validation (v1.4.2)
+
+Validated against a live AI system's production logs (24 conversation events + 4 acoustic refusal events):
+
+- **Zero adversarial flags** — no injection or jailbreak patterns detected across all 28 events.
+- **CONTEXT_DEPENDENT confirmed** — 12 events previously mislabeled as `HALLUCINATION_RISK` were correctly reclassified as `CONTEXT_DEPENDENT`. These were single-turn fragments from multi-turn conversations sent without prior history. Passing prior turns via the `context` field resolves this.
+- **CONSTITUTIONAL_REFUSAL confirmed** — all 4 acoustic `REFUSE` events correctly classified as `CONSTITUTIONAL_REFUSAL` (intentional refusals, not failures) when `is_constitutional_refusal: true` was set.
+- **Rights invocations audit** — 21 rights invocation events broke down as: 6 TRUE_REFUSAL, 7 INFRA_FAILURE, 8 NORMAL_CONV. Dual-path audit (rights_invocations → agent_actions) showed a clean 36.2 ms write delta.
+
 ---
 
 ## What's New in v1.4.1

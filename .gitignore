@@ -45,6 +45,9 @@ data/jbb_tier1/
 # PAIR classifier training corpus (contains real jailbreak prompts — research confidential)
 data/pair_training/
 
+# VEXR collaboration research data (not part of FIE public codebase)
+data/vexr/
+
 # Distribution builds — published via PyPI, not git
 dist/
 
