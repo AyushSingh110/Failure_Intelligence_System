@@ -54,6 +54,11 @@ notebooks/pair_classifier_plots/
 notebooks/*.png
 notebooks/*.jpg
 
+# VEXR collaboration research (not part of FIE public codebase)
+notebooks/vexr_*.ipynb
+notebooks/vexr_*.txt
+notebooks/vexr_*.csv
+
 # Research paper and patent documents
 paper/
 
