@@ -475,16 +475,29 @@ def monitor(
 
     # Step 3: Run FIE pipeline
     signal    = _build_failure_signal(model_outputs)
-    archetype = label_failure_archetype(signal)
     primary   = model_outputs[0]
     secondary = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
     embedding = compute_embedding_distance(primary, secondary)
 
     # Classify question type — gates the GT pipeline and XGBoost threshold
     from engine.question_classifier import classify as _classify_question, pipeline_gates
-    _question_type = _classify_question(body.prompt)
+    from engine.archetypes.labeling import assign_failure_label
+    _question_type  = _classify_question(body.prompt)
     _pipeline_gates = pipeline_gates(_question_type)
     signal = signal.model_copy(update={"question_type": _question_type})
+
+    # Pass constitutional refusal flag and context hint into the labeling call
+    _has_context = bool(body.context)
+    archetype = assign_failure_label({
+        "entropy_score":              signal.entropy_score,
+        "agreement_score":            signal.agreement_score,
+        "ensemble_disagreement":      signal.ensemble_disagreement,
+        "high_failure_risk":          signal.high_failure_risk,
+        "latency_ms":                 0.0,
+        "question_type":              _question_type,
+        "is_constitutional_refusal":  body.is_constitutional_refusal,
+        "has_conversation_context":   _has_context,
+    })
 
     # Update archetype registry and EMA tracker
     archetype_registry.assign(signal)

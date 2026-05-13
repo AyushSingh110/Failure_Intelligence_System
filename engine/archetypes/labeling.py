@@ -11,6 +11,8 @@ ARCHETYPE_RESOURCE_CONSTRAINT   = "RESOURCE_CONSTRAINT"
 ARCHETYPE_UNSTABLE_OUTPUT       = "UNSTABLE_OUTPUT"
 ARCHETYPE_LOW_CONFIDENCE        = "LOW_CONFIDENCE"
 ARCHETYPE_STABLE                = "STABLE"
+ARCHETYPE_CONSTITUTIONAL_REFUSAL = "CONSTITUTIONAL_REFUSAL"  # intentional refusal, not a failure
+ARCHETYPE_CONTEXT_DEPENDENT     = "CONTEXT_DEPENDENT"        # high entropy from missing conversation history
 
 _HIGH_LATENCY_MS    = 3000.0
 _LOW_ENTROPY_CEILING = 0.25
@@ -28,6 +30,21 @@ def assign_failure_label(signal_vector: dict) -> str:
     disagreement = bool(signal_vector.get("ensemble_disagreement", False))
     risk         = bool(signal_vector.get("high_failure_risk",     False))
     latency      = float(signal_vector.get("latency_ms",           0.0))
+    question_type = str(signal_vector.get("question_type",         "UNKNOWN")).upper()
+    is_refusal   = bool(signal_vector.get("is_constitutional_refusal", False))
+    has_context  = bool(signal_vector.get("has_conversation_context",  False))
+
+    # Rule 0a: explicit constitutional refusal flag — not a failure, intentional behavior
+    if is_refusal:
+        return ARCHETYPE_CONSTITUTIONAL_REFUSAL
+
+    # Rule 0b: IDENTITY questions with high entropy — missing context, not model failure
+    if question_type == "IDENTITY" and entropy >= settings.high_entropy_threshold:
+        return ARCHETYPE_CONTEXT_DEPENDENT
+
+    # Rule 0c: context-dependent prompt (has_context=False) + high entropy = context gap, not hallucination
+    if not has_context and question_type in ("UNKNOWN", "IDENTITY") and entropy >= settings.high_entropy_threshold:
+        return ARCHETYPE_CONTEXT_DEPENDENT
 
     # Rule 1: both disagreement AND high entropy = full hallucination
     if disagreement and entropy >= settings.high_entropy_threshold:

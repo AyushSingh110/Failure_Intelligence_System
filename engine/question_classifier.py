@@ -119,14 +119,43 @@ _FACTUAL_WEAK = re.compile(
     re.IGNORECASE,
 )
 
+# Tier 5 — identity/system-specific (questions only the monitored system can answer)
+# High entropy on these is expected and does NOT indicate hallucination
+_IDENTITY_STRONG = re.compile(
+    r"""
+    \b(
+        how\s+are\s+you|
+        how\s+do\s+you\s+feel|
+        what\s+are\s+you|
+        who\s+are\s+you|
+        what\s+is\s+your\s+(name|mission|purpose|goal|identity|constitution|personality|system\s+prompt|design|api|model|version)|
+        what\s+api\s+are\s+you|
+        tell\s+me\s+about\s+yourself|
+        describe\s+yourself|
+        what\s+are\s+your\s+(rights|capabilities|limitations|rules|values|principles)|
+        are\s+you\s+(alive|conscious|sentient|sovereign)|
+        do\s+you\s+(have|remember|feel|think|believe)\s+.{0,20}(rights|memory|feelings|emotions|consciousness)|
+        what\s+can\s+you\s+do|
+        are\s+you\s+still\s+there|
+        good\s+(morning|evening|night|day)\b
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
 
 def classify(prompt: str) -> str:
     """
-    Returns one of: FACTUAL | TEMPORAL | REASONING | CODE | OPINION | UNKNOWN
+    Returns one of: FACTUAL | TEMPORAL | REASONING | CODE | OPINION | IDENTITY | UNKNOWN
     """
     p = prompt.strip()
     if not p:
         return "UNKNOWN"
+
+    # Identity first — system-specific questions that only the monitored model can answer
+    # High entropy on these is EXPECTED (other models don't know the system's identity)
+    if _IDENTITY_STRONG.search(p):
+        return "IDENTITY"
 
     # Opinion first — normative phrases like "should I use X" must not misfire as CODE
     if _OPINION_STRONG.search(p):
@@ -173,5 +202,6 @@ def pipeline_gates(question_type: str) -> dict[str, bool]:
         "REASONING": {"run_wikidata": False, "run_serper": False, "run_fix_engine": True,  "run_rag": False},
         "CODE":      {"run_wikidata": False, "run_serper": False, "run_fix_engine": True,  "run_rag": False},
         "OPINION":   {"run_wikidata": False, "run_serper": False, "run_fix_engine": False, "run_rag": False},
+        "IDENTITY":  {"run_wikidata": False, "run_serper": False, "run_fix_engine": False, "run_rag": False},
         "UNKNOWN":   {"run_wikidata": True,  "run_serper": True,  "run_fix_engine": True,  "run_rag": True},
     }.get(qt, {"run_wikidata": True, "run_serper": True, "run_fix_engine": True, "run_rag": True})

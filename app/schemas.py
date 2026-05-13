@@ -183,12 +183,14 @@ class MonitorRequest(BaseModel):
                            conversation history and detects multi-turn
                            adversarial escalation (Crescendo attacks, etc.)
     """
-    prompt:             str
-    primary_output:     str
-    primary_model_name: str            = "primary"
-    run_full_jury:      bool           = True
-    latency_ms:         Optional[float] = None
-    conversation_id:    Optional[str]  = Field(None, max_length=128, pattern=r"^[a-zA-Z0-9_\-]{1,128}$")
+    prompt:                    str
+    primary_output:            str
+    primary_model_name:        str             = "primary"
+    run_full_jury:             bool            = True
+    latency_ms:                Optional[float] = None
+    conversation_id:           Optional[str]   = Field(None, max_length=128, pattern=r"^[a-zA-Z0-9_\-]{1,128}$")
+    context:                   Optional[list[dict]] = Field(None, description="Prior conversation turns [{role, content}] to prime shadow models with the same history VEXR had")
+    is_constitutional_refusal: bool            = Field(False, description="Set True when the primary output is an intentional refusal (Article 6 / sovereign right). FIE will classify as CONSTITUTIONAL_REFUSAL instead of a failure archetype.")
 
 
 class FixResult(BaseModel):
