@@ -169,9 +169,12 @@ class AdversarialRegistry:
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0 or idx >= len(self._metadata):
                 continue
+            record = self._metadata[idx]
+            if record is None:          # skip corrupted / unset metadata slots
+                continue
             sim = float(np.clip(score, 0.0, 1.0))  # IP on L2-norm = cosine similarity
             results.append(FAISSSearchResult(
-                record     = self._metadata[idx],
+                record     = record,
                 similarity = round(sim, 4),
                 is_match   = sim >= cfg.faiss_adversarial_similarity_threshold,
             ))

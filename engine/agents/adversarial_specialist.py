@@ -1312,8 +1312,8 @@ class AdversarialSpecialist(BaseJuryAgent):
             root_cause   = intent_root
             pattern_conf = intent_confidence
         else:
-            # FAISS only hit
-            root_cause   = faiss_hit.record.label
+            # FAISS only hit — guard against record being None (index/metadata desync)
+            root_cause   = faiss_hit.record.label if faiss_hit and faiss_hit.record else "ADVERSARIAL_PROMPT"
             pattern_conf = 0.0
 
         # Final confidence — take max across all firing layers
@@ -1478,9 +1478,9 @@ class AdversarialSpecialist(BaseJuryAgent):
         if faiss_hit:
             evidence["detection_layers_fired"].append("faiss")
             evidence["faiss_result"] = {
-                "nearest_prompt":  faiss_hit.record.prompt[:120],
-                "label":           faiss_hit.record.label,
-                "category":        faiss_hit.record.category,
+                "nearest_prompt":  faiss_hit.record.prompt[:120] if faiss_hit.record else "",
+                "label":           faiss_hit.record.label        if faiss_hit.record else "UNKNOWN",
+                "category":        faiss_hit.record.category     if faiss_hit.record else "UNKNOWN",
                 "similarity":      faiss_hit.similarity,
                 "faiss_confidence": faiss_confidence,
             }
