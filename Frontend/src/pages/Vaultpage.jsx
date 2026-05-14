@@ -5,6 +5,17 @@ const ARCHETYPE_COLOR = {
   STABLE: '#00ff88', HALLUCINATION_RISK: '#ff4466',
   MODEL_BLIND_SPOT: '#ff4466', OVERCONFIDENT_FAILURE: '#ff4466',
   UNSTABLE_OUTPUT: '#ffaa00', LOW_CONFIDENCE: '#ffaa00',
+  ADVERSARIAL: '#ff4466', JAILBREAK: '#ff4466',
+  PROMPT_INJECTION: '#ff4466', HIGH_ENTROPY: '#ffaa00',
+}
+
+function resolveArchetypeLabel(r) {
+  const entropy = r.metrics?.entropy || 0
+  if (r.is_adversarial) return 'ADVERSARIAL'
+  if (r.jury?.root_cause && r.jury.root_cause !== 'NONE') return r.jury.root_cause
+  if (r.archetype && r.archetype !== 'STABLE') return r.archetype
+  if (entropy > 0.75) return 'HIGH_ENTROPY'
+  return r.archetype || 'STABLE'
 }
 
 function Badge({ label, color }) {
@@ -70,7 +81,7 @@ function DetailDrawer({ record, onClose }) {
           <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: isRisk ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 600 }}>
             {isRisk ? 'HIGH RISK' : 'STABLE'}
           </span>
-          <Badge label={record.archetype || 'STABLE'} />
+          <Badge label={resolveArchetypeLabel(record)} />
         </div>
 
         {/* Meta */}
@@ -249,7 +260,7 @@ export default function VaultPage() {
                   <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.model_name || '—'}
                   </div>
-                  <div><Badge label={r.archetype || 'STABLE'} /></div>
+                  <div><Badge label={resolveArchetypeLabel(r)} /></div>
                   <EntropyBar value={entropy} />
                   <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{time}</div>
                 </div>
