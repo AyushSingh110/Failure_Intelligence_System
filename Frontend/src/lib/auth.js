@@ -27,11 +27,11 @@ function getCurrentRedirectUri() {
 
 export function getGoogleRedirectUri() {
   const savedRedirectUri = sessionStorage.getItem(GOOGLE_REDIRECT_KEY)
-  return savedRedirectUri || import.meta.env.VITE_REDIRECT_URI || getCurrentRedirectUri()
+  return savedRedirectUri || getCurrentRedirectUri()
 }
 
 export function getGoogleAuthUrl() {
-  const redirectUri = import.meta.env.VITE_REDIRECT_URI || getCurrentRedirectUri()
+  const redirectUri = getCurrentRedirectUri()
   sessionStorage.setItem(GOOGLE_REDIRECT_KEY, redirectUri)
 
   const params = new URLSearchParams({
