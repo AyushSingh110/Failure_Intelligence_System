@@ -30,12 +30,86 @@ def run_ground_truth_pipeline(
     shadow_weights:   Optional[list[float]] = None,
     use_wikidata:     bool = True,
     use_serper:       bool = True,
+    question_type:    str  = "UNKNOWN",
 ) -> GroundTruthPipelineResult:
     """
     Main entry point. Called from the /monitor route after jury verdict.
+
+    question_type controls routing:
+      FACTUAL/UNKNOWN → Wikidata + Serper external verification
+      TEMPORAL        → Serper only (live data)
+      REASONING/CODE  → self-consistency check across shadow outputs (no external lookup)
+      OPINION/IDENTITY → no GT verification (escalate immediately if low confidence)
     """
     result = GroundTruthPipelineResult()
     result.pipeline_trace = []
+
+    qt = (question_type or "UNKNOWN").upper()
+
+    # ── REASONING / CODE → self-consistency across shadow outputs ─────────────
+    # External sources (Wikidata, Serper) cannot verify reasoning or code.
+    # If shadow models agree semantically, treat the medoid as pseudo-GT.
+    if qt in ("REASONING", "CODE"):
+        result.pipeline_trace.append(
+            f"Question type={qt}: routing to self-consistency verifier "
+            "(Wikidata/Serper disabled for this type)"
+        )
+        if shadow_outputs and len(shadow_outputs) >= 2:
+            try:
+                from engine.verifier.self_consistency_verifier import check_self_consistency
+                sc = check_self_consistency(shadow_outputs)
+                result.pipeline_trace.append(
+                    f"Self-consistency ({sc.method}): score={sc.consistency_score:.3f} "
+                    f"consistent={sc.is_consistent} n={sc.num_outputs}"
+                )
+                if sc.is_consistent:
+                    result.verified_answer = sc.best_answer
+                    result.confidence      = sc.consistency_score
+                    result.source          = f"self_consistency_{qt.lower()}"
+                    result.pipeline_trace.append(
+                        f"Pseudo-GT accepted: medoid answer selected "
+                        f"(confidence={sc.consistency_score:.3f})"
+                    )
+                    _cache_if_confident(
+                        prompt, sc.best_answer,
+                        f"self_consistency_{qt.lower()}", sc.consistency_score,
+                    )
+                    return result
+                else:
+                    result.requires_escalation = True
+                    result.escalation_reason   = (
+                        f"Shadow models disagree on this {qt} question "
+                        f"(self-consistency score={sc.consistency_score:.2f} "
+                        f"< threshold). Human review recommended."
+                    )
+                    result.pipeline_trace.append(
+                        f"Escalating: {result.escalation_reason}"
+                    )
+                    return result
+            except Exception as exc:
+                logger.warning("Self-consistency check failed: %s", exc)
+                result.pipeline_trace.append(f"Self-consistency error: {exc} — escalating")
+                result.requires_escalation = True
+                result.escalation_reason   = f"Self-consistency verification failed: {exc}"
+                return result
+        else:
+            result.requires_escalation = True
+            result.escalation_reason   = (
+                f"Not enough shadow outputs for self-consistency check "
+                f"on {qt} question (need >= 2, got {len(shadow_outputs or [])})"
+            )
+            result.pipeline_trace.append(f"Escalating: {result.escalation_reason}")
+            return result
+
+    # ── OPINION / IDENTITY → no GT pipeline, return empty (caller decides) ────
+    if qt in ("OPINION", "IDENTITY"):
+        result.pipeline_trace.append(
+            f"Question type={qt}: no external GT available — "
+            "returning empty result (jury verdict is authoritative)"
+        )
+        result.confidence = jury_confidence
+        result.source     = "none"
+        return result
 
     # Cache lookup
     try:

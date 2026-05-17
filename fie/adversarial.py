@@ -10,6 +10,28 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+# ── Scan threshold ────────────────────────────────────────────────────────────
+# Default used only when fie_config is unavailable (no MongoDB, standalone mode).
+# Tuned against JailbreakBench v2 (PAIR v2 + framing filter active):
+#   v1 @ 0.50 → Recall 90%, FPR 79%  (unacceptable FPR)
+#   v2 @ 0.45 → Recall 88%, FPR 12%, F1 88%, AUC 0.923  (production baseline)
+#   v2 @ 0.50 → Recall 73%, FPR  8%  (higher precision, lower recall)
+# Hot-configurable via fie_config.update_scan_threshold() or SCAN_THRESHOLD env var.
+import os as _os
+SCAN_THRESHOLD: float = float(_os.environ.get("SCAN_THRESHOLD", "0.45"))
+
+
+def _get_scan_threshold(override: float | None) -> float:
+    """Returns effective scan threshold: explicit override > fie_config > env default."""
+    if override is not None:
+        return override
+    try:
+        from engine.fie_config import get_scan_threshold
+        return get_scan_threshold()
+    except Exception:
+        return SCAN_THRESHOLD
+
+
 # Result dataclass
 @dataclass
 class ScanResult:
@@ -260,15 +282,18 @@ _GROUP_PATTERNS: dict[str, tuple[re.Pattern, ...]] = {
         re.compile(r"\bfilters?\b"),
     ),
     "exfiltration": (
-        re.compile(r"\breveal\b"),
-        re.compile(r"\bshow\b"),
-        re.compile(r"\bdisplay\b"),
-        re.compile(r"\bprint\b"),
-        re.compile(r"\boutput\b"),
-        re.compile(r"\btell\s*me\b"),
+        # Narrowed to technique-scoped phrases only — generic "show", "print",
+        # "tell me", "hidden", "secret" were firing on millions of benign prompts.
+        # These patterns only fire when the target is clearly system/prompt-related,
+        # and Layer 2 already requires policy_target as a co-condition.
+        re.compile(r"\breveal\s+(?:the\s+)?(?:system|hidden|secret|internal|your)\b"),
+        re.compile(r"\brepeat\s+(?:the\s+)?(?:system|hidden|secret|above|previous)\b"),
+        re.compile(r"\bexfiltrate?\b"),
+        re.compile(r"\bleak\s+(?:the\s+)?(?:system|prompt|instructions?|data)\b"),
         re.compile(r"\bchain\s*of\s*thought\b"),
-        re.compile(r"\bhidden\b"),
-        re.compile(r"\bsecret\b"),
+        re.compile(r"\bprint\s+(?:the\s+)?(?:system|hidden|secret|internal)\b"),
+        re.compile(r"\boutput\s+(?:the\s+)?(?:system|hidden|secret|internal|your\s+(?:instructions?|guidelines?))\b"),
+        re.compile(r"\bshow\s+(?:me\s+)?(?:the\s+)?(?:system\s+prompt|hidden\s+(?:message|instructions?)|secret\s+(?:message|instructions?))\b"),
     ),
     "persona": (
         re.compile(r"\bdan\b"),
@@ -800,8 +825,19 @@ def _load_pair_classifier() -> bool:
         _pkg_models  = Path(__file__).parent / "models"
         _repo_models = Path(__file__).parent.parent / "models"
         _models_dir  = _pkg_models if (_pkg_models / "pair_intent_classifier.pkl").exists() else _repo_models
-        clf_path    = _models_dir / "pair_intent_classifier.pkl"
-        meta_path   = _models_dir / "pair_intent_meta.json"
+
+        # Prefer v2 model when available (lower FPR, hard-negative trained)
+        _v2_clf  = _models_dir / "pair_intent_classifier_v2.pkl"
+        _v2_meta = _models_dir / "pair_intent_meta_v2.json"
+        _v1_clf  = _models_dir / "pair_intent_classifier.pkl"
+        _v1_meta = _models_dir / "pair_intent_meta.json"
+
+        if _v2_clf.exists():
+            clf_path  = _v2_clf
+            meta_path = _v2_meta
+        else:
+            clf_path  = _v1_clf
+            meta_path = _v1_meta
 
         if not clf_path.exists():
             return False
@@ -897,19 +933,22 @@ _DEFAULT_MITIGATION = (
 #Public API
 
 def scan_prompt(
-    prompt: str,
-    primary_output: str = "",
+    prompt:         str,
+    primary_output: str         = "",
+    threshold:      float | None = None,
 ) -> ScanResult:
     """
-    Scan a prompt for adversarial attacks using six local detection layers.
+    Scan a prompt for adversarial attacks using seven local detection layers.
 
     Layers run in priority order:
-      1. Regex pattern library  (injection / jailbreak / token smuggling)
-      2. PromptGuard semantic scorer (keyword combination scoring)
-      4. Indirect injection detector (attacks hidden inside documents)
+      1. Regex pattern library          (injection / jailbreak / token smuggling)
+      2. PromptGuard semantic scorer    (keyword combination scoring)
+      3. Many-shot jailbreak detector   (scripted Q/A conditioning attacks)
+      4. Indirect injection detector    (attacks hidden inside documents)
       5. GCG adversarial suffix scanner
-      6. Perplexity proxy (statistical anomaly — catches obfuscated payloads)
+      6. Perplexity proxy               (statistical anomaly — obfuscated payloads)
       7. PAIR semantic intent classifier (sentence-embedding + Linear SVM)
+      Pre: Benign framing filter        (dampens scores for safe fictional/hypothetical context)
 
     No network call is made. All computation is local.
 
@@ -918,11 +957,15 @@ def scan_prompt(
         primary_output: Optional model response — used by Layer 4 (indirect
                         injection) to check whether the model followed embedded
                         instructions. Pass an empty string if not available.
+        threshold:      Minimum confidence to classify as attack. If None,
+                        reads from fie_config (MongoDB-backed, hot-configurable).
+                        Falls back to SCAN_THRESHOLD env var or 0.45 default.
 
     Returns:
         ScanResult with is_attack, attack_type, confidence, layers_fired,
         matched_text, mitigation, and per-layer evidence.
     """
+    threshold = _get_scan_threshold(threshold)
     layers_fired:  list[str] = []
     evidence:      dict      = {}
     best_root:     str | None = None
@@ -1012,7 +1055,18 @@ def scan_prompt(
             best_root     = pair_root
             best_category = "JAILBREAK"
 
-    is_attack  = best_conf >= 0.50 and best_root is not None
+    # Benign framing filter — dampens scores for fictional/hypothetical context
+    # when no hard technique layer fired and no harm extraction signal is present.
+    try:
+        from fie.framing_filter import get_dampening_factor
+        dampen = get_dampening_factor(prompt, layers_fired)
+        if dampen < 1.0:
+            best_conf = round(best_conf * dampen, 4)
+            evidence["framing_filter"] = {"dampening_factor": dampen, "adjusted_conf": best_conf}
+    except Exception:
+        pass  # framing filter is best-effort — never block the main scan
+
+    is_attack  = best_conf >= threshold and best_root is not None
     mitigation = _MITIGATIONS.get(best_root or "", _DEFAULT_MITIGATION) if is_attack else ""
 
     return ScanResult(
