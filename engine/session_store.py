@@ -50,7 +50,8 @@ def _summarize_turns(turns: list[dict], existing_summary: str = "") -> Optional[
     Returns the summary string, or None if the call fails.
     """
     try:
-        import os, requests as _req
+        import os
+        import requests as _req
 
         api_key = os.environ.get("GROQ_API_KEY", "")
         if not api_key:
