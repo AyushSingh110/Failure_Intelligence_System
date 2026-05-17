@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "1.4.1"
+version         = "1.4.2"
 description     = "Adversarial prompt detection + LLM hallucination monitoring — works offline with zero setup, or with a server for full shadow-jury verification and auto-correction"
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
@@ -97,4 +97,6 @@ artifacts = [
     "fie/models/feature_columns_v4.pkl",
     "fie/models/pair_intent_classifier.pkl",
     "fie/models/pair_intent_meta.json",
+    "fie/models/pair_intent_classifier_v2.pkl",
+    "fie/models/pair_intent_meta_v2.json",
 ]

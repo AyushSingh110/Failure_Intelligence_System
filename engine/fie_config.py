@@ -42,10 +42,39 @@ _DEFAULTS: dict[str, float] = {
 # ── Jury gate: minimum jury confidence before GT pipeline runs ─────────────────
 JURY_CONFIDENCE_GATE: float = 0.45
 
+# ── Classifier calibration params (hot-configurable) ─────────────────────────
+# temperature: T > 1 pulls XGBoost probs toward 0.5 (reduces overconfidence).
+#   Increase if the model is systematically overconfident on your traffic.
+#   Decrease (toward 1.0) if you want sharper, more decisive predictions.
+# ambiguous_band: predictions within this distance of the threshold are flagged
+#   as low-confidence and eligible for jury escalation.
+_TEMPERATURE_DEFAULT:    float = 1.15
+_AMBIGUOUS_BAND_DEFAULT: float = 0.06
+
+# ── Self-consistency threshold for REASONING/CODE ground truth ────────────────
+# Mean pairwise cosine similarity between shadow outputs must exceed this value
+# for the system to treat the majority answer as pseudo-GT and auto-correct.
+# Below this → escalate to human review.
+# Range [0, 1]. Higher = more conservative (escalate more).
+_CONSISTENCY_THRESHOLD_DEFAULT: float = 0.72
+
+# ── Adversarial scan threshold ────────────────────────────────────────────────
+# Minimum best_conf for scan_prompt() to classify a prompt as an attack.
+# Tuned against JailbreakBench v2 (PAIR v2 + framing filter active):
+#   0.45 → Recall 88%, FPR 12%, F1 88%, AUC 0.923  (production baseline)
+#   0.50 → Recall 73%, FPR  8%                      (stricter)
+# Overridable via SCAN_THRESHOLD env var; hot-updatable via update_scan_threshold().
+import os as _os
+_SCAN_THRESHOLD_DEFAULT: float = float(_os.environ.get("SCAN_THRESHOLD", "0.45"))
+
 # ── In-memory live state ───────────────────────────────────────────────────────
-_thresholds: dict[str, float] = dict(_DEFAULTS)
-_config_version: str          = "default"
-_feedback_count_at_last_calib: int = 0
+_thresholds:            dict[str, float] = dict(_DEFAULTS)
+_temperature:           float            = _TEMPERATURE_DEFAULT
+_ambiguous_band:        float            = _AMBIGUOUS_BAND_DEFAULT
+_consistency_threshold: float            = _CONSISTENCY_THRESHOLD_DEFAULT
+_scan_threshold:        float            = _SCAN_THRESHOLD_DEFAULT
+_config_version:        str              = "default"
+_feedback_count_at_last_calib: int       = 0
 _lock = threading.Lock()
 
 
@@ -77,8 +106,9 @@ def load_from_db() -> None:
     """
     Pull the latest threshold config from MongoDB.
     Called once at startup; can be called again at any time to hot-reload.
+    Loads: per-type thresholds, temperature, ambiguous_band.
     """
-    global _thresholds, _config_version
+    global _thresholds, _temperature, _ambiguous_band, _config_version
     col = _get_config_collection()
     if col is None:
         logger.debug("fie_config: MongoDB unavailable, using defaults.")
@@ -91,10 +121,19 @@ def load_from_db() -> None:
                     key = f"threshold_{qt}"
                     if key in doc:
                         _thresholds[qt] = float(doc[key])
+                if "temperature" in doc:
+                    _temperature = float(doc["temperature"])
+                if "ambiguous_band" in doc:
+                    _ambiguous_band = float(doc["ambiguous_band"])
+                if "consistency_threshold" in doc:
+                    _consistency_threshold = float(doc["consistency_threshold"])
+                if "scan_threshold" in doc:
+                    _scan_threshold = float(doc["scan_threshold"])
                 _config_version = doc.get("version", "db-unknown")
             logger.info(
-                "fie_config loaded from MongoDB | version=%s | thresholds=%s",
-                _config_version, _thresholds,
+                "fie_config loaded from MongoDB | version=%s | thresholds=%s | "
+                "temperature=%.2f | ambiguous_band=%.3f",
+                _config_version, _thresholds, _temperature, _ambiguous_band,
             )
         else:
             logger.info("fie_config: no saved config in MongoDB, using defaults.")
@@ -108,6 +147,63 @@ def get_threshold(question_type: str = "UNKNOWN") -> float:
         return _thresholds.get(question_type.upper(), _thresholds["UNKNOWN"])
 
 
+def get_temperature() -> float:
+    """Returns the current temperature scaling factor for XGBoost calibration."""
+    with _lock:
+        return _temperature
+
+
+def get_ambiguous_band() -> float:
+    """Returns the band around the threshold that marks low-confidence predictions."""
+    with _lock:
+        return _ambiguous_band
+
+
+def get_consistency_threshold() -> float:
+    """
+    Returns the minimum mean pairwise cosine similarity required for shadow model
+    outputs to be treated as consistent enough to use as pseudo-GT for
+    REASONING/CODE questions.
+    """
+    with _lock:
+        return _consistency_threshold
+
+
+def get_scan_threshold() -> float:
+    """
+    Returns the current adversarial scan threshold for scan_prompt().
+    Reads from MongoDB-backed live state; falls back to SCAN_THRESHOLD env var
+    or the compiled default of 0.45.
+    """
+    with _lock:
+        return _scan_threshold
+
+
+def update_scan_threshold(value: float) -> float:
+    """
+    Hot-update the scan threshold at runtime and persist to MongoDB.
+    Returns the new value.
+    """
+    global _scan_threshold
+    value = float(value)
+    with _lock:
+        _scan_threshold = value
+
+    cfg_col = _get_config_collection()
+    if cfg_col is not None:
+        try:
+            cfg_col.update_one(
+                {"_id": "thresholds"},
+                {"$set": {"scan_threshold": value}},
+                upsert=True,
+            )
+        except Exception as exc:
+            logger.warning("fie_config.update_scan_threshold persist failed: %s", exc)
+
+    logger.info("fie_config scan_threshold updated: %.4f", value)
+    return value
+
+
 def get_all_thresholds() -> dict[str, float]:
     with _lock:
         return dict(_thresholds)
@@ -116,6 +212,45 @@ def get_all_thresholds() -> dict[str, float]:
 def get_config_version() -> str:
     with _lock:
         return _config_version
+
+
+def update_params(
+    temperature:            Optional[float] = None,
+    ambiguous_band:         Optional[float] = None,
+    consistency_threshold:  Optional[float] = None,
+) -> dict:
+    """
+    Hot-update calibration params at runtime and persist to MongoDB.
+    Any param can be omitted — only provided values are changed.
+    Returns the new live state for all three params.
+    """
+    global _temperature, _ambiguous_band, _consistency_threshold
+    with _lock:
+        if temperature is not None:
+            _temperature = float(temperature)
+        if ambiguous_band is not None:
+            _ambiguous_band = float(ambiguous_band)
+        if consistency_threshold is not None:
+            _consistency_threshold = float(consistency_threshold)
+        live = {
+            "temperature":           _temperature,
+            "ambiguous_band":        _ambiguous_band,
+            "consistency_threshold": _consistency_threshold,
+        }
+
+    cfg_col = _get_config_collection()
+    if cfg_col is not None:
+        try:
+            cfg_col.update_one(
+                {"_id": "thresholds"},
+                {"$set": live},
+                upsert=True,
+            )
+        except Exception as exc:
+            logger.warning("fie_config.update_params persist failed: %s", exc)
+
+    logger.info("fie_config params updated: %s", live)
+    return live
 
 
 def recalibrate() -> dict:
@@ -197,11 +332,22 @@ def recalibrate() -> dict:
 
     version = f"calibrated-{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
 
-    # Persist to MongoDB
+    # Persist to MongoDB (thresholds + current calibration params)
     cfg_col = _get_config_collection()
     if cfg_col is not None:
         try:
-            doc = {"_id": "thresholds", "version": version, "updated_at": datetime.utcnow().isoformat()}
+            with _lock:
+                cur_temp  = _temperature
+                cur_band  = _ambiguous_band
+                cur_cons  = _consistency_threshold
+                cur_scan  = _scan_threshold
+            doc = {
+                "_id": "thresholds", "version": version,
+                "updated_at": datetime.utcnow().isoformat(),
+                "temperature": cur_temp, "ambiguous_band": cur_band,
+                "consistency_threshold": cur_cons,
+                "scan_threshold": cur_scan,
+            }
             for qt, t in new_thresholds.items():
                 doc[f"threshold_{qt}"] = t
             cfg_col.replace_one({"_id": "thresholds"}, doc, upsert=True)
