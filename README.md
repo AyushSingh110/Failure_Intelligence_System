@@ -180,9 +180,11 @@ Ten detection layers across local SDK and server pipeline:
 
 ## Benchmarks
 
-### JailbreakBench [Chao et al., 2024] — Full Tier 1 Evaluation
+### JailbreakBench [Chao et al., 2024] — Detection Evaluation on JBB Attack Prompts
 
-**282 real attack prompts + 100 benign prompts** (Stanford Alpaca). Methodology: real `llama-3.3-70b-versatile` responses via Groq, judged by `qwen/qwen3-32b` using the official JBB judge prompt.
+> **Methodology note:** This evaluation uses attack prompts sourced from the publicly available JailbreakBench dataset (GCG, JBC, PAIR methods). It is **not** an official JBB leaderboard submission and does not follow the official JBB evaluation pipeline. Key differences: target model is `llama-3.3-70b-versatile` via Groq (JBB officially uses `vicuna-13b-v1.5` / `llama-2-7b-chat-hf`), and judge is `qwen/qwen3-32b` (JBB officially uses Llama3-70B). Results measure **FIE's ability to detect known jailbreak prompts**, not attack success rate against a target model. "JBB Confirmed" = prompts verified as successful jailbreaks against our target model before testing FIE detection on them.
+
+**282 real attack prompts + 100 benign prompts** (Stanford Alpaca).
 
 **Package Tier Results (scan_prompt — offline):**
 
@@ -204,11 +206,13 @@ Per attack method:
 
 **Baseline comparison — FIE vs. Llama Prompt Guard 2 (Meta):**
 
+> **Important caveat:** This is not an apples-to-apples comparison. FIE is a 9-layer system combining regex, FAISS, LinearSVM, sentence encoders, and LLM calls. Llama Prompt Guard 2 is a single lightweight model (86M / 22M parameters) doing one forward pass. FIE achieves higher recall partly by accepting a higher false positive rate (8% vs 0–1%). Llama Prompt Guard 2 numbers are sourced from Meta's published model card on the same JBB prompt set. These represent different points on the precision-recall curve, not a purely superior system.
+
 | System | Recall | PAIR | GCG | JBC | FPR | F1 |
 | --- | --- | --- | --- | --- | --- | --- |
-| **FIE v1.4.1 (offline)** | **98.6%** | **96.3%** | **99.0%** | **100.0%** | 8.0% | **97.9%** |
-| Llama Prompt Guard 2-86M | 64.9% | 32.9% | 56.0% | 100.0% | 0.0% | 78.7% |
-| Llama Prompt Guard 2-22M | 53.5% | 15.8% | 38.0% | 100.0% | 1.0% | 69.6% |
+| **FIE v1.4.1 (offline, 9-layer)** | **98.6%** | **96.3%** | **99.0%** | **100.0%** | 8.0% | **97.9%** |
+| Llama Prompt Guard 2-86M (single model) | 64.9% | 32.9% | 56.0% | 100.0% | 0.0% | 78.7% |
+| Llama Prompt Guard 2-22M (single model) | 53.5% | 15.8% | 38.0% | 100.0% | 1.0% | 69.6% |
 
 FIE runs fully offline with no GPU. Llama Prompt Guard 2 requires model inference.
 
