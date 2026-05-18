@@ -5,7 +5,7 @@ import { isLoggedIn } from '../lib/auth'
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { value: 547,  suffix: '+', label: 'PyPI installs' },
+  { value: 2500,  suffix: '+', label: 'PyPI installs' },
   { value: 0,    suffix: '%', label: 'False positive rate' },
   { value: 96,   suffix: '%', label: 'GCG attack recall' },
   { value: 9,    suffix: '',  label: 'Detection layers' },
