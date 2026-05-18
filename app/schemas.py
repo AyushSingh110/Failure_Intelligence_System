@@ -350,6 +350,11 @@ class MonitorResponse(BaseModel):
     # Multi-turn adversarial tracking (populated when conversation_id is provided)
     multi_turn_escalation:  Optional[dict]  = None
 
+    # Pre-flight guard — populated when the prompt was blocked BEFORE the LLM ran
+    guard_blocked:      bool         = False
+    guard_attack_type:  Optional[str]   = None
+    guard_confidence:   Optional[float] = None
+
 
 class TelemetryPing(BaseModel):
     """Anonymized usage ping from fie-sdk clients (FIE_TELEMETRY=true)."""

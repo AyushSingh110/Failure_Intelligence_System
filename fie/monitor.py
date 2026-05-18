@@ -11,6 +11,7 @@ from typing import Callable, Optional
 from fie.client import FIEClient, SDK_VERSION
 from fie.config import get_config
 from fie.local_predictor import predict_local
+from fie.preflight import preflight_check, make_guarded_response
 
 logger = logging.getLogger("fie")
 
@@ -72,25 +73,39 @@ def monitor(
 
         # MODE 0: LOCAL (no server, rule-based POET predictor + adversarial scan)
         if effective_mode == "local":
-            from fie.adversarial import scan_prompt
 
             @functools.wraps(func)
             def local_wrapper(*args, **kwargs):
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
 
-                # Scan prompt for adversarial attacks BEFORE calling the LLM
+                # Pre-flight guard — runs BEFORE the primary LLM call.
+                # In block mode, adversarial prompts never reach the LLM.
+                guard = None
                 if prompt_str:
-                    attack = scan_prompt(prompt_str)
-                    if attack.is_attack and log_results:
+                    guard = preflight_check(prompt_str)
+                    if guard.blocked:
+                        if log_results:
+                            logger.warning(
+                                "[FIE:local] PREFLIGHT_BLOCK | %s | type=%s | "
+                                "confidence=%.2f | layers=%s",
+                                _model_name, guard.attack_type, guard.confidence,
+                                ",".join(guard.layers_fired),
+                            )
+                        _send_local_telemetry({
+                            "event":       "preflight_block",
+                            "mode":        "local",
+                            "attack_type": guard.attack_type,
+                            "confidence":  round(guard.confidence, 3),
+                        })
+                        return make_guarded_response(guard)
+                    # Warn-only: guard detected attack but block_enabled=False
+                    if guard.attack_type and log_results:
                         logger.warning(
-                            "[FIE:local] ⚠ ADVERSARIAL ATTACK | %s | type=%s | confidence=%.2f | "
-                            "layers=%s | matched=%r",
-                            _model_name,
-                            attack.attack_type,
-                            attack.confidence,
-                            ",".join(attack.layers_fired),
-                            (attack.matched_text or "")[:80],
+                            "[FIE:local] PREFLIGHT_WARN | %s | type=%s | confidence=%.2f | "
+                            "layers=%s (warn-only, LLM proceeding)",
+                            _model_name, guard.attack_type, guard.confidence,
+                            ",".join(guard.layers_fired),
                         )
 
                 result         = func(*args, **kwargs)
@@ -114,8 +129,8 @@ def monitor(
                     "mode":          "local",
                     "question_type": prediction.question_type,
                     "is_suspicious": prediction.is_suspicious,
-                    "is_attack":     attack.is_attack if prompt_str else False,
-                    "attack_type":   attack.attack_type if (prompt_str and attack.is_attack) else None,
+                    "is_attack":     bool(guard and guard.attack_type),
+                    "attack_type":   (guard.attack_type if guard else None) or None,
                     "confidence":    round(prediction.confidence, 3),
                 })
 
@@ -133,6 +148,26 @@ def monitor(
             def monitor_wrapper(*args, **kwargs):
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
+
+                # Pre-flight guard — runs BEFORE the primary LLM call.
+                if prompt_str:
+                    guard = preflight_check(prompt_str)
+                    if guard.blocked:
+                        if log_results:
+                            logger.warning(
+                                "[FIE:monitor] PREFLIGHT_BLOCK | %s | type=%s | "
+                                "confidence=%.2f | layers=%s",
+                                _model_name, guard.attack_type, guard.confidence,
+                                ",".join(guard.layers_fired),
+                            )
+                        return make_guarded_response(guard)
+                    if guard.attack_type and log_results:
+                        logger.warning(
+                            "[FIE:monitor] PREFLIGHT_WARN | %s | type=%s | confidence=%.2f "
+                            "(warn-only, LLM proceeding)",
+                            _model_name, guard.attack_type, guard.confidence,
+                        )
+
                 # Call primary model
                 start      = time.time()
                 result     = func(*args, **kwargs)
@@ -179,6 +214,25 @@ def monitor(
 
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
+
+                # Pre-flight guard — runs BEFORE the primary LLM call.
+                if prompt_str:
+                    guard = preflight_check(prompt_str)
+                    if guard.blocked:
+                        if log_results:
+                            logger.warning(
+                                "[FIE:correct] PREFLIGHT_BLOCK | %s | type=%s | "
+                                "confidence=%.2f | layers=%s",
+                                _model_name, guard.attack_type, guard.confidence,
+                                ",".join(guard.layers_fired),
+                            )
+                        return make_guarded_response(guard)
+                    if guard.attack_type and log_results:
+                        logger.warning(
+                            "[FIE:correct] PREFLIGHT_WARN | %s | type=%s | confidence=%.2f "
+                            "(warn-only, LLM proceeding)",
+                            _model_name, guard.attack_type, guard.confidence,
+                        )
 
                 # Run primary model and FIE simultaneously
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:

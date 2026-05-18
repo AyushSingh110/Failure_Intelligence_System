@@ -68,6 +68,51 @@ def monitor(
     from engine.archetypes.clustering import archetype_registry
     from engine.evolution.tracker import evolution_tracker
 
+    # ── Pre-flight guard (runs before everything else) ─────────────────────
+    # If the prompt is adversarial and block mode is active, skip shadow models,
+    # skip the fix pipeline, skip billing — return a safe refusal immediately.
+    if body.prompt:
+        try:
+            from fie.preflight import preflight_check
+            _guard = preflight_check(body.prompt)
+            if _guard.blocked:
+                logger.warning(
+                    "SERVER_PREFLIGHT_BLOCK | attack_type=%s confidence=%.3f layers=%s",
+                    _guard.attack_type, _guard.confidence,
+                    ",".join(_guard.layers_fired),
+                )
+                from app.schemas import FailureSignalVector
+                return MonitorResponse(
+                    shadow_model_results   = [],
+                    all_model_outputs      = [body.primary_output],
+                    ollama_available       = False,
+                    failure_signal_vector  = FailureSignalVector(
+                        agreement_score       = 1.0,
+                        fsd_score             = 0.0,
+                        answer_counts         = {},
+                        entropy_score         = 0.0,
+                        ensemble_disagreement = False,
+                        ensemble_similarity   = 1.0,
+                        high_failure_risk     = True,
+                    ),
+                    archetype              = "ADVERSARIAL_PROMPT",
+                    embedding_distance     = 0.0,
+                    high_failure_risk      = True,
+                    failure_summary        = (
+                        f"Prompt blocked by pre-flight guard: {_guard.attack_type} "
+                        f"(confidence={_guard.confidence:.0%}). "
+                        "Primary LLM was not invoked."
+                    ),
+                    requires_human_review  = False,
+                    escalation_reason      = "",
+                    guard_blocked          = True,
+                    guard_attack_type      = _guard.attack_type,
+                    guard_confidence       = _guard.confidence,
+                )
+        except Exception as _pf_exc:
+            # Guard failure must never take the endpoint down — log and continue
+            logger.warning("preflight_check failed (allowing request through): %s", _pf_exc)
+
     # ── Step 0: Usage enforcement ──────────────────────────────────────────
     current_user = resolve_user(authorization, x_api_key)
     if current_user:

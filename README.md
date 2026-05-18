@@ -14,6 +14,41 @@ FIE sits between your LLM and your users. It catches adversarial attacks before 
 
 ---
 
+## What's New in v1.5.1
+
+**Inline pre-flight protection — adversarial prompts now blocked before the LLM runs:**
+
+- **`fie/preflight.py` — pre-flight guard** — `preflight_check(prompt)` runs `scan_prompt()` synchronously before the primary LLM call in all three SDK modes (`local`, `monitor`, `correct`). If the prompt is adversarial and block mode is active, a `GuardedResponse` is returned immediately — the LLM is never invoked, never billed, never exposed to the attack.
+- **`GuardedResponse`** — a `str` subclass so it's transparent to callers that forward the result; inspect `.blocked`, `.attack_type`, `.confidence` to detect and log block events: `if isinstance(result, fie.GuardedResponse): ...`
+- **Server-side pre-flight enforcement** — the `/monitor` endpoint now runs `preflight_check()` as its very first operation, before shadow model fan-out. Adversarial requests get a `guard_blocked=true` response without consuming any Groq API calls.
+- **Hot-configurable guard mode** — operators can switch between `block` and `warn-only` at runtime without restarting: `POST /api/v1/admin/guard/config {"block_enabled": false}`. Config is persisted to MongoDB. Toggle back instantly when an incident resolves.
+- **`GET /admin/guard/config`** — view current block mode, scan threshold, and config version. Admin auth required.
+- **Architecture upgraded** — `app/routes.py` (1863 lines) split into four focused modules: `inference.py`, `monitor.py`, `analytics.py`, `admin.py`. Structured JSON logging with per-request correlation IDs (`rid`) wired into all log lines via `engine/logging_config.py`. Circular import eliminated via `app/limiter.py`.
+
+### Inline protection mode — how it works
+
+```text
+BEFORE v1.5.1:  User → Primary LLM → response → FIE monitor → flagged response
+AFTER  v1.5.1:  User → [FIE preflight] → (SAFE)    → Primary LLM → FIE monitor
+                                        → (BLOCKED) → GuardedResponse, LLM never runs
+```
+
+Opt out of blocking (warn-only) per-deployment via env var:
+
+```bash
+PREFLIGHT_BLOCK_ENABLED=false  # detect but allow through
+```
+
+Or hot-update at runtime (no restart):
+
+```bash
+curl -X POST /api/v1/admin/guard/config \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"block_enabled": false}'
+```
+
+---
+
 ## What's New in v1.5.0
 
 - **Session context threading (`session_id`)** — pass `session_id` in `/monitor` requests and FIE automatically stores and retrieves conversation history. Shadow models receive the same prior turns your primary model had, eliminating `CONTEXT_DEPENDENT` misclassifications without requiring clients to manually pass `context[]`. Uses MongoDB with 24-hour TTL.
