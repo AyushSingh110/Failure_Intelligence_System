@@ -67,14 +67,25 @@ _CONSISTENCY_THRESHOLD_DEFAULT: float = 0.72
 import os as _os
 _SCAN_THRESHOLD_DEFAULT: float = float(_os.environ.get("SCAN_THRESHOLD", "0.45"))
 
+# ── Pre-flight block mode ──────────────────────────────────────────────────────
+# When True, prompts that exceed the scan threshold are BLOCKED before the
+# primary LLM is called (inline protection mode).
+# When False, attacks are detected and logged but the LLM call proceeds
+# (warn-only / monitoring-only mode).
+# Hot-updatable via update_preflight_config(); persisted to MongoDB.
+_PREFLIGHT_BLOCK_ENABLED_DEFAULT: bool = _os.environ.get(
+    "PREFLIGHT_BLOCK_ENABLED", "true"
+).lower() not in ("0", "false", "no")
+
 # ── In-memory live state ───────────────────────────────────────────────────────
-_thresholds:            dict[str, float] = dict(_DEFAULTS)
-_temperature:           float            = _TEMPERATURE_DEFAULT
-_ambiguous_band:        float            = _AMBIGUOUS_BAND_DEFAULT
-_consistency_threshold: float            = _CONSISTENCY_THRESHOLD_DEFAULT
-_scan_threshold:        float            = _SCAN_THRESHOLD_DEFAULT
-_config_version:        str              = "default"
-_feedback_count_at_last_calib: int       = 0
+_thresholds:              dict[str, float] = dict(_DEFAULTS)
+_temperature:             float            = _TEMPERATURE_DEFAULT
+_ambiguous_band:          float            = _AMBIGUOUS_BAND_DEFAULT
+_consistency_threshold:   float            = _CONSISTENCY_THRESHOLD_DEFAULT
+_scan_threshold:          float            = _SCAN_THRESHOLD_DEFAULT
+_preflight_block_enabled: bool             = _PREFLIGHT_BLOCK_ENABLED_DEFAULT
+_config_version:          str              = "default"
+_feedback_count_at_last_calib: int         = 0
 _lock = threading.Lock()
 
 
@@ -106,9 +117,9 @@ def load_from_db() -> None:
     """
     Pull the latest threshold config from MongoDB.
     Called once at startup; can be called again at any time to hot-reload.
-    Loads: per-type thresholds, temperature, ambiguous_band.
+    Loads: per-type thresholds, temperature, ambiguous_band, preflight_block_enabled.
     """
-    global _thresholds, _temperature, _ambiguous_band, _config_version
+    global _thresholds, _temperature, _ambiguous_band, _config_version, _preflight_block_enabled
     col = _get_config_collection()
     if col is None:
         logger.debug("fie_config: MongoDB unavailable, using defaults.")
@@ -129,11 +140,14 @@ def load_from_db() -> None:
                     _consistency_threshold = float(doc["consistency_threshold"])
                 if "scan_threshold" in doc:
                     _scan_threshold = float(doc["scan_threshold"])
+                if "preflight_block_enabled" in doc:
+                    _preflight_block_enabled = bool(doc["preflight_block_enabled"])
                 _config_version = doc.get("version", "db-unknown")
             logger.info(
                 "fie_config loaded from MongoDB | version=%s | thresholds=%s | "
-                "temperature=%.2f | ambiguous_band=%.3f",
+                "temperature=%.2f | ambiguous_band=%.3f | preflight_block=%s",
                 _config_version, _thresholds, _temperature, _ambiguous_band,
+                _preflight_block_enabled,
             )
         else:
             logger.info("fie_config: no saved config in MongoDB, using defaults.")
@@ -202,6 +216,64 @@ def update_scan_threshold(value: float) -> float:
 
     logger.info("fie_config scan_threshold updated: %.4f", value)
     return value
+
+
+def get_preflight_config() -> dict:
+    """
+    Returns the current pre-flight guard configuration.
+
+    Keys
+    ----
+    block_enabled : bool   — True = hard block; False = warn-only
+    scan_threshold: float  — confidence floor used by scan_prompt()
+    """
+    with _lock:
+        return {
+            "block_enabled":  _preflight_block_enabled,
+            "scan_threshold": _scan_threshold,
+        }
+
+
+def update_preflight_config(block_enabled: Optional[bool] = None) -> dict:
+    """
+    Hot-update the pre-flight guard at runtime and persist to MongoDB.
+    Use scan_threshold via update_scan_threshold(); this controls the block toggle.
+
+    Parameters
+    ----------
+    block_enabled : bool, optional
+        True = hard block mode (LLM never runs on detected attacks).
+        False = warn-only mode (detects but allows through).
+
+    Returns
+    -------
+    dict  Current live preflight config after the update.
+    """
+    global _preflight_block_enabled
+    with _lock:
+        if block_enabled is not None:
+            _preflight_block_enabled = bool(block_enabled)
+        result = {
+            "block_enabled":  _preflight_block_enabled,
+            "scan_threshold": _scan_threshold,
+        }
+
+    cfg_col = _get_config_collection()
+    if cfg_col is not None:
+        try:
+            cfg_col.update_one(
+                {"_id": "thresholds"},
+                {"$set": {"preflight_block_enabled": _preflight_block_enabled}},
+                upsert=True,
+            )
+        except Exception as exc:
+            logger.warning("fie_config.update_preflight_config persist failed: %s", exc)
+
+    logger.info(
+        "fie_config preflight updated | block_enabled=%s | scan_threshold=%.4f",
+        _preflight_block_enabled, _scan_threshold,
+    )
+    return result
 
 
 def get_all_thresholds() -> dict[str, float]:
@@ -337,16 +409,18 @@ def recalibrate() -> dict:
     if cfg_col is not None:
         try:
             with _lock:
-                cur_temp  = _temperature
-                cur_band  = _ambiguous_band
-                cur_cons  = _consistency_threshold
-                cur_scan  = _scan_threshold
+                cur_temp     = _temperature
+                cur_band     = _ambiguous_band
+                cur_cons     = _consistency_threshold
+                cur_scan     = _scan_threshold
+                cur_preflight= _preflight_block_enabled
             doc = {
                 "_id": "thresholds", "version": version,
                 "updated_at": datetime.utcnow().isoformat(),
                 "temperature": cur_temp, "ambiguous_band": cur_band,
                 "consistency_threshold": cur_cons,
                 "scan_threshold": cur_scan,
+                "preflight_block_enabled": cur_preflight,
             }
             for qt, t in new_thresholds.items():
                 doc[f"threshold_{qt}"] = t

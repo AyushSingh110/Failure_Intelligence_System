@@ -3,19 +3,120 @@ Admin and notification routes.
 
 Endpoints
 ---------
+GET  /admin/guard/config    — view current pre-flight guard settings
+POST /admin/guard/config    — hot-update block mode and/or scan threshold
 POST /notifications/digest  — compile a usage digest and email it to the tenant
 """
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Body, Header, HTTPException, Query
+from pydantic import BaseModel
 
-from app.auth_guard import resolve_user
+from app.auth_guard import resolve_user, require_admin
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# ── Guard config schemas ───────────────────────────────────────────────────────
+
+class GuardConfigUpdate(BaseModel):
+    """Body for POST /admin/guard/config."""
+    block_enabled:  Optional[bool]  = None
+    scan_threshold: Optional[float] = None
+
+
+# ── GET /admin/guard/config ───────────────────────────────────────────────────
+
+@router.get("/admin/guard/config", response_model=dict)
+def get_guard_config(
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+) -> dict:
+    """
+    Return the current pre-flight guard configuration.
+
+    Response fields
+    ---------------
+    block_enabled   True = hard block mode (LLM never runs on detected attacks).
+                    False = warn-only mode (detects and logs, LLM still runs).
+    scan_threshold  Confidence floor for scan_prompt() to classify an attack.
+    source          Where the active config was loaded from.
+    """
+    require_admin(authorization, x_api_key)
+    from engine.fie_config import get_preflight_config, get_config_version
+    cfg = get_preflight_config()
+    return {
+        "block_enabled":  cfg["block_enabled"],
+        "scan_threshold": cfg["scan_threshold"],
+        "config_version": get_config_version(),
+        "note": (
+            "block_enabled=true  → adversarial prompts are blocked before the LLM runs. "
+            "block_enabled=false → warn-only, attacks are logged but LLM still runs. "
+            "Update scan_threshold via this endpoint or SCAN_THRESHOLD env var."
+        ),
+    }
+
+
+# ── POST /admin/guard/config ──────────────────────────────────────────────────
+
+@router.post("/admin/guard/config", response_model=dict)
+def update_guard_config(
+    body:          GuardConfigUpdate,
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+) -> dict:
+    """
+    Hot-update the pre-flight guard at runtime — no restart needed.
+
+    Both fields are optional; omit any field to leave it unchanged.
+
+    Examples
+    --------
+    Switch to warn-only mode (keep detecting but stop blocking):
+        {"block_enabled": false}
+
+    Re-enable blocking and tighten the threshold:
+        {"block_enabled": true, "scan_threshold": 0.55}
+
+    Just lower the threshold (block mode unchanged):
+        {"scan_threshold": 0.40}
+    """
+    require_admin(authorization, x_api_key)
+
+    if body.scan_threshold is not None:
+        t = float(body.scan_threshold)
+        if not (0.0 < t < 1.0):
+            raise HTTPException(
+                status_code=422,
+                detail="scan_threshold must be between 0.0 and 1.0 (exclusive).",
+            )
+
+    from engine.fie_config import update_preflight_config, update_scan_threshold, get_preflight_config
+
+    if body.scan_threshold is not None:
+        update_scan_threshold(body.scan_threshold)
+
+    result = update_preflight_config(block_enabled=body.block_enabled)
+
+    logger.info(
+        "GUARD_CONFIG_UPDATE | block_enabled=%s scan_threshold=%.4f",
+        result["block_enabled"], result["scan_threshold"],
+    )
+
+    return {
+        "status":         "updated",
+        "block_enabled":  result["block_enabled"],
+        "scan_threshold": result["scan_threshold"],
+        "message": (
+            f"Pre-flight guard is now in {'BLOCK' if result['block_enabled'] else 'WARN-ONLY'} mode "
+            f"with scan_threshold={result['scan_threshold']:.4f}."
+        ),
+    }
 
 
 @router.post("/notifications/digest", response_model=dict)
