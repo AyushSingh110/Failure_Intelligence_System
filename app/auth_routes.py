@@ -17,11 +17,18 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173")
-GOOGLE_TOKEN_URL     = "https://oauth2.googleapis.com/token"
-GOOGLE_USER_URL      = "https://www.googleapis.com/oauth2/v2/userinfo"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USER_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
+
+
+def _google_client_id() -> str:
+    return os.getenv("GOOGLE_CLIENT_ID", "")
+
+def _google_client_secret() -> str:
+    return os.getenv("GOOGLE_CLIENT_SECRET", "")
+
+def _google_redirect_uri() -> str:
+    return os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173")
 
 
 # Schemas
@@ -68,8 +75,13 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
     # Always use the redirect_uri the frontend actually sent to Google.
     # Using a hardcoded env var here causes redirect_uri_mismatch for any
     # environment (prod, staging) that differs from the env var value.
-    redirect_uri = body.redirect_uri or GOOGLE_REDIRECT_URI
-    logger.info("google_callback: using redirect_uri=%s", redirect_uri)
+    client_id     = _google_client_id()
+    client_secret = _google_client_secret()
+    redirect_uri  = body.redirect_uri or _google_redirect_uri()
+    logger.info(
+        "google_callback: redirect_uri=%s client_id_present=%s client_secret_present=%s",
+        redirect_uri, bool(client_id), bool(client_secret),
+    )
 
     #Exchange code for access token
     try:
@@ -77,8 +89,8 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
             GOOGLE_TOKEN_URL,
             data={
                 "code":          body.code,
-                "client_id":     GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
+                "client_id":     client_id,
+                "client_secret": client_secret,
                 "redirect_uri":  redirect_uri,
                 "grant_type":    "authorization_code",
             },
@@ -88,8 +100,8 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
             logger.error(
                 "Google token exchange failed. redirect_uri=%s client_id_present=%s client_secret_present=%s response=%s",
                 redirect_uri,
-                bool(GOOGLE_CLIENT_ID),
-                bool(GOOGLE_CLIENT_SECRET),
+                bool(client_id),
+                bool(client_secret),
                 token_resp.text,
             )
             raise HTTPException(status_code=400, detail=f"Token exchange failed: {token_resp.text}")
