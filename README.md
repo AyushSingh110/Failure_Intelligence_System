@@ -16,36 +16,66 @@ FIE sits between your users and your LLM. It intercepts adversarial prompts *bef
 
 ## What's New — FIE Playground
 
-**Side-by-side comparison: raw primary model output vs FIE-protected response.**
+**Side-by-side comparison: raw primary model output vs FIE-protected response — full pipeline, any model.**
 
-Developers can now see exactly what FIE catches and corrects before their users ever see it.  Type any prompt in the dashboard Playground page and get two responses in parallel:
+Developers can now see exactly what FIE catches and corrects before their users ever see it. Type any prompt in the dashboard Playground page and get two responses in parallel:
 
 | Panel | What it shows |
 | --- | --- |
-| Primary Model | Raw output from `llama-3.1-8b-instant` with **no guard, no correction** — what your users would receive without FIE |
-| FIE Protected | Pre-flight guard result + shadow ensemble consensus from three 70B+ models — what your users **actually receive** |
+| Primary Model | Raw output with **no guard, no correction** — what your users would receive without FIE |
+| FIE Protected | Full pipeline result — pre-flight guard → shadow ensemble → signal analysis → DiagnosticJury → correction |
 
 **Three possible outcomes:**
 
 ```text
-BLOCKED   — adversarial prompt caught by pre-flight guard.
-            Primary model output is shown for comparison, but
-            the LLM was never billed and the attack never executed.
+BLOCKED   — adversarial prompt caught by pre-flight guard or DiagnosticJury.
+            The model was never billed and the attack never executed.
 
-CORRECTED — primary model gave a wrong or unsafe answer.
-            FIE delivers the shadow ensemble's higher-confidence
-            answer to your users instead.
+CORRECTED — primary model gave a wrong or hallucinated answer.
+            FIE detected the failure via signal analysis and DiagnosticJury,
+            then delivered the shadow ensemble's higher-confidence answer instead.
 
-VALIDATED — primary model answer confirmed correct by shadow ensemble.
-            FIE passes it through unchanged.
+VALIDATED — primary model answer confirmed correct by the full pipeline.
+            Agreement score, entropy, and jury all agreed. Passed through unchanged.
 ```
+
+**Full pipeline that runs on every Playground request:**
+
+```text
+Prompt
+  │
+  ├──► [1] Pre-flight adversarial guard       (blocks attacks instantly)
+  ├──► [2] Shadow model fan-out               (3 Groq models in parallel)
+  ├──► [3] Signal analysis                    (agreement score + entropy)
+  ├──► [4] DiagnosticJury                     (3 specialist agents)
+  └──► [5] Correction decision                (jury verdict + signals → VALIDATED / CORRECTED / BLOCKED)
+```
+
+**Bring your own model — custom endpoint support:**
+
+Any company can test their own model against FIE without changing any code. In the Playground, select **"Custom endpoint"** and paste:
+
+- **Endpoint URL** — your model's API URL (any OpenAI-compatible endpoint)
+- **API key** — your model's API key
+
+FIE will call your model for the raw response, then run the complete protection pipeline on top of it. Works with OpenAI GPT-4o, Google Gemini, Anthropic Claude, Mistral, and any self-hosted model that follows the OpenAI chat completions format.
+
+```text
+Your model URL  →  FIE calls it  →  raw response
+                →  FIE pipeline  →  protected response
+                                     ↑
+                          same pipeline as production
+```
+
+Your API key is used only for that single request and is never stored or logged.
 
 **Implementation details:**
 
-- New endpoint: `POST /api/v1/playground` — requires auth, not persisted to MongoDB
-- Raw call and shadow fan-out run in parallel (`ThreadPoolExecutor`) so total latency is bounded by the slowest single model, not their sum
-- Answer comparison uses Jaccard similarity on content words (stopwords excluded, threshold 0.55)
-- Frontend: new `/playground` route + sidebar nav item in `Frontend/src/pages/Playgroundpage.jsx`
+- Endpoint: `POST /api/v1/playground` — requires auth, results NOT persisted to MongoDB
+- Raw call and shadow fan-out run in parallel (`ThreadPoolExecutor`) — total latency bounded by slowest single model
+- FIE status determined by DiagnosticJury verdict + signal thresholds (agreement < 0.4 + entropy > 0.5 → CORRECTED)
+- Custom endpoints must accept OpenAI-compatible chat completions format
+- Frontend: `/playground` route with model selector dropdown in `Frontend/src/pages/Playgroundpage.jsx`
 - Existing `/monitor`, `/diagnose`, and all other endpoints are completely untouched
 
 ---
