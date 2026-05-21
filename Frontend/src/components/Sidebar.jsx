@@ -46,6 +46,19 @@ const NAV = [
     ),
   },
   {
+    path: '/playground',
+    label: 'Playground',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="1.8">
+        <rect x="2" y="3" width="9" height="18" rx="2"/>
+        <rect x="13" y="3" width="9" height="18" rx="2"/>
+        <line x1="2" y1="12" x2="11" y2="12"/>
+        <line x1="13" y1="12" x2="22" y2="12"/>
+      </svg>
+    ),
+  },
+  {
     path: '/analytics',
     label: 'Analytics',
     icon: (

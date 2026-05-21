@@ -14,6 +14,42 @@ FIE sits between your users and your LLM. It intercepts adversarial prompts *bef
 
 ---
 
+## What's New — FIE Playground
+
+**Side-by-side comparison: raw primary model output vs FIE-protected response.**
+
+Developers can now see exactly what FIE catches and corrects before their users ever see it.  Type any prompt in the dashboard Playground page and get two responses in parallel:
+
+| Panel | What it shows |
+| --- | --- |
+| Primary Model | Raw output from `llama-3.1-8b-instant` with **no guard, no correction** — what your users would receive without FIE |
+| FIE Protected | Pre-flight guard result + shadow ensemble consensus from three 70B+ models — what your users **actually receive** |
+
+**Three possible outcomes:**
+
+```text
+BLOCKED   — adversarial prompt caught by pre-flight guard.
+            Primary model output is shown for comparison, but
+            the LLM was never billed and the attack never executed.
+
+CORRECTED — primary model gave a wrong or unsafe answer.
+            FIE delivers the shadow ensemble's higher-confidence
+            answer to your users instead.
+
+VALIDATED — primary model answer confirmed correct by shadow ensemble.
+            FIE passes it through unchanged.
+```
+
+**Implementation details:**
+
+- New endpoint: `POST /api/v1/playground` — requires auth, not persisted to MongoDB
+- Raw call and shadow fan-out run in parallel (`ThreadPoolExecutor`) so total latency is bounded by the slowest single model, not their sum
+- Answer comparison uses Jaccard similarity on content words (stopwords excluded, threshold 0.55)
+- Frontend: new `/playground` route + sidebar nav item in `Frontend/src/pages/Playgroundpage.jsx`
+- Existing `/monitor`, `/diagnose`, and all other endpoints are completely untouched
+
+---
+
 ## What's New in v1.5.1
 
 **Inline pre-flight protection — adversarial prompts now blocked before the LLM runs:**
