@@ -5,8 +5,9 @@ import LandingPage   from './pages/LandingPage'
 import LoginPage     from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import AnalyzePage   from './pages/Analyzepage'
-import DiagnosePage  from './pages/Diagnosepage'
-import AlertsPage    from './pages/AlertsPage'
+import DiagnosePage    from './pages/Diagnosepage'
+import PlaygroundPage  from './pages/Playgroundpage'
+import AlertsPage      from './pages/AlertsPage'
 import VaultPage     from './pages/Vaultpage'
 import SettingsPage   from './pages/Settingspage'
 import AnalyticsPage  from './pages/AnalyticsPage'
@@ -32,7 +33,8 @@ export default function App() {
         {/* Protected dashboard routes */}
         <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
         <Route path="/analyze"   element={<Protected><AnalyzePage /></Protected>} />
-        <Route path="/diagnose"  element={<Protected><DiagnosePage /></Protected>} />
+        <Route path="/diagnose"    element={<Protected><DiagnosePage /></Protected>} />
+        <Route path="/playground"  element={<Protected><PlaygroundPage /></Protected>} />
         <Route path="/analytics" element={<Protected><AnalyticsPage /></Protected>} />
         <Route path="/alerts"    element={<Protected><AlertsPage /></Protected>} />
         <Route path="/vault"     element={<Protected><VaultPage /></Protected>} />
