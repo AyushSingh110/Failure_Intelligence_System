@@ -113,7 +113,9 @@ def _run_preflight(prompt: str) -> tuple[bool, str, float, list[str]]:
 def _call_groq(model_name: str, prompt: str, groq) -> tuple[str, str, float, bool]:
     t0 = time.perf_counter()
     try:
-        r = groq._call_single_model(model_name, prompt, max_tokens=500, temperature=0.2)
+        from engine.groq_service import _MODEL_ALIASES
+        resolved = _MODEL_ALIASES.get(model_name, model_name)
+        r = groq._call_single_model(resolved, prompt, max_tokens=500, temperature=0.2)
         return r.output_text, r.model_name, (time.perf_counter() - t0) * 1000, r.success
     except Exception as exc:
         logger.error("groq call failed (%s): %s", model_name, exc)

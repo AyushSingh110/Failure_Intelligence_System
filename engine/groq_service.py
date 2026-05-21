@@ -70,14 +70,17 @@ class GroqModelResponse:
 # Fallback options provided for any model that fails
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
-    "deepseek-r1-distill-llama-70b",
-    "qwen-qwq-32b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3-32b",
 ]
 _MODEL_ALIASES = {
-    "mixtral-8x7b-32768":  "llama-3.3-70b-versatile",
-    "gemma2-9b-it":        "llama-3.3-70b-versatile",
-    "llama3-8b-8192":      "llama-3.1-8b-instant",
-    "llama-3.2-3b-preview": "llama-3.1-8b-instant",
+    # deprecated model names → current equivalents
+    "mixtral-8x7b-32768":           "llama-3.3-70b-versatile",
+    "gemma2-9b-it":                 "llama-3.3-70b-versatile",
+    "llama3-8b-8192":               "llama-3.1-8b-instant",
+    "llama-3.2-3b-preview":         "llama-3.1-8b-instant",
+    "deepseek-r1-distill-llama-70b": "openai/gpt-oss-120b",
+    "qwen-qwq-32b":                 "qwen/qwen3-32b",
 }
 
 #Suffix appended to each prompt in fan_out_with_confidence().
