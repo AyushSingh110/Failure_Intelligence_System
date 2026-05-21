@@ -340,7 +340,7 @@ export default function PlaygroundPage() {
               <ModelPanel
                 title="FIE Protected"
                 subtitle="Full pipeline output — what your users receive"
-                model={fieStatus === 'BLOCKED' ? 'blocked before model call' : result.shadow_results?.[0]?.model || 'shadow ensemble'}
+                model={fieStatus === 'BLOCKED' ? 'blocked before model call' : result.shadow_results?.length ? `shadow ensemble · ${result.shadow_results.length} model${result.shadow_results.length > 1 ? 's' : ''}` : 'shadow ensemble'}
                 latency={result.fie_latency_ms}
                 response={result.fie_response}
                 status={fieStatus}
