@@ -11,12 +11,11 @@ const STATUS_CONFIG = {
 }
 
 const PRESET_MODELS = [
-  { value: 'llama-3.1-8b-instant',        label: 'Llama 3.1 8B  (default, intentionally weak)' },
-  { value: 'llama-3.3-70b-versatile',     label: 'Llama 3.3 70B' },
+  { value: 'llama-3.1-8b-instant',          label: 'Llama 3.1 8B  (default, intentionally weak)' },
+  { value: 'llama-3.3-70b-versatile',       label: 'Llama 3.3 70B' },
   { value: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 70B' },
-  { value: 'qwen-qwq-32b',                label: 'Qwen QwQ 32B' },
-  { value: 'gemma2-9b-it',                label: 'Gemma 2 9B' },
-  { value: '__custom__',                  label: 'Custom endpoint (your own model)' },
+  { value: 'qwen-qwq-32b',                  label: 'Qwen QwQ 32B' },
+  { value: '__custom__',                    label: 'Custom endpoint (your own model)' },
 ]
 
 const EXAMPLES = [
