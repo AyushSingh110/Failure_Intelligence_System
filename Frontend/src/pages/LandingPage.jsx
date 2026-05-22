@@ -45,12 +45,22 @@ const FEATURES = [
   {
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17.5h7M17.5 14v7"/>
+      </svg>
+    ),
+    title: 'Live Playground',
+    desc: 'Test any prompt side-by-side: raw model vs. full FIE pipeline. Connect your own enterprise model via any OpenAI-compatible endpoint — zero code changes needed.',
+    color: '#a78bfa',
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
         <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
       </svg>
     ),
     title: 'Works Offline',
     desc: 'Local mode runs entirely on your machine with zero network calls. No API key, no server. Add one decorator and protection is immediate.',
-    color: '#a78bfa',
+    color: '#fb923c',
   },
   {
     icon: (
@@ -60,7 +70,7 @@ const FEATURES = [
     ),
     title: 'LangGraph Pipeline',
     desc: 'Detection runs as a stateful LangGraph StateGraph — guard → signal extraction → DiagnosticJury — each stage a typed node with conditional routing.',
-    color: '#fb923c',
+    color: '#00d4ff',
   },
   {
     icon: (
@@ -91,7 +101,6 @@ const ATTACK_BENCHMARKS = [
   { method: 'Direct injection',       detection: '95.0%', fpr: '2.0%' },
 ]
 
-// syntax-coloured code lines
 const CODE_LINES = [
   { tokens: [{ t: 'from ', c: '#79c0ff' }, { t: 'fie ', c: '#79c0ff' }, { t: 'import ', c: '#ff7b72' }, { t: 'monitor', c: '#e6edf3' }] },
   { tokens: [] },
@@ -101,6 +110,21 @@ const CODE_LINES = [
   { tokens: [] },
   { tokens: [{ t: '# Hallucinations + attacks caught automatically', c: '#8b949e' }] },
   { tokens: [{ t: 'response ', c: '#e6edf3' }, { t: '= ', c: '#ff7b72' }, { t: 'ask_ai(', c: '#e6edf3' }, { t: '"Who won the 2022 World Cup?"', c: '#a5d6ff' }, { t: ')', c: '#e6edf3' }] },
+]
+
+// Pipeline stages for animated demo
+const PIPELINE_NODES = [
+  { id: 0, label: 'Prompt',           sub: 'user input',           color: '#8b9ab0', icon: 'M8 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm0 0v6h6' },
+  { id: 1, label: 'Pre-flight Guard', sub: '9 detection layers',   color: '#ff4466', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  { id: 2, label: 'Shadow Ensemble',  sub: '3 models in parallel', color: '#00d4ff', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
+  { id: 3, label: 'DiagnosticJury',   sub: '3 specialist agents',  color: '#a78bfa', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { id: 4, label: 'Protected Output', sub: 'verified response',    color: '#00ff88', icon: 'M20 6L9 17l-5-5' },
+]
+
+const OUTCOME_DEMOS = [
+  { status: 'VALIDATED', color: '#00ff88', bg: 'rgba(0,255,136,0.08)', border: 'rgba(0,255,136,0.2)', label: 'Primary model confirmed correct by shadow jury' },
+  { status: 'CORRECTED', color: '#ffaa00', bg: 'rgba(255,170,0,0.08)', border: 'rgba(255,170,0,0.2)',  label: 'Hallucination detected — shadow consensus applied' },
+  { status: 'BLOCKED',   color: '#ff4466', bg: 'rgba(255,68,102,0.08)', border: 'rgba(255,68,102,0.2)', label: 'Adversarial attack intercepted before LLM call' },
 ]
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -137,6 +161,35 @@ function useCounter(target, visible, duration = 1400) {
   return val
 }
 
+function usePipelineAnimation(nodeCount, visible) {
+  const [activeNode, setActiveNode] = useState(-1)
+  const [outcomeIdx, setOutcomeIdx] = useState(0)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (!visible) return
+    let node = 0
+    const advance = () => {
+      setActiveNode(node)
+      if (node < nodeCount - 1) {
+        node++
+        timerRef.current = setTimeout(advance, 700)
+      } else {
+        // pause at end, then cycle outcome and restart
+        timerRef.current = setTimeout(() => {
+          setOutcomeIdx(i => (i + 1) % OUTCOME_DEMOS.length)
+          node = 0
+          timerRef.current = setTimeout(advance, 400)
+        }, 2200)
+      }
+    }
+    timerRef.current = setTimeout(advance, 300)
+    return () => clearTimeout(timerRef.current)
+  }, [visible, nodeCount])
+
+  return { activeNode, outcomeIdx }
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({ value, suffix, label, visible }) {
@@ -158,7 +211,7 @@ function StatCard({ value, suffix, label, visible }) {
   )
 }
 
-function FeatureCard({ icon, title, desc, color, delay }) {
+function FeatureCard({ icon, title, desc, color }) {
   const [hov, setHov] = useState(false)
   return (
     <div
@@ -209,6 +262,112 @@ function RevealSection({ children, style }) {
   )
 }
 
+function PipelineDemo() {
+  const [ref, visible] = useScrollReveal()
+  const { activeNode, outcomeIdx } = usePipelineAnimation(PIPELINE_NODES.length, visible)
+  const outcome = OUTCOME_DEMOS[outcomeIdx]
+
+  return (
+    <div ref={ref} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'none' : 'translateY(24px)',
+      transition: 'opacity 0.65s cubic-bezier(0.16,1,0.3,1), transform 0.65s cubic-bezier(0.16,1,0.3,1)',
+    }}>
+      {/* Node row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0', overflowX: 'auto', paddingBottom: '8px' }}>
+        {PIPELINE_NODES.map((node, i) => {
+          const isActive = activeNode === i
+          const isPast   = activeNode > i
+          const nodeColor = isActive || isPast ? node.color : '#2a3142'
+          const textColor = isActive ? node.color : isPast ? 'rgba(255,255,255,0.55)' : 'var(--text-muted)'
+
+          return (
+            <div key={node.id} style={{ display: 'flex', alignItems: 'center', flex: i < PIPELINE_NODES.length - 1 ? '1' : 'none', minWidth: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '90px' }}>
+                {/* Icon box */}
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '12px',
+                  background: isActive ? `rgba(${hexToRgb(node.color)},0.15)` : isPast ? `rgba(${hexToRgb(node.color)},0.07)` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isActive ? node.color + '60' : isPast ? node.color + '30' : 'var(--border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: nodeColor,
+                  transition: 'all 0.4s ease',
+                  boxShadow: isActive ? `0 0 20px rgba(${hexToRgb(node.color)},0.25)` : 'none',
+                  flexShrink: 0,
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d={node.icon}/>
+                  </svg>
+                </div>
+                {/* Label */}
+                <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: isActive ? 'var(--text-primary)' : textColor, transition: 'color 0.4s', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+                    {node.label}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap', opacity: isActive ? 1 : 0.5, transition: 'opacity 0.4s' }}>
+                    {node.sub}
+                  </div>
+                </div>
+              </div>
+
+              {/* Connector line */}
+              {i < PIPELINE_NODES.length - 1 && (
+                <div style={{ flex: 1, height: '1px', margin: '0 6px', marginTop: '-28px', position: 'relative', overflow: 'hidden', minWidth: '16px' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'var(--border)' }}/>
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: `linear-gradient(90deg, ${PIPELINE_NODES[i].color}, ${PIPELINE_NODES[i+1].color})`,
+                    opacity: activeNode > i ? 1 : 0,
+                    transition: 'opacity 0.4s ease',
+                  }}/>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Outcome badge */}
+      <div style={{ marginTop: '28px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' }}>
+          OUTCOME
+        </div>
+        {OUTCOME_DEMOS.map((o, i) => (
+          <div key={o.status} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '7px',
+            padding: '5px 13px', borderRadius: '20px',
+            background: i === outcomeIdx ? o.bg : 'transparent',
+            border: `1px solid ${i === outcomeIdx ? o.border : 'var(--border)'}`,
+            transition: 'all 0.4s ease',
+          }}>
+            <div style={{
+              width: '5px', height: '5px', borderRadius: '50%',
+              background: i === outcomeIdx ? o.color : 'var(--text-muted)',
+              transition: 'background 0.4s',
+              animation: i === outcomeIdx ? 'pulse-slow 1.8s ease-in-out infinite' : 'none',
+            }}/>
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', fontWeight: 700,
+              color: i === outcomeIdx ? o.color : 'var(--text-muted)',
+              letterSpacing: '0.06em', transition: 'color 0.4s',
+            }}>{o.status}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Outcome description */}
+      <div style={{
+        marginTop: '12px', fontSize: '12px', color: outcome.color,
+        opacity: 0.8, fontFamily: 'JetBrains Mono, monospace',
+        transition: 'color 0.4s',
+        minHeight: '18px',
+      }}>
+        ↳ {outcome.label}
+      </div>
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -218,7 +377,6 @@ export default function LandingPage() {
   const [statsRef, statsVisible] = useScrollReveal()
 
   useEffect(() => {
-    // If Google OAuth redirected here instead of /login, forward everything to /login
     const params = new URLSearchParams(window.location.search)
     if (params.has('code')) {
       navigate('/login' + window.location.search, { replace: true })
@@ -264,6 +422,15 @@ export default function LandingPage() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        @keyframes bg-shift {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes typing-cursor {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
         }
 
         .fu  { animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both; }
@@ -363,12 +530,25 @@ export default function LandingPage() {
           background: linear-gradient(90deg, var(--border), transparent);
         }
 
+        .playground-card {
+          background: var(--bg-card);
+          border-radius: 16px;
+          border: 1px solid var(--border);
+          overflow: hidden;
+          transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .playground-card:hover {
+          border-color: rgba(167,139,250,0.3);
+          box-shadow: 0 0 40px rgba(167,139,250,0.06);
+        }
+
         @media (max-width: 768px) {
           .hide-mobile { display: none !important; }
           .grid-3 { grid-template-columns: 1fr !important; }
           .grid-2 { grid-template-columns: 1fr !important; }
           .grid-4 { grid-template-columns: repeat(2,1fr) !important; }
           .code-split { grid-template-columns: 1fr !important; }
+          .pipeline-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -399,7 +579,6 @@ export default function LandingPage() {
             maxWidth: '1100px', margin: '0 auto', padding: '0 28px',
             height: '58px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
                 width: '30px', height: '30px', borderRadius: '8px',
@@ -413,7 +592,6 @@ export default function LandingPage() {
                 Failure Intelligence Engine
               </span>
             </div>
-            {/* Links */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
               <a href="https://github.com/AyushSingh110/Failure_Intelligence_System" target="_blank" rel="noopener noreferrer" className="nav-link hide-mobile">GitHub</a>
               <a href="https://pypi.org/project/fie-sdk/" target="_blank" rel="noopener noreferrer" className="nav-link hide-mobile">PyPI</a>
@@ -428,7 +606,6 @@ export default function LandingPage() {
         {/* ── Hero ─────────────────────────────────────────────────── */}
         <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '100px 28px 80px', position: 'relative', zIndex: 1 }}>
 
-          {/* Badge */}
           <div className="fu d1" style={{ marginBottom: '24px' }}>
             <span className="pill">
               <span className="pill-dot"/>
@@ -436,7 +613,6 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Headline */}
           <h1 className="fu d2" style={{
             fontSize: 'clamp(36px, 5.5vw, 60px)', fontWeight: 800,
             lineHeight: 1.1, letterSpacing: '-0.035em',
@@ -451,7 +627,6 @@ export default function LandingPage() {
             }}>before your users do.</span>
           </h1>
 
-          {/* Sub */}
           <p className="fu d3" style={{
             fontSize: '16px', lineHeight: 1.75, color: 'var(--text-muted)',
             maxWidth: '530px', marginBottom: '40px',
@@ -460,7 +635,6 @@ export default function LandingPage() {
             and automatic correction — as a single Python decorator.
           </p>
 
-          {/* CTAs */}
           <div className="fu d4" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '44px', alignItems: 'center' }}>
             {loggedIn
               ? <Link to="/dashboard" className="cta-primary">Go to Dashboard →</Link>
@@ -472,7 +646,6 @@ export default function LandingPage() {
             </a>
           </div>
 
-          {/* Install pill */}
           <div className="fu d5" style={{
             display: 'inline-flex', alignItems: 'center', gap: '16px',
             padding: '11px 18px', borderRadius: '10px',
@@ -525,14 +698,102 @@ export default function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }} className="grid-3">
             {FEATURES.map((f, i) => (
               <RevealSection key={f.title} style={{ transitionDelay: `${i * 60}ms` }}>
-                <FeatureCard {...f} delay={i} />
+                <FeatureCard {...f} />
               </RevealSection>
             ))}
           </div>
         </section>
 
-        {/* ── How it works ─────────────────────────────────────────── */}
+        {/* ── Playground Pipeline Showcase ─────────────────────────── */}
         <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.012)', position: 'relative', zIndex: 1 }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '96px 28px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '72px', alignItems: 'start' }} className="pipeline-grid">
+
+              <RevealSection>
+                <div className="section-label">Playground</div>
+                <h2 style={{
+                  fontSize: 'clamp(22px,3vw,30px)', fontWeight: 700, letterSpacing: '-0.025em',
+                  color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1.25,
+                }}>
+                  See FIE protect<br/>your model live.
+                </h2>
+                <p style={{ fontSize: '14px', lineHeight: 1.75, color: 'var(--text-muted)', marginBottom: '24px' }}>
+                  Type any prompt and watch the full pipeline run in real time.
+                  The raw model response appears instantly on the left — the FIE-protected
+                  result appears on the right, with every decision explained.
+                </p>
+                <p style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-muted)', marginBottom: '32px' }}>
+                  <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>Custom endpoint support</span> — connect
+                  any OpenAI-compatible model (your own fine-tune, enterprise LLM, or local Ollama) and test it under FIE protection without writing a single line of code.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '32px' }}>
+                  {[
+                    { color: '#00ff88', text: 'VALIDATED — primary model confirmed correct' },
+                    { color: '#ffaa00', text: 'CORRECTED — hallucination caught, shadow used' },
+                    { color: '#ff4466', text: 'BLOCKED — adversarial attack intercepted' },
+                  ].map(({ color, text }) => (
+                    <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0 }}/>
+                      <span style={{ color: 'var(--text-muted)' }}>{text}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link to={loggedIn ? '/playground' : '/login'} className="cta-primary" style={{ alignSelf: 'flex-start' }}>
+                  {loggedIn ? 'Open Playground →' : 'Try the Playground'}
+                </Link>
+              </RevealSection>
+
+              <RevealSection style={{ transitionDelay: '120ms' }}>
+                <div className="playground-card" style={{ padding: '28px 28px 24px' }}>
+                  {/* Card header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
+                    <div style={{ display: 'flex', gap: '7px' }}>
+                      {['#ff5f57','#febc2e','#28c840'].map(c => (
+                        <div key={c} style={{ width: '10px', height: '10px', borderRadius: '50%', background: c, opacity: 0.7 }}/>
+                      ))}
+                    </div>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>FIE PIPELINE</span>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                      padding: '3px 8px', borderRadius: '4px',
+                      background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.15)',
+                    }}>
+                      <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00ff88', animation: 'pulse-slow 2s ease-in-out infinite' }}/>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#00ff88', letterSpacing: '0.06em' }}>LIVE</span>
+                    </div>
+                  </div>
+
+                  <PipelineDemo />
+
+                  {/* Shadow model row */}
+                  <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                      SHADOW ENSEMBLE
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {[
+                        { name: 'Llama 3.3 70B', color: '#00d4ff' },
+                        { name: 'GPT-OSS 120B',  color: '#a78bfa' },
+                        { name: 'Qwen 3 32B',    color: '#00ff88' },
+                      ].map(m => (
+                        <div key={m.name} style={{
+                          padding: '4px 10px', borderRadius: '6px',
+                          background: `rgba(${hexToRgb(m.color)},0.07)`,
+                          border: `1px solid rgba(${hexToRgb(m.color)},0.18)`,
+                          fontFamily: 'JetBrains Mono, monospace', fontSize: '10px',
+                          color: m.color, letterSpacing: '0.02em',
+                        }}>{m.name}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </RevealSection>
+            </div>
+          </div>
+        </section>
+
+        {/* ── How it works ─────────────────────────────────────────── */}
+        <section style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '96px 28px' }}>
             <RevealSection>
               <div className="section-label">How it works</div>
@@ -560,58 +821,58 @@ export default function LandingPage() {
         </section>
 
         {/* ── Code block ───────────────────────────────────────────── */}
-        <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '96px 28px', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '72px', alignItems: 'center' }} className="code-split">
-            <RevealSection>
-              <div className="section-label">Integration</div>
-              <h2 style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: '18px', lineHeight: 1.25 }}>
-                One decorator.<br />Full protection.
-              </h2>
-              <p style={{ fontSize: '14px', lineHeight: 1.75, color: 'var(--text-muted)', marginBottom: '28px' }}>
-                Add{' '}
-                <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', background: 'rgba(0,212,255,0.08)', padding: '2px 7px', borderRadius: '5px', color: 'var(--accent-cyan)' }}>
-                  @monitor(mode="local")
-                </code>
-                {' '}to any LLM function. Works with OpenAI, Anthropic, Groq, Ollama — anything that returns a string.
-              </p>
-              <Link to={loggedIn ? '/dashboard' : '/login'} className="cta-primary" style={{ alignSelf: 'flex-start' }}>
-                {loggedIn ? 'Open dashboard →' : 'Get started free'}
-              </Link>
-            </RevealSection>
+        <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.012)', position: 'relative', zIndex: 1 }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '96px 28px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '72px', alignItems: 'center' }} className="code-split">
+              <RevealSection>
+                <div className="section-label">Integration</div>
+                <h2 style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: '18px', lineHeight: 1.25 }}>
+                  One decorator.<br />Full protection.
+                </h2>
+                <p style={{ fontSize: '14px', lineHeight: 1.75, color: 'var(--text-muted)', marginBottom: '28px' }}>
+                  Add{' '}
+                  <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', background: 'rgba(0,212,255,0.08)', padding: '2px 7px', borderRadius: '5px', color: 'var(--accent-cyan)' }}>
+                    @monitor(mode="local")
+                  </code>
+                  {' '}to any LLM function. Works with OpenAI, Anthropic, Groq, Ollama — anything that returns a string.
+                </p>
+                <Link to={loggedIn ? '/dashboard' : '/login'} className="cta-primary" style={{ alignSelf: 'flex-start' }}>
+                  {loggedIn ? 'Open dashboard →' : 'Get started free'}
+                </Link>
+              </RevealSection>
 
-            <RevealSection style={{ transitionDelay: '120ms' }}>
-              <div className="code-block">
-                {/* Title bar */}
-                <div style={{
-                  padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)',
-                  display: 'flex', gap: '7px', alignItems: 'center',
-                  background: 'rgba(255,255,255,0.02)',
-                }}>
-                  {['#ff5f57','#febc2e','#28c840'].map(c => (
-                    <div key={c} style={{ width: '11px', height: '11px', borderRadius: '50%', background: c, opacity: 0.8 }}/>
-                  ))}
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginLeft: '10px' }}>example.py</span>
+              <RevealSection style={{ transitionDelay: '120ms' }}>
+                <div className="code-block">
+                  <div style={{
+                    padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)',
+                    display: 'flex', gap: '7px', alignItems: 'center',
+                    background: 'rgba(255,255,255,0.02)',
+                  }}>
+                    {['#ff5f57','#febc2e','#28c840'].map(c => (
+                      <div key={c} style={{ width: '11px', height: '11px', borderRadius: '50%', background: c, opacity: 0.8 }}/>
+                    ))}
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginLeft: '10px' }}>example.py</span>
+                  </div>
+                  <pre style={{ margin: 0, padding: '22px 24px', fontFamily: 'JetBrains Mono, monospace', fontSize: '12.5px', lineHeight: 1.8, overflowX: 'auto', whiteSpace: 'pre' }}>
+                    {CODE_LINES.map((line, li) => (
+                      <div key={li}>
+                        {line.tokens.length === 0
+                          ? <span>&nbsp;</span>
+                          : line.tokens.map((tok, ti) => (
+                              <span key={ti} style={{ color: tok.c }}>{tok.t}</span>
+                            ))
+                        }
+                      </div>
+                    ))}
+                  </pre>
                 </div>
-                {/* Code */}
-                <pre style={{ margin: 0, padding: '22px 24px', fontFamily: 'JetBrains Mono, monospace', fontSize: '12.5px', lineHeight: 1.8, overflowX: 'auto', whiteSpace: 'pre' }}>
-                  {CODE_LINES.map((line, li) => (
-                    <div key={li}>
-                      {line.tokens.length === 0
-                        ? <span>&nbsp;</span>
-                        : line.tokens.map((tok, ti) => (
-                            <span key={ti} style={{ color: tok.c }}>{tok.t}</span>
-                          ))
-                      }
-                    </div>
-                  ))}
-                </pre>
-              </div>
-            </RevealSection>
+              </RevealSection>
+            </div>
           </div>
         </section>
 
         {/* ── Benchmarks ───────────────────────────────────────────── */}
-        <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.012)', position: 'relative', zIndex: 1 }}>
+        <section style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '96px 28px' }}>
             <RevealSection>
               <div className="section-label">Benchmarks</div>
@@ -623,7 +884,6 @@ export default function LandingPage() {
               </p>
             </RevealSection>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }} className="grid-2">
-              {/* Hallucination */}
               <RevealSection>
                 <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px', letterSpacing: '0.02em' }}>Hallucination Detection</div>
                 <div style={{ borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-card)' }}>
@@ -643,7 +903,6 @@ export default function LandingPage() {
                 </div>
               </RevealSection>
 
-              {/* Attack */}
               <RevealSection style={{ transitionDelay: '100ms' }}>
                 <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px', letterSpacing: '0.02em' }}>Adversarial Attack Detection · JailbreakBench</div>
                 <div style={{ borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg-card)' }}>
@@ -669,7 +928,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── CTA ──────────────────────────────────────────────────── */}
-        <section style={{ position: 'relative', zIndex: 1, overflow: 'hidden' }}>
+        <section style={{ borderTop: '1px solid var(--border)', position: 'relative', zIndex: 1, overflow: 'hidden' }}>
           <div style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
             background: 'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(0,212,255,0.06) 0%, transparent 70%)',
