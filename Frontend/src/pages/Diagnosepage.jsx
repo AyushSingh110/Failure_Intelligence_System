@@ -146,11 +146,32 @@ export default function DiagnosePage() {
       <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: '24px', animation: 'kpiIn 0.5s ease both' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Diagnose</h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Run the full DiagnosticJury — 3 specialist agents find root cause and mitigation.
+        <div style={{ marginBottom: '20px', animation: 'kpiIn 0.5s ease both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>Diagnose</h1>
+            <span style={{
+              padding: '2px 9px', borderRadius: '20px', fontSize: '10px', fontWeight: 600,
+              fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+              background: 'rgba(255,68,102,0.08)', color: '#ff4466',
+              border: '1px solid rgba(255,68,102,0.2)',
+            }}>FORENSICS</span>
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Post-incident forensics tool — paste saved outputs from a past failure to run the full DiagnosticJury and find root cause, agent verdicts, and mitigation strategy.
           </p>
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '9px',
+            padding: '10px 14px', borderRadius: '8px',
+            background: 'rgba(255,68,102,0.04)', border: '1px solid rgba(255,68,102,0.15)',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4466" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style={{ fontSize: '12px', color: 'rgba(255,100,120,0.8)', lineHeight: 1.6 }}>
+              Built for engineers investigating why a model failed in production. For live testing with real model calls, use the{' '}
+              <a href="/playground" style={{ color: '#ff4466', fontWeight: 600, textDecoration: 'none' }}>Playground</a> instead.
+            </span>
+          </div>
         </div>
 
         {/* Examples */}

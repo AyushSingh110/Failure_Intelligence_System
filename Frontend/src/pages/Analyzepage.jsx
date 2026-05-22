@@ -75,11 +75,32 @@ export default function AnalyzePage() {
       <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: '24px', animation: 'kpiIn 0.5s ease both' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Analyze</h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Extract failure signals from LLM outputs — Phase 1 + Phase 2 detection.
+        <div style={{ marginBottom: '20px', animation: 'kpiIn 0.5s ease both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>Signal Inspector</h1>
+            <span style={{
+              padding: '2px 9px', borderRadius: '20px', fontSize: '10px', fontWeight: 600,
+              fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+              background: 'rgba(0,212,255,0.08)', color: 'var(--accent-cyan)',
+              border: '1px solid rgba(0,212,255,0.18)',
+            }}>DEV TOOL</span>
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Paste pre-existing LLM outputs to extract failure signals — agreement score, entropy, FSV, archetype classification.
           </p>
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '9px',
+            padding: '10px 14px', borderRadius: '8px',
+            background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.18)',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style={{ fontSize: '12px', color: 'rgba(167,139,250,0.8)', lineHeight: 1.6 }}>
+              This tool works on outputs you already have. If you want FIE to call the model and run the full pipeline for you, use the{' '}
+              <a href="/playground" style={{ color: '#a78bfa', fontWeight: 600, textDecoration: 'none' }}>Playground</a> instead.
+            </span>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>

@@ -1,4 +1,5 @@
 steps:
+  # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -6,5 +7,35 @@ steps:
       - '${_IMAGE}'
       - '.'
 
+  # Step 2: Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_IMAGE}'
+
+  # Step 3: Deploy to Cloud Run with all required env vars
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_IMAGE}'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      # Non-secret env vars — safe to keep here
+      - '--set-env-vars=MONGODB_DB_NAME=${_MONGODB_DB_NAME},CORS_ALLOWED_ORIGINS=${_CORS_ORIGINS},GROQ_ENABLED=true,GROQ_TIMEOUT_SECONDS=30,DEBUG=false,LOG_LEVEL=INFO'
+      # Secrets pulled from Secret Manager — never stored in code
+      - '--update-secrets=MONGODB_URI=MONGODB_URI:latest,GROQ_API_KEY=GROQ_API_KEY:latest,JWT_SECRET=JWT_SECRET:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest'
+
 images:
   - '${_IMAGE}'
+
+# Substitution defaults — override these in the Cloud Build trigger UI
+substitutions:
+  _IMAGE: 'gcr.io/YOUR_PROJECT_ID/fie-backend:latest'
+  _SERVICE_NAME: 'fie-backend'
+  _REGION: 'us-central1'
+  _MONGODB_DB_NAME: 'fie_database'
+  _CORS_ORIGINS: 'https://your-frontend.pages.dev'
