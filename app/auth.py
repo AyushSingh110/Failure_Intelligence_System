@@ -17,10 +17,19 @@ import jwt
 logger = logging.getLogger(__name__)
 
 # ── Config ─────────────────────────────────────────────────────────────────
-JWT_SECRET    = os.getenv("JWT_SECRET_KEY", "fie-default-secret-change-this-now-32chars")
+_jwt_secret_raw = os.getenv("JWT_SECRET_KEY", "")
+if not _jwt_secret_raw or len(_jwt_secret_raw) < 32:
+    import warnings
+    warnings.warn(
+        "JWT_SECRET_KEY is not set or is too short (< 32 chars). "
+        "Set a strong random secret in production via the JWT_SECRET_KEY env var.",
+        RuntimeWarning,
+        stacklevel=1,
+    )
+JWT_SECRET    = _jwt_secret_raw or "fie-insecure-dev-secret-DO-NOT-USE-IN-PROD"
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_H  = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
-ADMIN_EMAIL   = os.getenv("ADMIN_EMAIL", "ayushsingh355vns@gmail.com")
+ADMIN_EMAIL   = os.getenv("ADMIN_EMAIL", "")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────

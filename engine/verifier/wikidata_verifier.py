@@ -224,9 +224,10 @@ CORRECT_VALUE: <a complete, self-contained answer phrase that directly answers t
         if not groq:
             return True, 0.0, ""
 
+        from config import get_settings
         resp = groq.complete(
             prompt,
-            model_name  = "llama-3.1-8b-instant",
+            model_name  = get_settings().groq_fast_model,
             max_tokens  = 60,
             temperature = 0.0,
         )

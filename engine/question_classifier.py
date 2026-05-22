@@ -184,6 +184,111 @@ def classify(prompt: str) -> str:
     return "UNKNOWN"
 
 
+# ── Provenance classification ──────────────────────────────────────────────────
+# Patterns that indicate the prompt is asking about the user's own state
+# (wallet, account, portfolio, personal data) — requires USER_SPECIFIC_STATE.
+_USER_SPECIFIC_RE = re.compile(
+    r"""
+    \b(
+        my\s+(wallet|balance|portfolio|account|holdings|assets|positions?|funds?|
+               transaction|deposit|withdrawal|stake|nft|token|address)|
+        how\s+much\s+(do\s+i\s+have|is\s+in\s+my)|
+        what\s+is\s+(in\s+my|my\s+(?:balance|portfolio|account))|
+        (show|check|view|see)\s+my\s+|
+        my\s+(subscription|order|invoice|receipt|history|settings|profile|plan)
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+# Patterns that signal a mix of live market data + user context
+_MIXED_SYNTHESIS_RE = re.compile(
+    r"""
+    \b(
+        (how\s+much\s+is\s+my|what\s+is\s+my)\s+
+            \w+\s+(worth|valued\s+at|in\s+usd|in\s+dollars)|
+        (profit|loss|pnl|return)\s+(on|from|of)\s+my|
+        (risk|exposure)\s+(of|on)\s+my\s+(position|portfolio|stake)|
+        (should\s+i\s+(sell|buy|hold))\s+(my|the)\s+
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+# Live market data that the question classifier may miss due to phrasing variation.
+# Currency rates, stock prices, and commodity prices always require real-time lookup
+# regardless of question structure (e.g. "What is today INR to USD rate?" classifies
+# as FACTUAL because _TEMPORAL_STRONG requires "the" before "today").
+_LIVE_MARKET_RE = re.compile(
+    r"""
+    \b(
+        # Currency pairs
+        [a-z]{3}\s+to\s+[a-z]{3}\s+(rate|price|exchange|conversion)|
+        (exchange|conversion)\s+rate|
+        (inr|usd|eur|gbp|jpy|cny|cad|aud|chf|hkd|sgd|nok|sek|dkk|rub|try|brl|mxn|zar|krw)
+            \s+(to|vs?\.?|against)\s+[a-z]{3}|
+        forex\s+(rate|price|pair)|
+        # Stock / index prices
+        (stock|share)\s+(price|value|rate)\s+(of|for)|
+        (nifty|sensex|dow|nasdaq|s&p|ftse|dax|nikkei|hang\s+seng)\s+(today|now|current|live)|
+        # Crypto
+        (bitcoin|btc|ethereum|eth|solana|sol|bnb|xrp|usdt)\s+(price|rate|value|today|now)|
+        # Commodities
+        (gold|silver|oil|crude|platinum|copper)\s+(price|rate|today|now|current|live)|
+        # Interest rates
+        (repo\s+rate|fed\s+rate|interest\s+rate|rbi\s+rate)\s+(today|now|current)|
+        # Medical / pharmaceutical live data — order-independent (current/latest can come before or after)
+        (fda|ema|cdsco)\s+(approval|warning|recall|alert)(\s+(today|now|current|latest|recent))?|
+        (current|latest|recent|new)\s+(fda|ema|cdsco)\s+(approval|warning|recall|alert)|
+        (drug|medication)\s+(recall|warning|alert)(\s+(today|now|current|latest))?|
+        (current|latest|recent|new)\s+(drug|medication)\s+(recall|warning|alert)
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def classify_provenance_category(question_type: str, prompt: str) -> str:
+    """
+    Map a question type + prompt text to a ProvenanceCategory.
+
+    The category describes what *kind* of knowledge is needed to answer
+    correctly — not whether the model was right or wrong.
+
+    Returns one of:
+      GENERAL_KNOWLEDGE   — static training knowledge sufficient
+      LIVE_WORLD_STATE    — real-time tool call required (prices, weather, scores)
+      USER_SPECIFIC_STATE — needs data from the user's own account/system
+      MIXED_SYNTHESIS     — combines live data + user-specific context
+
+    Note: _LIVE_MARKET_RE catches financial/medical live-data queries that the
+    base question classifier may label as FACTUAL due to phrasing variation
+    (e.g. "What is today INR to USD rate?" — no "the" before "today" so
+    _TEMPORAL_STRONG misses it, but it is still definitively live-data).
+    """
+    qt = (question_type or "UNKNOWN").upper()
+
+    # Check for mixed (live + user) first — most specific
+    if _MIXED_SYNTHESIS_RE.search(prompt):
+        return "MIXED_SYNTHESIS"
+
+    # User-specific: wallet, account, personal data
+    if _USER_SPECIFIC_RE.search(prompt):
+        return "USER_SPECIFIC_STATE"
+
+    # Temporal question type always needs live data
+    if qt == "TEMPORAL":
+        return "LIVE_WORLD_STATE"
+
+    # Catch financial / medical live-data queries that phrasing caused to be
+    # classified as FACTUAL — currency rates, stock prices, drug recalls, etc.
+    if _LIVE_MARKET_RE.search(prompt):
+        return "LIVE_WORLD_STATE"
+
+    # Everything else the LLM can answer from its training weights
+    return "GENERAL_KNOWLEDGE"
+
+
 def pipeline_gates(question_type: str) -> dict[str, bool]:
     """
     Returns a dict of booleans controlling which pipeline stages are enabled

@@ -337,6 +337,7 @@ def monitor(
     # ── Step 7: Ground Truth pipeline + auto-fix ──────────────────────────
     fix_result_schema     = None
     gt_result_schema      = None
+    gt_pipeline_result    = None   # raw dataclass — carries provenance_label/category
     requires_human_review = False
     escalation_reason_str = ""
 
@@ -373,7 +374,9 @@ def monitor(
                 shadow_weights  = shadow_weights,
                 use_wikidata    = _pipeline_gates.get("run_wikidata", True),
                 use_serper      = _pipeline_gates.get("run_serper",   True),
+                question_type   = _question_type,
             )
+            gt_pipeline_result = gt   # keep raw result for provenance enrichment
             gt_result_schema = GroundTruthVerification(
                 verified_answer     = gt.verified_answer,
                 confidence          = gt.confidence,
@@ -529,6 +532,20 @@ def monitor(
             and gt_result_schema.source not in ("none", "shadow_consensus")
         )
 
+        # Provenance at this point — GT pipeline result takes priority,
+        # otherwise derive from question classifier.
+        from engine.question_classifier import classify_provenance_category as _cprov
+        _prov_cat_xgb = (
+            gt_pipeline_result.provenance_category
+            if gt_pipeline_result is not None
+            else _cprov(_question_type, body.prompt)
+        )
+        _prov_lbl_xgb = (
+            gt_pipeline_result.provenance_label
+            if gt_pipeline_result is not None
+            else "UNVERIFIED_MODEL_INFERENCE"
+        )
+
         _xgb_is_failure, _xgb_prob = _clf_predict(
             agreement_score     = signal.agreement_score,
             entropy_score       = signal.entropy_score,
@@ -544,6 +561,8 @@ def monitor(
             fix_strategy        = _fix_strategy_xgb,
             gt_source           = _gt_source_xgb,
             question_type       = _question_type,
+            provenance_category = _prov_cat_xgb,
+            provenance_label    = _prov_lbl_xgb,
         )
 
         _xgb_threshold  = get_threshold(_question_type)
@@ -556,6 +575,28 @@ def monitor(
         )
     except Exception as _clf_exc:
         logger.warning("XGBoost classifier unavailable, keeping POET decision: %s", _clf_exc)
+
+    # ── Provenance enrichment — copy GT pipeline labels onto FSV ──────────
+    # gt_pipeline_result is the raw dataclass with provenance_label/category.
+    # When the GT pipeline didn't run (adversarial block, etc.) we derive
+    # provenance from question_type so the field is always populated.
+    try:
+        from engine.question_classifier import classify_provenance_category
+        _prov_cat = classify_provenance_category(_question_type, body.prompt)
+        if gt_pipeline_result is not None:
+            _prov_label = gt_pipeline_result.provenance_label
+            _prov_cat   = gt_pipeline_result.provenance_category
+        elif _prov_cat in ("LIVE_WORLD_STATE", "USER_SPECIFIC_STATE", "MIXED_SYNTHESIS"):
+            # Live/user data but GT pipeline didn't run → mark as requiring verification
+            _prov_label = "REQUIRES_TOOL_VERIFICATION"
+        else:
+            _prov_label = "UNVERIFIED_MODEL_INFERENCE"
+        signal = signal.model_copy(update={
+            "provenance_category": _prov_cat,
+            "provenance_label":    _prov_label,
+        })
+    except Exception as _prov_exc:
+        logger.debug("Provenance enrichment failed (non-fatal): %s", _prov_exc)
 
     # ── Step 9a: Build and annotate response ──────────────────────────────
     from engine.fie_config import MODEL_VERSION as _MODEL_VER

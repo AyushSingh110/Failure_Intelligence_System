@@ -114,6 +114,11 @@ class MonitorState(TypedDict, total=False):
     archetype:                str
     embedding_distance:       float
 
+    # ── Provenance gate ──────────────────────────────────────────────────
+    provenance_category:      str   # GENERAL_KNOWLEDGE | LIVE_WORLD_STATE | USER_SPECIFIC_STATE | MIXED_SYNTHESIS
+    provenance_label:         str   # FULLY_PROVENANCED | PARTIALLY_PROVENANCED | UNVERIFIED_MODEL_INFERENCE | ...
+    provenance_gate_triggered: bool  # True when live data needed but GT won't run
+
     # ── Jury deliberation ────────────────────────────────────────────────
     jury_verdict:             Optional[Any]           # JuryVerdict schema
     jury_confidence:          float
@@ -387,6 +392,65 @@ def signal_extract(state: MonitorState) -> dict:
         "archetype":         archetype,
         "embedding_distance": embedding["embedding_distance"],
         "pipeline_trace":    _trace(state, trace_msg),
+    }
+
+
+# ── Node 4b: provenance_gate ─────────────────────────────────────────────────
+
+def provenance_gate(state: MonitorState) -> dict:
+    """
+    Classify the provenance category for this prompt and assign an initial
+    provenance label.
+
+    Runs after signal_extract (so question_type is known) and before
+    jury_deliberate (so the label is available to the jury and finalize).
+
+    Policy: if the prompt requires live or user-specific data
+    (LIVE_WORLD_STATE / USER_SPECIFIC_STATE / MIXED_SYNTHESIS) but
+    high_failure_risk is False — meaning GT verification won't run —
+    label the inference NULL_REQUIRED_BUT_MISSING so downstream consumers
+    know verification was expected but skipped.
+
+    The label is later overwritten by the GT pipeline with the real outcome
+    (FULLY_PROVENANCED, PARTIALLY_PROVENANCED, etc.) when GT does run.
+    """
+    from engine.question_classifier import classify_provenance_category
+
+    prompt = state.get("prompt", "")
+    qt     = state.get("question_type", "UNKNOWN")
+
+    prov_cat = classify_provenance_category(qt, prompt)
+
+    signal = state.get("failure_signal")
+    high_risk = getattr(signal, "high_failure_risk", False) if signal else False
+
+    live_required = prov_cat in ("LIVE_WORLD_STATE", "USER_SPECIFIC_STATE", "MIXED_SYNTHESIS")
+    gate_triggered = live_required and not high_risk
+
+    if gate_triggered:
+        prov_label = "NULL_REQUIRED_BUT_MISSING"
+    else:
+        prov_label = "UNVERIFIED_MODEL_INFERENCE"
+
+    # Propagate into the FailureSignalVector so the response carries it
+    if signal is not None:
+        signal = signal.model_copy(update={
+            "provenance_category": prov_cat,
+            "provenance_label":    prov_label,
+        })
+
+    trace_msg = (
+        f"provenance_gate: category={prov_cat} label={prov_label} "
+        f"gate_triggered={gate_triggered}"
+    )
+    logger.info(trace_msg)
+
+    return {
+        "provenance_category":      prov_cat,
+        "provenance_label":         prov_label,
+        "provenance_gate_triggered": gate_triggered,
+        "failure_signal":           signal,
+        "pipeline_trace":           _trace(state, trace_msg),
     }
 
 
@@ -828,6 +892,8 @@ def finalize(state: MonitorState) -> dict:
             fix_strategy        = fix_strategy,
             gt_source           = gt_source,
             question_type       = qt,
+            provenance_category = state.get("provenance_category", "GENERAL_KNOWLEDGE"),
+            provenance_label    = getattr(signal, "provenance_label", "UNVERIFIED_MODEL_INFERENCE") if signal else "UNVERIFIED_MODEL_INFERENCE",
         )
         threshold   = get_threshold(qt)
         xgb_failure = xgb_prob >= threshold
@@ -994,6 +1060,7 @@ def _build_graph() -> StateGraph:
     g.add_node("shadow_inference", shadow_inference)
     g.add_node("adversarial_guard", adversarial_guard)
     g.add_node("signal_extract",   signal_extract)
+    g.add_node("provenance_gate",  provenance_gate)
     g.add_node("jury_deliberate",  jury_deliberate)
     g.add_node("security_checks",  security_checks)
     g.add_node("gt_verify",        gt_verify)
@@ -1012,7 +1079,8 @@ def _build_graph() -> StateGraph:
         {"END": END, "signal_extract": "signal_extract"},
     )
 
-    g.add_edge("signal_extract",  "jury_deliberate")
+    g.add_edge("signal_extract",  "provenance_gate")
+    g.add_edge("provenance_gate", "jury_deliberate")
     g.add_edge("jury_deliberate", "security_checks")
 
     g.add_conditional_edges(
@@ -1080,6 +1148,9 @@ def run_pipeline(initial_state: MonitorState) -> MonitorState:
     initial_state.setdefault("canary_token", "")
     initial_state.setdefault("context", [])
     initial_state.setdefault("session_context", [])
+    initial_state.setdefault("provenance_category", "GENERAL_KNOWLEDGE")
+    initial_state.setdefault("provenance_label", "UNVERIFIED_MODEL_INFERENCE")
+    initial_state.setdefault("provenance_gate_triggered", False)
 
     result = get_pipeline().invoke(initial_state)
 

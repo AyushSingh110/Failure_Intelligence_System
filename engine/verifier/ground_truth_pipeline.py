@@ -21,6 +21,12 @@ class GroundTruthPipelineResult:
     # Summary of what the pipeline did — shown in XAI explanation
     pipeline_trace:     list[str] = field(default_factory=list)
 
+    # ── Phase 1 Provenance ────────────────────────────────────────────────────
+    # Set at each return point to describe how well the source was verified.
+    # Consumers copy this onto FailureSignalVector.provenance_label.
+    provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE"
+    provenance_category: str = "GENERAL_KNOWLEDGE"
+
 def run_ground_truth_pipeline(
     prompt:           str,
     primary_output:   str,
@@ -46,6 +52,16 @@ def run_ground_truth_pipeline(
 
     qt = (question_type or "UNKNOWN").upper()
 
+    # Determine provenance category from question type + prompt content
+    try:
+        from engine.question_classifier import classify_provenance_category
+        result.provenance_category = classify_provenance_category(qt, prompt)
+    except Exception:
+        result.provenance_category = "GENERAL_KNOWLEDGE"
+
+    # Default label — overridden at each verification outcome below
+    result.provenance_label = "UNVERIFIED_MODEL_INFERENCE"
+
     # ── REASONING / CODE → self-consistency across shadow outputs ─────────────
     # External sources (Wikidata, Serper) cannot verify reasoning or code.
     # If shadow models agree semantically, treat the medoid as pseudo-GT.
@@ -66,6 +82,7 @@ def run_ground_truth_pipeline(
                     result.verified_answer = sc.best_answer
                     result.confidence      = sc.consistency_score
                     result.source          = f"self_consistency_{qt.lower()}"
+                    result.provenance_label = "PARTIALLY_PROVENANCED"
                     result.pipeline_trace.append(
                         f"Pseudo-GT accepted: medoid answer selected "
                         f"(confidence={sc.consistency_score:.3f})"
@@ -77,6 +94,7 @@ def run_ground_truth_pipeline(
                     return result
                 else:
                     result.requires_escalation = True
+                    result.provenance_label    = "UNVERIFIED_MODEL_INFERENCE"
                     result.escalation_reason   = (
                         f"Shadow models disagree on this {qt} question "
                         f"(self-consistency score={sc.consistency_score:.2f} "
@@ -90,10 +108,12 @@ def run_ground_truth_pipeline(
                 logger.warning("Self-consistency check failed: %s", exc)
                 result.pipeline_trace.append(f"Self-consistency error: {exc} — escalating")
                 result.requires_escalation = True
+                result.provenance_label    = "UNVERIFIED_MODEL_INFERENCE"
                 result.escalation_reason   = f"Self-consistency verification failed: {exc}"
                 return result
         else:
             result.requires_escalation = True
+            result.provenance_label    = "UNVERIFIED_MODEL_INFERENCE"
             result.escalation_reason   = (
                 f"Not enough shadow outputs for self-consistency check "
                 f"on {qt} question (need >= 2, got {len(shadow_outputs or [])})"
@@ -107,8 +127,9 @@ def run_ground_truth_pipeline(
             f"Question type={qt}: no external GT available — "
             "returning empty result (jury verdict is authoritative)"
         )
-        result.confidence = jury_confidence
-        result.source     = "none"
+        result.confidence       = jury_confidence
+        result.source           = "none"
+        result.provenance_label = "UNVERIFIED_MODEL_INFERENCE"
         return result
 
     # Cache lookup
@@ -116,10 +137,11 @@ def run_ground_truth_pipeline(
         from engine.ground_truth_cache import lookup_cache
         cache_hit = lookup_cache(prompt)
         if cache_hit:
-            result.verified_answer = cache_hit.verified_answer
-            result.confidence      = cache_hit.confidence
-            result.source          = f"GT Cache ({cache_hit.source})"
-            result.from_cache      = True
+            result.verified_answer  = cache_hit.verified_answer
+            result.confidence       = cache_hit.confidence
+            result.source           = f"GT Cache ({cache_hit.source})"
+            result.from_cache       = True
+            result.provenance_label = "FULLY_PROVENANCED"
             result.pipeline_trace.append(
                 f"Cache HIT — '{cache_hit.verified_answer[:60]}' "
                 f"(verified by {cache_hit.verified_by}, used {cache_hit.use_count} times)"
@@ -155,6 +177,7 @@ def run_ground_truth_pipeline(
             "Temporal question detected but Serper disabled for this question type — escalating"
         )
         result.requires_escalation = True
+        result.provenance_label    = "REQUIRES_TOOL_VERIFICATION"
         result.escalation_reason   = "Real-time lookup disabled for this question type."
         return result
 
@@ -166,8 +189,8 @@ def run_ground_truth_pipeline(
 
             if serper.skip:
                 result.pipeline_trace.append(f"Serper skipped: {serper.error}")
-                # No real-time source = escalate for temporal questions
                 result.requires_escalation = True
+                result.provenance_label    = "REQUIRES_TOOL_VERIFICATION"
                 result.escalation_reason   = (
                     "This question requires real-time data but no live search provider "
                     "is configured. Add SERPER_API_KEY to .env to enable real-time verification."
@@ -178,9 +201,10 @@ def run_ground_truth_pipeline(
             if serper.found:
                 if not serper.matches_output:
                     # Search result contradicts model output — use search answer
-                    result.verified_answer = serper.grounded_answer
-                    result.confidence      = serper.confidence
-                    result.source          = serper.source
+                    result.verified_answer  = serper.grounded_answer
+                    result.confidence       = serper.confidence
+                    result.source           = serper.source
+                    result.provenance_label = "FULLY_PROVENANCED"
                     result.pipeline_trace.append(
                         f"Serper OVERRIDE — model output contradicted by search "
                         f"(confidence={serper.confidence:.2f}). Using search answer."
@@ -188,10 +212,11 @@ def run_ground_truth_pipeline(
                     _cache_if_confident(prompt, result.verified_answer, "serper", serper.confidence)
                     return result
                 else:
-                    # Search result confirms model output — return with higher confidence
-                    result.verified_answer = primary_output
-                    result.confidence      = serper.confidence
-                    result.source          = f"Serper confirmed: {serper.source}"
+                    # Search result confirms model output
+                    result.verified_answer  = primary_output
+                    result.confidence       = serper.confidence
+                    result.source           = f"Serper confirmed: {serper.source}"
+                    result.provenance_label = "FULLY_PROVENANCED"
                     result.pipeline_trace.append(
                         f"Serper CONFIRMED model output (confidence={serper.confidence:.2f})"
                     )
@@ -199,6 +224,7 @@ def run_ground_truth_pipeline(
             else:
                 result.pipeline_trace.append(f"Serper found no results: {serper.error}")
                 result.requires_escalation = True
+                result.provenance_label    = "REQUIRES_TOOL_VERIFICATION"
                 result.escalation_reason   = "Real-time search returned no results for this query"
                 return result
 
@@ -206,6 +232,7 @@ def run_ground_truth_pipeline(
             logger.warning("Serper verification failed: %s", exc)
             result.pipeline_trace.append(f"Serper error: {exc}")
             result.requires_escalation = True
+            result.provenance_label    = "REQUIRES_TOOL_VERIFICATION"
             result.escalation_reason   = f"Real-time verification failed: {exc}"
             return result
 
@@ -237,16 +264,18 @@ def run_ground_truth_pipeline(
                             f"is a bare fragment — skipping override, escalating"
                         )
                         result.requires_escalation = True
-                        result.escalation_reason = (
+                        result.provenance_label    = "PARTIALLY_PROVENANCED"
+                        result.escalation_reason   = (
                             f"Wikidata found a mismatch (confidence={wiki.confidence:.2f}) "
                             f"but could not produce a complete replacement answer. "
                             "Manual review recommended."
                         )
                         return result
 
-                    result.verified_answer = correct
-                    result.confidence      = wiki.confidence
-                    result.source          = wiki.source
+                    result.verified_answer  = correct
+                    result.confidence       = wiki.confidence
+                    result.source           = wiki.source
+                    result.provenance_label = "FULLY_PROVENANCED"
                     result.pipeline_trace.append(
                         f"Wikidata OVERRIDE — claim contradicted "
                         f"(confidence={wiki.confidence:.2f}). "
@@ -256,10 +285,10 @@ def run_ground_truth_pipeline(
                     return result
 
                 elif wiki.matches_claim and wiki.confidence >= 0.60:
-                    # Wikidata confirms — boost consensus
-                    result.verified_answer = primary_output
-                    result.confidence      = wiki.confidence
-                    result.source          = f"Wikidata confirmed: {wiki.source}"
+                    result.verified_answer  = primary_output
+                    result.confidence       = wiki.confidence
+                    result.source           = f"Wikidata confirmed: {wiki.source}"
+                    result.provenance_label = "FULLY_PROVENANCED"
                     result.pipeline_trace.append(
                         f"Wikidata CONFIRMED model output (confidence={wiki.confidence:.2f})"
                     )
@@ -284,17 +313,20 @@ def run_ground_truth_pipeline(
     )
 
     if consensus_strength >= 0.60:
-        # Good shadow consensus — proceed with weighted consensus, no escalation
         result.pipeline_trace.append(
             "Proceeding with shadow consensus (strength sufficient)"
         )
-        # Return empty verified_answer = caller uses shadow consensus via fix_engine
-        result.confidence = consensus_strength
-        result.source     = "shadow_consensus"
+        result.confidence       = consensus_strength
+        result.source           = "shadow_consensus"
+        # Shadow consensus alone = partial provenance (no external source confirmed it)
+        result.provenance_label = "PARTIALLY_PROVENANCED"
         return result
     else:
-        # Weak consensus + no external verification = escalate
         result.requires_escalation = True
+        # No external source + weak consensus = the claim is unverified model inference
+        result.provenance_label    = "NULL_REQUIRED_BUT_MISSING" if result.provenance_category in (
+            "LIVE_WORLD_STATE", "USER_SPECIFIC_STATE", "MIXED_SYNTHESIS"
+        ) else "UNVERIFIED_MODEL_INFERENCE"
         result.escalation_reason   = (
             f"External ground truth verification found no reliable source "
             f"and shadow model consensus is too weak "

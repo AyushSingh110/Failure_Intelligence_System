@@ -105,9 +105,10 @@ VERDICT
 CONFIDENCE
 REASON"""
 
+            from config import get_settings
             response = groq.complete(
                 verification_prompt,
-                model_name  = "llama-3.1-8b-instant",
+                model_name  = get_settings().groq_fast_model,
                 max_tokens  = 100,
                 temperature = 0.0,
             )
