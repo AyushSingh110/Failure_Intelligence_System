@@ -62,6 +62,9 @@ class Settings(BaseSettings):
                                         ])
     groq_timeout_seconds:   int       = Field(default=30, ge=5, le=120)
     groq_enabled:           bool      = Field(default=True)
+    # Fast cheap model used for claim extraction, RAG, and GT verification.
+    # Override via GROQ_FAST_MODEL env var when the default is deprecated.
+    groq_fast_model:        str       = Field(default="llama-3.1-8b-instant")
 
     # Ground Truth Verification settings 
     wikidata_enabled:                 bool  = Field(default=True)

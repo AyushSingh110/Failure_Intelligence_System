@@ -162,9 +162,10 @@ GROUNDED_ANSWER: <most accurate answer based on the search result>"""
             # Fallback: if output and search answer share significant words → consistent
             return _heuristic_match(primary_output, search_answer)
 
+        from config import get_settings
         resp = groq.complete(
             verification_prompt,
-            model_name  = "llama-3.1-8b-instant",
+            model_name  = get_settings().groq_fast_model,
             max_tokens  = 100,
             temperature = 0.0,
         )

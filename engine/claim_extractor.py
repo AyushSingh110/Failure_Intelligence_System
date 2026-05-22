@@ -18,6 +18,9 @@ class ExtractedClaim:
     property: str
     value:    str
     raw_text: str
+    # Provenance fields — set by the GT pipeline after verification
+    provenance_source:         str = "unverified"        # wikidata | serper | shadow_consensus | unverified
+    claim_provenance_category: str = "GENERAL_KNOWLEDGE" # mirrors ProvenanceCategory
 
 
 # Extraction prompt
@@ -82,9 +85,10 @@ def extract_claim(text: str, question: str = "") -> Optional[ExtractedClaim]:
             )
         else:
             prompt = _EXTRACTION_PROMPT_NO_QUESTION.format(text=text[:500])
+        from config import get_settings
         response = groq.complete(
             prompt,
-            model_name  = "llama-3.1-8b-instant",
+            model_name  = get_settings().groq_fast_model,
             max_tokens  = 80,
             temperature = 0.0,
         )

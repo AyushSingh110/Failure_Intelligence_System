@@ -44,10 +44,11 @@ def get_grounded_answer(prompt: str, context: str | None = None) -> str:
             logger.warning("GroqService unavailable for RAG grounding")
             return ""
 
+        from config import get_settings
         rag_prompt = build_rag_prompt(prompt, context)
         response   = groq.complete(
             rag_prompt,
-            model_name  = "llama-3.1-8b-instant",
+            model_name  = get_settings().groq_fast_model,
             max_tokens  = 120,
             temperature = 0.0,
         )

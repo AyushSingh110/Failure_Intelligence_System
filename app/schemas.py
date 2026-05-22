@@ -1,8 +1,48 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime
+
+
+# ── Provenance types ──────────────────────────────────────────────────────────
+# ProvenanceCategory: what type of knowledge does this response draw from?
+#
+#   GENERAL_KNOWLEDGE   — static facts the LLM learned during training
+#                         (capitals, chemical formulas, historical dates)
+#   LIVE_WORLD_STATE    — information that changes in real time and requires
+#                         a live tool call to verify (prices, weather, scores)
+#   USER_SPECIFIC_STATE — data that only exists in the user's account or
+#                         system (wallet balance, account history, settings)
+#   MIXED_SYNTHESIS     — the response combines static knowledge AND live/user
+#                         data (e.g. "your BTC is worth $X today")
+#
+ProvenanceCategory = Literal[
+    "GENERAL_KNOWLEDGE",
+    "LIVE_WORLD_STATE",
+    "USER_SPECIFIC_STATE",
+    "MIXED_SYNTHESIS",
+]
+
+# ProvenanceLabel: how well was the source of this specific response verified?
+#
+#   FULLY_PROVENANCED          — an external source (Wikidata / Serper) confirmed
+#                                the answer with high confidence
+#   PARTIALLY_PROVENANCED      — some claims were verified, others could not be
+#   UNVERIFIED_MODEL_INFERENCE — no external check was done; model asserts from
+#                                training data only (most common for GENERAL_KNOWLEDGE)
+#   REQUIRES_TOOL_VERIFICATION — the question needs live data but no tool result
+#                                is attached (should have been verified but wasn't)
+#   NULL_REQUIRED_BUT_MISSING  — the category demands verification, none occurred,
+#                                and this is a reliability gap that should be flagged
+#
+ProvenanceLabel = Literal[
+    "FULLY_PROVENANCED",
+    "PARTIALLY_PROVENANCED",
+    "UNVERIFIED_MODEL_INFERENCE",
+    "REQUIRES_TOOL_VERIFICATION",
+    "NULL_REQUIRED_BUT_MISSING",
+]
 
 
 class MathematicalMetrics(BaseModel):
@@ -46,6 +86,14 @@ class FailureSignalVector(BaseModel):
     high_failure_risk:    bool  = False
     # Question-type classification (set at routing time, before jury)
     question_type:        str   = "UNKNOWN"   # FACTUAL|TEMPORAL|REASONING|CODE|OPINION|UNKNOWN
+
+    # ── Phase 1 Provenance ────────────────────────────────────────────────────
+    # provenance_category: what kind of knowledge does this response draw from?
+    # provenance_label:    how well was the source of this response verified?
+    # Both are set by the ground_truth_pipeline after verification completes.
+    # Default: GENERAL_KNOWLEDGE / UNVERIFIED_MODEL_INFERENCE until the pipeline runs.
+    provenance_category: str = "GENERAL_KNOWLEDGE"
+    provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE"
 
 
 # ── Phase 2 schemas ───────────────────────────────────────────────────────
