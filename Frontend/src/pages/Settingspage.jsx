@@ -65,8 +65,10 @@ export default function SettingsPage() {
   const navigate  = useNavigate()
   const session   = getSession()
   const [apiKey, setApiKey]   = useState(session?.api_key || '')
+  const [showKey, setShowKey] = useState(false)
   const [regen, setRegen]     = useState(false)
   const [regenDone, setRegenDone] = useState(false)
+  const [confirmRegen, setConfirmRegen] = useState(false)
   const [error, setError]     = useState('')
 
   const name      = session?.name || 'User'
@@ -77,6 +79,7 @@ export default function SettingsPage() {
   const initials  = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
   const handleRegenerate = async () => {
+    setConfirmRegen(false)
     setRegen(true)
     setError('')
     try {
@@ -133,7 +136,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile */}
-        <div style={{ animation: 'kpiIn 0.5s ease 0.05s both', opacity: 0 }}>
+        <div style={{ animation: 'kpiIn 0.5s ease 0.05s both' }}>
           <Section title="Profile">
             <div style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid var(--border)' }}>
               <div style={{
@@ -161,10 +164,23 @@ export default function SettingsPage() {
         </div>
 
         {/* API Key */}
-        <div style={{ animation: 'kpiIn 0.5s ease 0.1s both', opacity: 0 }}>
+        <div style={{ animation: 'kpiIn 0.5s ease 0.1s both' }}>
           <Section title="API Key">
             <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Your API Key</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Your API Key</div>
+                <button
+                  onClick={() => setShowKey(k => !k)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontFamily: 'JetBrains Mono, monospace', fontSize: '10px',
+                    color: 'var(--text-muted)', padding: '2px 6px',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-cyan)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >{showKey ? 'HIDE' : 'SHOW'}</button>
+              </div>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '10px 14px', borderRadius: '8px',
@@ -174,7 +190,8 @@ export default function SettingsPage() {
                   flex: 1, fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '13px', color: 'var(--accent-green)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{apiKey}</div>
+                  letterSpacing: showKey ? '0' : '0.12em',
+                }}>{showKey ? apiKey : '•'.repeat(Math.min(apiKey.length, 36))}</div>
                 <CopyButton text={apiKey} />
               </div>
               {regenDone && (
@@ -190,35 +207,77 @@ export default function SettingsPage() {
             </div>
             <div style={{ padding: '14px 18px' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                Generate a new key — old key stops working immediately.
+                Generates a new key. Your current key stops working immediately — update all integrations before rotating.
               </div>
-              <button
-                onClick={handleRegenerate}
-                disabled={regen}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '8px 16px', borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg-hover)', color: 'var(--text-secondary)',
-                  fontFamily: 'JetBrains Mono, monospace', fontSize: '12px',
-                  cursor: regen ? 'not-allowed' : 'pointer',
-                  opacity: regen ? 0.6 : 1, transition: 'all 0.15s ease',
-                }}
-              >
-                {regen && (
-                  <svg style={{ animation: 'spin 1s linear infinite' }} width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2"/>
-                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                )}
-                {regen ? 'Regenerating...' : 'Regenerate API Key'}
-              </button>
+              {!confirmRegen ? (
+                <button
+                  onClick={() => setConfirmRegen(true)}
+                  disabled={regen}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '8px 16px', borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'transparent', color: 'var(--text-secondary)',
+                    fontFamily: 'JetBrains Mono, monospace', fontSize: '12px',
+                    cursor: 'pointer', transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-bright)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+                >
+                  Regenerate API Key
+                </button>
+              ) : (
+                <div style={{
+                  padding: '12px 14px', borderRadius: '8px',
+                  border: '1px solid rgba(255,170,0,0.3)',
+                  background: 'rgba(255,170,0,0.05)',
+                }}>
+                  <div style={{ fontSize: '12px', color: 'var(--accent-amber)', fontFamily: 'JetBrains Mono, monospace', marginBottom: '10px', fontWeight: 600 }}>
+                    This will invalidate your current key. Are you sure?
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleRegenerate}
+                      disabled={regen}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '7px 14px', borderRadius: '7px',
+                        border: '1px solid rgba(255,68,102,0.4)',
+                        background: 'rgba(255,68,102,0.08)', color: 'var(--accent-red)',
+                        fontFamily: 'JetBrains Mono, monospace', fontSize: '12px',
+                        cursor: regen ? 'not-allowed' : 'pointer',
+                        opacity: regen ? 0.6 : 1, transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {regen && (
+                        <svg style={{ animation: 'spin 1s linear infinite' }} width="11" height="11" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2"/>
+                          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      )}
+                      {regen ? 'Regenerating...' : 'Yes, rotate key'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmRegen(false)}
+                      style={{
+                        padding: '7px 14px', borderRadius: '7px',
+                        border: '1px solid var(--border)',
+                        background: 'transparent', color: 'var(--text-muted)',
+                        fontFamily: 'JetBrains Mono, monospace', fontSize: '12px',
+                        cursor: 'pointer', transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </Section>
         </div>
 
         {/* SDK Quick Start */}
-        <div style={{ animation: 'kpiIn 0.5s ease 0.15s both', opacity: 0 }}>
+        <div style={{ animation: 'kpiIn 0.5s ease 0.15s both' }}>
           <Section title="Quick Start — Connect Your LLM">
             <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Step 1 — Install SDK</div>
@@ -261,7 +320,7 @@ def call_your_llm(prompt: str) -> str:
         </div>
 
         {/* Modes */}
-        <div style={{ animation: 'kpiIn 0.5s ease 0.2s both', opacity: 0 }}>
+        <div style={{ animation: 'kpiIn 0.5s ease 0.2s both' }}>
           <Section title="Monitor Modes">
             {[
               { mode: 'monitor', color: 'var(--accent-cyan)',  title: 'Background monitoring', desc: 'User gets answer instantly. FIE checks in background. Best for speed.' },
@@ -283,7 +342,7 @@ def call_your_llm(prompt: str) -> str:
         </div>
 
         {/* Danger zone */}
-        <div style={{ animation: 'kpiIn 0.5s ease 0.25s both', opacity: 0 }}>
+        <div style={{ animation: 'kpiIn 0.5s ease 0.25s both' }}>
           <Section title="Account">
             <div style={{ padding: '14px 18px' }}>
               <button
