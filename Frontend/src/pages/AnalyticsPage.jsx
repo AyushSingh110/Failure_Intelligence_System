@@ -34,25 +34,32 @@ function StatCard({ label, value, sub, color, delay = 0 }) {
     <div style={{
       padding: '18px 20px', borderRadius: '12px',
       background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderTop: `2px solid ${color}`,
       animation: `kpiIn 0.5s ease ${delay}ms both`,
       position: 'relative', overflow: 'hidden',
-    }}>
+      transition: 'border-color 0.2s, box-shadow 0.2s',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-bright)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)' }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
+    >
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '48px',
-        background: `linear-gradient(180deg, ${color}10 0%, transparent 100%)`,
+        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+        background: color, opacity: 0.8,
+      }}/>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '56px',
+        background: `linear-gradient(180deg, ${color}0d 0%, transparent 100%)`,
         pointerEvents: 'none',
       }}/>
       <div style={{
         fontFamily: 'JetBrains Mono, monospace', fontSize: '9px',
-        fontWeight: 600, letterSpacing: '0.14em',
-        color: 'var(--text-muted)', marginBottom: '10px',
+        fontWeight: 700, letterSpacing: '0.14em',
+        color: 'var(--text-muted)', marginBottom: '12px',
       }}>{label}</div>
       <div style={{
         fontFamily: 'JetBrains Mono, monospace', fontSize: '28px',
-        fontWeight: 800, color, lineHeight: 1, marginBottom: '6px',
+        fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1, marginBottom: '7px',
       }}>{value}</div>
-      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{sub}</div>
+      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</div>
     </div>
   )
 }
@@ -61,14 +68,16 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
     <div style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      background: 'var(--bg-elevated)', border: '1px solid var(--border-bright)',
       borderRadius: '8px', padding: '10px 14px',
-      fontFamily: 'JetBrains Mono, monospace', fontSize: '12px',
+      fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
     }}>
-      <div style={{ color: 'var(--text-muted)', marginBottom: '6px' }}>{label}</div>
+      <div style={{ color: 'var(--text-muted)', marginBottom: '7px', fontSize: '10px' }}>{label}</div>
       {payload.map(p => (
-        <div key={p.dataKey} style={{ color: p.color || p.stroke, marginBottom: '2px' }}>
-          {p.dataKey}: {typeof p.value === 'number' ? p.value.toFixed(3) : p.value}
+        <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', marginBottom: '3px' }}>
+          <span style={{ color: 'var(--text-muted)' }}>{p.dataKey}</span>
+          <span style={{ color: p.color || p.stroke }}>{typeof p.value === 'number' ? p.value.toFixed(3) : p.value}</span>
         </div>
       ))}
     </div>
@@ -162,10 +171,10 @@ export default function AnalyticsPage() {
 
         {/* Header */}
         <div style={{ marginBottom: '24px', animation: 'kpiIn 0.5s ease both' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
             Analytics
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
             Failure patterns, model health, and usage breakdown
           </p>
         </div>
