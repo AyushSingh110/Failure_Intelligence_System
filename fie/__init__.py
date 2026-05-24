@@ -5,7 +5,7 @@ from fie.adversarial import scan_prompt
 from fie.preflight import preflight_check, GuardedResponse
 from fie import integrations
 
-__version__ = "1.5.1"
+__version__ = "1.6.0"
 __all__      = [
     "monitor",
     "FIEClient",

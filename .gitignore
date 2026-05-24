@@ -16,11 +16,17 @@ pip-log.txt
 # ============================================================
 
 # Trained ML models (XGBoost classifiers — proprietary)
+# NOTE: covers root models/ AND any subdirectory (fie/models/, etc.)
 models/*.pkl
 models/*.joblib
 models/*.bin
-# Keep placeholder so the folder exists in the repo
+**/models/*.pkl
+**/models/*.joblib
+**/models/*.bin
+**/models/*.json
+# Keep placeholders so folders exist in the repo
 !models/.gitkeep
+!**/models/.gitkeep
 
 # Adversarial FAISS index (trained corpus — proprietary)
 storage/faiss_adversarial.index
@@ -45,6 +51,11 @@ data/jbb_tier1/
 # PAIR classifier training corpus (contains real jailbreak prompts — research confidential)
 data/pair_training/
 
+# Adversarial evaluation data (research confidential)
+data/adversarial_eval_set.jsonl
+data/eval_new_attacks_results.json
+data/eval_new_attacks.py
+
 # VEXR collaboration research data (not part of FIE public codebase)
 data/vexr/
 
@@ -56,6 +67,11 @@ notebooks/comparison_plots/
 notebooks/pair_classifier_plots/
 notebooks/*.png
 notebooks/*.jpg
+
+# Benchmark evaluation output (research-only, not for public push)
+notebooks/benchmark_figures/
+notebooks/benchmark_results/
+notebooks/*.csv
 
 # VEXR collaboration research (not part of FIE public codebase)
 notebooks/vexr_*.ipynb
@@ -71,6 +87,18 @@ README_files/
 # ============================================================
 # END PRIVATE
 # ============================================================
+
+# ── Benchmark & evaluation results (research-only) ────────────────────────────
+results/
+
+# ── Jupyter checkpoints ───────────────────────────────────────────────────────
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# ── HuggingFace local dataset downloads (if saved outside ~/.cache) ───────────
+*.arrow
+*.parquet
+datasets/
 
 # --- Failure Intelligence Storage (runtime vault) ---
 failures.json

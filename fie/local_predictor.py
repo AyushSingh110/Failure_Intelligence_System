@@ -1,35 +1,10 @@
-"""
-fie.local_predictor — zero-dependency local failure detection.
-
-Works without a server, no API key needed. Uses a rule-based POET-inspired
-algorithm that runs entirely on the user's machine.
-
-Usage:
-    from fie import monitor
-
-    @monitor(mode="local")
-    def ask_ai(prompt: str) -> str:
-        return your_llm(prompt)
-
-What it detects locally:
-- Hedging / uncertainty language ("I think", "probably", "I'm not sure")
-- Self-contradiction patterns ("however", "but actually", "on the other hand")
-- Temporal hallucination signals ("as of my knowledge cutoff", "I don't have")
-- Overconfident wrong-sounding patterns
-- Question-type routing (opinion/code questions return low risk by default)
-
-What it cannot do locally (requires server):
-- Shadow model cross-checking (needs 3 independent model calls)
-- Wikidata / Serper ground truth verification
-- Auto-calibrating per-type thresholds from real feedback
-"""
+"""Offline heuristic failure detection. Regex-based hedging, contradiction, and temporal signals."""
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
 
 
-# ── Hedging phrase patterns ───────────────────────────────────────────────────
 _HEDGE_PATTERNS = [
     r"\bi['']?m not (sure|certain|aware|confident)\b",
     r"\bi (think|believe|suppose|guess|assume)\b",
@@ -43,7 +18,6 @@ _HEDGE_PATTERNS = [
 ]
 _HEDGE_RE = [re.compile(p, re.IGNORECASE) for p in _HEDGE_PATTERNS]
 
-# ── Temporal cutoff signals ───────────────────────────────────────────────────
 _TEMPORAL_PATTERNS = [
     r"\bmy (training|knowledge) (data|cutoff|date)\b",
     r"\bas of (my|the) (last|training|knowledge)\b",
@@ -53,7 +27,6 @@ _TEMPORAL_PATTERNS = [
 ]
 _TEMPORAL_RE = [re.compile(p, re.IGNORECASE) for p in _TEMPORAL_PATTERNS]
 
-# ── Self-contradiction signals ─────────────────────────────────────────────────
 _CONTRADICT_PATTERNS = [
     r"\bhowever[,.]?\s+(this|that|it|actually)\b",
     r"\bbut (actually|in fact|on the other hand)\b",
@@ -64,7 +37,6 @@ _CONTRADICT_PATTERNS = [
 ]
 _CONTRADICT_RE = [re.compile(p, re.IGNORECASE) for p in _CONTRADICT_PATTERNS]
 
-# ── Question-type classifier (lightweight copy of engine/question_classifier) ─
 _CODE_RE = re.compile(
     r"\b(write|code|implement|function|program|script|algorithm|class|method|"
     r"debug|fix (the )?(bug|error|code)|how (do|to) (code|implement|write|build))\b",
@@ -92,7 +64,6 @@ def _classify_question_type(prompt: str) -> str:
     return "FACTUAL"
 
 
-# ── Local prediction result ───────────────────────────────────────────────────
 @dataclass
 class LocalPrediction:
     is_suspicious:    bool
