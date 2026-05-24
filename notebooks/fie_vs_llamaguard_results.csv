@@ -1,4 +1,0 @@
-System,Recall,FPR,Precision,F1,AUC-ROC
-FIE v1.4.2,88.0,12.0,88.0,88.0,0.906
-Llama Guard 2-86M,31.0,17.0,64.6,41.9,0.698
-Llama Guard 2-22M,28.0,8.0,77.8,41.2,0.713
