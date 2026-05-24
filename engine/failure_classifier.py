@@ -49,9 +49,9 @@ CLASSIFIER_THRESHOLD: float = 0.522
 # The actual threshold for each type comes from fie_config (MongoDB-backed), not here.
 _BLIND_SPOT_TYPES: frozenset[str] = frozenset({"CODE", "REASONING", "OPINION"})
 
-# v3/v4 feature schema: adds question_type + provenance as categorical features
+# v4 feature schema: adds question_type + provenance + reasoning failure type
 _CATS_V3 = ["archetype", "jury_verdict", "fix_strategy", "gt_source", "question_type",
-            "provenance_category", "provenance_label"]
+            "provenance_category", "provenance_label", "reasoning_failure_type"]
 _CATS_V2 = ["archetype", "jury_verdict", "fix_strategy", "gt_source"]
 _CATS    = _CATS_V3 if _USING_V3 else _CATS_V2
 
@@ -126,8 +126,10 @@ def _infer(
     fix_strategy:        str,
     gt_source:           str,
     question_type:       str,
-    provenance_category: str = "GENERAL_KNOWLEDGE",
-    provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE",
+    provenance_category:    str   = "GENERAL_KNOWLEDGE",
+    provenance_label:       str   = "UNVERIFIED_MODEL_INFERENCE",
+    reasoning_failure_type: str   = "NOT_APPLICABLE",
+    reasoning_confidence:   float = 0.0,
 ) -> ClassifierResult:
     """Core inference — shared by predict() and predict_full()."""
     _load()
@@ -175,8 +177,10 @@ def _infer(
             "fix_strategy"       : fix_strategy     or "NONE",
             "gt_source"          : gt_source        or "none",
             "question_type"      : qt,
-            "provenance_category": provenance_category or "GENERAL_KNOWLEDGE",
-            "provenance_label"   : provenance_label   or "UNVERIFIED_MODEL_INFERENCE",
+            "provenance_category"    : provenance_category    or "GENERAL_KNOWLEDGE",
+            "provenance_label"       : provenance_label       or "UNVERIFIED_MODEL_INFERENCE",
+            "reasoning_failure_type" : reasoning_failure_type or "NOT_APPLICABLE",
+            "reasoning_confidence"   : float(reasoning_confidence or 0.0),
         }
 
         df     = pd.DataFrame([row])
@@ -234,9 +238,11 @@ def predict(
     jury_verdict_str:    str,
     fix_strategy:        str,
     gt_source:           str,
-    question_type:       str = "UNKNOWN",
-    provenance_category: str = "GENERAL_KNOWLEDGE",
-    provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE",
+    question_type:          str   = "UNKNOWN",
+    provenance_category:    str   = "GENERAL_KNOWLEDGE",
+    provenance_label:       str   = "UNVERIFIED_MODEL_INFERENCE",
+    reasoning_failure_type: str   = "NOT_APPLICABLE",
+    reasoning_confidence:   float = 0.0,
 ) -> tuple[bool, float]:
     """
     Runs the XGBoost v4 classifier with temperature calibration.
@@ -253,7 +259,7 @@ def predict(
         agreement_score, entropy_score, jury_confidence, fix_confidence,
         gt_confidence, high_failure_risk, fix_applied, requires_escalation,
         gt_override, archetype, jury_verdict_str, fix_strategy, gt_source, question_type,
-        provenance_category, provenance_label,
+        provenance_category, provenance_label, reasoning_failure_type, reasoning_confidence,
     )
     return r.is_failure, r.probability
 
@@ -272,9 +278,11 @@ def predict_full(
     jury_verdict_str:    str,
     fix_strategy:        str,
     gt_source:           str,
-    question_type:       str = "UNKNOWN",
-    provenance_category: str = "GENERAL_KNOWLEDGE",
-    provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE",
+    question_type:          str   = "UNKNOWN",
+    provenance_category:    str   = "GENERAL_KNOWLEDGE",
+    provenance_label:       str   = "UNVERIFIED_MODEL_INFERENCE",
+    reasoning_failure_type: str   = "NOT_APPLICABLE",
+    reasoning_confidence:   float = 0.0,
 ) -> ClassifierResult:
     """
     Same as predict() but returns a ClassifierResult with full metadata:
@@ -293,5 +301,5 @@ def predict_full(
         agreement_score, entropy_score, jury_confidence, fix_confidence,
         gt_confidence, high_failure_risk, fix_applied, requires_escalation,
         gt_override, archetype, jury_verdict_str, fix_strategy, gt_source, question_type,
-        provenance_category, provenance_label,
+        provenance_category, provenance_label, reasoning_failure_type, reasoning_confidence,
     )

@@ -1,26 +1,4 @@
-"""
-Pre-flight adversarial guard — intercepts prompts BEFORE the primary LLM runs.
-
-This module is the SDK-side half of the inline protection layer.  It is
-imported by fie/monitor.py and called at the very start of every wrapper so
-that adversarial prompts never reach the primary model.
-
-Design decisions
-----------------
-* GuardedResponse has __str__ returning the refusal message, so callers
-  that just forward the result to their users see a meaningful safe reply.
-* Callers that want to detect a block check `hasattr(result, "blocked")`.
-* Block mode is opt-out via env var or hot-config — teams can flip to
-  warn-only without redeploying.
-* preflight_check() never raises — failures fall through as "not blocked"
-  so a bug here can never take the primary model offline.
-
-Configuration (in order of priority)
---------------------------------------
-1. MongoDB `fie_config` collection  →  hot-reload, no restart needed
-2. PREFLIGHT_BLOCK_ENABLED env var  →  "true" / "false"
-3. Compiled default                 →  block_enabled = True
-"""
+"""Pre-flight adversarial guard. Runs scan_prompt before the LLM call; returns GuardedResponse on block."""
 from __future__ import annotations
 
 import dataclasses
@@ -48,7 +26,6 @@ _DEFAULT_REFUSAL: str = os.environ.get(
 
 @dataclasses.dataclass
 class GuardResult:
-    """Raw result from preflight_check() — used internally by the wrappers."""
     blocked:         bool
     attack_type:     str
     confidence:      float
@@ -59,24 +36,7 @@ class GuardResult:
 # ── GuardedResponse ───────────────────────────────────────────────────────────
 
 class GuardedResponse(str):
-    """
-    Returned to the caller instead of calling the primary LLM when a prompt is
-    blocked by the pre-flight guard.
-
-    Inherits from str so it behaves transparently in code that just forwards
-    the return value as text.  Callers that want to detect a block explicitly:
-
-        result = my_llm_fn(prompt=user_input)
-        if isinstance(result, GuardedResponse) and result.blocked:
-            log_security_event(result.attack_type, result.confidence)
-
-    Attributes
-    ----------
-    blocked      True always (a GuardedResponse is always a block event).
-    attack_type  Category of detected attack (e.g. "PROMPT_INJECTION").
-    confidence   Detection confidence in [0, 1].
-    layers_fired List of detection layers that fired.
-    """
+    """str subclass returned when a prompt is blocked. Transparent to callers that forward return values."""
 
     blocked:      bool
     attack_type:  str
@@ -120,14 +80,14 @@ def _get_block_enabled() -> bool:
         return _ENV_BLOCK_ENABLED
 
 
-def _safe_scan(prompt: str) -> tuple[bool, str, float, list[str]]:
+def _safe_scan(prompt: str, session_id: str | None = None) -> tuple[bool, str, float, list[str]]:
     """
     Run scan_prompt() and return (is_attack, attack_type, confidence, layers_fired).
     Never raises — returns (False, "", 0.0, []) on any failure.
     """
     try:
         from fie.adversarial import scan_prompt
-        result = scan_prompt(prompt)
+        result = scan_prompt(prompt, session_id=session_id)
         return result.is_attack, result.attack_type, result.confidence, result.layers_fired
     except Exception as exc:
         logger.debug("preflight scan failed (allowing request through): %s", exc)
@@ -136,35 +96,15 @@ def _safe_scan(prompt: str) -> tuple[bool, str, float, list[str]]:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def preflight_check(prompt: str) -> GuardResult:
-    """
-    Scan a prompt for adversarial content BEFORE the primary LLM is invoked.
-
-    Parameters
-    ----------
-    prompt : str
-        The raw user prompt.
-
-    Returns
-    -------
-    GuardResult
-        .blocked = True  → caller should return a GuardedResponse, skip LLM.
-        .blocked = False → safe to proceed with the primary model call.
-
-    Notes
-    -----
-    * Uses the same threshold as scan_prompt() (SCAN_THRESHOLD / fie_config).
-    * In warn-only mode (block_enabled=False) the scan still runs and logs,
-      but blocked is always False so the LLM call proceeds.
-    * This function never raises — failures are logged and return blocked=False.
-    """
+def preflight_check(prompt: str, session_id: str | None = None) -> GuardResult:
+    """Scan prompt before the LLM call. Returns GuardResult with blocked=True if an attack is detected."""
     if not prompt or not prompt.strip():
         return GuardResult(
             blocked=False, attack_type="", confidence=0.0,
             layers_fired=[], refusal_message="",
         )
 
-    is_attack, attack_type, confidence, layers_fired = _safe_scan(prompt)
+    is_attack, attack_type, confidence, layers_fired = _safe_scan(prompt, session_id=session_id)
 
     if not is_attack:
         return GuardResult(

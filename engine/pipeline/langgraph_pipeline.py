@@ -119,6 +119,11 @@ class MonitorState(TypedDict, total=False):
     provenance_label:         str   # FULLY_PROVENANCED | PARTIALLY_PROVENANCED | UNVERIFIED_MODEL_INFERENCE | ...
     provenance_gate_triggered: bool  # True when live data needed but GT won't run
 
+    # ── Reasoning verification ───────────────────────────────────────────
+    reasoning_result:         Optional[Any]   # ReasoningVerificationResult (engine dataclass)
+    reasoning_failure_type:   str             # ARITHMETIC_ERROR | LOGICAL_GAP | etc.
+    reasoning_confidence:     float
+
     # ── Jury deliberation ────────────────────────────────────────────────
     jury_verdict:             Optional[Any]           # JuryVerdict schema
     jury_confidence:          float
@@ -452,6 +457,78 @@ def provenance_gate(state: MonitorState) -> dict:
         "failure_signal":           signal,
         "pipeline_trace":           _trace(state, trace_msg),
     }
+
+
+# ── Node 4c: reasoning_verify ────────────────────────────────────────────────
+
+def reasoning_verify(state: MonitorState) -> dict:
+    """
+    Step-level reasoning failure detection.  Runs ONLY when question_type=REASONING.
+
+    Runs AFTER provenance_gate so question_type is already classified.
+    Runs BEFORE jury_deliberate so the jury can incorporate step-level evidence.
+
+    Three-phase pipeline:
+      1. decompose_reasoning_chain() — split output into typed atomic steps
+      2. verify_steps()             — arithmetic eval / factual GT / logical gap
+      3. run_socratic_probe()       — adversarial challenge questions
+
+    No GPU required.  Falls back to offline heuristics when Groq is unavailable.
+    """
+    qt = state.get("question_type", "UNKNOWN")
+
+    if qt != "REASONING":
+        return {
+            "reasoning_result":       None,
+            "reasoning_failure_type": "NOT_APPLICABLE",
+            "reasoning_confidence":   0.0,
+            "pipeline_trace":         _trace(state, f"reasoning_verify: skipped (question_type={qt})"),
+        }
+
+    try:
+        from engine.reasoning.reasoning_verifier import verify_reasoning
+
+        prompt         = state.get("prompt", "")
+        primary_output = state.get("primary_output", "")
+        shadow_texts   = state.get("shadow_texts") or []
+        shadow_weights = state.get("shadow_weights") or []
+
+        rr = verify_reasoning(
+            question        = prompt,
+            primary_answer  = primary_output,
+            shadow_outputs  = shadow_texts,
+            shadow_weights  = shadow_weights,
+            use_groq        = True,
+        )
+
+        # Propagate failure into the FailureSignalVector so jury + XGBoost see it
+        signal = state.get("failure_signal")
+        if signal is not None and rr.failure_detected and rr.confidence >= 0.55:
+            signal = signal.model_copy(update={"high_failure_risk": True})
+
+        trace_msg = (
+            f"reasoning_verify: failure={rr.failure_detected} "
+            f"type={rr.failure_type} conf={rr.confidence:.3f} "
+            f"steps={rr.total_steps} first_fail={rr.first_failed_step}"
+        )
+        logger.info(trace_msg)
+
+        return {
+            "reasoning_result":       rr,
+            "reasoning_failure_type": rr.failure_type,
+            "reasoning_confidence":   rr.confidence,
+            "failure_signal":         signal,
+            "pipeline_trace":         _trace(state, trace_msg),
+        }
+
+    except Exception as exc:
+        logger.error("reasoning_verify failed: %s", exc, exc_info=True)
+        return {
+            "reasoning_result":       None,
+            "reasoning_failure_type": "UNKNOWN",
+            "reasoning_confidence":   0.0,
+            "pipeline_trace":         _trace(state, f"reasoning_verify: error — {exc}"),
+        }
 
 
 # ── Node 5: jury_deliberate ───────────────────────────────────────────────────
@@ -1061,6 +1138,7 @@ def _build_graph() -> StateGraph:
     g.add_node("adversarial_guard", adversarial_guard)
     g.add_node("signal_extract",   signal_extract)
     g.add_node("provenance_gate",  provenance_gate)
+    g.add_node("reasoning_verify", reasoning_verify)
     g.add_node("jury_deliberate",  jury_deliberate)
     g.add_node("security_checks",  security_checks)
     g.add_node("gt_verify",        gt_verify)
@@ -1079,8 +1157,9 @@ def _build_graph() -> StateGraph:
         {"END": END, "signal_extract": "signal_extract"},
     )
 
-    g.add_edge("signal_extract",  "provenance_gate")
-    g.add_edge("provenance_gate", "jury_deliberate")
+    g.add_edge("signal_extract",   "provenance_gate")
+    g.add_edge("provenance_gate",  "reasoning_verify")
+    g.add_edge("reasoning_verify", "jury_deliberate")
     g.add_edge("jury_deliberate", "security_checks")
 
     g.add_conditional_edges(
@@ -1151,6 +1230,9 @@ def run_pipeline(initial_state: MonitorState) -> MonitorState:
     initial_state.setdefault("provenance_category", "GENERAL_KNOWLEDGE")
     initial_state.setdefault("provenance_label", "UNVERIFIED_MODEL_INFERENCE")
     initial_state.setdefault("provenance_gate_triggered", False)
+    initial_state.setdefault("reasoning_result", None)
+    initial_state.setdefault("reasoning_failure_type", "NOT_APPLICABLE")
+    initial_state.setdefault("reasoning_confidence", 0.0)
 
     result = get_pipeline().invoke(initial_state)
 

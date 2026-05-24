@@ -61,7 +61,6 @@ def monitor(
     """
     Decorator that monitors or corrects LLM outputs automatically."""
 
-    # Handle legacy async_mode parameter
     if async_mode is not None:
         effective_mode = "monitor" if async_mode else "correct"
     else:
@@ -71,7 +70,6 @@ def monitor(
 
         _model_name = model_name or func.__name__
 
-        # MODE 0: LOCAL (no server, rule-based POET predictor + adversarial scan)
         if effective_mode == "local":
 
             @functools.wraps(func)
@@ -79,8 +77,6 @@ def monitor(
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
 
-                # Pre-flight guard — runs BEFORE the primary LLM call.
-                # In block mode, adversarial prompts never reach the LLM.
                 guard = None
                 if prompt_str:
                     guard = preflight_check(prompt_str)
@@ -99,7 +95,6 @@ def monitor(
                             "confidence":  round(guard.confidence, 3),
                         })
                         return make_guarded_response(guard)
-                    # Warn-only: guard detected attack but block_enabled=False
                     if guard.attack_type and log_results:
                         logger.warning(
                             "[FIE:local] PREFLIGHT_WARN | %s | type=%s | confidence=%.2f | "
@@ -110,8 +105,7 @@ def monitor(
 
                 result         = func(*args, **kwargs)
                 primary_output = result if isinstance(result, str) else str(result)
-
-                prediction = predict_local(prompt_str, primary_output)
+                prediction     = predict_local(prompt_str, primary_output)
 
                 if log_results:
                     risk_label = "⚠ SUSPICIOUS" if prediction.is_suspicious else "✓ STABLE"
@@ -123,7 +117,6 @@ def monitor(
                         prediction.signals,
                     )
 
-                # Opt-in telemetry — no prompts, no outputs, just usage signals
                 _send_local_telemetry({
                     "event":         "monitor_call",
                     "mode":          "local",
@@ -134,14 +127,13 @@ def monitor(
                     "confidence":    round(prediction.confidence, 3),
                 })
 
-                return result  # local mode never modifies the output
+                return result
 
             return local_wrapper
 
-        config      = get_config(fie_url=fie_url, api_key=api_key)
-        client      = FIEClient(config)
+        config = get_config(fie_url=fie_url, api_key=api_key)
+        client = FIEClient(config)
 
-        # MODE 1: MONITOR (fast async)
         if effective_mode == "monitor":
 
             @functools.wraps(func)
@@ -149,7 +141,6 @@ def monitor(
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
 
-                # Pre-flight guard — runs BEFORE the primary LLM call.
                 if prompt_str:
                     guard = preflight_check(prompt_str)
                     if guard.blocked:
@@ -168,13 +159,11 @@ def monitor(
                             _model_name, guard.attack_type, guard.confidence,
                         )
 
-                # Call primary model
-                start      = time.time()
-                result     = func(*args, **kwargs)
-                latency_ms = round((time.time() - start) * 1000, 1)
+                start          = time.time()
+                result         = func(*args, **kwargs)
+                latency_ms     = round((time.time() - start) * 1000, 1)
                 primary_output = result if isinstance(result, str) else str(result)
 
-                # Send to FIE in background — never blocks user
                 def _background_check():
                     fie_result = client.monitor(
                         prompt             = prompt_str,
@@ -188,7 +177,6 @@ def monitor(
                         if alert_slack and fie_result.get("high_failure_risk"):
                             _fire_slack_alert(alert_slack, fie_result,
                                               prompt_str, primary_output, _model_name)
-                        # Opt-in telemetry — anonymized, fire-and-forget
                         fsv = fie_result.get("failure_signal_vector") or {}
                         client._send_telemetry("monitor_call", {
                             "high_failure_risk": fie_result.get("high_failure_risk", False),
@@ -198,15 +186,11 @@ def monitor(
                             "mode":              "monitor",
                         })
 
-                t = threading.Thread(target=_background_check, daemon=True)
-                t.start()
-
-                # Return original answer immediately — no waiting
+                threading.Thread(target=_background_check, daemon=True).start()
                 return result
 
             return monitor_wrapper
 
-        # MODE 2: CORRECT (real-time correction)
         else:
 
             @functools.wraps(func)
@@ -215,7 +199,6 @@ def monitor(
                 prompt     = kwargs.get("prompt") or (args[0] if args else "")
                 prompt_str = str(prompt) if prompt else ""
 
-                # Pre-flight guard — runs BEFORE the primary LLM call.
                 if prompt_str:
                     guard = preflight_check(prompt_str)
                     if guard.blocked:
@@ -234,14 +217,8 @@ def monitor(
                             _model_name, guard.attack_type, guard.confidence,
                         )
 
-                # Run primary model and FIE simultaneously
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-
-                    # Thread 1:Primary model call
                     primary_future = executor.submit(func, *args, **kwargs)
-
-                    # Thread 2:We need primary output first for FIE
-                    # So: get primary output, then immediately start FIE
                     start          = time.time()
                     primary_result = primary_future.result()
                     latency_ms     = round((time.time() - start) * 1000, 1)
@@ -257,20 +234,16 @@ def monitor(
                         latency_ms,
                         run_full_jury,
                     )
-
-                    # Wait for FIE to complete
                     try:
                         fie_result = fie_future.result(timeout=300)
                     except concurrent.futures.TimeoutError:
                         logger.warning("[FIE] Correction timed out — returning original")
                         fie_result = {}
 
-                # Process FIE result
                 if fie_result:
                     _log_result(fie_result, _model_name, latency_ms, log_results)
 
-                    # Opt-in telemetry — anonymized, fire-and-forget
-                    fsv = fie_result.get("failure_signal_vector") or {}
+                    fsv   = fie_result.get("failure_signal_vector") or {}
                     fix_r = fie_result.get("fix_result") or {}
                     client._send_telemetry("monitor_call", {
                         "high_failure_risk": fie_result.get("high_failure_risk", False),
@@ -293,10 +266,8 @@ def monitor(
                             _preview(primary_output),
                             _preview(fixed_output),
                         )
-                        # Return fixed answer to user
                         return fixed_output
 
-                    # No fix needed or fix not applied — return original
                     warning = fix_result.get("warning", "")
                     if warning:
                         logger.warning("[FIE] %s | %s", _model_name, warning)
@@ -305,15 +276,12 @@ def monitor(
                         _fire_slack_alert(alert_slack, fie_result,
                                           prompt_str, primary_output, _model_name)
 
-                # Return original (either stable or fix not applicable)
                 return primary_result
 
             return correct_wrapper
 
     return decorator
 
-
-#Helper: Log FIE result
 
 def _log_result(
     fie_result:  dict,
@@ -347,7 +315,6 @@ def _log_result(
     if warning:
         logger.warning("[FIE] %s | %s", model_name, warning)
 
-    # Log ground truth verification result
     gt = fie_result.get("ground_truth") or {}
     if gt:
         gt_source     = gt.get("source", "")
@@ -374,7 +341,6 @@ def _log_result(
         )
 
 
-#Helper: Slack alert
 def _fire_slack_alert(
     webhook_url:    str,
     fie_result:     dict,
@@ -395,7 +361,6 @@ def _fire_slack_alert(
     entropy    = fsv.get("entropy_score", 0)
     agreement  = fsv.get("agreement_score", 0)
 
-    # Check if fix was applied
     fix_result  = fie_result.get("fix_result") or {}
     fix_applied = fix_result.get("fix_applied", False)
     fix_strategy = fix_result.get("fix_strategy", "")

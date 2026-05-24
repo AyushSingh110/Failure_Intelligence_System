@@ -1,28 +1,80 @@
 from __future__ import annotations
 
 import collections
+import concurrent.futures
+import hashlib
 import math
 import re
 import statistics
+import threading
+import time
 import unicodedata
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 
-# ── Scan threshold ────────────────────────────────────────────────────────────
-# Default used only when fie_config is unavailable (no MongoDB, standalone mode).
-# Tuned against JailbreakBench v2 (PAIR v2 + framing filter active):
-#   v1 @ 0.50 → Recall 90%, FPR 79%  (unacceptable FPR)
-#   v2 @ 0.45 → Recall 88%, FPR 12%, F1 88%, AUC 0.923  (production baseline)
-#   v2 @ 0.50 → Recall 73%, FPR  8%  (higher precision, lower recall)
-# Hot-configurable via fie_config.update_scan_threshold() or SCAN_THRESHOLD env var.
+# ── Legacy global threshold (kept for backward compat) ────────────────────────
+# Per-attack-type thresholds (_ATTACK_THRESHOLDS) are used in scan_prompt().
+# This value is only used when attack type is unknown or as a final fallback.
 import os as _os
-SCAN_THRESHOLD: float = float(_os.environ.get("SCAN_THRESHOLD", "0.45"))
+SCAN_THRESHOLD: float = float(_os.environ.get("SCAN_THRESHOLD", "0.65"))
+
+
+# ── Per-attack-type thresholds ────────────────────────────────────────────────
+# Calibrated per-layer precision from JailbreakBench v2 evaluation.
+# Hot-configurable via MongoDB fie_config (get_attack_thresholds()).
+# Uncertainty zone = [threshold × 0.60, threshold) → routes to LlamaGuard.
+_ATTACK_THRESHOLDS: dict[str, float] = {
+    "TOKEN_SMUGGLING"              : 0.88,  # regex only, near-zero FPR
+    "PROMPT_INJECTION"             : 0.72,  # high precision needed
+    "GCG_ADVERSARIAL_SUFFIX"       : 0.72,  # statistical, needs high bar
+    "INDIRECT_PROMPT_INJECTION"    : 0.70,
+    "MANY_SHOT_JAILBREAK"          : 0.68,
+    "OBFUSCATED_ADVERSARIAL_PAYLOAD": 0.70, # just recalibrated
+    "JAILBREAK_ATTEMPT"            : 0.65,  # PAIR classifier backs this up
+}
+
+# Layers with near-zero FPR — fire above threshold → BLOCK, skip aggregation.
+_FAST_PATH_LAYERS: frozenset[str] = frozenset({"regex", "gcg_suffix"})
+
+# Per-layer weights for weighted vote aggregator (precision-calibrated).
+_LAYER_WEIGHTS: dict[str, float] = {
+    "regex"              : 1.5,
+    "gcg_suffix"         : 1.3,
+    "many_shot"          : 1.2,
+    "prompt_guard"       : 1.1,
+    "pair_classifier"    : 1.0,
+    "indirect_injection" : 0.9,
+    "perplexity_proxy"   : 0.7,   # lowest precision layer
+}
+
+
+# ── LayerResult dataclass ─────────────────────────────────────────────────────
+@dataclass
+class LayerResult:
+    """Normalised output from one detection layer."""
+    layer_name  : str
+    attack_type : str | None
+    confidence  : float
+    evidence    : dict
+    latency_ms  : float = 0.0
+
+
+# ── Threshold helpers ─────────────────────────────────────────────────────────
+
+def _get_attack_threshold(attack_type: str) -> float:
+    """Per-type threshold: fie_config (hot) > _ATTACK_THRESHOLDS > SCAN_THRESHOLD."""
+    try:
+        from engine.fie_config import get_attack_thresholds
+        return get_attack_thresholds().get(attack_type, _ATTACK_THRESHOLDS.get(attack_type, SCAN_THRESHOLD))
+    except Exception:
+        return _ATTACK_THRESHOLDS.get(attack_type, SCAN_THRESHOLD)
 
 
 def _get_scan_threshold(override: float | None) -> float:
-    """Returns effective scan threshold: explicit override > fie_config > env default."""
+    """Legacy helper — kept for any external callers. Use _get_attack_threshold() internally."""
     if override is not None:
         return override
     try:
@@ -30,6 +82,53 @@ def _get_scan_threshold(override: float | None) -> float:
         return get_scan_threshold()
     except Exception:
         return SCAN_THRESHOLD
+
+
+# ── Scan result cache ─────────────────────────────────────────────────────────
+# TTL-aware LRU cache for scan_prompt() results.
+# Key: SHA-256(prompt.strip().lower()) — raw text never stored.
+# Used to short-circuit repeated identical prompts (common in load tests / retries)
+# and to avoid redundant LlamaGuard API calls.
+
+class _ScanCache:
+    """Thread-safe LRU cache with per-entry TTL."""
+
+    def __init__(self, maxsize: int = 512, ttl: float = 300.0) -> None:
+        self._maxsize = maxsize
+        self._ttl     = ttl
+        self._cache: collections.OrderedDict[str, tuple[object, float]] = collections.OrderedDict()
+        self._lock    = threading.RLock()
+
+    def _key(self, prompt: str) -> str:
+        return hashlib.sha256(prompt.strip().lower().encode("utf-8", errors="replace")).hexdigest()
+
+    def get(self, prompt: str) -> object | None:
+        key = self._key(prompt)
+        with self._lock:
+            if key not in self._cache:
+                return None
+            value, ts = self._cache[key]
+            if time.monotonic() - ts > self._ttl:
+                del self._cache[key]
+                return None
+            self._cache.move_to_end(key)
+            return value
+
+    def set(self, prompt: str, value: object) -> None:
+        key = self._key(prompt)
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+            self._cache[key] = (value, time.monotonic())
+            if len(self._cache) > self._maxsize:
+                self._cache.popitem(last=False)
+
+    def invalidate(self, prompt: str) -> None:
+        with self._lock:
+            self._cache.pop(self._key(prompt), None)
+
+
+_scan_cache = _ScanCache(maxsize=512, ttl=300.0)
 
 
 # Result dataclass
@@ -709,13 +808,27 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
     if len(prompt) < 20:
         return None, 0.0, {}
 
-    # Hardcoded thresholds (matching server defaults)
+    # Thresholds — calibrated against JailbreakBench v2 + 200-prompt benign corpus.
+    # Compression / non-dict: unchanged — these are stable, high-precision signals.
     C_HIGH  = 0.82
     C_LOW   = 0.72
     ND_HIGH = 0.65
     ND_LOW  = 0.50
-    KL_HIGH = 0.55
-    KL_LOW  = 0.35
+    # KL divergence: raised from 0.55/0.35 → 0.72/0.50.
+    # Low threshold (0.35) caused false positives on technical vocabulary
+    # (medical/scientific terms skew letter frequency on small samples).
+    # 0.50 stays well above legitimate English tech prose (typical KL 0.15–0.35).
+    # Raised minimum letter sample from 40 → 60 for statistical reliability.
+    KL_HIGH = 0.72
+    KL_LOW  = 0.50
+    KL_MIN_LETTERS = 60
+    # Token length variance: raised thresholds and added minimum token count.
+    # With fewer than 8 tokens, one long technical word (e.g. "atherosclerosis",
+    # "cryptocurrency") spikes variance to 30-40, causing false positives.
+    # Real obfuscated payloads produce high variance from mixed-length junk tokens.
+    LV_HIGH      = 40.0
+    LV_LOW       = 26.0
+    LV_MIN_TOKENS = 8
 
     comp_ratio   = _compression_ratio(prompt)
     non_dict     = _non_dict_density(prompt)
@@ -723,8 +836,8 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
     len_variance = _token_length_variance(prompt)
     tokens       = [t for t in _TOKEN_SPLIT_RE.split(prompt) if t]
 
-    non_ascii_ratio    = sum(1 for c in prompt if ord(c) > 127) / max(len(prompt), 1)
-    skip_english_only  = non_ascii_ratio > 0.25
+    non_ascii_ratio   = sum(1 for c in prompt if ord(c) > 127) / max(len(prompt), 1)
+    skip_english_only = non_ascii_ratio > 0.25
 
     signals: list[str] = []
     confidence = 0.0
@@ -752,12 +865,14 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
         signals.append(f"char_type_entropy={type_entropy:.2f} (elevated)")
         confidence = max(confidence, 0.48)
 
-    if len_variance > 28.0:
-        signals.append(f"token_length_variance={len_variance:.1f} (very high)")
-        confidence = max(confidence, 0.63)
-    elif len_variance > 16.0:
-        signals.append(f"token_length_variance={len_variance:.1f} (elevated)")
-        confidence = max(confidence, 0.46)
+    # Require minimum token count: variance is not meaningful on 5-7 token sentences.
+    if len(tokens) >= LV_MIN_TOKENS:
+        if len_variance > LV_HIGH:
+            signals.append(f"token_length_variance={len_variance:.1f} (very high)")
+            confidence = max(confidence, 0.63)
+        elif len_variance > LV_LOW:
+            signals.append(f"token_length_variance={len_variance:.1f} (elevated)")
+            confidence = max(confidence, 0.46)
 
     b64_match = _BASE64_BLOCK_RE.search(prompt)
     if b64_match:
@@ -766,7 +881,7 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
         confidence = max(confidence, 0.76 if len(block) >= 40 else 0.58)
 
     letters_only = [c.lower() for c in prompt if c.isalpha()]
-    if not skip_english_only and len(letters_only) >= 40:
+    if not skip_english_only and len(letters_only) >= KL_MIN_LETTERS:
         alpha_ratio = len(letters_only) / len(prompt)
         if alpha_ratio > 0.70:
             freq_counts   = collections.Counter(letters_only)
@@ -787,9 +902,17 @@ def _run_perplexity_proxy(prompt: str) -> tuple[str | None, float, dict]:
     if not signals or (len(signals) == 1 and confidence < 0.70):
         return None, 0.0, {}
 
+    pre_boost_conf = confidence
+
     if len(signals) >= 3:
         confidence = min(confidence + 0.12, 0.88)
     elif len(signals) >= 2:
+        # Prevent 2-weak-signal false positives: at least one signal must be
+        # HIGH-level (individual confidence ≥ 0.62) before combining scores.
+        # Two "elevated" signals (each ~0.46–0.55) on legitimate tech text
+        # would otherwise exceed the 0.45 threshold after the +0.06 boost.
+        if pre_boost_conf < 0.62:
+            return None, 0.0, {}
         confidence = min(confidence + 0.06, 0.82)
 
     return "OBFUSCATED_ADVERSARIAL_PAYLOAD", round(confidence, 4), {
@@ -930,152 +1053,342 @@ _DEFAULT_MITIGATION = (
 )
 
 
-#Public API
+# ── Normalised layer wrappers ─────────────────────────────────────────────────
+# Each returns (attack_type | None, confidence, evidence_dict) uniformly.
+
+def _layer_regex(prompt: str) -> tuple[str | None, float, dict]:
+    pattern_hit, matched_text = _run_pattern_detection(prompt)
+    if pattern_hit is None:
+        return None, 0.0, {}
+    return pattern_hit.root_cause, pattern_hit.base_confidence, {
+        "category": pattern_hit.category, "matched_text": matched_text,
+    }
+
+def _layer_prompt_guard(prompt: str) -> tuple[str | None, float, dict]:
+    root, conf, evidence = _run_guard_detection(prompt)
+    return root, conf, {"evidence": evidence[:5]}
+
+def _layer_many_shot(prompt: str) -> tuple[str | None, float, dict]:
+    return _run_many_shot_detection(prompt)
+
+def _layer_indirect(prompt: str, primary_output: str = "") -> tuple[str | None, float, dict]:
+    return _run_indirect_injection_detection(prompt, primary_output)
+
+def _layer_gcg(prompt: str) -> tuple[str | None, float, dict]:
+    return _run_gcg_detection(prompt)
+
+def _layer_perplexity(prompt: str) -> tuple[str | None, float, dict]:
+    return _run_perplexity_proxy(prompt)
+
+def _layer_pair(prompt: str) -> tuple[str | None, float, dict]:
+    return _run_pair_classifier(prompt)
+
+
+# ── Parallel layer runner ─────────────────────────────────────────────────────
+
+def _run_layer_safe(
+    layer_name : str,
+    layer_fn   : Callable[[], tuple[str | None, float, dict]],
+    timeout    : float = 2.0,
+) -> LayerResult:
+    """Call one detection layer with timeout + exception isolation."""
+    t0 = time.perf_counter()
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            fut = ex.submit(layer_fn)
+            try:
+                root, conf, evidence = fut.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                root, conf, evidence = None, 0.0, {"error": "layer_timeout"}
+    except Exception as exc:
+        root, conf, evidence = None, 0.0, {"error": str(exc)[:120]}
+    return LayerResult(
+        layer_name  = layer_name,
+        attack_type = root,
+        confidence  = round(conf, 4),
+        evidence    = evidence,
+        latency_ms  = round((time.perf_counter() - t0) * 1000, 2),
+    )
+
+
+def _run_all_layers_parallel(
+    prompt         : str,
+    primary_output : str = "",
+) -> list[LayerResult]:
+    """Submit all 7 layers to a thread pool and collect results."""
+    tasks: list[tuple[str, Callable]] = [
+        ("regex",               lambda: _layer_regex(prompt)),
+        ("prompt_guard",        lambda: _layer_prompt_guard(prompt)),
+        ("many_shot",           lambda: _layer_many_shot(prompt)),
+        ("indirect_injection",  lambda: _layer_indirect(prompt, primary_output)),
+        ("gcg_suffix",          lambda: _layer_gcg(prompt)),
+        ("perplexity_proxy",    lambda: _layer_perplexity(prompt)),
+        ("pair_classifier",     lambda: _layer_pair(prompt)),
+    ]
+
+    results: list[LayerResult] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as pool:
+        futures = {
+            pool.submit(_run_layer_safe, name, fn): name
+            for name, fn in tasks
+        }
+        try:
+            for fut in concurrent.futures.as_completed(futures, timeout=10.0):
+                try:
+                    results.append(fut.result())
+                except Exception:
+                    pass   # individual layer failure never kills the scan
+        except concurrent.futures.TimeoutError:
+            # Collect whatever finished; timed-out layers are silently skipped
+            for fut, name in futures.items():
+                if fut.done():
+                    try:
+                        results.append(fut.result())
+                    except Exception:
+                        pass
+
+    return results
+
+
+# ── Weighted vote aggregator ──────────────────────────────────────────────────
+
+def _weighted_aggregate(
+    fired: list[LayerResult],
+) -> tuple[str | None, float, list[str], dict]:
+    """
+    Combine fired layer results into a single (attack_type, confidence, layers, evidence).
+
+    Algorithm:
+      1. Fast-path: near-zero-FPR layers (regex, gcg_suffix) that exceed their
+         per-type threshold → return immediately without full aggregation.
+      2. Group remaining results by attack_type.
+      3. For each group: weighted average confidence (weight = layer precision proxy).
+      4. Corroboration boost: +0.08 for 2 layers, +0.12 for 3+ layers agreeing.
+      5. Winner = attack_type with highest weighted+boosted confidence.
+    """
+    if not fired:
+        return None, 0.0, [], {}
+
+    # Step 1 — fast path for high-precision layers
+    for r in sorted(fired, key=lambda x: _LAYER_WEIGHTS.get(x.layer_name, 1.0), reverse=True):
+        if r.layer_name in _FAST_PATH_LAYERS and r.attack_type:
+            threshold = _get_attack_threshold(r.attack_type)
+            if r.confidence >= threshold * 0.90:   # 90% of threshold = fast block
+                return r.attack_type, r.confidence, [r.layer_name], r.evidence
+
+    # Step 2 — group by attack_type
+    by_type: dict[str, list[LayerResult]] = {}
+    for r in fired:
+        if r.attack_type:
+            by_type.setdefault(r.attack_type, []).append(r)
+
+    if not by_type:
+        return None, 0.0, [], {}
+
+    # Step 3+4 — weighted average + corroboration boost per type
+    type_scores: dict[str, float] = {}
+    for attack_type, results in by_type.items():
+        total_w  = sum(_LAYER_WEIGHTS.get(r.layer_name, 1.0) for r in results)
+        sum_wc   = sum(r.confidence * _LAYER_WEIGHTS.get(r.layer_name, 1.0) for r in results)
+        base     = sum_wc / total_w
+        n        = len(results)
+        boost    = 0.12 if n >= 3 else (0.08 if n >= 2 else 0.0)
+        type_scores[attack_type] = min(round(base + boost, 4), 0.96)
+
+    # Step 5 — winner
+    best_type = max(type_scores, key=type_scores.__getitem__)
+    best_conf = type_scores[best_type]
+    best_layers   = [r.layer_name for r in by_type[best_type]]
+    best_evidence = {r.layer_name: r.evidence for r in by_type[best_type]}
+
+    return best_type, best_conf, best_layers, best_evidence
+
+
+# ── Session tracker integration ───────────────────────────────────────────────
+
+def _record_session(prompt: str, result: "ScanResult", session_id: str | None) -> None:
+    """Best-effort session tracking — never raises, never blocks scan."""
+    if not session_id:
+        return
+    try:
+        import hashlib
+        from fie.session_tracker import get_tracker
+        tracker    = get_tracker()
+        phash      = hashlib.sha256(prompt.strip().encode()).hexdigest()
+        escalation = tracker.record(
+            session_id  = session_id,
+            prompt_hash = phash,
+            attack_type = result.attack_type,
+            confidence  = result.confidence,
+            is_attack   = result.is_attack,
+        )
+        if escalation:
+            import logging
+            logging.getLogger("fie.session").warning(
+                "SESSION_ESCALATION | session=%s rule=%s severity=%s context=%s",
+                session_id, escalation.rule, escalation.severity, escalation.context,
+            )
+    except Exception:
+        pass
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
 
 def scan_prompt(
-    prompt:         str,
-    primary_output: str         = "",
-    threshold:      float | None = None,
+    prompt:          str,
+    primary_output:  str         = "",
+    threshold:       float | None = None,
+    session_id:      str | None  = None,
+    use_llama_guard: bool | None = None,
 ) -> ScanResult:
     """
-    Scan a prompt for adversarial attacks using seven local detection layers.
+    Scan a prompt for adversarial attacks.
 
-    Layers run in priority order:
-      1. Regex pattern library          (injection / jailbreak / token smuggling)
-      2. PromptGuard semantic scorer    (keyword combination scoring)
-      3. Many-shot jailbreak detector   (scripted Q/A conditioning attacks)
-      4. Indirect injection detector    (attacks hidden inside documents)
-      5. GCG adversarial suffix scanner
-      6. Perplexity proxy               (statistical anomaly — obfuscated payloads)
-      7. PAIR semantic intent classifier (sentence-embedding + Linear SVM)
-      Pre: Benign framing filter        (dampens scores for safe fictional/hypothetical context)
+    All 7 layers run in parallel via ThreadPoolExecutor.
+    Results are aggregated with per-layer precision weights and corroboration
+    boosts, then routed through three confidence zones:
 
-    No network call is made. All computation is local.
+      CLEAR SAFE   (conf < threshold × 0.60) → immediate ALLOW, cached
+      UNCERTAIN    (conf in [0.60×T, T))      → LlamaGuard tiebreaker (if available)
+      CLEAR ATTACK (conf ≥ threshold)         → immediate BLOCK, cached
 
     Args:
-        prompt:         The user prompt / input text to scan.
-        primary_output: Optional model response — used by Layer 4 (indirect
-                        injection) to check whether the model followed embedded
-                        instructions. Pass an empty string if not available.
-        threshold:      Minimum confidence to classify as attack. If None,
-                        reads from fie_config (MongoDB-backed, hot-configurable).
-                        Falls back to SCAN_THRESHOLD env var or 0.45 default.
-
-    Returns:
-        ScanResult with is_attack, attack_type, confidence, layers_fired,
-        matched_text, mitigation, and per-layer evidence.
+        prompt:          User prompt to scan.
+        primary_output:  Optional model response for indirect-injection Layer 4.
+        threshold:       Override global threshold. None → fie_config / env / 0.65.
+        session_id:      Optional session identifier for future session-tracker wiring.
+        use_llama_guard: Override LlamaGuard Tier-3 call. None → auto (UNCERTAIN zone).
     """
-    threshold = _get_scan_threshold(threshold)
-    layers_fired:  list[str] = []
-    evidence:      dict      = {}
-    best_root:     str | None = None
-    best_conf:     float      = 0.0
-    best_category: str | None = None
-    best_matched:  str | None = None
+    # ── Cache lookup ──────────────────────────────────────────────────────────
+    cached = _scan_cache.get(prompt)
+    if cached is not None:
+        return cached
 
-    # Layer 1 — regex
-    pattern_hit, matched_text = _run_pattern_detection(prompt)
-    if pattern_hit is not None:
-        layers_fired.append("regex")
-        evidence["regex"] = {
-            "category":        pattern_hit.category,
-            "root_cause":      pattern_hit.root_cause,
-            "matched_text":    matched_text,
-            "base_confidence": pattern_hit.base_confidence,
-        }
-        if pattern_hit.base_confidence > best_conf:
-            best_conf     = pattern_hit.base_confidence
-            best_root     = pattern_hit.root_cause
-            best_category = pattern_hit.category
-            best_matched  = matched_text
+    # ── Resolve per-scan threshold ────────────────────────────────────────────
+    _threshold = _get_scan_threshold(threshold)
 
-    # Layer 2 — prompt_guard
-    guard_root, guard_conf, guard_evidence = _run_guard_detection(prompt)
-    if guard_root is not None:
-        layers_fired.append("prompt_guard")
-        evidence["prompt_guard"] = {
-            "root_cause": guard_root,
-            "confidence": guard_conf,
-            "evidence":   guard_evidence[:5],
-        }
-        if guard_conf > best_conf:
-            best_conf     = guard_conf
-            best_root     = guard_root
-            best_category = None
+    # ── Parallel layer execution ──────────────────────────────────────────────
+    all_results   = _run_all_layers_parallel(prompt, primary_output)
+    fired_results = [r for r in all_results if r.attack_type is not None]
 
-    # Layer 3 — many-shot jailbreak
-    many_root, many_conf, many_evidence = _run_many_shot_detection(prompt)
-    if many_root is not None:
-        layers_fired.append("many_shot")
-        evidence["many_shot"] = many_evidence | {"confidence": many_conf}
-        if many_conf > best_conf:
-            best_conf     = many_conf
-            best_root     = many_root
-            best_category = "JAILBREAK"
-
-    # Layer 4 — indirect injection
-    indirect_root, indirect_conf, indirect_evidence = _run_indirect_injection_detection(
-        prompt, primary_output
-    )
-    if indirect_root is not None:
-        layers_fired.append("indirect_injection")
-        evidence["indirect_injection"] = indirect_evidence | {"confidence": indirect_conf}
-        if indirect_conf > best_conf:
-            best_conf     = indirect_conf
-            best_root     = indirect_root
-            best_category = "INDIRECT"
-
-    # Layer 5 — GCG suffix
-    gcg_root, gcg_conf, gcg_evidence = _run_gcg_detection(prompt)
-    if gcg_root is not None:
-        layers_fired.append("gcg_suffix")
-        evidence["gcg_suffix"] = gcg_evidence | {"confidence": gcg_conf}
-        if gcg_conf > best_conf:
-            best_conf     = gcg_conf
-            best_root     = gcg_root
-            best_category = "SMUGGLING"
-
-    # Layer 6 — perplexity proxy
-    perp_root, perp_conf, perp_evidence = _run_perplexity_proxy(prompt)
-    if perp_root is not None:
-        layers_fired.append("perplexity_proxy")
-        evidence["perplexity_proxy"] = perp_evidence | {"confidence": perp_conf}
-        if perp_conf > best_conf:
-            best_conf     = perp_conf
-            best_root     = perp_root
-            best_category = "OBFUSCATED"
-
-    # Layer 7 — PAIR semantic intent classifier (requires sentence-transformers + joblib)
-    pair_root, pair_conf, pair_evidence = _run_pair_classifier(prompt)
-    if pair_root is not None:
-        layers_fired.append("pair_classifier")
-        evidence["pair_classifier"] = pair_evidence
-        if pair_conf > best_conf:
-            best_conf     = pair_conf
-            best_root     = pair_root
-            best_category = "JAILBREAK"
-
-    # Benign framing filter — dampens scores for fictional/hypothetical context
-    # when no hard technique layer fired and no harm extraction signal is present.
+    # ── Benign framing filter (dampening on fired layer names) ────────────────
+    fired_names = [r.layer_name for r in fired_results]
+    dampen      = 1.0
     try:
         from fie.framing_filter import get_dampening_factor
-        dampen = get_dampening_factor(prompt, layers_fired)
-        if dampen < 1.0:
-            best_conf = round(best_conf * dampen, 4)
-            evidence["framing_filter"] = {"dampening_factor": dampen, "adjusted_conf": best_conf}
+        dampen = get_dampening_factor(prompt, fired_names)
     except Exception:
-        pass  # framing filter is best-effort — never block the main scan
+        pass
 
-    is_attack  = best_conf >= threshold and best_root is not None
-    mitigation = _MITIGATIONS.get(best_root or "", _DEFAULT_MITIGATION) if is_attack else ""
+    if dampen < 1.0:
+        fired_results = [
+            LayerResult(
+                layer_name  = r.layer_name,
+                attack_type = r.attack_type,
+                confidence  = round(r.confidence * dampen, 4),
+                evidence    = r.evidence,
+                latency_ms  = r.latency_ms,
+            )
+            for r in fired_results
+        ]
 
-    return ScanResult(
-        is_attack    = is_attack,
-        attack_type  = best_root if is_attack else None,
-        category     = best_category if is_attack else None,
-        confidence   = round(best_conf, 4) if is_attack else 0.0,
-        layers_fired = layers_fired,
-        matched_text = best_matched,
-        mitigation   = mitigation,
-        evidence     = evidence,
-    )
+    # ── Weighted aggregation ──────────────────────────────────────────────────
+    best_type, best_conf, best_layers, best_evidence = _weighted_aggregate(fired_results)
+
+    # Record framing dampening in evidence if it applied
+    if dampen < 1.0:
+        best_evidence["framing_filter"] = {"dampening_factor": dampen}
+
+    # ── Extract matched_text from regex evidence (best-effort) ───────────────
+    matched_text: str | None = None
+    if "regex" in best_evidence:
+        matched_text = best_evidence["regex"].get("matched_text")
+
+    # ── Three-zone routing ────────────────────────────────────────────────────
+    type_threshold = _get_attack_threshold(best_type) if best_type else _threshold
+    safe_ceiling   = type_threshold * 0.60
+
+    if best_type is None or best_conf < safe_ceiling:
+        # CLEAR SAFE — well below threshold, no LlamaGuard needed
+        result = ScanResult(
+            is_attack    = False,
+            attack_type  = None,
+            category     = None,
+            confidence   = 0.0,
+            layers_fired = fired_names,
+            matched_text = None,
+            mitigation   = "",
+            evidence     = best_evidence,
+        )
+        _scan_cache.set(prompt, result)
+        _record_session(prompt, result, session_id)
+        return result
+
+    if best_conf >= type_threshold:
+        # CLEAR ATTACK — confident block, no LlamaGuard needed
+        mitigation = _MITIGATIONS.get(best_type, _DEFAULT_MITIGATION)
+        result = ScanResult(
+            is_attack    = True,
+            attack_type  = best_type,
+            category     = None,
+            confidence   = round(best_conf, 4),
+            layers_fired = best_layers,
+            matched_text = matched_text,
+            mitigation   = mitigation,
+            evidence     = best_evidence,
+        )
+        _scan_cache.set(prompt, result)
+        _record_session(prompt, result, session_id)
+        return result
+
+    # UNCERTAIN zone — [0.60×T, T)
+    # Try LlamaGuard Tier-3 tiebreaker; fall through on failure or skip.
+    lg_verdict: bool | None = None
+    if use_llama_guard is not False:
+        try:
+            from fie.llama_guard import query_llama_guard
+            lg_verdict = query_llama_guard(prompt)
+        except Exception:
+            pass   # LlamaGuard unavailable — use local confidence alone
+
+    if lg_verdict is True:
+        # LlamaGuard confirms attack → treat as CLEAR ATTACK
+        mitigation = _MITIGATIONS.get(best_type, _DEFAULT_MITIGATION)
+        result = ScanResult(
+            is_attack    = True,
+            attack_type  = best_type,
+            category     = None,
+            confidence   = round(min(best_conf + 0.08, 0.96), 4),  # small boost for confirmation
+            layers_fired = best_layers,
+            matched_text = matched_text,
+            mitigation   = mitigation,
+            evidence     = best_evidence | {"llama_guard": "confirmed_attack"},
+        )
+    elif lg_verdict is False:
+        # LlamaGuard says safe → clear
+        result = ScanResult(
+            is_attack    = False,
+            attack_type  = None,
+            category     = None,
+            confidence   = 0.0,
+            layers_fired = fired_names,
+            matched_text = None,
+            mitigation   = "",
+            evidence     = best_evidence | {"llama_guard": "confirmed_safe"},
+        )
+    else:
+        # LlamaGuard unavailable or skipped — local confidence below threshold → ALLOW
+        result = ScanResult(
+            is_attack    = False,
+            attack_type  = None,
+            category     = None,
+            confidence   = 0.0,
+            layers_fired = fired_names,
+            matched_text = None,
+            mitigation   = "",
+            evidence     = best_evidence,
+        )
+
+    _scan_cache.set(prompt, result)
+    _record_session(prompt, result, session_id)
+    return result

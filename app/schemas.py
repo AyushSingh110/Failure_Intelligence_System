@@ -335,6 +335,42 @@ class GroundTruthVerification(BaseModel):
     pipeline_trace:      list[str] = Field(default_factory=list)
 
 
+class ReasoningStepResult(BaseModel):
+    """API-safe representation of one verified reasoning step."""
+    index:        int
+    text:         str
+    step_type:    str
+    is_correct:   bool  = True
+    confidence:   float = Field(default=0.0, ge=0.0, le=1.0)
+    failure_note: str   = ""
+
+
+class ReasoningVerification(BaseModel):
+    """
+    Result from the reasoning verification pipeline.
+    Embedded in MonitorResponse when question_type = REASONING.
+
+    failure_type values:
+      ARITHMETIC_ERROR       — a calculation in the chain is provably wrong
+      FACTUAL_GROUNDING_FAIL — a stated fact contradicts Wikidata/Serper
+      LOGICAL_GAP            — a step is semantically disconnected from prior context
+      SOCRATIC_CONTRADICTION — shadow models contradict the reasoning when probed
+      UPSTREAM_PROPAGATION   — conclusion drawn from a failed earlier step
+      NO_FAILURE_DETECTED    — all checks passed
+    """
+    failure_detected:    bool  = False
+    failure_type:        str   = "NO_FAILURE_DETECTED"
+    confidence:          float = Field(default=0.0, ge=0.0, le=1.0)
+    total_steps:         int   = 0
+    first_failed_step:   Optional[int] = None
+    steps:               list[ReasoningStepResult] = Field(default_factory=list)
+    pipeline_trace:      list[str] = Field(default_factory=list)
+    # Socratic probe summary
+    socratic_probes_run:         int   = 0
+    socratic_contradiction_found: bool  = False
+    socratic_score:              float = Field(default=0.0, ge=0.0, le=1.0)
+
+
 class FeedbackRequest(BaseModel):
     """
     Step 8 — User submits ground truth feedback for a specific inference.
@@ -389,6 +425,9 @@ class MonitorResponse(BaseModel):
     ground_truth:          Optional[GroundTruthVerification] = None
     requires_human_review: bool = False
     escalation_reason:     str  = ""
+
+    # Reasoning verification (populated when question_type = REASONING)
+    reasoning_verification: Optional[ReasoningVerification] = None
 
     # Classifier metadata (useful for debugging and research paper)
     classifier_probability: Optional[float] = None

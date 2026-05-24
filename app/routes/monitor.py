@@ -241,6 +241,53 @@ def monitor(
     except Exception as _spike_exc:
         logger.debug("Spike notification failed (non-fatal): %s", _spike_exc)
 
+    # ── Step 4b: Reasoning verification (REASONING questions only) ───────────
+    reasoning_verification_schema = None
+    if _question_type == "REASONING":
+        try:
+            from engine.reasoning.reasoning_verifier import verify_reasoning
+            from app.schemas import ReasoningVerification, ReasoningStepResult
+            _shadow_texts = [r.output_text for r in shadow_results_raw if r.success and r.output_text]
+            _rr = verify_reasoning(
+                question       = body.prompt,
+                primary_answer = body.primary_output,
+                shadow_outputs = _shadow_texts,
+                shadow_weights = shadow_weights[:len(_shadow_texts)],
+                use_groq       = True,
+            )
+            # Upgrade high_failure_risk if reasoning failure detected with high confidence
+            if _rr.failure_detected and _rr.confidence >= 0.55:
+                signal = signal.model_copy(update={"high_failure_risk": True})
+            # Convert engine dataclass → Pydantic schema
+            reasoning_verification_schema = ReasoningVerification(
+                failure_detected = _rr.failure_detected,
+                failure_type     = _rr.failure_type,
+                confidence       = _rr.confidence,
+                total_steps      = _rr.total_steps,
+                first_failed_step= _rr.first_failed_step,
+                steps            = [
+                    ReasoningStepResult(
+                        index        = s.index,
+                        text         = s.text,
+                        step_type    = s.step_type,
+                        is_correct   = s.is_correct,
+                        confidence   = s.confidence,
+                        failure_note = s.failure_note,
+                    )
+                    for s in _rr.steps
+                ],
+                pipeline_trace              = _rr.pipeline_trace,
+                socratic_probes_run         = _rr.socratic.probes_run         if _rr.socratic else 0,
+                socratic_contradiction_found= _rr.socratic.contradiction_found if _rr.socratic else False,
+                socratic_score              = _rr.socratic.contradiction_score if _rr.socratic else 0.0,
+            )
+            logger.info(
+                "reasoning_verification: failure=%s type=%s conf=%.3f steps=%d",
+                _rr.failure_detected, _rr.failure_type, _rr.confidence, _rr.total_steps,
+            )
+        except Exception as _rv_exc:
+            logger.warning("reasoning_verification failed (non-fatal): %s", _rv_exc)
+
     # ── Step 5: DiagnosticJury ─────────────────────────────────────────────
     jury_verdict = None
     if body.run_full_jury:
@@ -561,8 +608,16 @@ def monitor(
             fix_strategy        = _fix_strategy_xgb,
             gt_source           = _gt_source_xgb,
             question_type       = _question_type,
-            provenance_category = _prov_cat_xgb,
-            provenance_label    = _prov_lbl_xgb,
+            provenance_category    = _prov_cat_xgb,
+            provenance_label       = _prov_lbl_xgb,
+            reasoning_failure_type = (
+                reasoning_verification_schema.failure_type
+                if reasoning_verification_schema else "NOT_APPLICABLE"
+            ),
+            reasoning_confidence   = (
+                reasoning_verification_schema.confidence
+                if reasoning_verification_schema else 0.0
+            ),
         )
 
         _xgb_threshold  = get_threshold(_question_type)
@@ -618,6 +673,7 @@ def monitor(
         model_version          = _MODEL_VER,
         config_version         = _config_ver,
         multi_turn_escalation  = multi_turn_result,
+        reasoning_verification = reasoning_verification_schema,
     )
 
     stored_request_id = None
