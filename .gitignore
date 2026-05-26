@@ -121,4 +121,4 @@ nosetests.xml
 static/
 docs/
 
-tests/
+# tests/ — intentionally tracked so CI can run them
