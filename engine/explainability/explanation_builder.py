@@ -8,7 +8,6 @@ from app.schemas import (
     ExplanationSignal,
     ExplanationStep,
     FixResult,
-    HumanExplanation,
     JuryVerdict,
     MonitorResponse,
 )

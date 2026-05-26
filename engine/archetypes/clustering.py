@@ -144,7 +144,7 @@ class ArchetypeClusterRegistry:
         ]
 
 
-# Stateless batch API (for one-shot analysis without a registry) 
+# Stateless batch API (for one-shot analysis without a registry)
 def cluster_signals(
     signals: list[FailureSignalVector],
 ) -> list[FailureCluster]:

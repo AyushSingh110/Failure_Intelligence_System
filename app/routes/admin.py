@@ -2,13 +2,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Body, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 from app.auth_guard import resolve_user, require_admin
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Guard config schemas 
+# Guard config schemas
 class GuardConfigUpdate(BaseModel):
     """Body for POST /admin/guard/config."""
     block_enabled:  Optional[bool]  = None
@@ -22,7 +22,7 @@ def get_guard_config(
     authorization: str | None = Header(None),
     x_api_key:     str | None = Header(None, alias="X-API-Key"),
 ) -> dict:
- 
+
     #Return the current pre-flight guard configuration.
     require_admin(authorization, x_api_key)
     from engine.fie_config import get_preflight_config, get_config_version
@@ -39,7 +39,7 @@ def get_guard_config(
     }
 
 
-# POST /admin/guard/config 
+# POST /admin/guard/config
 @router.post("/admin/guard/config", response_model=dict)
 def update_guard_config(
     body:          GuardConfigUpdate,
@@ -57,7 +57,7 @@ def update_guard_config(
                 detail="scan_threshold must be between 0.0 and 1.0 (exclusive).",
             )
 
-    from engine.fie_config import update_preflight_config, update_scan_threshold, get_preflight_config
+    from engine.fie_config import update_preflight_config, update_scan_threshold
 
     if body.scan_threshold is not None:
         update_scan_threshold(body.scan_threshold)

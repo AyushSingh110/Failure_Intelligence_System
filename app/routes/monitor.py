@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, Header, HTTPException, Request
 from app.limiter import rate_limit
-from app.routes._helpers import build_failure_signal, get_signal_logs_collection
+from app.routes._helpers import build_failure_signal
 from engine.agents.failure_agent import failure_agent
 from app.schemas import (
     MonitorRequest,
@@ -29,7 +29,7 @@ def monitor(
     authorization: str | None = Header(None),
     x_api_key:     str | None = Header(None, alias="X-API-Key"),
 ) -> MonitorResponse:
-    
+
     from app.schemas import DiagnosticRequest, InferenceRequest, MathematicalMetrics
     from engine.explainability.explanation_builder import attach_explanations_to_monitor
     from engine.detector.embedding import compute_embedding_distance
@@ -107,7 +107,7 @@ def monitor(
             # Guard failure must never take the endpoint down — log and continue
             logger.warning("preflight_check failed (allowing request through): %s", _pf_exc)
 
-    # Step 0: Usage enforcement 
+    # Step 0: Usage enforcement
     current_user = resolve_user(authorization, x_api_key)
     if current_user:
         try:
@@ -127,7 +127,7 @@ def monitor(
         except Exception as exc:
             logger.warning("Failed to update usage counters: %s", exc)
 
-    # Step 1: Session context threading 
+    # Step 1: Session context threading
     if body.session_id and not body.context:
         try:
             from engine.session_store import get_context
@@ -190,7 +190,7 @@ def monitor(
         for r in shadow_results_raw
     ]
 
-    # Step 4: Signal analysis 
+    # Step 4: Signal analysis
     signal    = build_failure_signal(model_outputs)
     primary   = model_outputs[0]
     secondary = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
@@ -235,7 +235,7 @@ def monitor(
     except Exception as _spike_exc:
         logger.debug("Spike notification failed (non-fatal): %s", _spike_exc)
 
-    # Step 4b: Reasoning verification 
+    # Step 4b: Reasoning verification
     reasoning_verification_schema = None
     if _question_type == "REASONING":
         try:
@@ -282,7 +282,7 @@ def monitor(
         except Exception as _rv_exc:
             logger.warning("reasoning_verification failed (non-fatal): %s", _rv_exc)
 
-    # Step 5: DiagnosticJury 
+    # Step 5: DiagnosticJury
     jury_verdict = None
     if body.run_full_jury:
         diag_request = DiagnosticRequest(
@@ -310,7 +310,7 @@ def monitor(
         except Exception as _faiss_exc:
             logger.debug("FAISS auto-growth failed (non-fatal): %s", _faiss_exc)
 
-    # Step 5b: Multi-turn escalation 
+    # Step 5b: Multi-turn escalation
     multi_turn_result = None
     if body.conversation_id:
         try:
@@ -363,7 +363,7 @@ def monitor(
     except Exception as exc:
         logger.debug("model_extraction_tracker failed (non-fatal): %s", exc)
 
-    # Step 6: Failure summary 
+    # Step 6: Failure summary
     if jury_verdict and jury_verdict.failure_summary:
         failure_summary = jury_verdict.failure_summary
     elif signal.high_failure_risk:
@@ -375,7 +375,7 @@ def monitor(
     else:
         failure_summary = f"Model outputs are stable — archetype: {archetype}"
 
-    # Step 7: Ground Truth pipeline + auto-fix 
+    # Step 7: Ground Truth pipeline + auto-fix
     fix_result_schema     = None
     gt_result_schema      = None
     gt_pipeline_result    = None   # raw dataclass — carries provenance_label/category
@@ -554,7 +554,7 @@ def monitor(
     _config_ver = "default"
     try:
         from engine.failure_classifier import predict as _clf_predict
-        from engine.fie_config import get_threshold, get_config_version, MODEL_VERSION
+        from engine.fie_config import get_threshold, get_config_version
 
         _jury_conf_xgb    = jury_verdict.jury_confidence if jury_verdict else 0.0
         _jury_verd_str    = (
@@ -624,7 +624,7 @@ def monitor(
     except Exception as _clf_exc:
         logger.warning("XGBoost classifier unavailable, keeping POET decision: %s", _clf_exc)
 
-    # Provenance enrichment — copy GT pipeline labels onto FSV 
+    # Provenance enrichment — copy GT pipeline labels onto FSV
     try:
         from engine.question_classifier import classify_provenance_category
         _prov_cat = classify_provenance_category(_question_type, body.prompt)
@@ -643,7 +643,7 @@ def monitor(
     except Exception as _prov_exc:
         logger.debug("Provenance enrichment failed (non-fatal): %s", _prov_exc)
 
-    # Step 9a: Build and annotate response 
+    # Step 9a: Build and annotate response
     from engine.fie_config import MODEL_VERSION as _MODEL_VER
     response = MonitorResponse(
         shadow_model_results   = shadow_model_results,
@@ -671,7 +671,7 @@ def monitor(
     if not (current_user and current_user.get("is_admin", False)):
         response.explanation_internal = None
 
-    # Step 9b: Signal logging 
+    # Step 9b: Signal logging
     _signal_log_id = ""
     try:
         from storage.signal_logger import log_signal
@@ -740,7 +740,7 @@ def monitor(
     except Exception as _log_exc:
         logger.debug("Signal logging failed (non-fatal): %s", _log_exc)
 
-    # Step 9c: Persist inference record 
+    # Step 9c: Persist inference record
     try:
         stored_request_id = str(uuid.uuid4())[:12]
 
@@ -817,7 +817,7 @@ def monitor(
     except Exception as exc:
         logger.warning("Failed to save inference record: %s", exc)
 
-    # Step 10: Update session store 
+    # Step 10: Update session store
     if body.session_id:
         try:
             from engine.session_store import store_turn
@@ -829,7 +829,7 @@ def monitor(
     return response
 
 
-# GET /monitor/status 
+# GET /monitor/status
 @router.get("/monitor/status", response_model=dict)
 def monitor_status() -> dict:
     """Current Ollama service status and model availability."""
@@ -846,7 +846,7 @@ def monitor_status() -> dict:
     }
 
 
-# GET /monitor/model-info 
+# GET /monitor/model-info
 @router.get("/monitor/model-info", response_model=dict)
 def model_info() -> dict:
     """Classifier version, thresholds, AUC, config version. No auth required."""
@@ -880,7 +880,7 @@ def model_info() -> dict:
     }
 
 
-# GET /monitor/calibration 
+# GET /monitor/calibration
 
 @router.get("/monitor/calibration", response_model=dict)
 def get_calibration_stats(
@@ -893,7 +893,7 @@ def get_calibration_stats(
     return get_calibration_stats()
 
 
-# GET /monitor/signal-logs 
+# GET /monitor/signal-logs
 
 @router.get("/monitor/signal-logs", response_model=list)
 def get_signal_logs(
@@ -907,7 +907,7 @@ def get_signal_logs(
     return get_recent_logs(limit=min(limit, 500))
 
 
-# POST /feedback/{request_id} 
+# POST /feedback/{request_id}
 @router.post("/feedback/{request_id}", response_model=FeedbackResponse)
 def submit_feedback(
     request_id:    str,
@@ -1010,5 +1010,5 @@ def submit_feedback(
     )
 
 
-# local import needed by submit_feedback 
+# local import needed by submit_feedback
 from storage.database import get_inference_by_id  # noqa: E402

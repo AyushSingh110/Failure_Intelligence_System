@@ -29,7 +29,6 @@ import re
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +88,7 @@ def _get_concern_categories(prompt: str) -> list[str]:
 def _get_db_collection():
     """Returns the conversation_turns MongoDB collection, or None if DB unavailable."""
     try:
-        from storage.database import _client, _db
+        from storage.database import _db
         if _db is None:
             return None
         col = _db["conversation_turns"]

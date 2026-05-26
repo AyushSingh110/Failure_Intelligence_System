@@ -10,7 +10,7 @@ import jwt
 
 logger = logging.getLogger(__name__)
 
-#Config 
+#Config
 _jwt_secret_raw = os.getenv("JWT_SECRET_KEY", "")
 if not _jwt_secret_raw or len(_jwt_secret_raw) < 32:
     import warnings
@@ -26,7 +26,7 @@ JWT_EXPIRE_H  = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 ADMIN_EMAIL   = os.getenv("ADMIN_EMAIL", "")
 
 
-# Helpers 
+# Helpers
 def _generate_api_key() -> str:
     chars = string.ascii_lowercase + string.digits
     rand  = ''.join(secrets.choice(chars) for _ in range(16))
@@ -40,7 +40,7 @@ def _generate_tenant_id(email: str) -> str:
     return f"{email_part}-{rand}"
 
 
-# MongoDB Operations 
+# MongoDB Operations
 def _get_users_collection():
     """Returns MongoDB users collection."""
     try:
@@ -189,7 +189,7 @@ def regenerate_api_key(email: str) -> str:
     return new_key
 
 
-# JWT Session Tokens 
+# JWT Session Tokens
 def create_session_token(user: dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_H)
     payload = {

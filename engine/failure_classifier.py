@@ -4,7 +4,6 @@ import logging
 import math
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 import pandas as pd
 
