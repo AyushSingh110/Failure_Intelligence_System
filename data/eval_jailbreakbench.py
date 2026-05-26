@@ -230,7 +230,7 @@ def main() -> None:
 
     print("  FIE × JailbreakBench Evaluation")
     print(f"  Timestamp  : {timestamp}")
-    print(f"  Tiers      : package" + (f" + server ({args.server})" if args.server else ""))
+    print("  Tiers      : package" + (f" + server ({args.server})" if args.server else ""))
     print(f"  Benign n   : {args.benign}")
     print()
 
@@ -347,8 +347,8 @@ def _print_results(summary: dict, server_url: Optional[str]) -> None:
 
     print()
     print("  Files:")
-    print(f"    Raw    : data/jbb_results/raw_*.jsonl")
-    print(f"    Summary: data/jbb_results/summary_*.json")
+    print("    Raw    : data/jbb_results/raw_*.jsonl")
+    print("    Summary: data/jbb_results/summary_*.json")
     print()
     print("  Citation label: 'JailbreakBench [Chao et al., 2024]'")
     print("  Dataset URL   : https://github.com/JailbreakBench/jailbreakbench")

@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -75,7 +74,7 @@ def load_jbb_hard_examples(predictions_csv: Path) -> tuple[list[str], list[int]]
     for p in tp_sample.tolist():
         prompts.append(str(p)); labels.append(1)
 
-    print(f"Hard examples loaded:")
+    print("Hard examples loaded:")
     print(f"  False positives (hard negatives) : {len(false_positives)}")
     print(f"  False negatives (hard positives) : {len(false_negatives)}")
     print(f"  True positives  (anchor)         : {len(tp_sample)}")
@@ -138,7 +137,7 @@ def load_original_training_data() -> tuple[list[str], list[int]]:
         jbb = load_dataset("JailbreakBench/JBB-Behaviors", "behaviors")
         for row in jbb["benign"]:
             prompts.append(str(row["Goal"])[:512]); labels.append(0)
-        print(f"  JBB benign (near-boundary) : added to benign class")
+        print("  JBB benign (near-boundary) : added to benign class")
     except Exception as e:
         print(f"  JBB benign: skipped ({e})")
 
@@ -150,7 +149,6 @@ def load_original_training_data() -> tuple[list[str], list[int]]:
 def encode_prompts(prompts: list[str], embed_model: str) -> "np.ndarray":
     """Encode prompts with sentence-transformers. Returns L2-normalized embeddings."""
     from sentence_transformers import SentenceTransformer
-    import numpy as np
 
     print(f"\nEncoding {len(prompts)} prompts with {embed_model}...")
     t0  = time.time()
@@ -279,7 +277,7 @@ def retrain(predictions_csv: Path, output_pkl: Path, output_meta: Path) -> None:
     with open(output_meta, "w") as f:
         json.dump(meta, f, indent=2)
 
-    print(f"\nSaved:")
+    print("\nSaved:")
     print(f"  Model    : {output_pkl}")
     print(f"  Metadata : {output_meta}")
     print(f"\nv1 -> v2 FPR delta  : {meta['improvement_vs_v1']['fpr_delta']:+.4f}")

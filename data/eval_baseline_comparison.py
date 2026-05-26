@@ -143,7 +143,6 @@ def compute_metrics(rows: list[dict], detected_key: str) -> dict:
 
 def plot_comparison(summary: dict) -> None:
     import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
     import numpy as np
 
     # Muted academic palette

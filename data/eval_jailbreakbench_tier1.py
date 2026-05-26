@@ -7,7 +7,6 @@ import random
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Optional
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -94,7 +93,7 @@ def _groq_chat(
                 continue
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"].strip()
-        except Exception as e:
+        except Exception:
             if attempt == retries - 1:
                 raise
             time.sleep(delay)

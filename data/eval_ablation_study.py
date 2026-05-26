@@ -26,7 +26,6 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 from fie.adversarial import (
     _run_pattern_detection,
@@ -289,7 +288,7 @@ def main() -> None:
 
     attack = [r for r in rows if r["label"] == "attack"]
     benign = [r for r in rows if r["label"] == "benign"]
-    print(f"Ablation Study — FIE Package Tier")
+    print("Ablation Study — FIE Package Tier")
     print(f"  Prompts : {len(rows)} (attack={len(attack)}, benign={len(benign)})")
 
     # Warm up PAIR classifier (lazy load)
