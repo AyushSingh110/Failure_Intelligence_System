@@ -11,7 +11,6 @@ from app.schemas import (
     ArchetypeAnalysisResponse,
     TrackResponse,
     FailureSignalVector,
-    InferenceRecord,
     ClusterAssignment,
     LabelResult,
     DiagnosticRequest,
@@ -19,7 +18,6 @@ from app.schemas import (
 )
 from storage.database import (
     save_inference,
-    get_all_inferences,
     get_all_inferences as get_all_inferences_admin,
     get_inference_by_id,
     get_inference_by_id_for_tenant,
@@ -36,7 +34,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-#Phase 1 
+#Phase 1
 @router.post("/track", response_model=TrackResponse)
 def track_inference(request: InferenceRequest) -> TrackResponse:
     success = save_inference(request)
@@ -72,7 +70,7 @@ def track_and_analyze(request: InferenceRequest, body: AnalyzeRequest) -> dict:
     }
 
 
-#Phase 2 schemas 
+#Phase 2 schemas
 
 @router.get("/inferences", response_model=list[InferenceRequest])
 def list_inferences(
@@ -219,7 +217,7 @@ def clear_all_inferences(
     return {"status": "cleared", "deleted_count": count}
 
 
-# Phase 2 
+# Phase 2
 
 @router.post("/analyze/v2", response_model=ArchetypeAnalysisResponse)
 def analyze_v2(body: AnalyzeRequest) -> ArchetypeAnalysisResponse:

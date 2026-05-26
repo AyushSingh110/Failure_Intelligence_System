@@ -31,14 +31,12 @@ from app.schemas import (
     TrendResponse,
     ClusterSummaryResponse,
     FailureSignalVector,
-    InferenceRecord,
     ClusterAssignment,
     LabelResult,
     TelemetryPing,
 )
 from storage.database import (
     save_inference,
-    get_all_inferences,
     get_all_inferences as get_all_inferences_admin,
     get_inference_by_id,
     get_inference_by_id_for_tenant,
@@ -47,7 +45,7 @@ from storage.database import (
     clear_inferences_for_tenant,
 )
 from engine.detector.consistency import compute_consistency, is_primary_outlier
-from engine.detector.entropy import compute_entropy, compute_entropy_from_counts
+from engine.detector.entropy import compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
 from engine.detector.embedding import compute_embedding_distance
 from engine.archetypes.labeling import label_failure_archetype
@@ -863,7 +861,7 @@ def monitor(
         )
 
         # Use per-question-type threshold from fie_config (auto-calibrated)
-        from engine.fie_config import get_threshold, get_config_version, MODEL_VERSION
+        from engine.fie_config import get_threshold, get_config_version
         _xgb_threshold   = get_threshold(_question_type)
         _xgb_is_failure  = _xgb_prob >= _xgb_threshold
         _config_ver      = get_config_version()
@@ -1475,7 +1473,6 @@ def analytics_calibration(
             return {"error": "No labeled examples found", "question_type": question_type}
 
         # 10 equal-width bins from 0.0 → 1.0
-        import math
         n_bins = 10
         bins: dict = {i: {"predicted_sum": 0.0, "correct": 0, "total": 0}
                       for i in range(n_bins)}

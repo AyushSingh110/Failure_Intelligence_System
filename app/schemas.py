@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from datetime import datetime
 
-#Provenance types 
+#Provenance types
 ProvenanceCategory = Literal[
     "GENERAL_KNOWLEDGE",
     "LIVE_WORLD_STATE",
@@ -74,7 +74,7 @@ class FailureSignalVector(BaseModel):
     provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE"
 
 
-# Phase 2 schemas 
+# Phase 2 schemas
 class ClusterAssignment(BaseModel):
     cluster_id:       Optional[str] = None
     status:           str
@@ -126,7 +126,7 @@ class ClusterSummaryResponse(BaseModel):
     clusters:       list[dict]
 
 
-# Phase 3 schemas 
+# Phase 3 schemas
 class AgentVerdict(BaseModel):
     agent_name:          str
     root_cause:          str
@@ -145,7 +145,7 @@ class JuryVerdict(BaseModel):
     is_complex_prompt:  bool                   = False
     failure_summary:    str                    = ""
 
-#Input to the /diagnose endpoint 
+#Input to the /diagnose endpoint
 class DiagnosticRequest(BaseModel):
     prompt:        str
     model_outputs: list[str] = Field(..., min_length=1)
@@ -163,7 +163,7 @@ class DiagnosticResponse(BaseModel):
     human_explanation:     Optional["HumanExplanation"] = None
 
 
-#Phase 4 schemas — Real-time Monitor 
+#Phase 4 schemas — Real-time Monitor
 
 class OllamaModelResult(BaseModel):
     """Response from a single Ollama shadow model."""

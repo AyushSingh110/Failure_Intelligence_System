@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Callable, Optional

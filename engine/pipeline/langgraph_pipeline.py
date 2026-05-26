@@ -12,7 +12,7 @@ from typing_extensions import TypedDict
 logger = logging.getLogger(__name__)
 
 
-#State schema 
+#State schema
 class MonitorState(TypedDict, total=False):
     prompt:                   str
     primary_output:           str
@@ -27,10 +27,10 @@ class MonitorState(TypedDict, total=False):
     latency_ms:               Optional[float]
     request_id:               str
 
-    # Session 
+    # Session
     session_context:          list[dict]
 
-    # Shadow models 
+    # Shadow models
     model_outputs:            list[str]
     shadow_results_raw:       list[Any]
     shadow_weights:           list[float]
@@ -38,7 +38,7 @@ class MonitorState(TypedDict, total=False):
     canary_token:             str
     ollama_available:         bool
 
-    #Adversarial guard 
+    #Adversarial guard
     is_adversarial:           bool
     attack_type:              Optional[str]
     attack_category:          Optional[str]
@@ -53,23 +53,23 @@ class MonitorState(TypedDict, total=False):
     archetype:                str
     embedding_distance:       float
 
-    # Provenance gate 
+    # Provenance gate
     provenance_category:      str   # GENERAL_KNOWLEDGE , LIVE_WORLD_STATE , USER_SPECIFIC_STATE , MIXED_SYNTHESIS
-    provenance_label:         str   # FULLY_PROVENANCED, PARTIALLY_PROVENANCED , UNVERIFIED_MODEL_INFERENCE  
+    provenance_label:         str   # FULLY_PROVENANCED, PARTIALLY_PROVENANCED , UNVERIFIED_MODEL_INFERENCE
     provenance_gate_triggered: bool  # True when live data needed but GT won't run
 
-    # Reasoning verification 
-    reasoning_result:         Optional[Any]   # ReasoningVerificationResult 
+    # Reasoning verification
+    reasoning_result:         Optional[Any]   # ReasoningVerificationResult
     reasoning_failure_type:   str             # ARITHMETIC_ERROR,LOGICAL_GAP,etc.
     reasoning_confidence:     float
 
-    # Jury deliberation 
+    # Jury deliberation
     jury_verdict:             Optional[Any]           # JuryVerdict schema
     jury_confidence:          float
     failure_summary:          str
     root_cause:               str
 
-    # Security checks 
+    # Security checks
     multi_turn_result:        Optional[dict]
     extraction_result:        Optional[dict]
 
@@ -79,20 +79,20 @@ class MonitorState(TypedDict, total=False):
     gt_confidence:            float
     gt_source:                str
 
-    # Auto-correction 
+    # Auto-correction
     fix_result:               Optional[Any]           # FixResult schema
     corrected_answer:         Optional[str]
 
-    # XGBoost post-GT classifier 
+    # XGBoost post-GT classifier
     xgb_probability:          Optional[float]
     xgb_is_failure:           bool
     config_version:           str
 
-    # Escalation 
+    # Escalation
     requires_human_review:    bool
     escalation_reason:        str
 
-    #  Audit trail 
+    #  Audit trail
     pipeline_trace:           list[str]
 
 
@@ -104,7 +104,7 @@ def _trace(state: MonitorState, msg: str) -> list[str]:
     return trace
 
 
-# Node 1: load_session 
+# Node 1: load_session
 
 def load_session(state: MonitorState) -> dict:
     """Fetch prior conversation turns from the session store when session_id is set."""
@@ -129,7 +129,7 @@ def load_session(state: MonitorState) -> dict:
         }
 
 
-# Node 2: shadow_inference 
+# Node 2: shadow_inference
 
 def shadow_inference(state: MonitorState) -> dict:
     """Fan out prompt to Groq shadow models and collect outputs + confidence weights."""
@@ -194,7 +194,7 @@ def shadow_inference(state: MonitorState) -> dict:
     }
 
 
-# Node 3: adversarial_guard 
+# Node 3: adversarial_guard
 
 def adversarial_guard(state: MonitorState) -> dict:
     """
@@ -233,7 +233,7 @@ def adversarial_guard(state: MonitorState) -> dict:
         }
 
 
-# Routing: blocked? 
+# Routing: blocked?
 
 def _route_after_guard(state: MonitorState) -> str:
     # Route to finalize (not END) so blocked attacks are persisted in the dashboard
@@ -340,7 +340,7 @@ def signal_extract(state: MonitorState) -> dict:
     }
 
 
-# Node 4b: provenance_gate 
+# Node 4b: provenance_gate
 
 def provenance_gate(state: MonitorState) -> dict:
     """
@@ -399,7 +399,7 @@ def provenance_gate(state: MonitorState) -> dict:
     }
 
 
-# Node 4c: reasoning_verify 
+# Node 4c: reasoning_verify
 
 def reasoning_verify(state: MonitorState) -> dict:
     """
@@ -471,7 +471,7 @@ def reasoning_verify(state: MonitorState) -> dict:
         }
 
 
-# Node 5: jury_deliberate 
+# Node 5: jury_deliberate
 def jury_deliberate(state: MonitorState) -> dict:
     """
     Phase 3 — DiagnosticJury: adversarial specialist + linguistic auditor + domain critic.
@@ -543,7 +543,7 @@ def jury_deliberate(state: MonitorState) -> dict:
         }
 
 
-# Node 6: security_checks 
+# Node 6: security_checks
 
 def security_checks(state: MonitorState) -> dict:
     """Multi-turn Crescendo tracking + model-extraction detection."""
@@ -626,7 +626,7 @@ def _route_to_verify(state: MonitorState) -> str:
     return "gt_verify" if gate_passed and high_risk else "finalize"
 
 
-# Node 7: gt_verify 
+# Node 7: gt_verify
 
 def gt_verify(state: MonitorState) -> dict:
     """
@@ -687,7 +687,7 @@ def gt_verify(state: MonitorState) -> dict:
         }
 
 
-# Routing: escalate or fix? 
+# Routing: escalate or fix?
 
 def _route_after_gt(state: MonitorState) -> str:
     gt = state.get("gt_result")
@@ -698,11 +698,11 @@ def _route_after_gt(state: MonitorState) -> str:
     return "auto_correct"
 
 
-# ── Node 8: escalate 
+# ── Node 8: escalate
 
 def escalate(state: MonitorState) -> dict:
     """Mark the inference as requiring human review and build the escalation response."""
-    from app.schemas import FixResult as FixResultSchema, GroundTruthVerification
+    from app.schemas import FixResult as FixResultSchema
 
     gt     = state.get("gt_result")
     reason = gt.escalation_reason if gt else "GT pipeline found no reliable source."
@@ -731,7 +731,7 @@ def escalate(state: MonitorState) -> dict:
     }
 
 
-# Node 9: auto_correct 
+# Node 9: auto_correct
 
 def auto_correct(state: MonitorState) -> dict:
     """
@@ -745,7 +745,7 @@ def auto_correct(state: MonitorState) -> dict:
     gt     = state.get("gt_result")
     root_c = state.get("root_cause", "UNKNOWN")
 
-    # Strategy 1: GT verified answer 
+    # Strategy 1: GT verified answer
     if gt and gt.verified_answer and gt.verified_answer != state.get("primary_output"):
         fix = FixResultSchema(
             fixed_output      = gt.verified_answer,
@@ -771,7 +771,7 @@ def auto_correct(state: MonitorState) -> dict:
             "pipeline_trace":  _trace(state, trace_msg),
         }
 
-    # Strategy 2: Fix engine (shadow consensus) 
+    # Strategy 2: Fix engine (shadow consensus)
     try:
         from engine.fix_engine import apply_fix
         fix_obj = apply_fix(
@@ -815,7 +815,7 @@ def auto_correct(state: MonitorState) -> dict:
     except Exception as exc:
         logger.warning("auto_correct fix_engine failed: %s", exc)
 
-    # Strategy 3: RAG Wikipedia grounding 
+    # Strategy 3: RAG Wikipedia grounding
     if root_c in {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"}:
         try:
             from engine.fix_engine import prompt_requires_live_data
@@ -852,7 +852,7 @@ def auto_correct(state: MonitorState) -> dict:
     }
 
 
-# Node 10: finalize 
+# Node 10: finalize
 
 def finalize(state: MonitorState) -> dict:
     """
@@ -872,7 +872,7 @@ def finalize(state: MonitorState) -> dict:
     qt         = state.get("question_type", "UNKNOWN")
     archetype  = state.get("archetype", "UNKNOWN")
 
-    # XGBoost post-GT classifier 
+    # XGBoost post-GT classifier
     xgb_prob    = None
     config_ver  = "default"
     xgb_failure = state.get("failure_signal") and getattr(state["failure_signal"], "high_failure_risk", False)
@@ -925,7 +925,7 @@ def finalize(state: MonitorState) -> dict:
         config_ver = "default"
         logger.warning("XGBoost classifier unavailable: %s", exc)
 
-    # Short-circuit for guard-blocked attacks 
+    # Short-circuit for guard-blocked attacks
     if state.get("guard_blocked"):
         stored_request_id = state.get("request_id") or str(uuid.uuid4())[:12]
         try:
@@ -965,7 +965,7 @@ def finalize(state: MonitorState) -> dict:
             "pipeline_trace": _trace(state, f"finalize: guard_blocked — stored adversarial record {stored_request_id}"),
         }
 
-    # Failure summary (fallback if not already set by earlier nodes) 
+    # Failure summary (fallback if not already set by earlier nodes)
     failure_summary = state.get("failure_summary") or (
         f"High failure risk — archetype: {archetype}. "
         f"Entropy: {getattr(signal, 'entropy_score', 0):.3f}, "
@@ -974,7 +974,7 @@ def finalize(state: MonitorState) -> dict:
         f"Model outputs are stable — archetype: {archetype}"
     )
 
-    # Signal logging 
+    # Signal logging
     signal_log_id = ""
     try:
         from storage.signal_logger import log_signal
@@ -1026,7 +1026,7 @@ def finalize(state: MonitorState) -> dict:
     except Exception as exc:
         logger.debug("Signal logging failed (non-fatal): %s", exc)
 
-    # Persist inference record 
+    # Persist inference record
     stored_request_id = state.get("request_id") or str(uuid.uuid4())[:12]
     try:
         from storage.database import save_inference
@@ -1067,7 +1067,7 @@ def finalize(state: MonitorState) -> dict:
         except Exception as exc:
             logger.debug("SessionStore save failed (non-fatal): %s", exc)
 
-    # Email notifications (fire-and-forget) 
+    # Email notifications (fire-and-forget)
     try:
         from app.notifications import notify_attack_detected, notify_human_review
         tenant_id = state.get("tenant_id") or "anonymous"
@@ -1111,7 +1111,7 @@ def finalize(state: MonitorState) -> dict:
     }
 
 
-# Graph assembly 
+# Graph assembly
 
 def _build_graph() -> StateGraph:
     g = StateGraph(MonitorState)
@@ -1164,7 +1164,7 @@ def _build_graph() -> StateGraph:
     return g.compile()
 
 
-# Singleton compiled graph 
+# Singleton compiled graph
 
 _graph: Any = None
 
@@ -1176,7 +1176,7 @@ def get_pipeline():
     return _graph
 
 
-# Public entry point 
+# Public entry point
 
 def run_pipeline(initial_state: MonitorState) -> MonitorState:
     """

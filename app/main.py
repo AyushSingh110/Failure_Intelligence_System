@@ -4,21 +4,20 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-# Load .env before any module-level 
+# Load .env before any module-level
 from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from config import get_settings
 from engine.logging_config import configure_logging, bind_request_id
-# Logging must be configured before any other FIE import emits log records 
+# Logging must be configured before any other FIE import emits log records
 configure_logging()
 import logging
 import os
 logger = logging.getLogger("fie.server")
 
-#Route packages 
+#Route packages
 from app.routes import router
 from app.auth_routes import router as auth_router
 
@@ -43,7 +42,7 @@ _ALLOWED_ORIGINS = [
 ]
 
 
-# Background encoder warm-up 
+# Background encoder warm-up
 
 def _warm_encoder_in_background() -> None:
     """Warm the sentence encoder after startup without blocking the web server."""
@@ -62,11 +61,11 @@ def _warm_encoder_in_background() -> None:
         logger.error("background_task=encoder_warmup status=failed error=%s", exc)
 
 
-# Lifespan 
+# Lifespan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup 
+    # Startup
     from storage.database import initialize_vault
     initialize_vault()
 
@@ -81,7 +80,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    #Shutdown 
+    #Shutdown
     from storage.database import flush_vault
     flush_vault()
     logger.info("shutdown=vault status=flushed")
@@ -95,7 +94,7 @@ app = FastAPI(
     lifespan = lifespan,
 )
 
-# Rate limiting 
+# Rate limiting
 if _rate_limiting_available and _limiter is not None:
     app.state.limiter = _limiter
     if RateLimitExceeded and _rate_limit_exceeded_handler:
@@ -112,7 +111,7 @@ app.add_middleware(
 app.include_router(router,      prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 
-# Middleware: security headers + structured request logging 
+# Middleware: security headers + structured request logging
 @app.middleware("http")
 async def security_and_logging(request: Request, call_next):
     """
@@ -150,7 +149,7 @@ async def security_and_logging(request: Request, call_next):
     return response
 
 
-#Root endpoints 
+#Root endpoints
 @app.get("/")
 def root() -> dict[str, str]:
     return {

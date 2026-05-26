@@ -12,7 +12,7 @@ from app.schemas import (
     DiagnosticResponse,
 )
 from engine.detector.consistency import compute_consistency
-from engine.detector.entropy import compute_entropy, compute_entropy_from_counts
+from engine.detector.entropy import compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
 from engine.detector.embedding import compute_embedding_distance
 from engine.archetypes.labeling import (

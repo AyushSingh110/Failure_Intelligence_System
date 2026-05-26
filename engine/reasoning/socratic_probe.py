@@ -273,7 +273,6 @@ def run_socratic_probe(
             # Pick the shadow output that is most different from primary
             # (most independent perspective)
             try:
-                import numpy as np
                 from engine.encoder import get_encoder
                 enc = get_encoder()
                 if enc.available and len(shadow_outputs) > 1:

@@ -45,13 +45,13 @@ class PlaygroundResponse(BaseModel):
     preflight_confidence:  float     = 0.0
     preflight_layers:      list[str] = []
 
-    # Raw primary model 
+    # Raw primary model
     raw_response:   str   = ""
     raw_model:      str   = ""
     raw_latency_ms: float = 0.0
     raw_success:    bool  = False
 
-    # FIE-protected response 
+    # FIE-protected response
     fie_response:   str   = ""
     fie_status:     str   = "UNAVAILABLE"  # BLOCKED | VALIDATED | CORRECTED | UNAVAILABLE
     fie_latency_ms: float = 0.0
@@ -166,7 +166,7 @@ def _run_jury(prompt: str, raw: str, shadow_texts: list[str]):
         return None
 
 
-#Endpoint 
+#Endpoint
 @router.post("/playground", response_model=PlaygroundResponse)
 def playground(
     body:          PlaygroundRequest,
@@ -199,7 +199,7 @@ def playground(
 
     t_total = time.perf_counter()
 
-    # Step 1: Pre-flight 
+    # Step 1: Pre-flight
     blocked, attack_type, pf_conf, pf_layers = _run_preflight(body.prompt)
 
     if blocked:
@@ -233,7 +233,7 @@ def playground(
             is_adversarial        = True,
         )
 
-    #  Step 2: Raw primary + shadow ensemble in parallel 
+    #  Step 2: Raw primary + shadow ensemble in parallel
     def _get_raw():
         if is_custom:
             return _call_custom(body.custom_endpoint, body.custom_api_key, body.prompt)
@@ -271,7 +271,7 @@ def playground(
             if j.primary_verdict:
                 jury_root = j.primary_verdict.root_cause or ""
 
-    # Step 4: Determine FIE status and response 
+    # Step 4: Determine FIE status and response
     fie_text = shadow_best or raw_text
 
     if not shadow_best:
