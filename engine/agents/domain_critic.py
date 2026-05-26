@@ -1,12 +1,9 @@
 #domain_critic.py
 from __future__ import annotations
-
 import re
 import logging
 from typing import NamedTuple
-
 import numpy as np
-
 from app.schemas import AgentVerdict
 from config import get_settings
 from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext

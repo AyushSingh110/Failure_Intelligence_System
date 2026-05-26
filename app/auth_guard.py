@@ -1,9 +1,6 @@
 from __future__ import annotations
-
 from typing import Optional
-
 from fastapi import HTTPException
-
 from app.auth import get_user_by_api_key, get_user_by_email, verify_session_token
 
 
@@ -22,7 +19,12 @@ def resolve_user(
     if authorization and authorization.startswith("Bearer "):
         payload = verify_session_token(authorization.split(" ", 1)[1])
         if payload:
-            user = get_user_by_email(payload["email"])
+            # Use JWT payload directly — avoids MongoDB round-trip on every request.
+            # Fall back to DB only if critical fields are missing (shouldn't happen).
+            if all(k in payload for k in ("email", "tenant_id", "api_key")):
+                user = payload
+            else:
+                user = get_user_by_email(payload["email"])
 
     if not user and x_api_key:
         user = get_user_by_api_key(x_api_key)

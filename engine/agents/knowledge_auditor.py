@@ -2,7 +2,6 @@ class KnowledgeAuditor:
     """
     Orchestrates the verification pipeline.
     """
-
     def audit(self, prompt: str, model_output: str) -> dict:
 
         # Lazy imports to avoid circular dependency

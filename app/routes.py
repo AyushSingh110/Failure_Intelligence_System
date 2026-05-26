@@ -144,13 +144,16 @@ def track_and_analyze(request: InferenceRequest, body: AnalyzeRequest) -> dict:
 
 @router.get("/inferences", response_model=list[InferenceRequest])
 def list_inferences(
+    limit:         int = 100,
+    offset:        int = 0,
     authorization: str | None = Header(None),
-    x_api_key: str | None = Header(None, alias="X-API-Key"),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
 ) -> list[InferenceRequest]:
     user = require_user(authorization, x_api_key)
+    limit = max(1, min(limit, 500))
     if user.get("is_admin", False):
-        return get_all_inferences_admin()
-    return get_inferences_for_tenant(user["tenant_id"])
+        return get_all_inferences_admin(limit=limit, offset=offset)
+    return get_inferences_for_tenant(user["tenant_id"], limit=limit, offset=offset)
 
 
 @router.get("/inferences/export/csv")

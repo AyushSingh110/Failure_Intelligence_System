@@ -1,11 +1,7 @@
 from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
-
-from app.schemas import AgentVerdict, FailureSignalVector
-
+from typing import Optionalfrom app.schemas import AgentVerdict, FailureSignalVector
 
 # Context container
 @dataclass(frozen=True)

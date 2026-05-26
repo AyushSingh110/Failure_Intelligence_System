@@ -1,63 +1,4 @@
-"""
-Full LangGraph orchestration pipeline for the Failure Intelligence Engine.
 
-Every request to /monitor is routed through this graph.  Each node is
-responsible for exactly one concern; all shared state flows through
-MonitorState.  Nodes return only the keys they write — LangGraph merges
-the partial dict back into the state automatically.
-
-Graph topology
---------------
-
-  START
-    │
-    ▼
-  load_session          ← fetch prior turns from session store (optional)
-    │
-    ▼
-  shadow_inference      ← fan-out to Groq shadow models + canary injection
-    │
-    ▼
-  adversarial_guard     ← 7-layer offline scan_prompt (no LLM call, ~15 ms)
-    │
-    ├─ BLOCKED ──────────────────────────────────────────────► END
-    │
-    └─ SAFE ──►  signal_extract   ← FSV + question classify + archetype + EMA
-                    │
-                    ▼
-                 jury_deliberate  ← DiagnosticJury (optional, gated by run_full_jury)
-                    │
-                    ▼
-                 security_checks  ← multi-turn Crescendo + model-extraction
-                    │
-                    ▼
-                 should_verify?   ← routing: high_failure_risk + jury confidence gate
-                    │
-                    ├─ NO ───────────────────────────────────► finalize
-                    │
-                    └─ YES ──►  gt_verify   ← Wikidata / Serper / self-consistency
-                                   │
-                                   ├─ ESCALATE ──►  escalate  ──► finalize
-                                   │
-                                   └─ FIX ──────►  auto_correct ► finalize
-                                                       │
-                                                       ▼
-                                                    finalize     ← xgboost classify +
-                                                                   signal log + persist
-                                                       │
-                                                       ▼
-                                                     END
-
-Design notes
-------------
-- Every node is a plain function returning ``dict``.  No async — the
-  underlying services (Groq, MongoDB, Wikidata) all use the ``requests``
-  library synchronously.
-- The compiled graph is a module-level singleton (thread-safe, stateless
-  between invocations).
-- ``pipeline_trace`` is a list[str] that every node appends to; it gives
-  the XAI explanation panel a step-by-step audit trail.
-"""
 from __future__ import annotations
 
 import logging
@@ -71,10 +12,8 @@ from typing_extensions import TypedDict
 logger = logging.getLogger(__name__)
 
 
-# ── State schema ──────────────────────────────────────────────────────────────
-
+#State schema 
 class MonitorState(TypedDict, total=False):
-    # ── Request inputs ───────────────────────────────────────────────────
     prompt:                   str
     primary_output:           str
     primary_model_name:       str
@@ -88,10 +27,10 @@ class MonitorState(TypedDict, total=False):
     latency_ms:               Optional[float]
     request_id:               str
 
-    # ── Session ──────────────────────────────────────────────────────────
+    # Session 
     session_context:          list[dict]
 
-    # ── Shadow models ────────────────────────────────────────────────────
+    # Shadow models 
     model_outputs:            list[str]
     shadow_results_raw:       list[Any]
     shadow_weights:           list[float]
@@ -99,7 +38,7 @@ class MonitorState(TypedDict, total=False):
     canary_token:             str
     ollama_available:         bool
 
-    # ── Adversarial guard ────────────────────────────────────────────────
+    #Adversarial guard 
     is_adversarial:           bool
     attack_type:              Optional[str]
     attack_category:          Optional[str]
@@ -108,56 +47,56 @@ class MonitorState(TypedDict, total=False):
     attack_evidence:          dict
     guard_blocked:            bool
 
-    # ── Signal extraction ────────────────────────────────────────────────
+    # Signal extraction
     failure_signal:           Optional[Any]          # FailureSignalVector schema
     question_type:            str
     archetype:                str
     embedding_distance:       float
 
-    # ── Provenance gate ──────────────────────────────────────────────────
-    provenance_category:      str   # GENERAL_KNOWLEDGE | LIVE_WORLD_STATE | USER_SPECIFIC_STATE | MIXED_SYNTHESIS
-    provenance_label:         str   # FULLY_PROVENANCED | PARTIALLY_PROVENANCED | UNVERIFIED_MODEL_INFERENCE | ...
+    # Provenance gate 
+    provenance_category:      str   # GENERAL_KNOWLEDGE , LIVE_WORLD_STATE , USER_SPECIFIC_STATE , MIXED_SYNTHESIS
+    provenance_label:         str   # FULLY_PROVENANCED, PARTIALLY_PROVENANCED , UNVERIFIED_MODEL_INFERENCE  
     provenance_gate_triggered: bool  # True when live data needed but GT won't run
 
-    # ── Reasoning verification ───────────────────────────────────────────
-    reasoning_result:         Optional[Any]   # ReasoningVerificationResult (engine dataclass)
-    reasoning_failure_type:   str             # ARITHMETIC_ERROR | LOGICAL_GAP | etc.
+    # Reasoning verification 
+    reasoning_result:         Optional[Any]   # ReasoningVerificationResult 
+    reasoning_failure_type:   str             # ARITHMETIC_ERROR,LOGICAL_GAP,etc.
     reasoning_confidence:     float
 
-    # ── Jury deliberation ────────────────────────────────────────────────
+    # Jury deliberation 
     jury_verdict:             Optional[Any]           # JuryVerdict schema
     jury_confidence:          float
     failure_summary:          str
     root_cause:               str
 
-    # ── Security checks ──────────────────────────────────────────────────
+    # Security checks 
     multi_turn_result:        Optional[dict]
     extraction_result:        Optional[dict]
 
-    # ── Ground truth verification ────────────────────────────────────────
+    # Ground truth verification
     gt_result:                Optional[Any]           # GroundTruthVerification schema
     verified_answer:          Optional[str]
     gt_confidence:            float
     gt_source:                str
 
-    # ── Auto-correction ──────────────────────────────────────────────────
+    # Auto-correction 
     fix_result:               Optional[Any]           # FixResult schema
     corrected_answer:         Optional[str]
 
-    # ── XGBoost post-GT classifier ───────────────────────────────────────
+    # XGBoost post-GT classifier 
     xgb_probability:          Optional[float]
     xgb_is_failure:           bool
     config_version:           str
 
-    # ── Escalation ───────────────────────────────────────────────────────
+    # Escalation 
     requires_human_review:    bool
     escalation_reason:        str
 
-    # ── Audit trail ──────────────────────────────────────────────────────
+    #  Audit trail 
     pipeline_trace:           list[str]
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+#Helpers
 
 def _trace(state: MonitorState, msg: str) -> list[str]:
     trace = list(state.get("pipeline_trace") or [])
@@ -165,7 +104,7 @@ def _trace(state: MonitorState, msg: str) -> list[str]:
     return trace
 
 
-# ── Node 1: load_session ──────────────────────────────────────────────────────
+# Node 1: load_session 
 
 def load_session(state: MonitorState) -> dict:
     """Fetch prior conversation turns from the session store when session_id is set."""
@@ -190,7 +129,7 @@ def load_session(state: MonitorState) -> dict:
         }
 
 
-# ── Node 2: shadow_inference ──────────────────────────────────────────────────
+# Node 2: shadow_inference 
 
 def shadow_inference(state: MonitorState) -> dict:
     """Fan out prompt to Groq shadow models and collect outputs + confidence weights."""
@@ -255,7 +194,7 @@ def shadow_inference(state: MonitorState) -> dict:
     }
 
 
-# ── Node 3: adversarial_guard ─────────────────────────────────────────────────
+# Node 3: adversarial_guard 
 
 def adversarial_guard(state: MonitorState) -> dict:
     """
@@ -294,13 +233,14 @@ def adversarial_guard(state: MonitorState) -> dict:
         }
 
 
-# ── Routing: blocked? ─────────────────────────────────────────────────────────
+# Routing: blocked? 
 
 def _route_after_guard(state: MonitorState) -> str:
-    return "END" if state.get("guard_blocked") else "signal_extract"
+    # Route to finalize (not END) so blocked attacks are persisted in the dashboard
+    return "finalize" if state.get("guard_blocked") else "signal_extract"
 
 
-# ── Node 4: signal_extract ────────────────────────────────────────────────────
+# Node 4: signal_extract
 
 def signal_extract(state: MonitorState) -> dict:
     """
@@ -400,7 +340,7 @@ def signal_extract(state: MonitorState) -> dict:
     }
 
 
-# ── Node 4b: provenance_gate ─────────────────────────────────────────────────
+# Node 4b: provenance_gate 
 
 def provenance_gate(state: MonitorState) -> dict:
     """
@@ -459,7 +399,7 @@ def provenance_gate(state: MonitorState) -> dict:
     }
 
 
-# ── Node 4c: reasoning_verify ────────────────────────────────────────────────
+# Node 4c: reasoning_verify 
 
 def reasoning_verify(state: MonitorState) -> dict:
     """
@@ -531,8 +471,7 @@ def reasoning_verify(state: MonitorState) -> dict:
         }
 
 
-# ── Node 5: jury_deliberate ───────────────────────────────────────────────────
-
+# Node 5: jury_deliberate 
 def jury_deliberate(state: MonitorState) -> dict:
     """
     Phase 3 — DiagnosticJury: adversarial specialist + linguistic auditor + domain critic.
@@ -604,7 +543,7 @@ def jury_deliberate(state: MonitorState) -> dict:
         }
 
 
-# ── Node 6: security_checks ───────────────────────────────────────────────────
+# Node 6: security_checks 
 
 def security_checks(state: MonitorState) -> dict:
     """Multi-turn Crescendo tracking + model-extraction detection."""
@@ -675,8 +614,7 @@ def security_checks(state: MonitorState) -> dict:
     return updates
 
 
-# ── Routing: should we run GT verification? ───────────────────────────────────
-
+# Routing: should we run GT verification?
 def _route_to_verify(state: MonitorState) -> str:
     signal = state.get("failure_signal")
     jury   = state.get("jury_verdict")
@@ -688,7 +626,7 @@ def _route_to_verify(state: MonitorState) -> str:
     return "gt_verify" if gate_passed and high_risk else "finalize"
 
 
-# ── Node 7: gt_verify ─────────────────────────────────────────────────────────
+# Node 7: gt_verify 
 
 def gt_verify(state: MonitorState) -> dict:
     """
@@ -749,7 +687,7 @@ def gt_verify(state: MonitorState) -> dict:
         }
 
 
-# ── Routing: escalate or fix? ─────────────────────────────────────────────────
+# Routing: escalate or fix? 
 
 def _route_after_gt(state: MonitorState) -> str:
     gt = state.get("gt_result")
@@ -760,7 +698,7 @@ def _route_after_gt(state: MonitorState) -> str:
     return "auto_correct"
 
 
-# ── Node 8: escalate ──────────────────────────────────────────────────────────
+# ── Node 8: escalate 
 
 def escalate(state: MonitorState) -> dict:
     """Mark the inference as requiring human review and build the escalation response."""
@@ -793,7 +731,7 @@ def escalate(state: MonitorState) -> dict:
     }
 
 
-# ── Node 9: auto_correct ──────────────────────────────────────────────────────
+# Node 9: auto_correct 
 
 def auto_correct(state: MonitorState) -> dict:
     """
@@ -807,7 +745,7 @@ def auto_correct(state: MonitorState) -> dict:
     gt     = state.get("gt_result")
     root_c = state.get("root_cause", "UNKNOWN")
 
-    # ── Strategy 1: GT verified answer ──────────────────────────────────
+    # Strategy 1: GT verified answer 
     if gt and gt.verified_answer and gt.verified_answer != state.get("primary_output"):
         fix = FixResultSchema(
             fixed_output      = gt.verified_answer,
@@ -833,7 +771,7 @@ def auto_correct(state: MonitorState) -> dict:
             "pipeline_trace":  _trace(state, trace_msg),
         }
 
-    # ── Strategy 2: Fix engine (shadow consensus) ────────────────────────
+    # Strategy 2: Fix engine (shadow consensus) 
     try:
         from engine.fix_engine import apply_fix
         fix_obj = apply_fix(
@@ -877,7 +815,7 @@ def auto_correct(state: MonitorState) -> dict:
     except Exception as exc:
         logger.warning("auto_correct fix_engine failed: %s", exc)
 
-    # ── Strategy 3: RAG Wikipedia grounding ─────────────────────────────
+    # Strategy 3: RAG Wikipedia grounding 
     if root_c in {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"}:
         try:
             from engine.fix_engine import prompt_requires_live_data
@@ -914,7 +852,7 @@ def auto_correct(state: MonitorState) -> dict:
     }
 
 
-# ── Node 10: finalize ─────────────────────────────────────────────────────────
+# Node 10: finalize 
 
 def finalize(state: MonitorState) -> dict:
     """
@@ -934,7 +872,7 @@ def finalize(state: MonitorState) -> dict:
     qt         = state.get("question_type", "UNKNOWN")
     archetype  = state.get("archetype", "UNKNOWN")
 
-    # ── XGBoost post-GT classifier ───────────────────────────────────────
+    # XGBoost post-GT classifier 
     xgb_prob    = None
     config_ver  = "default"
     xgb_failure = state.get("failure_signal") and getattr(state["failure_signal"], "high_failure_risk", False)
@@ -987,7 +925,47 @@ def finalize(state: MonitorState) -> dict:
         config_ver = "default"
         logger.warning("XGBoost classifier unavailable: %s", exc)
 
-    # ── Failure summary (fallback if not already set by earlier nodes) ───
+    # Short-circuit for guard-blocked attacks 
+    if state.get("guard_blocked"):
+        stored_request_id = state.get("request_id") or str(uuid.uuid4())[:12]
+        try:
+            from storage.database import save_inference
+            from app.schemas import InferenceRequest, MathematicalMetrics
+            _blocked = InferenceRequest(
+                request_id      = stored_request_id,
+                tenant_id       = state.get("tenant_id") or "anonymous",
+                timestamp       = datetime.now(timezone.utc),
+                model_name      = state.get("primary_model_name") or "blocked",
+                model_version   = "guard-v1",
+                temperature     = 0.0,
+                latency_ms      = state.get("latency_ms") or 0.0,
+                input_text      = state.get("prompt", ""),
+                output_text     = "",
+                is_adversarial  = True,
+                guard_attack_type = state.get("attack_type"),
+                guard_confidence  = state.get("attack_confidence", 0.0),
+                archetype         = "ADVERSARIAL_PROMPT",
+                metrics         = MathematicalMetrics(
+                    entropy         = 1.0,
+                    agreement_score = 0.0,
+                ),
+            )
+            save_inference(_blocked)
+        except Exception as _exc:
+            logger.debug("Failed to persist blocked attack: %s", _exc)
+        return {
+            "xgb_probability": None,
+            "xgb_is_failure":  True,
+            "config_version":  "guard",
+            "failure_summary": (
+                f"Prompt blocked by adversarial guard: {state.get('attack_type')} "
+                f"(confidence={state.get('attack_confidence', 0):.0%})"
+            ),
+            "request_id":     stored_request_id,
+            "pipeline_trace": _trace(state, f"finalize: guard_blocked — stored adversarial record {stored_request_id}"),
+        }
+
+    # Failure summary (fallback if not already set by earlier nodes) 
     failure_summary = state.get("failure_summary") or (
         f"High failure risk — archetype: {archetype}. "
         f"Entropy: {getattr(signal, 'entropy_score', 0):.3f}, "
@@ -996,7 +974,7 @@ def finalize(state: MonitorState) -> dict:
         f"Model outputs are stable — archetype: {archetype}"
     )
 
-    # ── Signal logging ───────────────────────────────────────────────────
+    # Signal logging 
     signal_log_id = ""
     try:
         from storage.signal_logger import log_signal
@@ -1048,23 +1026,28 @@ def finalize(state: MonitorState) -> dict:
     except Exception as exc:
         logger.debug("Signal logging failed (non-fatal): %s", exc)
 
-    # ── Persist inference record ─────────────────────────────────────────
+    # Persist inference record 
     stored_request_id = state.get("request_id") or str(uuid.uuid4())[:12]
     try:
         from storage.database import save_inference
         from app.schemas import InferenceRequest, MathematicalMetrics
 
+        jury = state.get("jury_verdict")
         record = InferenceRequest(
-            request_id    = stored_request_id,
-            tenant_id     = state.get("tenant_id") or "anonymous",
-            timestamp     = datetime.now(timezone.utc),
-            model_name    = state.get("primary_model_name") or "unknown",
-            model_version = "monitor-v2",
-            temperature   = 0.7,
-            latency_ms    = state.get("latency_ms") or 0.0,
-            input_text    = state["prompt"],
-            output_text   = state["primary_output"],
-            metrics       = MathematicalMetrics(
+            request_id        = stored_request_id,
+            tenant_id         = state.get("tenant_id") or "anonymous",
+            timestamp         = datetime.now(timezone.utc),
+            model_name        = state.get("primary_model_name") or "unknown",
+            model_version     = "monitor-v2",
+            temperature       = 0.7,
+            latency_ms        = state.get("latency_ms") or 0.0,
+            input_text        = state["prompt"],
+            output_text       = state["primary_output"],
+            is_adversarial    = bool(state.get("is_adversarial") or (jury and jury.is_adversarial)),
+            guard_attack_type = state.get("attack_type"),
+            guard_confidence  = state.get("attack_confidence"),
+            archetype         = state.get("archetype"),
+            metrics           = MathematicalMetrics(
                 entropy            = getattr(signal, "entropy_score", 0.0) if signal else 0.0,
                 agreement_score    = getattr(signal, "agreement_score", 0.0) if signal else 0.0,
                 fsd_score          = getattr(signal, "fsd_score", 0.0) if signal else 0.0,
@@ -1075,7 +1058,7 @@ def finalize(state: MonitorState) -> dict:
     except Exception as exc:
         logger.warning("Inference record persistence failed: %s", exc)
 
-    # ── Session store — save this turn for future context ────────────────
+    # Session store — save this turn for future context
     if state.get("session_id"):
         try:
             from engine.session_store import store_turn
@@ -1084,7 +1067,7 @@ def finalize(state: MonitorState) -> dict:
         except Exception as exc:
             logger.debug("SessionStore save failed (non-fatal): %s", exc)
 
-    # ── Email notifications (fire-and-forget) ────────────────────────────
+    # Email notifications (fire-and-forget) 
     try:
         from app.notifications import notify_attack_detected, notify_human_review
         tenant_id = state.get("tenant_id") or "anonymous"
@@ -1128,7 +1111,7 @@ def finalize(state: MonitorState) -> dict:
     }
 
 
-# ── Graph assembly ────────────────────────────────────────────────────────────
+# Graph assembly 
 
 def _build_graph() -> StateGraph:
     g = StateGraph(MonitorState)
@@ -1154,7 +1137,7 @@ def _build_graph() -> StateGraph:
     g.add_conditional_edges(
         "adversarial_guard",
         _route_after_guard,
-        {"END": END, "signal_extract": "signal_extract"},
+        {"finalize": "finalize", "signal_extract": "signal_extract"},
     )
 
     g.add_edge("signal_extract",   "provenance_gate")
@@ -1181,7 +1164,7 @@ def _build_graph() -> StateGraph:
     return g.compile()
 
 
-# ── Singleton compiled graph ──────────────────────────────────────────────────
+# Singleton compiled graph 
 
 _graph: Any = None
 
@@ -1193,7 +1176,7 @@ def get_pipeline():
     return _graph
 
 
-# ── Public entry point ────────────────────────────────────────────────────────
+# Public entry point 
 
 def run_pipeline(initial_state: MonitorState) -> MonitorState:
     """

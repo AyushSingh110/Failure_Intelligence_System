@@ -4,7 +4,6 @@ from config import get_settings
 
 settings = get_settings()
 
-
 class EMAState:
     """Maintains a single streaming EMA value."""
 
@@ -34,8 +33,6 @@ class EMAState:
         if self._previous is None or self._value is None:
             return 0.0
         return round(self._value - self._previous, 4)
-
-
 class SignalEvolutionTracker:
     """
     Tracks multiple failure metrics via independent streaming EMAs.

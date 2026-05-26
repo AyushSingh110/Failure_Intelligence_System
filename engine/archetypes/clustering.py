@@ -2,7 +2,6 @@ import math
 import uuid
 from dataclasses import dataclass, field
 from typing import TypedDict
-
 from app.schemas import FailureSignalVector
 from engine.archetypes.similarity import compute_signal_similarity
 from engine.archetypes.labeling import label_failure_archetype
@@ -11,7 +10,6 @@ from config import get_settings
 settings = get_settings()
 
 ARCHETYPE_NOVEL_ANOMALY = "NOVEL_ANOMALY"
-
 _LOG_GROWTH_FACTOR = 0.03
 
 
@@ -30,8 +28,6 @@ class ClusterAssignment(TypedDict):
     status: str        # "KNOWN_FAILURE" | "NOVEL_ANOMALY" | "AMBIGUOUS"
     similarity_score: float
     archetype: str
-
-
 @dataclass
 class FailureCluster:
     cluster_id:  str = field(default_factory=lambda: str(uuid.uuid4())[:8])
@@ -60,8 +56,6 @@ class FailureCluster:
 
     def size(self) -> int:
         return len(self.members)
-
-
 class ArchetypeClusterRegistry:
     """
     Stateful registry of known failure clusters.
@@ -150,8 +144,7 @@ class ArchetypeClusterRegistry:
         ]
 
 
-# ── Stateless batch API (for one-shot analysis without a registry) ────────
-
+# Stateless batch API (for one-shot analysis without a registry) 
 def cluster_signals(
     signals: list[FailureSignalVector],
 ) -> list[FailureCluster]:

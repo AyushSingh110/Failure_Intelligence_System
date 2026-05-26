@@ -1,36 +1,16 @@
-"""
-Analytics, trend, cluster, and telemetry routes.
-
-Endpoints
----------
-GET  /trend                          — EMA degradation trend
-GET  /clusters                       — archetype cluster summary
-DELETE /clusters/reset               — reset archetype registry
-POST /telemetry                      — receive anonymized SDK pings
-GET  /analytics/usage                — request volume + failure rate (admin)
-GET  /analytics/model-performance    — XGBoost accuracy from feedback (admin)
-GET  /analytics/calibration          — calibration curves (admin)
-GET  /analytics/question-breakdown   — per-question-type stats (admin)
-GET  /analytics/paper-metrics        — all research-paper metrics in one call (admin)
-GET  /analytics/sdk-telemetry        — SDK ping analytics (admin)
-"""
 from __future__ import annotations
-
 import logging
 from collections import defaultdict
-
 from fastapi import APIRouter, Header, Query, Request
-
 from app.limiter import rate_limit
 from app.routes._helpers import get_signal_logs_collection
 from app.schemas import TrendResponse, ClusterSummaryResponse, TelemetryPing
 from app.auth_guard import require_admin
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-# ── Trend and clusters ────────────────────────────────────────────────────────
+# Trend and clusters 
 
 @router.get("/trend", response_model=TrendResponse)
 def get_trend() -> TrendResponse:
@@ -53,7 +33,7 @@ def reset_clusters() -> dict:
     return {"status": "reset", "message": "Archetype registry cleared"}
 
 
-# ── Telemetry ─────────────────────────────────────────────────────────────────
+# Telemetry 
 
 @router.post("/telemetry", response_model=dict)
 @rate_limit("30/minute")
@@ -76,7 +56,7 @@ def receive_telemetry(request: Request, body: TelemetryPing) -> dict:
     return {"status": "ok"}
 
 
-# ── Analytics (admin) ─────────────────────────────────────────────────────────
+# Analytics (admin)
 
 @router.get("/analytics/usage", response_model=dict)
 def analytics_usage(

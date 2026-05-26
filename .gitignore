@@ -120,3 +120,5 @@ nosetests.xml
 .streamlit/config.toml
 static/
 docs/
+
+tests/

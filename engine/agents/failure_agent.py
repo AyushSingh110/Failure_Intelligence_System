@@ -1,9 +1,7 @@
 #failure_agent.py
 from __future__ import annotations
-
 import logging
 from typing import Optional
-
 from app.schemas import (
     AgentVerdict,
     FailureSignalVector,

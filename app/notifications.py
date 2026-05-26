@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import logging
 import os
 import threading
@@ -18,7 +17,6 @@ def _send(subject: str, html: str, to: Optional[str] = None) -> None:
     """Fire-and-forget — never raises, never blocks the pipeline."""
     if not _ENABLED:
         return
-
     recipient = to or _NOTIFICATION_EMAIL
 
     def _post():

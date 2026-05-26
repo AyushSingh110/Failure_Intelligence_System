@@ -1,6 +1,3 @@
-"""
-app/auth_routes.py - Auth endpoints
-"""
 from __future__ import annotations
 import logging
 import os
@@ -32,7 +29,6 @@ def _google_redirect_uri() -> str:
 
 
 # Schemas
-
 class GoogleCallbackRequest(BaseModel):
     code:         str
     redirect_uri: str = "http://localhost:5173"
@@ -72,9 +68,6 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
     We exchange it for user info, then create/fetch user.
     """
     from app.auth import get_or_create_user, create_session_token
-    # Always use the redirect_uri the frontend actually sent to Google.
-    # Using a hardcoded env var here causes redirect_uri_mismatch for any
-    # environment (prod, staging) that differs from the env var value.
     client_id     = _google_client_id()
     client_secret = _google_client_secret()
     redirect_uri  = body.redirect_uri or _google_redirect_uri()

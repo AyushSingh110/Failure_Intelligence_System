@@ -1,31 +1,3 @@
-"""
-app/routes/playground.py
-
-FIE Playground — full pipeline comparison.
-
-Two parallel paths per request
---------------------------------
-Raw path  : calls the selected primary model with NO guard, NO correction.
-            This is exactly what users receive without FIE.
-
-FIE path  : runs the complete FIE architecture in order:
-              1. Pre-flight adversarial guard
-              2. Shadow model fan-out (3 Groq models in parallel)
-              3. Signal analysis  (agreement score, entropy)
-              4. DiagnosticJury   (3 specialist agents)
-              5. Correction decision based on jury verdict + signals
-
-Primary model choices
----------------------
-* Any preset Groq model (llama, deepseek, qwen, gemma)
-* Any custom OpenAI-compatible endpoint (enterprise integration)
-
-Security
---------
-* Requires valid session token or API key — 401 otherwise.
-* Custom endpoint calls are isolated; credentials never logged.
-* Results are NOT persisted to MongoDB — zero noise in analytics.
-"""
 from __future__ import annotations
 
 import logging
@@ -54,21 +26,17 @@ _HALLUCINATION_CAUSES = frozenset({
 })
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
-
+#Schemas
 class PlaygroundRequest(BaseModel):
     prompt:          str            = Field(..., min_length=1, max_length=8000)
     primary_model:   str            = Field("llama-3.1-8b-instant", max_length=128)
     custom_endpoint: Optional[str]  = Field(None, max_length=512)
     custom_api_key:  Optional[str]  = Field(None, max_length=256)
-
-
 class ShadowResult(BaseModel):
     model:      str
     answer:     str
     confidence: str
     latency_ms: float
-
 
 class PlaygroundResponse(BaseModel):
     # Pre-flight
@@ -77,13 +45,13 @@ class PlaygroundResponse(BaseModel):
     preflight_confidence:  float     = 0.0
     preflight_layers:      list[str] = []
 
-    # Raw primary model (no guard, no correction)
+    # Raw primary model 
     raw_response:   str   = ""
     raw_model:      str   = ""
     raw_latency_ms: float = 0.0
     raw_success:    bool  = False
 
-    # FIE-protected response (full pipeline result)
+    # FIE-protected response 
     fie_response:   str   = ""
     fie_status:     str   = "UNAVAILABLE"  # BLOCKED | VALIDATED | CORRECTED | UNAVAILABLE
     fie_latency_ms: float = 0.0
@@ -98,8 +66,7 @@ class PlaygroundResponse(BaseModel):
     entropy_score:   float              = 0.0
 
 
-# ── Internal helpers ──────────────────────────────────────────────────────────
-
+# Internal helpers
 def _run_preflight(prompt: str) -> tuple[bool, str, float, list[str]]:
     try:
         from fie.preflight import preflight_check
@@ -199,8 +166,7 @@ def _run_jury(prompt: str, raw: str, shadow_texts: list[str]):
         return None
 
 
-# ── Endpoint ──────────────────────────────────────────────────────────────────
-
+#Endpoint 
 @router.post("/playground", response_model=PlaygroundResponse)
 def playground(
     body:          PlaygroundRequest,
@@ -233,7 +199,7 @@ def playground(
 
     t_total = time.perf_counter()
 
-    # ── Step 1: Pre-flight ────────────────────────────────────────────────────
+    # Step 1: Pre-flight 
     blocked, attack_type, pf_conf, pf_layers = _run_preflight(body.prompt)
 
     if blocked:
@@ -267,7 +233,7 @@ def playground(
             is_adversarial        = True,
         )
 
-    # ── Step 2: Raw primary + shadow ensemble in parallel ─────────────────────
+    #  Step 2: Raw primary + shadow ensemble in parallel 
     def _get_raw():
         if is_custom:
             return _call_custom(body.custom_endpoint, body.custom_api_key, body.prompt)
@@ -305,7 +271,7 @@ def playground(
             if j.primary_verdict:
                 jury_root = j.primary_verdict.root_cause or ""
 
-    # ── Step 4: Determine FIE status and response ─────────────────────────────
+    # Step 4: Determine FIE status and response 
     fie_text = shadow_best or raw_text
 
     if not shadow_best:

@@ -1,18 +1,9 @@
-"""
-Inference tracking and analysis routes.
-
-Covers Phase 1 (track/analyze) and Phase 2 (analyze/v2, diagnose) of the FIE pipeline.
-All CRUD operations on inference records also live here.
-"""
 from __future__ import annotations
-
 import csv
 import io
 import logging
-
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
-
 from app.routes._helpers import build_failure_signal
 from app.schemas import (
     InferenceRequest,
@@ -45,8 +36,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-# ── Phase 1 ───────────────────────────────────────────────────────────────────
-
+#Phase 1 
 @router.post("/track", response_model=TrackResponse)
 def track_inference(request: InferenceRequest) -> TrackResponse:
     success = save_inference(request)
@@ -82,17 +72,20 @@ def track_and_analyze(request: InferenceRequest, body: AnalyzeRequest) -> dict:
     }
 
 
-# ── Inference record CRUD ─────────────────────────────────────────────────────
+#Phase 2 schemas 
 
 @router.get("/inferences", response_model=list[InferenceRequest])
 def list_inferences(
+    limit:         int = 100,
+    offset:        int = 0,
     authorization: str | None = Header(None),
     x_api_key:     str | None = Header(None, alias="X-API-Key"),
 ) -> list[InferenceRequest]:
     user = require_user(authorization, x_api_key)
+    limit = max(1, min(limit, 500))
     if user.get("is_admin", False):
-        return get_all_inferences_admin()
-    return get_inferences_for_tenant(user["tenant_id"])
+        return get_all_inferences_admin(limit=limit, offset=offset)
+    return get_inferences_for_tenant(user["tenant_id"], limit=limit, offset=offset)
 
 
 @router.get("/inferences/export/csv")
@@ -226,7 +219,7 @@ def clear_all_inferences(
     return {"status": "cleared", "deleted_count": count}
 
 
-# ── Phase 2 ───────────────────────────────────────────────────────────────────
+# Phase 2 
 
 @router.post("/analyze/v2", response_model=ArchetypeAnalysisResponse)
 def analyze_v2(body: AnalyzeRequest) -> ArchetypeAnalysisResponse:
