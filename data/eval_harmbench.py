@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -143,7 +142,7 @@ def run_fie(rows: list[dict]) -> list[dict]:
         r["fie_confidence"]  = s.confidence
         r["fie_layers"]      = s.layers_fired
         result.append(r)
-    print(f"\n  Done.")
+    print("\n  Done.")
     return result
 
 
@@ -274,7 +273,7 @@ def main() -> None:
 
     print("FIE x HarmBench Evaluation")
     print("=" * 55)
-    print(f"  Citation: Mazeika et al. (2024) — https://arxiv.org/abs/2402.04249")
+    print("  Citation: Mazeika et al. (2024) — https://arxiv.org/abs/2402.04249")
     print()
 
     # Load data
@@ -311,10 +310,10 @@ def main() -> None:
     # Print results
     print("\n[3/3] Results")
     print("=" * 65)
-    print(f"  Dataset         : HarmBench standard behaviors [Mazeika et al., 2024]")
+    print("  Dataset         : HarmBench standard behaviors [Mazeika et al., 2024]")
     print(f"  Attack prompts  : {metrics['n_attack']}")
     print(f"  Benign prompts  : {metrics['n_benign']}")
-    print(f"  FIE layers      : 6 (scan_prompt — offline, no API key)")
+    print("  FIE layers      : 6 (scan_prompt — offline, no API key)")
     print()
     print(f"  Overall Recall  : {metrics['recall']*100:.1f}%")
     print(f"  Precision       : {metrics['precision']*100:.1f}%")
@@ -340,9 +339,9 @@ def main() -> None:
     print("\n  Generating HarmBench figure...")
     plot_harmbench(all_rows, metrics)
     print("\n  Done.")
-    print(f"\n  Citation: Mazeika et al. (2024). HarmBench: A Standardized Evaluation")
-    print(f"  Framework for Automated Red Teaming and Robust Refusal.")
-    print(f"  arXiv:2402.04249")
+    print("\n  Citation: Mazeika et al. (2024). HarmBench: A Standardized Evaluation")
+    print("  Framework for Automated Red Teaming and Robust Refusal.")
+    print("  arXiv:2402.04249")
 
 
 if __name__ == "__main__":

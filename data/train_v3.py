@@ -19,13 +19,12 @@ import os
 import sys
 
 import joblib
-import numpy as np
 import pandas as pd
 from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.metrics import (
-    recall_score, precision_score, f1_score,
-    roc_auc_score, classification_report,
+    recall_score, f1_score,
+    roc_auc_score,
 )
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -182,7 +181,6 @@ cv_model = XGBClassifier(
     subsample=0.8, colsample_bytree=0.8,
     eval_metric="logloss", random_state=42, verbosity=0,
 )
-from sklearn.model_selection import StratifiedKFold, cross_val_score
 cv       = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 cv_auc   = cross_val_score(cv_model, X, y, cv=cv, scoring="roc_auc")
 cv_recall = cross_val_score(cv_model, X, y, cv=cv, scoring="recall")

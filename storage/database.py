@@ -70,7 +70,7 @@ def initialize_vault() -> None:
         from pymongo import MongoClient
         from pymongo.server_api import ServerApi
 
-        print(f"[database] Connecting to MongoDB Atlas...")
+        print("[database] Connecting to MongoDB Atlas...")
 
         _client = MongoClient(
             settings.mongodb_uri,

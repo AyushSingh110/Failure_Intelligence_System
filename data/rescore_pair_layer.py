@@ -50,7 +50,7 @@ def rescan(rows: list[dict]) -> list[dict]:
         r["package_confidence"]  = result.confidence
         r["package_layers"]      = result.layers_fired
         updated.append(r)
-    print(f"\n  Done.")
+    print("\n  Done.")
     return updated
 
 

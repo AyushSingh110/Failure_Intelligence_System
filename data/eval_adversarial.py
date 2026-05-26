@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -948,7 +947,7 @@ def main() -> None:
         remaining_nums = [s for s in range(1, n_seeds + 1) if not seed_result_path(args.seed_dir, s).exists()]
         print(f"\nCompleted seeds: {completed_nums}")
         print(f"Remaining seeds: {remaining_nums}")
-        print(f"Run the remaining seeds, then merge with:")
+        print("Run the remaining seeds, then merge with:")
         print(f"  python data/eval_adversarial.py --seeds {n_seeds} --chunk-size {chunk_size} --merge")
 
 
