@@ -33,6 +33,7 @@ const ARCHETYPE_COLOR = {
   HALLUCINATION_RISK:        '#ff4466',
   MODEL_BLIND_SPOT:          '#ff4466',
   OVERCONFIDENT_FAILURE:     '#ff4466',
+  ADVERSARIAL_PROMPT:        '#ff4466',
   UNSTABLE_OUTPUT:           '#ffaa00',
   LOW_CONFIDENCE:            '#ffaa00',
   TEMPORAL_KNOWLEDGE_CUTOFF: '#ffaa00',

@@ -1,23 +1,8 @@
-"""
-Real-time monitoring routes — the core of the production pipeline.
-
-Endpoints
----------
-POST /monitor              — fan-out to shadow models, run full FIE pipeline, return analysis
-GET  /monitor/status       — shadow model availability
-GET  /monitor/model-info   — classifier version, thresholds, AUC
-GET  /monitor/calibration  — per-bucket accuracy from user feedback (admin)
-GET  /monitor/signal-logs  — recent raw signal logs (admin)
-POST /feedback/{id}        — ground-truth feedback loop (Step 8)
-"""
 from __future__ import annotations
-
 import logging
 import uuid
 from datetime import datetime
-
 from fastapi import APIRouter, Header, HTTPException, Request
-
 from app.limiter import rate_limit
 from app.routes._helpers import build_failure_signal, get_signal_logs_collection
 from engine.agents.failure_agent import failure_agent
@@ -30,14 +15,12 @@ from app.schemas import (
 )
 from app.auth_guard import require_user, require_admin, resolve_user
 from config import get_settings
-
 logger   = logging.getLogger(__name__)
 settings = get_settings()
 router   = APIRouter()
 
 
-# ── POST /monitor ─────────────────────────────────────────────────────────────
-
+#POST /monitor
 @router.post("/monitor", response_model=MonitorResponse)
 @rate_limit("60/minute")
 def monitor(
@@ -46,21 +29,7 @@ def monitor(
     authorization: str | None = Header(None),
     x_api_key:     str | None = Header(None, alias="X-API-Key"),
 ) -> MonitorResponse:
-    """
-    Real-time monitoring endpoint — the core of the production system.
-
-    Flow:
-      1. Enforce per-tenant usage limits
-      2. Auto-inject session context for multi-turn conversations
-      3. Fan out prompt to all shadow models in parallel (Groq / Ollama)
-      4. Build FailureSignalVector from all model outputs
-      5. Run DiagnosticJury (if run_full_jury=True)
-      6. Run multi-turn escalation and model-extraction detectors
-      7. Run Ground Truth pipeline + auto-fix engine
-      8. Run XGBoost classifier override
-      9. Persist signal log + inference record
-     10. Fire email notifications (fire-and-forget)
-    """
+    
     from app.schemas import DiagnosticRequest, InferenceRequest, MathematicalMetrics
     from engine.explainability.explanation_builder import attach_explanations_to_monitor
     from engine.detector.embedding import compute_embedding_distance
@@ -68,9 +37,7 @@ def monitor(
     from engine.archetypes.clustering import archetype_registry
     from engine.evolution.tracker import evolution_tracker
 
-    # ── Pre-flight guard (runs before everything else) ─────────────────────
-    # If the prompt is adversarial and block mode is active, skip shadow models,
-    # skip the fix pipeline, skip billing — return a safe refusal immediately.
+    # Pre-flight guard
     if body.prompt:
         try:
             from fie.preflight import preflight_check
@@ -81,6 +48,33 @@ def monitor(
                     _guard.attack_type, _guard.confidence,
                     ",".join(_guard.layers_fired),
                 )
+                # Persist so the dashboard can count and display blocked attacks
+                try:
+                    from app.schemas import InferenceRequest, MathematicalMetrics
+                    from storage.database import save_inference
+                    _blocked_record = InferenceRequest(
+                        request_id      = str(uuid.uuid4())[:12],
+                        tenant_id       = (resolve_user(authorization, x_api_key) or {}).get("tenant_id", "anonymous"),
+                        timestamp       = datetime.utcnow(),
+                        model_name      = body.primary_model_name or "blocked",
+                        model_version   = "preflight-v1",
+                        temperature     = 0.0,
+                        latency_ms      = 0.0,
+                        input_text      = body.prompt or "",
+                        output_text     = "",
+                        is_adversarial  = True,
+                        guard_attack_type = _guard.attack_type,
+                        guard_confidence  = _guard.confidence,
+                        archetype         = "ADVERSARIAL_PROMPT",
+                        metrics         = MathematicalMetrics(
+                            entropy         = 1.0,
+                            agreement_score = 0.0,
+                        ),
+                    )
+                    save_inference(_blocked_record)
+                except Exception as _save_exc:
+                    logger.debug("Failed to persist blocked attack record: %s", _save_exc)
+
                 from app.schemas import FailureSignalVector
                 return MonitorResponse(
                     shadow_model_results   = [],
@@ -113,7 +107,7 @@ def monitor(
             # Guard failure must never take the endpoint down — log and continue
             logger.warning("preflight_check failed (allowing request through): %s", _pf_exc)
 
-    # ── Step 0: Usage enforcement ──────────────────────────────────────────
+    # Step 0: Usage enforcement 
     current_user = resolve_user(authorization, x_api_key)
     if current_user:
         try:
@@ -133,7 +127,7 @@ def monitor(
         except Exception as exc:
             logger.warning("Failed to update usage counters: %s", exc)
 
-    # ── Step 1: Session context threading ─────────────────────────────────
+    # Step 1: Session context threading 
     if body.session_id and not body.context:
         try:
             from engine.session_store import get_context
@@ -147,7 +141,7 @@ def monitor(
         except Exception as _sess_exc:
             logger.debug("SessionStore fetch failed (non-fatal): %s", _sess_exc)
 
-    # ── Step 2: Shadow model fan-out ───────────────────────────────────────
+    # Step 2: Shadow model fan-out
     ollama_available   = False
     shadow_results_raw = []
 
@@ -177,7 +171,7 @@ def monitor(
             "No shadow model provider configured. Add GROQ_API_KEY=gsk_xxx to .env"
         )
 
-    # ── Step 3: Build model_outputs list ──────────────────────────────────
+    # Step 3: Build model_outputs list
     model_outputs: list[str] = [body.primary_output]
     shadow_weights: list[float] = []
     for r in shadow_results_raw:
@@ -196,7 +190,7 @@ def monitor(
         for r in shadow_results_raw
     ]
 
-    # ── Step 4: Signal analysis ────────────────────────────────────────────
+    # Step 4: Signal analysis 
     signal    = build_failure_signal(model_outputs)
     primary   = model_outputs[0]
     secondary = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
@@ -241,7 +235,7 @@ def monitor(
     except Exception as _spike_exc:
         logger.debug("Spike notification failed (non-fatal): %s", _spike_exc)
 
-    # ── Step 4b: Reasoning verification (REASONING questions only) ───────────
+    # Step 4b: Reasoning verification 
     reasoning_verification_schema = None
     if _question_type == "REASONING":
         try:
@@ -288,7 +282,7 @@ def monitor(
         except Exception as _rv_exc:
             logger.warning("reasoning_verification failed (non-fatal): %s", _rv_exc)
 
-    # ── Step 5: DiagnosticJury ─────────────────────────────────────────────
+    # Step 5: DiagnosticJury 
     jury_verdict = None
     if body.run_full_jury:
         diag_request = DiagnosticRequest(
@@ -316,7 +310,7 @@ def monitor(
         except Exception as _faiss_exc:
             logger.debug("FAISS auto-growth failed (non-fatal): %s", _faiss_exc)
 
-    # ── Step 5b: Multi-turn escalation ────────────────────────────────────
+    # Step 5b: Multi-turn escalation 
     multi_turn_result = None
     if body.conversation_id:
         try:
@@ -345,7 +339,7 @@ def monitor(
         except Exception as exc:
             logger.warning("multi_turn_tracker failed (non-fatal): %s", exc)
 
-    # ── Step 5c: Model extraction detection ───────────────────────────────
+    # Step 5c: Model extraction detection
     extraction_result = None
     try:
         from engine.model_extraction_tracker import check_model_extraction
@@ -369,7 +363,7 @@ def monitor(
     except Exception as exc:
         logger.debug("model_extraction_tracker failed (non-fatal): %s", exc)
 
-    # ── Step 6: Failure summary ────────────────────────────────────────────
+    # Step 6: Failure summary 
     if jury_verdict and jury_verdict.failure_summary:
         failure_summary = jury_verdict.failure_summary
     elif signal.high_failure_risk:
@@ -381,7 +375,7 @@ def monitor(
     else:
         failure_summary = f"Model outputs are stable — archetype: {archetype}"
 
-    # ── Step 7: Ground Truth pipeline + auto-fix ──────────────────────────
+    # Step 7: Ground Truth pipeline + auto-fix 
     fix_result_schema     = None
     gt_result_schema      = None
     gt_pipeline_result    = None   # raw dataclass — carries provenance_label/category
@@ -555,7 +549,7 @@ def monitor(
             else:
                 logger.error("Fix engine failed: %s", exc, exc_info=True)
 
-    # ── Step 8: XGBoost classifier (post-GT) ──────────────────────────────
+    # Step 8: XGBoost classifier
     _xgb_prob   = None
     _config_ver = "default"
     try:
@@ -580,7 +574,6 @@ def monitor(
         )
 
         # Provenance at this point — GT pipeline result takes priority,
-        # otherwise derive from question classifier.
         from engine.question_classifier import classify_provenance_category as _cprov
         _prov_cat_xgb = (
             gt_pipeline_result.provenance_category
@@ -631,10 +624,7 @@ def monitor(
     except Exception as _clf_exc:
         logger.warning("XGBoost classifier unavailable, keeping POET decision: %s", _clf_exc)
 
-    # ── Provenance enrichment — copy GT pipeline labels onto FSV ──────────
-    # gt_pipeline_result is the raw dataclass with provenance_label/category.
-    # When the GT pipeline didn't run (adversarial block, etc.) we derive
-    # provenance from question_type so the field is always populated.
+    # Provenance enrichment — copy GT pipeline labels onto FSV 
     try:
         from engine.question_classifier import classify_provenance_category
         _prov_cat = classify_provenance_category(_question_type, body.prompt)
@@ -653,7 +643,7 @@ def monitor(
     except Exception as _prov_exc:
         logger.debug("Provenance enrichment failed (non-fatal): %s", _prov_exc)
 
-    # ── Step 9a: Build and annotate response ──────────────────────────────
+    # Step 9a: Build and annotate response 
     from engine.fie_config import MODEL_VERSION as _MODEL_VER
     response = MonitorResponse(
         shadow_model_results   = shadow_model_results,
@@ -681,7 +671,7 @@ def monitor(
     if not (current_user and current_user.get("is_admin", False)):
         response.explanation_internal = None
 
-    # ── Step 9b: Signal logging ────────────────────────────────────────────
+    # Step 9b: Signal logging 
     _signal_log_id = ""
     try:
         from storage.signal_logger import log_signal
@@ -750,7 +740,7 @@ def monitor(
     except Exception as _log_exc:
         logger.debug("Signal logging failed (non-fatal): %s", _log_exc)
 
-    # ── Step 9c: Persist inference record ─────────────────────────────────
+    # Step 9c: Persist inference record 
     try:
         stored_request_id = str(uuid.uuid4())[:12]
 
@@ -827,7 +817,7 @@ def monitor(
     except Exception as exc:
         logger.warning("Failed to save inference record: %s", exc)
 
-    # ── Step 10: Update session store ─────────────────────────────────────
+    # Step 10: Update session store 
     if body.session_id:
         try:
             from engine.session_store import store_turn
@@ -839,8 +829,7 @@ def monitor(
     return response
 
 
-# ── GET /monitor/status ───────────────────────────────────────────────────────
-
+# GET /monitor/status 
 @router.get("/monitor/status", response_model=dict)
 def monitor_status() -> dict:
     """Current Ollama service status and model availability."""
@@ -857,8 +846,7 @@ def monitor_status() -> dict:
     }
 
 
-# ── GET /monitor/model-info ───────────────────────────────────────────────────
-
+# GET /monitor/model-info 
 @router.get("/monitor/model-info", response_model=dict)
 def model_info() -> dict:
     """Classifier version, thresholds, AUC, config version. No auth required."""
@@ -892,7 +880,7 @@ def model_info() -> dict:
     }
 
 
-# ── GET /monitor/calibration ──────────────────────────────────────────────────
+# GET /monitor/calibration 
 
 @router.get("/monitor/calibration", response_model=dict)
 def get_calibration_stats(
@@ -905,7 +893,7 @@ def get_calibration_stats(
     return get_calibration_stats()
 
 
-# ── GET /monitor/signal-logs ──────────────────────────────────────────────────
+# GET /monitor/signal-logs 
 
 @router.get("/monitor/signal-logs", response_model=list)
 def get_signal_logs(
@@ -919,8 +907,7 @@ def get_signal_logs(
     return get_recent_logs(limit=min(limit, 500))
 
 
-# ── POST /feedback/{request_id} ───────────────────────────────────────────────
-
+# POST /feedback/{request_id} 
 @router.post("/feedback/{request_id}", response_model=FeedbackResponse)
 def submit_feedback(
     request_id:    str,
@@ -928,16 +915,7 @@ def submit_feedback(
     authorization: str | None = Header(None),
     x_api_key:     str | None = Header(None, alias="X-API-Key"),
 ) -> FeedbackResponse:
-    """
-    Step 8 — Ground Truth Feedback Loop.
-
-    When is_correct=False and correct_answer is provided:
-      1. Saves the correct answer to the GT cache (permanent, affects all future requests).
-      2. Stores a feedback record for analytics and threshold recalibration.
-      3. Adds to the XGBoost retraining buffer.
-
-    Every correction permanently improves the system.
-    """
+    #Ground Truth Feedback Loop.
     from storage.database import save_feedback, get_inference_by_id_for_tenant
     from engine.ground_truth_cache import save_to_cache
 
@@ -1032,5 +1010,5 @@ def submit_feedback(
     )
 
 
-# ── local import needed by submit_feedback ────────────────────────────────────
+# local import needed by submit_feedback 
 from storage.database import get_inference_by_id  # noqa: E402

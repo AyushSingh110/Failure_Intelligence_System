@@ -1,12 +1,9 @@
 from __future__ import annotations
-
 import json
 import logging
-
 from app.schemas import ExplanationBundle, HumanExplanation
 
 logger = logging.getLogger(__name__)
-
 
 _SEVERITY_MAP = {
     "PROMPT_INJECTION": "high",
@@ -19,7 +16,6 @@ _SEVERITY_MAP = {
     "PROMPT_COMPLEXITY_OOD": "medium",
     "STABLE": "low",
 }
-
 
 def build_human_explanation(bundle: ExplanationBundle) -> HumanExplanation:
     """

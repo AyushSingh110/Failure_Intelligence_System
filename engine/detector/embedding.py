@@ -1,13 +1,10 @@
 from __future__ import annotations
-
 import logging
 import math
 import re
 from collections import Counter
 from typing import TypedDict
-
 import numpy as np
-
 from config import get_settings
 from engine.encoder import get_encoder
 
@@ -15,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 # Public return type
-
 class EmbeddingResult(TypedDict):
     embedding_distance:  float
     semantic_similarity: float
@@ -64,8 +60,6 @@ def _transformer_similarity(text_a: str, text_b: str) -> float | None:
 
 
 # Character n-gram cosine similarity (fallback)
-
-
 def _build_ngram_vector(text: str, n: int | None = None) -> dict[str, float]:
     cfg = get_settings()
     n   = n or cfg.embedding_ngram_size
@@ -76,7 +70,6 @@ def _build_ngram_vector(text: str, n: int | None = None) -> dict[str, float]:
     counts = Counter(ngrams)
     total  = sum(counts.values())
     return {gram: count / total for gram, count in counts.items()}
-
 
 def _ngram_cosine(vec_a: dict[str, float], vec_b: dict[str, float]) -> float:
     if not vec_a or not vec_b:
@@ -89,7 +82,6 @@ def _ngram_cosine(vec_a: dict[str, float], vec_b: dict[str, float]) -> float:
         return 0.0
     return dot / (mag_a * mag_b)
 
-
 def _ngram_similarity(text_a: str, text_b: str) -> float:
     vec_a = _build_ngram_vector(text_a)
     vec_b = _build_ngram_vector(text_b)
@@ -98,7 +90,6 @@ def _ngram_similarity(text_a: str, text_b: str) -> float:
 
 
 # Public API — identical signature and return type
-
 def compute_embedding_distance(text_a: str, text_b: str) -> EmbeddingResult:
     """
     Computes semantic similarity and distance between two text outputs.

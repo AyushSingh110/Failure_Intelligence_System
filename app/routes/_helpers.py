@@ -1,13 +1,5 @@
-"""
-Shared helpers used across multiple route modules.
-
-Keep this file thin — only utilities that are genuinely shared.
-Business logic belongs in the engine layer, not here.
-"""
 from __future__ import annotations
-
 import logging
-
 from engine.detector.consistency import compute_consistency, is_primary_outlier
 from engine.detector.entropy import compute_entropy_from_counts
 from engine.detector.ensemble import compute_disagreement
@@ -17,18 +9,8 @@ from config import get_settings
 logger   = logging.getLogger(__name__)
 settings = get_settings()
 
-
 def build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
-    """
-    Construct a FailureSignalVector from all model outputs.
-
-    model_outputs[0]  = primary
-    model_outputs[1+] = shadow models
-
-    High-failure risk requires that the PRIMARY is the disagreeing party
-    (not just any shadow model).  This eliminates false positives from
-    noisy shadow outputs on stable primary answers.
-    """
+    #Construct a FailureSignalVector from all model outputs.
     primary_output   = model_outputs[0]
     secondary_output = model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
 

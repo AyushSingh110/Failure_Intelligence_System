@@ -1,10 +1,4 @@
-"""
-app/auth.py
-Complete authentication system
-"""
-
 from __future__ import annotations
-
 import logging
 import os
 import secrets
@@ -16,7 +10,7 @@ import jwt
 
 logger = logging.getLogger(__name__)
 
-# ── Config ─────────────────────────────────────────────────────────────────
+#Config 
 _jwt_secret_raw = os.getenv("JWT_SECRET_KEY", "")
 if not _jwt_secret_raw or len(_jwt_secret_raw) < 32:
     import warnings
@@ -32,35 +26,21 @@ JWT_EXPIRE_H  = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 ADMIN_EMAIL   = os.getenv("ADMIN_EMAIL", "")
 
 
-# ── Helpers ─────────────────────────────────────────────────────────────────
-
+# Helpers 
 def _generate_api_key() -> str:
-    """
-    Generates unique API key for each user.
-    Format: fie-xxxxxxxxxxxxxxxx
-    Example: fie-k8m2x9p1q4r7t3n6
-    Cryptographically secure — uses secrets module.
-    """
     chars = string.ascii_lowercase + string.digits
     rand  = ''.join(secrets.choice(chars) for _ in range(16))
     return f"fie-{rand}"
 
 
 def _generate_tenant_id(email: str) -> str:
-    """
-    Generates unique tenant ID from email.
-    Used to isolate each user's data in MongoDB.
-    Format: emailpart-random6chars
-    Example: ayush-k8m2x9
-    """
     email_part = email.split("@")[0].lower()
     email_part = ''.join(c for c in email_part if c.isalnum())[:10]
     rand = secrets.token_hex(3)
     return f"{email_part}-{rand}"
 
 
-# ── MongoDB Operations ──────────────────────────────────────────────────────
-
+# MongoDB Operations 
 def _get_users_collection():
     """Returns MongoDB users collection."""
     try:
@@ -81,14 +61,6 @@ def get_or_create_user(
     name:    str,
     picture: str = "",
 ) -> dict:
-    """
-    Gets existing user OR creates new one on first Google login.
-
-    Called every time user logs in with Google:
-      First time  → creates account + generates API key
-      Every time  → updates last_login timestamp
-      Returns     → full user dict from MongoDB
-    """
     collection = _get_users_collection()
     if collection is None:
         raise Exception("Database unavailable — check MONGODB_URI in .env")
@@ -134,10 +106,24 @@ def get_user_by_api_key(api_key: str) -> Optional[dict]:
     """
     Finds user by API key.
     Called on every /monitor request to identify tenant.
-    Returns None if key is invalid.
+    Falls back to env-based local key when MongoDB is unavailable.
     """
     if not api_key:
         return None
+
+    # Local fallback: match against FIE_API_KEY in env (works when MongoDB is down)
+    _env_key = os.getenv("FIE_API_KEY", "")
+    if _env_key and api_key == _env_key:
+        _admin = os.getenv("ADMIN_EMAIL", "local@fie.dev")
+        return {
+            "tenant_id":   _admin,
+            "email":       _admin,
+            "api_key":     api_key,
+            "is_admin":    True,
+            "calls_limit": 100_000,
+            "calls_used":  0,
+        }
+
     collection = _get_users_collection()
     if collection is None:
         return None
@@ -192,11 +178,6 @@ def increment_usage(tenant_id: str) -> bool:
 
 
 def regenerate_api_key(email: str) -> str:
-    """
-    Generates new API key for user.
-    Old key immediately becomes invalid.
-    Returns new API key.
-    """
     new_key    = _generate_api_key()
     collection = _get_users_collection()
     if collection:
@@ -208,18 +189,8 @@ def regenerate_api_key(email: str) -> str:
     return new_key
 
 
-# ── JWT Session Tokens ──────────────────────────────────────────────────────
-
+# JWT Session Tokens 
 def create_session_token(user: dict) -> str:
-    """
-    Creates JWT token for logged-in user.
-    Stored in Streamlit session_state.
-    Expires after JWT_EXPIRE_HOURS (default 24h).
-
-    Token payload contains everything needed
-    to identify the user without hitting MongoDB:
-      email, name, tenant_id, api_key, is_admin, plan
-    """
     expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_H)
     payload = {
         "email":     user["email"],
@@ -235,10 +206,6 @@ def create_session_token(user: dict) -> str:
 
 
 def verify_session_token(token: str) -> Optional[dict]:
-    """
-    Verifies JWT token — returns payload or None.
-    None means: invalid token or expired → show login page.
-    """
     try:
         return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:

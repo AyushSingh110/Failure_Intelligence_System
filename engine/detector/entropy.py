@@ -1,13 +1,10 @@
 from __future__ import annotations
-
 import math
 import logging
 from collections import Counter
-
 logger = logging.getLogger(__name__)
 
 SHORT_ANSWER_THRESHOLD: int = 40
-
 
 def _entropy_from_counts(counts: dict, total: int) -> float:
     """Shannon entropy normalised to [0, 1] from a count dict."""
@@ -20,7 +17,6 @@ def _entropy_from_counts(counts: dict, total: int) -> float:
             raw -= p * math.log2(p)
     max_entropy = math.log2(total)
     return round(raw / max_entropy if max_entropy > 0 else 0.0, 4)
-
 
 def compute_entropy_from_counts(answer_counts: dict[str, int], total: int) -> float:
     """

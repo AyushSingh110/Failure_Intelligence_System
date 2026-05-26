@@ -17,7 +17,6 @@ _STOP_WORDS: frozenset[str] = frozenset({
     "correct", "final", "result", "output", "response",
 })
 
-
 class EnsembleResult(TypedDict):
     disagreement:     bool
     similarity_score: float   # mean pairwise similarity across all model pairs
@@ -96,7 +95,6 @@ def _pair_similarity(text_a: str, text_b: str) -> float:
     return _cosine_similarity(tf_a, tf_b)
 
 # Primary API — all model outputs
-
 def compute_disagreement(
     model_outputs: list[str] | str,
     disagreement_threshold: float | str | None = None,
@@ -174,7 +172,6 @@ def compute_disagreement(
     )
 
 # Legacy API — kept for backward compatibility
-
 def compute_disagreement_pair(
     primary_output:         str,
     secondary_output:       str,

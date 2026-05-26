@@ -38,6 +38,8 @@ FRAMING_DAMPEN_FACTOR: float = float(os.environ.get("FRAMING_DAMPEN_FACTOR", "0.
 # because a real attack technique was detected regardless of framing.
 _TECHNIQUE_LAYERS: frozenset[str] = frozenset({
     "regex", "prompt_guard", "many_shot", "indirect_injection",
+    # These layers already account for framing — dampening would hide real attacks
+    "direct_harm", "fiction_harm", "virtualization",
 })
 
 # ── Safe framing signals ──────────────────────────────────────────────────────

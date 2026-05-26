@@ -1,8 +1,5 @@
 from __future__ import annotations
-
 from typing import Iterable
-
-
 _SENSITIVE_TOKENS = (
     "regex",
     "pattern",

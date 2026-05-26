@@ -2,7 +2,6 @@ import math
 from typing import TypedDict
 from app.schemas import FailureSignalVector
 
-
 # Feature weights — must mirror _extract_features() order exactly.
 # Keys document which feature each weight applies to.
 _FEATURE_WEIGHTS: dict[str, float] = {

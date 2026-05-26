@@ -1,7 +1,5 @@
 from __future__ import annotations
-
 from typing import Optional
-
 from app.schemas import (
     DiagnosticResponse,
     ExplanationAttribution,
@@ -16,8 +14,6 @@ from app.schemas import (
 )
 from engine.explainability.humanizer import build_human_explanation
 from engine.explainability.redaction import filter_safe_evidence, sanitize_text_for_external
-
-
 def _safe_round(value: Optional[float]) -> float:
     if value is None:
         return 0.0

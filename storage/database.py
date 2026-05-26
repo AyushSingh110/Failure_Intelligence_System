@@ -147,25 +147,27 @@ def save_inference(data: InferenceRequest) -> bool:
         return False
 
 
-def get_all_inferences() -> list[InferenceRequest]:
+def get_all_inferences(limit: int = 200, offset: int = 0) -> list[InferenceRequest]:
     """
-    Returns all stored inference records sorted by timestamp descending.
+    Returns stored inference records sorted by timestamp descending.
     """
     try:
         if _fallback_mode:
-            return sorted(
+            all_recs = sorted(
                 _fallback_records.values(),
                 key=lambda record: record.timestamp,
                 reverse=True,
             )
+            return all_recs[offset: offset + limit]
         col  = _get_collection()
         if col is None:
-            return sorted(
+            all_recs = sorted(
                 _fallback_records.values(),
                 key=lambda record: record.timestamp,
                 reverse=True,
             )
-        docs = col.find({}, sort=[("timestamp", -1)])
+            return all_recs[offset: offset + limit]
+        docs = col.find({}, sort=[("timestamp", -1)]).skip(offset).limit(limit)
         records = []
         for doc in docs:
             record = _from_doc(doc)
@@ -177,23 +179,25 @@ def get_all_inferences() -> list[InferenceRequest]:
         return []
 
 
-def get_inferences_for_tenant(tenant_id: str) -> list[InferenceRequest]:
-    """Returns only the inference records belonging to a single tenant."""
+def get_inferences_for_tenant(tenant_id: str, limit: int = 200, offset: int = 0) -> list[InferenceRequest]:
+    """Returns inference records for a single tenant, newest first."""
     try:
         if _fallback_mode:
-            return sorted(
-                (record for record in _fallback_records.values() if record.tenant_id == tenant_id),
+            all_recs = sorted(
+                (r for r in _fallback_records.values() if r.tenant_id == tenant_id),
                 key=lambda record: record.timestamp,
                 reverse=True,
             )
+            return all_recs[offset: offset + limit]
         col = _get_collection()
         if col is None:
-            return sorted(
-                (record for record in _fallback_records.values() if record.tenant_id == tenant_id),
+            all_recs = sorted(
+                (r for r in _fallback_records.values() if r.tenant_id == tenant_id),
                 key=lambda record: record.timestamp,
                 reverse=True,
             )
-        docs = col.find({"tenant_id": tenant_id}, sort=[("timestamp", -1)])
+            return all_recs[offset: offset + limit]
+        docs = col.find({"tenant_id": tenant_id}, sort=[("timestamp", -1)]).skip(offset).limit(limit)
         records = []
         for doc in docs:
             record = _from_doc(doc)

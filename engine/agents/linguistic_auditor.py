@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import math
 import re
 from typing import NamedTuple
@@ -9,7 +8,6 @@ from config import get_settings
 from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext
 
 settings = get_settings()
-
 
 # Complexity dimension detectors
 class _Dimension(NamedTuple):
