@@ -8,6 +8,9 @@ FIE wraps around any LLM with a single decorator. It watches every prompt going 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Deployed](https://img.shields.io/badge/Live-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
+[![Downloads](https://img.shields.io/pypi/dm/fie-sdk?label=PyPI%20downloads&color=brightgreen)](https://pypi.org/project/fie-sdk)
+
+> **867 developers installed FIE this month.** If you're one of them — even if you just tried it once — I'd genuinely love to hear what you thought. [Open a 2-minute discussion →](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions) or [email directly](mailto:ayushsingh355vns@gmail.com). Building this solo and every piece of feedback shapes what gets built next.
 
 ---
 
