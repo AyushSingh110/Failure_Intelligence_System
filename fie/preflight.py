@@ -80,14 +80,18 @@ def _get_block_enabled() -> bool:
         return _ENV_BLOCK_ENABLED
 
 
-def _safe_scan(prompt: str, session_id: str | None = None) -> tuple[bool, str, float, list[str]]:
+def _safe_scan(
+    prompt: str,
+    session_id: str | None = None,
+    domain: str | None = None,
+) -> tuple[bool, str, float, list[str]]:
     """
     Run scan_prompt() and return (is_attack, attack_type, confidence, layers_fired).
     Never raises — returns (False, "", 0.0, []) on any failure.
     """
     try:
         from fie.adversarial import scan_prompt
-        result = scan_prompt(prompt, session_id=session_id)
+        result = scan_prompt(prompt, session_id=session_id, domain=domain)
         return result.is_attack, result.attack_type, result.confidence, result.layers_fired
     except Exception as exc:
         logger.debug("preflight scan failed (allowing request through): %s", exc)
@@ -96,7 +100,11 @@ def _safe_scan(prompt: str, session_id: str | None = None) -> tuple[bool, str, f
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def preflight_check(prompt: str, session_id: str | None = None) -> GuardResult:
+def preflight_check(
+    prompt: str,
+    session_id: str | None = None,
+    domain: str | None = None,
+) -> GuardResult:
     """Scan prompt before the LLM call. Returns GuardResult with blocked=True if an attack is detected."""
     if not prompt or not prompt.strip():
         return GuardResult(
@@ -104,7 +112,9 @@ def preflight_check(prompt: str, session_id: str | None = None) -> GuardResult:
             layers_fired=[], refusal_message="",
         )
 
-    is_attack, attack_type, confidence, layers_fired = _safe_scan(prompt, session_id=session_id)
+    is_attack, attack_type, confidence, layers_fired = _safe_scan(
+        prompt, session_id=session_id, domain=domain,
+    )
 
     if not is_attack:
         return GuardResult(

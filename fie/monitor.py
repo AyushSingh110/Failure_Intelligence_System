@@ -55,6 +55,7 @@ def monitor(
     run_full_jury: bool          = True,
     mode:          str           = "monitor",
     log_results:   bool          = True,
+    domain:        Optional[str] = None,
 
     async_mode:    Optional[bool] = None,
 ):
@@ -79,7 +80,7 @@ def monitor(
 
                 guard = None
                 if prompt_str:
-                    guard = preflight_check(prompt_str)
+                    guard = preflight_check(prompt_str, domain=domain)
                     if guard.blocked:
                         if log_results:
                             logger.warning(
@@ -105,6 +106,16 @@ def monitor(
 
                 result         = func(*args, **kwargs)
                 primary_output = result if isinstance(result, str) else str(result)
+
+                # Output-side scan — runs in background, zero latency impact
+                if prompt_str and primary_output:
+                    from fie.output_scanner import scan_output_async
+                    scan_output_async(
+                        prompt     = prompt_str,
+                        response   = primary_output,
+                        model_name = _model_name,
+                    )
+
                 prediction     = predict_local(prompt_str, primary_output)
 
                 if log_results:
@@ -142,7 +153,7 @@ def monitor(
                 prompt_str = str(prompt) if prompt else ""
 
                 if prompt_str:
-                    guard = preflight_check(prompt_str)
+                    guard = preflight_check(prompt_str, domain=domain)
                     if guard.blocked:
                         if log_results:
                             logger.warning(
@@ -165,6 +176,15 @@ def monitor(
                 primary_output = result if isinstance(result, str) else str(result)
 
                 def _background_check():
+                    # Output-side adversarial scan — parallel to server check, zero cost
+                    if prompt_str and primary_output:
+                        from fie.output_scanner import scan_output_async
+                        scan_output_async(
+                            prompt     = prompt_str,
+                            response   = primary_output,
+                            model_name = _model_name,
+                        )
+
                     fie_result = client.monitor(
                         prompt             = prompt_str,
                         primary_output     = primary_output,
@@ -200,7 +220,7 @@ def monitor(
                 prompt_str = str(prompt) if prompt else ""
 
                 if prompt_str:
-                    guard = preflight_check(prompt_str)
+                    guard = preflight_check(prompt_str, domain=domain)
                     if guard.blocked:
                         if log_results:
                             logger.warning(
@@ -239,6 +259,15 @@ def monitor(
                     except concurrent.futures.TimeoutError:
                         logger.warning("[FIE] Correction timed out — returning original")
                         fie_result = {}
+
+                # Output-side scan — fire in background while correction logic runs
+                if prompt_str and primary_output:
+                    from fie.output_scanner import scan_output_async
+                    scan_output_async(
+                        prompt     = prompt_str,
+                        response   = primary_output,
+                        model_name = _model_name,
+                    )
 
                 if fie_result:
                     _log_result(fie_result, _model_name, latency_ms, log_results)

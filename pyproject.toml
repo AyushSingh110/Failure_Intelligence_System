@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "1.8.0"
-description     = "Adversarial prompt detection + LLM hallucination monitoring. 11-layer parallel detection engine: regex, prompt_guard, pair_classifier, GCG suffix, many-shot, indirect injection, direct harm, token smuggling, virtualization/scenario-stacking, fiction-wrapped jailbreaks, and multilingual injection (8 languages). Three-zone confidence routing, crescendo multi-turn tracking, LlamaGuard via Groq. Works fully offline or with a server."
+version         = "1.9.0"
+description     = "Adversarial prompt detection + LLM hallucination monitoring. 11-layer parallel detection engine with domain-aware thresholds and output-side adversarial scanning. Three-zone confidence routing, crescendo multi-turn tracking, fail-secure UNCERTAIN zone, and Llama Prompt Guard 2 via Groq. Works fully offline or with a server."
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
 license         = { text = "Apache-2.0" }
