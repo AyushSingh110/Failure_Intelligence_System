@@ -52,6 +52,7 @@ class MonitorState(TypedDict, total=False):
     question_type:            str
     archetype:                str
     embedding_distance:       float
+    ensemble_blind:           bool   # True when only one model output exists — ensemble disagreement is meaningless
 
     # Provenance gate
     provenance_category:      str   # GENERAL_KNOWLEDGE , LIVE_WORLD_STATE , USER_SPECIFIC_STATE , MIXED_SYNTHESIS
@@ -266,16 +267,24 @@ def signal_extract(state: MonitorState) -> dict:
     primary       = model_outputs[0]
     secondary     = model_outputs[1] if len(model_outputs) > 1 else primary
 
+    # When only one model output exists (no shadow models configured), ensemble
+    # disagreement is meaningless — compute_disagreement returns similarity=1.0 by
+    # design. Flag this in the signal so downstream nodes know ensemble is blind.
+    _ensemble_blind = len(model_outputs) < 2
+
     consistency   = compute_consistency(model_outputs)
     entropy_score = compute_entropy_from_counts(consistency["answer_counts"], len(model_outputs))
     ensemble      = compute_disagreement(model_outputs)
     embedding     = compute_embedding_distance(primary, secondary)
 
     primary_outlier   = is_primary_outlier(primary, model_outputs[1:])
+    # Ensemble disagreement is only meaningful when shadow models responded.
+    # When blind, skip it from high_failure_risk to avoid false negatives masking
+    # as false positives (single output always returns similarity=1.0).
     high_failure_risk = (
         primary_outlier
         or entropy_score >= settings.high_entropy_threshold
-        or (ensemble["disagreement"] and primary_outlier)
+        or (not _ensemble_blind and ensemble["disagreement"] and primary_outlier)
     )
 
     question_type  = classify_question(state["prompt"])
@@ -332,11 +341,12 @@ def signal_extract(state: MonitorState) -> dict:
     logger.info(trace_msg)
 
     return {
-        "failure_signal":    signal,
-        "question_type":     question_type,
-        "archetype":         archetype,
+        "failure_signal":     signal,
+        "question_type":      question_type,
+        "archetype":          archetype,
         "embedding_distance": embedding["embedding_distance"],
-        "pipeline_trace":    _trace(state, trace_msg),
+        "ensemble_blind":     _ensemble_blind,
+        "pipeline_trace":     _trace(state, trace_msg),
     }
 
 
@@ -403,7 +413,11 @@ def provenance_gate(state: MonitorState) -> dict:
 
 def reasoning_verify(state: MonitorState) -> dict:
     """
-    Step-level reasoning failure detection.  Runs ONLY when question_type=REASONING.
+    Step-level reasoning failure detection. Runs for REASONING and FACTUAL types.
+
+    FACTUAL is included because most real-world hallucinations are factual errors
+    in responses that look like factual answers — skipping FACTUAL means the
+    reasoning verifier never sees the majority of production hallucinations.
 
     Runs AFTER provenance_gate so question_type is already classified.
     Runs BEFORE jury_deliberate so the jury can incorporate step-level evidence.
@@ -417,7 +431,7 @@ def reasoning_verify(state: MonitorState) -> dict:
     """
     qt = state.get("question_type", "UNKNOWN")
 
-    if qt != "REASONING":
+    if qt not in ("REASONING", "FACTUAL"):
         return {
             "reasoning_result":       None,
             "reasoning_failure_type": "NOT_APPLICABLE",

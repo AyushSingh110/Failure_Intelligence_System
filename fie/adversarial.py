@@ -2019,17 +2019,34 @@ def scan_prompt(
             evidence     = best_evidence | {"llama_guard": "confirmed_safe"},
         )
     else:
-        # LlamaGuard unavailable or skipped — local confidence below threshold → ALLOW
-        result = ScanResult(
-            is_attack    = False,
-            attack_type  = None,
-            category     = None,
-            confidence   = 0.0,
-            layers_fired = fired_names,
-            matched_text = None,
-            mitigation   = "",
-            evidence     = best_evidence,
-        )
+        # LlamaGuard unavailable or skipped — block conservatively instead of allowing
+        # through silently. UNCERTAIN means we couldn't clear it, not that it's safe.
+        import os as _os
+        _strict = _os.environ.get("FIE_UNCERTAIN_ALLOW", "").lower() not in ("1", "true", "yes")
+        if _strict:
+            mitigation = _MITIGATIONS.get(best_type, _DEFAULT_MITIGATION)
+            result = ScanResult(
+                is_attack    = True,
+                attack_type  = best_type or "UNCERTAIN_BLOCKED",
+                category     = None,
+                confidence   = round(best_conf, 4),
+                layers_fired = best_layers,
+                matched_text = matched_text,
+                mitigation   = mitigation,
+                evidence     = best_evidence | {"llama_guard": "unavailable_blocked"},
+            )
+        else:
+            # FIE_UNCERTAIN_ALLOW=1 restores old pass-through behaviour (dev/test use)
+            result = ScanResult(
+                is_attack    = False,
+                attack_type  = None,
+                category     = None,
+                confidence   = 0.0,
+                layers_fired = fired_names,
+                matched_text = None,
+                mitigation   = "",
+                evidence     = best_evidence | {"llama_guard": "unavailable_allowed"},
+            )
 
     _scan_cache.set(prompt, result)
     # Pass is_uncertain=True so session tracker marks this turn for crescendo detection

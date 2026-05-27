@@ -71,11 +71,16 @@ That's it. No configuration, no API key, no network calls. Everything runs local
 - **Multilingual injection** — Tier 1 script-anomaly detection + Tier 2 translated phrase matching across 8 languages; optional Tier 3 LibreTranslate server-side translation
 - **Crescendo / multi-turn escalation** — session-aware trajectory boost that catches gradual foot-in-the-door attacks across conversation turns
 
-**Hallucinations (requires server connection):**
+**Hallucinations (requires server + external API keys):**
 
-- Factual errors — cross-checked against Wikidata and web search
-- Overconfident wrong answers — detected via ensemble disagreement
-- Inconsistent outputs — high variance across independent model runs
+> **What works out of the box:** entropy scoring and TF-IDF consistency across shadow model outputs. These catch high-variance outputs without any external calls.
+>
+> **What requires configuration:**
+> Factual cross-checking needs `SERPER_API_KEY` + `GROQ_API_KEY`. Ensemble disagreement needs `GROQ_ENABLED=true` — without shadow models a single output always scores similarity 1.0. Auto-correction needs both.
+
+- Factual errors — cross-checked against Wikidata and Serper (requires `SERPER_API_KEY`)
+- Overconfident wrong answers — detected via ensemble disagreement across Groq shadow models (requires `GROQ_API_KEY` + `GROQ_ENABLED=true`)
+- Inconsistent outputs — high variance across independent model runs (requires shadow models)
 
 ---
 
