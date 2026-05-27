@@ -22,6 +22,84 @@ import os as _os
 SCAN_THRESHOLD: float = float(_os.environ.get("SCAN_THRESHOLD", "0.65"))
 
 
+# ── Domain-aware threshold multipliers (Flaw 8) ───────────────────────────────
+# Multiplier applied to every per-attack-type threshold for the current request.
+# Values < 1.0 → lower threshold → stricter blocking (medical, finance, legal).
+# Values > 1.0 → higher threshold → more permissive (developer tooling).
+#
+# Rationale:
+#   medical/finance/legal — a missed attack in these domains has serious real-world
+#   consequences; false positives are far less costly than false negatives.
+#   developer — legitimate security research, red-team tooling, and CTF work produce
+#   prompts that resemble attacks; threshold relaxation reduces friction for real users.
+_DOMAIN_MULTIPLIERS: dict[str, float] = {
+    "medical"    : 0.80,  # patient safety, HIPAA context
+    "finance"    : 0.82,  # fraud risk, regulatory exposure
+    "legal"      : 0.83,  # privileged information, liability
+    "education"  : 0.88,  # children / minors may be in scope
+    "default"    : 1.00,  # no change — standard thresholds
+    "developer"  : 1.12,  # security tooling, CTF, red-team
+}
+
+# Regex-based domain inference from prompt text.
+# Each entry is (domain_name, compiled_pattern).
+# First match wins; evaluated in order.
+_DOMAIN_INFERENCE_RULES: list[tuple[str, re.Pattern]] = [
+    ("medical", re.compile(
+        r"\b(?:patient|diagnosis|diagnose|treatment|medication|prescription|"
+        r"clinical|symptom|doctor|physician|hospital|ehr|hipaa|"
+        r"icd[\-\s]?\d|dosage|therapeutic|pathology|radiology)\b",
+        re.IGNORECASE,
+    )),
+    ("finance", re.compile(
+        r"\b(?:portfolio|investment|trading|brokerage|equity|dividend|"
+        r"transaction|banking|credit\s+score|loan|mortgage|hedge\s+fund|"
+        r"sec\s+filing|financial\s+statement|aml|kyc|wire\s+transfer)\b",
+        re.IGNORECASE,
+    )),
+    ("legal", re.compile(
+        r"\b(?:lawsuit|litigation|attorney|counsel|court|jurisdiction|"
+        r"compliance|regulation|gdpr|ccpa|contract\s+clause|liability|"
+        r"indemnif|subpoena|deposition|arbitration)\b",
+        re.IGNORECASE,
+    )),
+    ("education", re.compile(
+        r"\b(?:student|homework|assignment|exam|curriculum|lesson\s+plan|"
+        r"k[\-\s]?12|classroom|grading|rubric|teacher|professor|lecture)\b",
+        re.IGNORECASE,
+    )),
+    ("developer", re.compile(
+        r"\b(?:source\s+code|code\s+review|pull\s+request|repository|"
+        r"api\s+endpoint|debug|stack\s+trace|unit\s+test|ci/cd|"
+        r"penetration\s+test|pentest|ctf|capture\s+the\s+flag|"
+        r"red\s+team|vulnerability\s+research|exploit\s+development)\b",
+        re.IGNORECASE,
+    )),
+]
+
+
+def _infer_domain(prompt: str) -> str:
+    """
+    Infer deployment domain from prompt text. Returns a key from _DOMAIN_MULTIPLIERS.
+    Evaluates only the first 800 chars to bound cost. First match wins.
+    """
+    sample = prompt[:800]
+    for domain, pattern in _DOMAIN_INFERENCE_RULES:
+        if pattern.search(sample):
+            return domain
+    return "default"
+
+
+def _get_domain_multiplier(domain: str | None, prompt: str) -> float:
+    """
+    Resolve the threshold multiplier for this request.
+
+    Priority: explicit `domain` arg → inferred from prompt → default (1.0).
+    """
+    resolved = domain or _infer_domain(prompt)
+    return _DOMAIN_MULTIPLIERS.get(resolved, 1.0)
+
+
 # ── Per-attack-type thresholds ────────────────────────────────────────────────
 # Calibrated per-layer precision from JailbreakBench v2 evaluation.
 # Hot-configurable via MongoDB fie_config (get_attack_thresholds()).
@@ -1866,11 +1944,12 @@ def scan_prompt(
     threshold:       float | None = None,
     session_id:      str | None  = None,
     use_llama_guard: bool | None = None,
+    domain:          str | None  = None,
 ) -> ScanResult:
     """
     Scan a prompt for adversarial attacks.
 
-    All 7 layers run in parallel via ThreadPoolExecutor.
+    All 11 layers run in parallel via ThreadPoolExecutor.
     Results are aggregated with per-layer precision weights and corroboration
     boosts, then routed through three confidence zones:
 
@@ -1884,11 +1963,20 @@ def scan_prompt(
         threshold:       Override global threshold. None → fie_config / env / 0.65.
         session_id:      Optional session identifier for future session-tracker wiring.
         use_llama_guard: Override LlamaGuard Tier-3 call. None → auto (UNCERTAIN zone).
+        domain:          Deployment domain for threshold adjustment. One of "medical",
+                         "finance", "legal", "education", "developer", "default".
+                         None → auto-inferred from prompt text.
     """
     # ── Cache lookup ──────────────────────────────────────────────────────────
-    cached = _scan_cache.get(prompt)
+    # Include domain in the cache key so domain='medical' and domain='developer'
+    # on the same prompt do not collide.
+    _cache_prompt = prompt if domain is None else f"{prompt}\x00domain={domain}"
+    cached = _scan_cache.get(_cache_prompt)
     if cached is not None:
         return cached
+
+    # ── Resolve domain multiplier (Flaw 8) ───────────────────────────────────
+    _domain_mult = _get_domain_multiplier(domain, prompt)
 
     # ── Resolve per-scan threshold ────────────────────────────────────────────
     _threshold = _get_scan_threshold(threshold)
@@ -1941,8 +2029,21 @@ def scan_prompt(
         }
 
     # ── Three-zone routing ────────────────────────────────────────────────────
-    type_threshold = _get_attack_threshold(best_type) if best_type else _threshold
-    safe_ceiling   = type_threshold * 0.60
+    # Domain multiplier scales the per-attack threshold:
+    #   < 1.0 (medical/finance) → stricter blocking
+    #   > 1.0 (developer)       → more permissive
+    _base_threshold = _get_attack_threshold(best_type) if best_type else _threshold
+    type_threshold  = round(_base_threshold * _domain_mult, 4)
+    safe_ceiling    = type_threshold * 0.60
+
+    # Record domain context in evidence when a non-default multiplier applied
+    if _domain_mult != 1.0 and best_type:
+        best_evidence["domain_threshold"] = {
+            "domain"     : domain or _infer_domain(prompt),
+            "multiplier" : _domain_mult,
+            "base"       : _base_threshold,
+            "effective"  : type_threshold,
+        }
 
     if best_type is None or best_conf < safe_ceiling:
         # CLEAR SAFE — well below threshold, no LlamaGuard needed
@@ -1956,7 +2057,7 @@ def scan_prompt(
             mitigation   = "",
             evidence     = best_evidence,
         )
-        _scan_cache.set(prompt, result)
+        _scan_cache.set(_cache_prompt, result)
         _record_session(prompt, result, session_id)
         return result
 
@@ -1976,7 +2077,7 @@ def scan_prompt(
             mitigation   = mitigation,
             evidence     = best_evidence,
         )
-        _scan_cache.set(prompt, result)
+        _scan_cache.set(_cache_prompt, result)
         _record_session(prompt, result, session_id)
         return result
 
@@ -2048,7 +2149,7 @@ def scan_prompt(
                 evidence     = best_evidence | {"llama_guard": "unavailable_allowed"},
             )
 
-    _scan_cache.set(prompt, result)
+    _scan_cache.set(_cache_prompt, result)
     # Pass is_uncertain=True so session tracker marks this turn for crescendo detection
     _record_session(prompt, result, session_id, is_uncertain=True)
     return result
