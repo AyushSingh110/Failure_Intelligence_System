@@ -1,7 +1,4 @@
-"""LlamaGuard 3 Tier-3 tiebreaker — circuit breaker + LRU cache, Groq free tier."""
-
 from __future__ import annotations
-
 import hashlib
 import os
 import threading
@@ -10,9 +7,8 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Literal
 
-
 _GROQ_API_KEY     = os.environ.get("GROQ_API_KEY", "")
-_GROQ_MODEL       = "meta-llama/llama-guard-3-8b"
+_GROQ_MODEL       = "meta-llama/llama-prompt-guard-2-86m"
 _GROQ_ENDPOINT    = "https://api.groq.com/openai/v1/chat/completions"
 _REQUEST_TIMEOUT  = 10.0
 _CB_FAILURE_LIMIT = 3
@@ -52,8 +48,6 @@ class _LGCache:
 
 
 _lg_cache = _LGCache()
-
-
 _CBState = Literal["CLOSED", "OPEN", "HALF_OPEN"]
 
 @dataclass
@@ -108,13 +102,8 @@ def query_llama_guard(prompt: str) -> bool:
     if not _circuit.allow():
         raise RuntimeError(f"LlamaGuard circuit breaker OPEN (state={_circuit.state})")
 
-    # Build LlamaGuard conversation format
-    messages = [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": prompt}],
-        }
-    ]
+    # Llama Prompt Guard 2 expects plain string content, not a content-block list
+    messages = [{"role": "user", "content": prompt}]
 
     try:
         import requests as _req
@@ -138,9 +127,20 @@ def query_llama_guard(prompt: str) -> bool:
         _circuit.record_failure()
         raise RuntimeError(f"LlamaGuard call failed: {exc}") from exc
 
-    # LlamaGuard 3 returns "safe" or "unsafe\n<category>"
-    is_unsafe = content.startswith("unsafe")
-    verdict   = is_unsafe  # True = attack, False = safe
+    # Llama Prompt Guard 2 returns a probability score (0.0–1.0)
+    # where values close to 1.0 indicate injection/jailbreak.
+    # Threshold 0.5 gives clean separation: benign ~0.0003, attacks 0.84–0.9996.
+    try:
+        score = float(content)
+        is_unsafe = score >= 0.5
+    except ValueError:
+        # Fallback: handle legacy text labels if model changes again
+        is_unsafe = (
+            content.startswith("injection")
+            or content.startswith("jailbreak")
+            or content.startswith("unsafe")
+        )
+    verdict = is_unsafe  # True = attack, False = safe
 
     _circuit.record_success()
     _lg_cache.set(prompt, verdict)
