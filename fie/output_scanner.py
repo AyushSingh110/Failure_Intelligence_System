@@ -209,6 +209,19 @@ def scan_output_async(
                     result.scan_ms,
                     result.evidence.get("matched", ""),
                 )
+                # Feedback loop: record output flag for human review
+                try:
+                    from fie.feedback_store import record as _fb_record
+                    _fb_record(
+                        kind="output_flag",
+                        flag_type=result.flag_type,
+                        confidence=result.confidence,
+                        prompt=prompt,
+                        matched=result.evidence.get("matched", ""),
+                        session_id=session_id,
+                    )
+                except Exception:
+                    pass
                 if on_flag is not None:
                     try:
                         on_flag(result)

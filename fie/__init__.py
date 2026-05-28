@@ -4,9 +4,10 @@ from fie.config import get_config, FIEConfig
 from fie.adversarial import scan_prompt, build_cwd_injection
 from fie.preflight import preflight_check, GuardedResponse
 from fie.output_scanner import scan_output, scan_output_async, OutputScanResult
+from fie.stream_guard import stream_guard, astream_guard
 from fie import integrations
 
-__version__ = "1.9.0"
+__version__ = "1.10.0"
 __all__      = [
     "monitor",
     "FIEClient",
@@ -19,5 +20,7 @@ __all__      = [
     "scan_output",
     "scan_output_async",
     "OutputScanResult",
+    "stream_guard",
+    "astream_guard",
     "integrations",
 ]

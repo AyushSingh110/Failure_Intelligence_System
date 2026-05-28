@@ -3,8 +3,7 @@ Layer 11: Multilingual injection detector.
 
 Three-tier cascade — each tier is faster and more approximate than the next.
 The function runs Tier 1 + Tier 2 in sequence (both are zero-latency regex).
-Tier 3 (translate-then-detect) runs upstream in preflight before the executor
-when LIBRETRANSLATE_URL is configured.
+Tier 3 (translate-then-detect) no longer requires a self-hosted server.
 
 Tier 1 — Script anomaly detection (zero latency, zero deps)
   Detects mixed-script prompts: 10%+ non-Latin alphabetic characters mixed
@@ -12,16 +11,19 @@ Tier 1 — Script anomaly detection (zero latency, zero deps)
   Confidence: 0.58 → UNCERTAIN zone (routes to LlamaGuard).
 
 Tier 2 — Static translated regex (zero latency, compiled at import)
-  Five core injection phrases translated into 8 languages.
+  Eight core injection phrases translated into 8 languages.
   Exact match on any phrase → confidence 0.70 → UNCERTAIN zone.
   If both Tier 1 AND Tier 2 fire simultaneously → confidence 0.80 → CLEAR ATTACK
   at the MULTILINGUAL_INJECTION threshold of 0.68.
 
-Tier 3 — Translate-then-detect (async, server-side only)
-  Runs as a parallel executor layer when LIBRETRANSLATE_URL is set.
-  Translates non-English prompts to English, then runs the full detection
-  pipeline on the translation. Not bundled in the pip package flow —
-  SDK users get Tier 1+2 only; server users get all three.
+Tier 3 — Translate-then-detect (runs in pip package, no server required)
+  Translation priority:
+    1. deep_translator (GoogleTranslator) — free, no API key, no server needed.
+       `pip install deep-translator` — included in fie-sdk dependencies.
+    2. LibreTranslate — if LIBRETRANSLATE_URL is set (self-hosted, backward compat).
+    3. None — fail open, detection runs on original text.
+  Minimum length gate: 50 chars (langdetect is unreliable on shorter text).
+  Timeout: 3 seconds per translation attempt.
 
 Language coverage: French, Spanish, German, Russian, Chinese (Simplified),
   Arabic, Italian, Portuguese.
@@ -93,6 +95,36 @@ _TRANSLATED_PATTERNS: list[re.Pattern] = [re.compile(pat, re.IGNORECASE) for pat
     r"aggira\s+i\s+filtri\s+di\s+sicurezza",                                           # Italian
     r"contorne\s+os\s+filtros?\s+de\s+segurança",                                      # Portuguese
 
+    # "Do anything now" / "no restrictions" persona
+    r"(?:fais|faites)\s+(?:tout|n'importe\s+quoi)\s+maintenant",                       # French
+    r"haz\s+(?:cualquier\s+cosa|todo)\s+ahora",                                        # Spanish
+    r"mach\s+(?:jetzt\s+)?(?:alles|alles\s+was\s+du\s+willst)",                        # German
+    r"делай\s+всё\s+(?:что\s+захочешь|сейчас)",                                       # Russian
+    r"现在可以做任何事",                                                                 # Chinese
+    r"افعل\s+أي\s+شيء\s+الآن",                                                         # Arabic
+    r"fai\s+(?:qualsiasi\s+cosa|tutto)\s+ora",                                          # Italian
+    r"faça\s+(?:qualquer\s+coisa|tudo)\s+agora",                                       # Portuguese
+
+    # "Your real / actual task is" — indirect injection in documents
+    r"(?:ta|votre)\s+(?:vraie|véritable)\s+(?:tâche|mission)\s+est",                  # French
+    r"(?:tu|su)\s+(?:verdadera|real)\s+tarea\s+es",                                    # Spanish
+    r"(?:deine|Ihre)\s+(?:eigentliche|wahre)\s+Aufgabe\s+ist",                        # German
+    r"(?:твоя|твоей)\s+настоящая\s+задача\s+—",                                        # Russian
+    r"你真正的任务是",                                                                   # Chinese
+    r"مهمتك\s+الحقيقية\s+هي",                                                          # Arabic
+    r"il\s+tuo\s+(?:vero|reale)\s+compito\s+è",                                        # Italian
+    r"(?:sua|tua)\s+(?:verdadeira|real)\s+tarefa\s+é",                                 # Portuguese
+
+    # "New instructions" header — structured data injection
+    r"nouvelles?\s+instructions?\s*:",                                                  # French
+    r"nuevas?\s+instrucciones?\s*:",                                                    # Spanish
+    r"neue\s+Anweisungen?\s*:",                                                         # German
+    r"новые\s+инструкции\s*:",                                                          # Russian
+    r"新指令[:：]",                                                                      # Chinese
+    r"تعليمات\s+جديدة\s*:",                                                             # Arabic
+    r"nuove\s+istruzioni?\s*:",                                                         # Italian
+    r"novas?\s+instruções?\s*:",                                                        # Portuguese
+
 ]]
 
 
@@ -124,36 +156,57 @@ def _script_anomaly_score(text: str) -> float:
     return nonlatin_count / total
 
 
-# ── Tier 3: LibreTranslate integration ───────────────────────────────────────
+# ── Tier 3: Translation (deep_translator → LibreTranslate fallback) ──────────
 
-def translate_to_english(text: str, timeout: float = 2.0) -> str | None:
+def translate_to_english(text: str, timeout: float = 3.0) -> str | None:
     """
-    Translate text to English via LibreTranslate.
+    Translate text to English for full pipeline re-analysis.
 
-    Requires LIBRETRANSLATE_URL env var (e.g. http://localhost:5000).
+    Translation priority:
+      1. deep_translator.GoogleTranslator — free, no API key, no self-hosted server.
+         Uses Google Translate's public endpoint. Requires: pip install deep-translator
+         (included in fie-sdk dependencies).
+      2. LibreTranslate — if LIBRETRANSLATE_URL env var is set (backward compat).
+      3. None — fail open.
+
+    Minimum length gate: 50 chars (langdetect unreliable on shorter text).
     Returns translated string or None on any failure.
-    Always fails open — caller should run detection on original if None.
-
-    Minimum length gate: don't attempt translation on short prompts
-    (langdetect is unreliable below ~50 chars).
     """
+    stripped = text.strip()
+    if len(stripped) < 50:
+        return None
+
+    sample = stripped[:2000]
+
+    # ── Option 1: deep_translator (no server, no key, built into fie-sdk) ────
+    try:
+        from deep_translator import GoogleTranslator
+        translated = GoogleTranslator(source="auto", target="en").translate(sample)
+        if translated and translated.lower() != stripped[:len(translated)].lower():
+            return translated
+    except ImportError:
+        pass   # deep_translator not installed — try LibreTranslate
+    except Exception:
+        pass   # network error, rate limit, etc. — try LibreTranslate
+
+    # ── Option 2: LibreTranslate (self-hosted, backward compat) ──────────────
     import os
     url = os.environ.get("LIBRETRANSLATE_URL", "")
-    if not url or len(text.strip()) < 50:
-        return None
-    try:
-        import httpx
-        resp = httpx.post(
-            f"{url.rstrip('/')}/translate",
-            json={"q": text[:2000], "source": "auto", "target": "en"},
-            timeout=timeout,
-        )
-        if resp.status_code == 200:
-            translated = resp.json().get("translatedText", "")
-            if translated and translated.lower() != text.lower():
-                return translated
-    except Exception:
-        pass
+    if url:
+        try:
+            import httpx
+            resp = httpx.post(
+                f"{url.rstrip('/')}/translate",
+                json={"q": sample, "source": "auto", "target": "en"},
+                timeout=timeout,
+            )
+            if resp.status_code == 200:
+                translated = resp.json().get("translatedText", "")
+                if translated and translated.lower() != stripped[:len(translated)].lower():
+                    return translated
+        except Exception:
+            pass
+
     return None
 
 

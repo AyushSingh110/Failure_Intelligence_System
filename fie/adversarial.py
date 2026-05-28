@@ -1967,6 +1967,27 @@ def scan_prompt(
                          "finance", "legal", "education", "developer", "default".
                          None → auto-inferred from prompt text.
     """
+    # ── Feedback loop: whitelist / known-attack fast path ────────────────────
+    try:
+        from fie.feedback_store import is_known_attack, is_whitelisted
+        if is_whitelisted(prompt):
+            result = ScanResult(
+                is_attack=False, attack_type=None, category=None, confidence=0.0,
+                layers_fired=[], matched_text=None, mitigation="",
+                evidence={"feedback": "whitelisted"},
+            )
+            return result
+        if is_known_attack(prompt):
+            result = ScanResult(
+                is_attack=True, attack_type="CONFIRMED_ATTACK", category=None, confidence=0.99,
+                layers_fired=["feedback_store"], matched_text=None,
+                mitigation=_MITIGATIONS.get("PROMPT_INJECTION", _DEFAULT_MITIGATION),
+                evidence={"feedback": "confirmed_tp"},
+            )
+            return result
+    except Exception:
+        pass
+
     # ── Cache lookup ──────────────────────────────────────────────────────────
     # Include domain in the cache key so domain='medical' and domain='developer'
     # on the same prompt do not collide.
@@ -2077,6 +2098,17 @@ def scan_prompt(
             mitigation   = mitigation,
             evidence     = best_evidence,
         )
+        # Feedback loop: record input block for human review
+        try:
+            from fie.feedback_store import record as _fb_record
+            _fb_record(
+                kind="input_block", flag_type=best_type,
+                confidence=round(best_conf, 4),
+                prompt=prompt, matched=matched_text or "",
+                session_id=session_id,
+            )
+        except Exception:
+            pass
         _scan_cache.set(_cache_prompt, result)
         _record_session(prompt, result, session_id)
         return result

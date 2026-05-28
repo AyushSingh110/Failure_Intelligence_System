@@ -78,6 +78,13 @@ async def lifespan(app: FastAPI):
 
     threading.Thread(target=_warm_encoder_in_background, daemon=True).start()
 
+    try:
+        from fie.feedback_store import _load_confirmed_from_db
+        threading.Thread(target=_load_confirmed_from_db, daemon=True).start()
+        logger.info("startup=feedback_store status=loading")
+    except Exception as _fb_exc:
+        logger.warning("startup=feedback_store status=skipped reason=%s", _fb_exc)
+
     yield
 
     #Shutdown
