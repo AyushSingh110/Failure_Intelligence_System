@@ -1,4 +1,4 @@
-# --- Python Environment ---
+# Python Environment 
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,15 +8,7 @@ env/
 .venv
 pip-log.txt
 
-# ============================================================
-# PRIVATE — DO NOT COMMIT
-# Trained models, datasets, research data, adversarial corpus.
-# These contain proprietary insights and are protected under
-# the provisional patent filing and Apache 2.0 copyright.
-# ============================================================
-
 # Trained ML models (XGBoost classifiers — proprietary)
-# NOTE: covers root models/ AND any subdirectory (fie/models/, etc.)
 models/*.pkl
 models/*.joblib
 models/*.bin
@@ -24,7 +16,6 @@ models/*.bin
 **/models/*.joblib
 **/models/*.bin
 **/models/*.json
-# Keep placeholders so folders exist in the repo
 !models/.gitkeep
 !**/models/.gitkeep
 
@@ -38,87 +29,76 @@ storage/*.json
 data/datasets/
 data/labeled/
 
-# Training results and metrics (research insights)
+# Training results and metrics 
 data/training_results.json
 data/eval_results*.json
 data/eval_results*.jsonl
 data/seeds/
-
-# JailbreakBench evaluation output (contains real attack prompts — research confidential)
 data/jbb_results/
 data/jbb_tier1/
 
-# PAIR classifier training corpus (contains real jailbreak prompts — research confidential)
+# PAIR classifier training corpus
 data/pair_training/
 
-# Adversarial evaluation data (research confidential)
+# Adversarial evaluation data 
 data/adversarial_eval_set.jsonl
 data/eval_new_attacks_results.json
 data/eval_new_attacks.py
 
-# VEXR collaboration research data (not part of FIE public codebase)
+# VEXR collaboration research data 
 data/vexr/
 
 # Distribution builds — published via PyPI, not git
 dist/
 
-# Notebook research output (plots, charts)
+# Notebook research output 
 notebooks/comparison_plots/
 notebooks/pair_classifier_plots/
 notebooks/*.png
 notebooks/*.jpg
 
-# Benchmark evaluation output (research-only, not for public push)
+# Benchmark evaluation output 
 notebooks/benchmark_figures/
 notebooks/benchmark_results/
 notebooks/*.csv
 
-# VEXR collaboration research (not part of FIE public codebase)
+# VEXR collaboration research 
 notebooks/vexr_*.ipynb
 notebooks/vexr_*.txt
 notebooks/vexr_*.csv
-
-# Research paper and patent documents
 paper/
-
-# Internal architecture documentation
 README_files/
 
-# ============================================================
-# END PRIVATE
-# ============================================================
 
-# ── Benchmark & evaluation results (research-only) ────────────────────────────
+# END PRIVATE
 results/
 
-# ── Jupyter checkpoints ───────────────────────────────────────────────────────
+#Jupyter checkpoints 
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
 
-# ── HuggingFace local dataset downloads (if saved outside ~/.cache) ───────────
+#HuggingFace local dataset downloads 
 *.arrow
 *.parquet
 datasets/
 
-# --- Failure Intelligence Storage (runtime vault) ---
+# Failure Intelligence Storage 
 failures.json
 
-# --- VS Code & IDEs ---
+# VS Code & IDEs 
 .vscode/
 .idea/
 *.swp
 *.bak
 
-# --- Testing & Reports ---
+# Testing & Reports 
 .pytest_cache/
 .coverage
 htmlcov/
 nosetests.xml
 *.log
 
-# --- Streamlit ---
+#Streamlit
 .streamlit/config.toml
 static/
 docs/
-
-# tests/ — intentionally tracked so CI can run them
