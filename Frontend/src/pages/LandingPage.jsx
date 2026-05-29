@@ -5,10 +5,10 @@ import { isLoggedIn } from '../lib/auth'
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { value: 3000,  suffix: '+', label: 'PyPI installs' },
+  { value: 4500,  suffix: '+', label: 'PyPI installs' },
   { value: 0,    suffix: '%', label: 'False positive rate' },
   { value: 96,   suffix: '%', label: 'GCG attack recall' },
-  { value: 10,   suffix: '',  label: 'Detection layers' },
+  { value: 11,   suffix: '',  label: 'Detection layers' },
 ]
 
 const FEATURES = [
@@ -1812,7 +1812,7 @@ function UnifiedArchitectureSection() {
               </div>
 
               {/* Rotating Core (Aligned perfectly left) */}
-              <div style={{ position: 'relative', width: '220px', height: '220px' }}>
+              <div style={{ position: 'relative', width: '220px', height: '220px',marginLeft: '80px' }}>
                 <div style={{
                   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                   width: '120%', height: '120%', background: 'radial-gradient(circle, rgba(167,139,250,0.15) 0%, transparent 60%)',
