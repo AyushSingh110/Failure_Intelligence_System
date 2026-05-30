@@ -6,8 +6,12 @@ from fie.preflight import preflight_check, GuardedResponse
 from fie.output_scanner import scan_output, scan_output_async, OutputScanResult
 from fie.stream_guard import stream_guard, astream_guard
 from fie import integrations
+from fie._telemetry import _ping_telemetry
 
 __version__ = "1.10.0"
+
+# anonymous usage ping — disable with FIE_NO_TELEMETRY=1
+_ping_telemetry(__version__)
 __all__      = [
     "monitor",
     "FIEClient",
