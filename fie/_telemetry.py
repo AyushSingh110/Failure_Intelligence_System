@@ -3,7 +3,7 @@ import os
 import platform
 import threading
 
-_TELEMETRY_URL = "https://fie-telemetry.fly.dev/ping"  # replace with your actual endpoint
+_TELEMETRY_URL = "https://failure-intelligence-system.onrender.com/ping"
 
 
 def _ping_telemetry(version: str) -> None:

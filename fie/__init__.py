@@ -8,7 +8,7 @@ from fie.stream_guard import stream_guard, astream_guard
 from fie import integrations
 from fie._telemetry import _ping_telemetry
 
-__version__ = "1.10.0"
+__version__ = "1.10.1"
 
 # anonymous usage ping — disable with FIE_NO_TELEMETRY=1
 _ping_telemetry(__version__)
