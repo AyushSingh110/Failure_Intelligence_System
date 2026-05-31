@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, useMotionValue, useSpring } from 'framer-motion'
+import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'framer-motion'
 import { isLoggedIn } from '../lib/auth'
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { value: 4500,  suffix: '+', label: 'PyPI installs' },
-  { value: 0,    suffix: '%', label: 'False positive rate' },
-  { value: 96,   suffix: '%', label: 'GCG attack recall' },
-  { value: 11,   suffix: '',  label: 'Detection layers' },
+  { value: 11, suffix: '',   label: 'Detection Layers'       },
+  { value: 96, suffix: '%',  label: 'Adversarial Recall'     },
+  { value: 10, suffix: 'ms', label: 'Avg. Interception Time' },
 ]
 
 const FEATURES = [
@@ -58,7 +57,7 @@ const FEATURES = [
         <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
       </svg>
     ),
-    title: 'Works Offline',
+    title: 'Zero-Dependency Local Mode',
     desc: 'Local mode runs entirely on your machine with zero network calls. No API key, no server. Add one decorator and protection is immediate.',
     color: '#fb923c',
   },
@@ -70,24 +69,14 @@ const FEATURES = [
     ),
     title: 'LangGraph Pipeline',
     desc: 'Detection runs as a stateful LangGraph StateGraph — guard → signal extraction → DiagnosticJury — each stage a typed node with conditional routing.',
-    color: '#00d4ff',
-  },
-  {
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-      </svg>
-    ),
-    title: 'Model Drift Monitoring',
-    desc: 'EMA-based trend tracking alerts you when failure rate rises — before your users notice. Catch degradation from stale training data or bad updates.',
-    color: '#00d4ff',
+    color: '#0ea5e9',
   },
 ]
 
 const STEPS = [
-  { n: '01', title: 'Install the SDK',        desc: 'pip install fie-sdk — one command, zero extra dependencies.' },
-  { n: '02', title: 'Add the decorator',      desc: 'Wrap your LLM call with @monitor(mode="local") for instant offline detection.' },
-  { n: '03', title: 'Connect for full power', desc: 'Sign in to unlock the shadow jury, XGBoost classifier, auto-correction, and live analytics.' },
+  { n: '01', title: 'Install the SDK',        desc: 'pip install fie-sdk — one command, zero extra dependencies, works in any Python environment.' },
+  { n: '02', title: 'Add one decorator',      desc: '@monitor(mode="local") wraps your LLM call. 11 detection layers activate immediately — no API key, no server.' },
+  { n: '03', title: 'Unlock full power',      desc: 'Sign in to activate the shadow jury, XGBoost classifier, auto-correction engine, and live analytics dashboard.' },
 ]
 
 const BENCHMARKS = [
@@ -96,9 +85,9 @@ const BENCHMARKS = [
 ]
 
 const ATTACK_BENCHMARKS = [
-  { method: 'GCG suffix attacks',     detection: '96.0%', fpr: '2.0%' },
-  { method: 'JBC persona jailbreaks', detection: '52.0%', fpr: '2.0%' },
-  { method: 'Direct injection',       detection: '95.0%', fpr: '2.0%' },
+  { method: 'Suffix-based attacks',  detection: '96.0%', fpr: '2.0%' },
+  { method: 'Persona jailbreaks',    detection: '52.0%', fpr: '2.0%' },
+  { method: 'Direct injection',      detection: '95.0%', fpr: '2.0%' },
 ]
 
 const FEED_EVENTS = [
@@ -236,14 +225,11 @@ function StatCard({ value, suffix, label, visible }) {
       <div style={{
         fontFamily: 'JetBrains Mono, monospace',
         fontSize: 'clamp(28px, 3.5vw, 38px)', fontWeight: 800,
-        color: 'var(--text-primary)', letterSpacing: '-0.03em',
-        marginBottom: '6px',
-        background: 'linear-gradient(135deg, #fff 30%, rgba(0,212,255,0.7) 100%)',
-        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        letterSpacing: '-0.03em', marginBottom: '6px', color: '#fff',
       }}>
         {count}{suffix}
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>{label}</div>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: '#6e90b0', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>{label}</div>
     </div>
   )
 }
@@ -260,21 +246,28 @@ function FeatureCard({ icon, title, desc, color }) {
       onMouseLeave={() => { setHov(false); handleLeave() }}
       onMouseMove={handleMove}
       style={{
-        padding: '26px 28px', borderRadius: '14px',
-        background: hov ? `rgba(${rgb},0.04)` : 'var(--bg-card)',
-        border: `1px solid ${hov ? color + '50' : 'var(--border)'}`,
+        padding: '28px 28px 32px', borderRadius: '14px',
+        background: hov
+          ? `rgba(${rgb},0.07)`
+          : `linear-gradient(135deg, rgba(${rgb},0.035) 0%, var(--bg-card) 60%)`,
+        border: `1px solid ${hov ? `rgba(${rgb},0.38)` : `rgba(${rgb},0.14)`}`,
         transition: hov
-          ? 'border-color 0.1s, background 0.1s, box-shadow 0.1s'
+          ? 'border-color 0.12s, background 0.12s, box-shadow 0.12s'
           : 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
         transform: tilt.active
           ? `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(4px)`
           : 'perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px)',
         boxShadow: hov
-          ? `0 20px 50px rgba(${rgb},0.12), 0 4px 16px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(${rgb},0.08)`
-          : '0 1px 3px rgba(0,0,0,0.3)',
+          ? `0 20px 50px rgba(${rgb},0.14), 0 4px 16px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(${rgb},0.08)`
+          : `0 1px 3px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(${rgb},0.04)`,
         cursor: 'default',
         position: 'relative', overflow: 'hidden',
         willChange: 'transform',
+        /* equal-height cards — fill the grid row */
+        height: '100%',
+        minHeight: '260px',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Shine overlay follows cursor */}
@@ -289,22 +282,23 @@ function FeatureCard({ icon, title, desc, color }) {
       {/* Top-edge accent line */}
       <div style={{
         position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px',
-        background: `linear-gradient(90deg, transparent, rgba(${rgb},${hov ? 0.5 : 0.15}), transparent)`,
+        background: `linear-gradient(90deg, transparent, rgba(${rgb},${hov ? 0.55 : 0.28}), transparent)`,
         transition: 'all 0.4s ease',
       }}/>
 
       <div style={{
-        width: '40px', height: '40px', borderRadius: '10px',
-        background: `rgba(${rgb},${hov ? 0.14 : 0.08})`,
-        border: `1px solid rgba(${rgb},${hov ? 0.35 : 0.18})`,
+        width: '44px', height: '44px', borderRadius: '11px',
+        background: `rgba(${rgb},${hov ? 0.16 : 0.08})`,
+        border: `1px solid rgba(${rgb},${hov ? 0.38 : 0.18})`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color, marginBottom: '16px',
+        color, marginBottom: '18px',
         transition: 'all 0.3s ease',
-        boxShadow: hov ? `0 0 20px rgba(${rgb},0.3)` : 'none',
+        boxShadow: hov ? `0 0 24px rgba(${rgb},0.32)` : 'none',
         position: 'relative', zIndex: 1,
+        flexShrink: 0,
       }}>{icon}</div>
-      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px', letterSpacing: '-0.01em', position: 'relative', zIndex: 2 }}>{title}</div>
-      <div style={{ fontSize: '13px', lineHeight: 1.7, color: hov ? 'var(--text-secondary)' : 'var(--text-muted)', transition: 'color 0.3s', position: 'relative', zIndex: 2 }}>{desc}</div>
+      <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#f0f6ff', marginBottom: '10px', letterSpacing: '-0.02em', lineHeight: 1.25, position: 'relative', zIndex: 2 }}>{title}</div>
+      <div style={{ fontSize: '13px', lineHeight: 1.72, color: hov ? '#9ab5cc' : 'var(--text-muted)', transition: 'color 0.3s', position: 'relative', zIndex: 2, flex: 1 }}>{desc}</div>
     </div>
   )
 }
@@ -525,6 +519,283 @@ function PipelineDemo() {
   )
 }
 
+// ── Feature Cards Section — true circle-orbit-to-grid ────────────────────────
+//
+//  Geometry (desktop, 1064 px inner container):
+//    • FC_W / FC_H   — card dimensions (fixed so all cards are equal height)
+//    • FC_CX / FC_CY — orbit centre inside the container
+//    • FC_R          — orbit radius; all positions stay within 0…1064 × 0…640
+//
+//  Animation phases:
+//    idle     → cards invisible at their circle positions
+//    circle   → cards scale/fade in on the circle (staggered)
+//    spinning → every card orbits one full 360 ° (4 equidistant keyframes)
+//    grid     → cards translate staggered from circle pos → grid pos + scale to 1
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Feature Cards — stack → fan circle → snap to grid ────────────────────────
+//
+//  Phase 1  'fan'  : cards erupt from a single stacked point, spreading outward
+//                    into a circle formation. Each card rotates to face outward
+//                    (like playing cards being fanned). Stagger: 90 ms / card.
+//
+//  Phase 2  'grid' : after the full circle is visible, each card snaps one-by-one
+//                    to its grid slot. rotateZ → 0, scale → 1. Stagger: 100 ms.
+//
+//  Geometry is fixed at 1064 px inner width (desktop). Mobile gets a simple
+//  stagger-up grid via a separate DOM branch + media query.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FC_W        = 344          // card width  (fills 3-col grid in 1064 px)
+const FC_H        = 260          // card height (equal for all cards)
+const FC_GAP      = 16
+const FC_CX       = 532          // orbit centre x  (1064 / 2)
+const FC_CY       = 310          // orbit centre y  (slightly below top card)
+const FC_R        = 175          // orbit radius
+const FC_GRID_H   = FC_H * 2 + FC_GAP   // 536
+
+// grid top-left of card i
+function _fcGrid(i) {
+  return {
+    left : (i % 3) * (FC_W + FC_GAP),
+    top  : Math.floor(i / 3) * (FC_H + FC_GAP),
+  }
+}
+
+// circle top-left of card i (12 o'clock start, clockwise)
+function _fcCircle(i) {
+  const a = (i / 6) * Math.PI * 2 - Math.PI / 2
+  return {
+    left : FC_CX + Math.cos(a) * FC_R - FC_W / 2,
+    top  : FC_CY + Math.sin(a) * FC_R - FC_H / 2,
+  }
+}
+
+// spoke angle: card points outward from circle centre (fan / playing-card look)
+function _fcSpoke(i) { return (i / 6) * 360 - 90 }
+
+// stacked centre (where all cards begin — the "deck" point)
+const FC_STACK_X = FC_CX - FC_W / 2   // 360
+const FC_STACK_Y = FC_CY - FC_H / 2   // 180
+
+// container height just large enough to contain the full circle
+const FC_CIRCLE_H = Math.ceil(FC_CY + FC_R + FC_H / 2) + 24  // ≈ 615
+
+function FeatureCardsSection() {
+  const triggerRef = useRef(null)
+  const [phase, setPhase] = useState('idle')   // idle → fan → grid
+
+  useEffect(() => {
+    const el = triggerRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return
+      obs.disconnect()
+      // slight pause so the header text is readable first
+      setTimeout(() => {
+        setPhase('fan')                              // cards fan out to circle
+        setTimeout(() => setPhase('grid'), 1100)    // then snap to grid slots
+      }, 200)
+    }, { threshold: 0.12 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  return (
+    <section style={{ position: 'relative', zIndex: 2, padding: '128px 28px', overflow: 'hidden' }}>
+      {/* Ambient glow */}
+      <div style={{
+        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '900px', height: '520px',
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.08) 0%, rgba(0,212,255,0.05) 40%, transparent 70%)',
+        pointerEvents: 'none',
+      }}/>
+
+      <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+
+        {/* Section header */}
+        <div ref={triggerRef} style={{ textAlign: 'center', marginBottom: '80px' }}>
+          <div className="section-label" style={{ justifyContent: 'center', marginBottom: '18px' }}>Capabilities</div>
+          <h2 style={{
+            fontFamily: 'Syne, sans-serif', fontSize: 'clamp(30px, 3.8vw, 48px)',
+            fontWeight: 800, letterSpacing: '-0.033em',
+            color: '#f4ecff', lineHeight: 1.08, marginBottom: '20px',
+          }}>
+            Everything your stack needs<br/>
+            <span style={{
+              background: 'linear-gradient(90deg, #00d4ff 0%, #a78bfa 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>to ship AI you can trust.</span>
+          </h2>
+          <p style={{ fontSize: '16px', color: '#8da8c4', maxWidth: '520px', margin: '0 auto', lineHeight: 1.68 }}>
+            From millisecond adversarial interception to shadow-jury hallucination detection — FIE runs invisibly alongside your existing stack.
+          </p>
+        </div>
+
+        {/* ── DESKTOP  circle animation ─────────────────────────────────────── */}
+        <div className="feat-cards-desktop">
+
+          {/* Decorative orbit ring — fades in with the fan, fades out with grid */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={
+              phase === 'fan'  ? { opacity: 1, scale: 1 } :
+              phase === 'grid' ? { opacity: 0, scale: 1.05 } : {}
+            }
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              position: 'absolute',
+              left: '50%', top: 0,
+              marginLeft: -(FC_R + 2),
+              marginTop: 80 + FC_CY - FC_R - 2,   // aligns ring with orbit centre
+              width: (FC_R + 2) * 2, height: (FC_R + 2) * 2,
+              borderRadius: '50%',
+              border: '1px dashed rgba(167,139,250,0.25)',
+              boxShadow: '0 0 48px rgba(0,212,255,0.07), inset 0 0 48px rgba(167,139,250,0.04)',
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* Cards container — height morphs from circle height → grid height */}
+          <motion.div
+            style={{ position: 'relative', width: '1064px', maxWidth: '100%', margin: '0 auto', overflow: 'visible', willChange: 'height' }}
+            animate={{ height: phase === 'grid' ? FC_GRID_H : FC_CIRCLE_H }}
+            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: phase === 'grid' ? 0.6 : 0 }}
+          >
+            {/* Central glow pulse while fanning */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={
+                phase === 'fan'  ? { opacity: 1, scale: 1 } :
+                phase === 'grid' ? { opacity: 0, scale: 0 } : {}
+              }
+              transition={{ duration: 0.5 }}
+              style={{
+                position: 'absolute',
+                left: FC_STACK_X + FC_W / 2 - 60,
+                top:  FC_STACK_Y + FC_H / 2 - 60,
+                width: 120, height: 120,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(0,212,255,0.22) 0%, rgba(167,139,250,0.12) 50%, transparent 70%)',
+                filter: 'blur(18px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {FEATURES.map((feat, i) => {
+              const gp   = _fcGrid(i)
+              const cp   = _fcCircle(i)
+              const spk  = _fcSpoke(i)
+
+              // offset from grid position → stacked centre
+              const stackDx = FC_STACK_X - gp.left
+              const stackDy = FC_STACK_Y - gp.top
+
+              // offset from grid position → circle position
+              const fanDx = cp.left - gp.left
+              const fanDy = cp.top  - gp.top
+
+              let anim  = {}
+              let trans = {}
+
+              if (phase === 'fan') {
+                anim  = { x: fanDx, y: fanDy, scale: 0.82, opacity: 1, rotateZ: spk }
+                trans = { duration: 0.6, delay: i * 0.09, ease: [0.25, 1, 0.5, 1] }
+              } else if (phase === 'grid') {
+                anim  = { x: 0, y: 0, scale: 1, opacity: 1, rotateZ: 0 }
+                trans = { duration: 0.65, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }
+              }
+
+              return (
+                <motion.div
+                  key={feat.title}
+                  style={{
+                    position: 'absolute',
+                    left: gp.left, top: gp.top,
+                    width: FC_W,
+                    zIndex: i + 1,
+                    transformOrigin: 'center center',
+                    willChange: 'transform, opacity',
+                  }}
+                  initial={{ x: stackDx, y: stackDy, scale: 0, opacity: 0, rotateZ: 0 }}
+                  animate={anim}
+                  transition={trans}
+                >
+                  <FeatureCard {...feat} />
+                </motion.div>
+              )
+            })}
+          </motion.div>
+        </div>
+
+        {/* ── MOBILE  simple stagger ───────────────────────────────────────────── */}
+        <div className="feat-cards-mobile">
+          {FEATURES.map((feat, i) => (
+            <motion.div
+              key={feat.title + '-m'}
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-8%' }}
+              transition={{ delay: i * 0.07, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <FeatureCard {...feat} />
+            </motion.div>
+          ))}
+        </div>
+
+      </div>
+    </section>
+  )
+}
+
+// ── Scroll progress bar ───────────────────────────────────────────────────────
+function ScrollProgressBar() {
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 200, damping: 40, restDelta: 0.001 })
+  return (
+    <motion.div
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: '2px',
+        background: 'linear-gradient(90deg, #00d4ff 0%, #a78bfa 50%, #00ff88 100%)',
+        transformOrigin: '0%',
+        scaleX,
+        zIndex: 9999,
+        pointerEvents: 'none',
+      }}
+    />
+  )
+}
+
+// ── Cursor glow — follows mouse with spring physics ───────────────────────────
+function CursorGlow() {
+  const x = useMotionValue(-600)
+  const y = useMotionValue(-600)
+  const sx = useSpring(x, { stiffness: 380, damping: 55 })
+  const sy = useSpring(y, { stiffness: 380, damping: 55 })
+
+  useEffect(() => {
+    const onMove = (e) => { x.set(e.clientX); y.set(e.clientY) }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [x, y])
+
+  return (
+    <motion.div
+      style={{
+        position: 'fixed',
+        x: sx, y: sy,
+        translateX: '-50%', translateY: '-50%',
+        width: 520, height: 520,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(0,212,255,0.055) 0%, rgba(167,139,250,0.03) 45%, transparent 70%)',
+        pointerEvents: 'none',
+        zIndex: 1,
+        willChange: 'transform',
+      }}
+    />
+  )
+}
+
 // ── Starfield background ──────────────────────────────────────────────────────
 // Positions generated once at module load — stable per session, no re-renders.
 function _genStars(n, range = 2000) {
@@ -654,10 +925,12 @@ function ParticleCanvas() {
     draw()
     return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('resize', resize) }
   }, [])
-  return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.22 }}/>
+  return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.14 }}/>
 }
 
 // ── Directional scroll-reveal hook ────────────────────────────────────────────
+// Only animates opacity + transform — both run on the compositor thread.
+// Blur was removed: it forces expensive repaints on every scroll frame.
 function useReveal(direction = 'up', delay = 0) {
   const ref = useRef(null)
   const [v, setV] = useState(false)
@@ -666,23 +939,22 @@ function useReveal(direction = 'up', delay = 0) {
     if (!el) return
     const obs = new IntersectionObserver(
       ([e]) => { if (e.isIntersecting) { setV(true); obs.disconnect() } },
-      { threshold: 0.07, rootMargin: '0px 0px -30px 0px' }
+      { threshold: 0.06, rootMargin: '0px 0px -24px 0px' }
     )
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
   const origin = {
-    left:  'translateX(-56px)',
-    right: 'translateX(56px)',
-    up:    'translateY(36px)',
-    scale: 'scale(0.95) translateY(20px)',
+    left:  'translateX(-38px)',
+    right: 'translateX(38px)',
+    up:    'translateY(26px)',
+    scale: 'scale(0.96) translateY(14px)',
   }
   return [ref, {
     opacity: v ? 1 : 0,
-    transform: v ? 'none' : (origin[direction] ?? origin.up),
-    filter: v ? 'blur(0px)' : 'blur(10px)',
-    transition: `opacity 0.85s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.85s cubic-bezier(0.16,1,0.3,1) ${delay}ms, filter 0.85s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
-    willChange: 'opacity, transform, filter',
+    transform: v ? 'translateZ(0)' : (origin[direction] ?? origin.up),
+    transition: `opacity 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+    willChange: 'opacity, transform',
   }]
 }
 
@@ -703,7 +975,7 @@ function DefenseViz() {
     { name: 'Regex Patterns',   val: 0.97, hot: true  },
     { name: 'PromptGuard',      val: 0.72, hot: true  },
     { name: 'Many-Shot',        val: 0.08, hot: false },
-    { name: 'GCG Suffix',       val: 0.14, hot: false },
+    { name: 'Suffix Patterns',  val: 0.14, hot: false },
     { name: 'Direct Harm',      val: 0.61, hot: true  },
     { name: 'Multilingual',     val: 0.09, hot: false },
   ]
@@ -976,7 +1248,7 @@ function FloatingChips() {
 
 const HERO_LAYERS = [
   { label: 'Regex',       color: '#00d4ff', weight: 1.5 },
-  { label: 'GCG Suffix',  color: '#00d4ff', weight: 1.3 },
+  { label: 'Suffix',      color: '#00d4ff', weight: 1.3 },
   { label: 'Many-Shot',   color: '#00c4ef', weight: 1.2 },
   { label: 'Direct Harm', color: '#00b8e0', weight: 1.1 },
   { label: 'PAIR / SVM',  color: '#0099cc', weight: 1.0 },
@@ -1220,29 +1492,97 @@ function HeroBubbleSystem() {
   )
 }
 
+// ── Typewriter hook ───────────────────────────────────────────────────────────
+function useTypewriter(text, speed = 22, startDelay = 1100) {
+  const [output, setOutput] = useState('')
+  const [cursor, setCursor] = useState(true)
+  useEffect(() => {
+    let i = 0
+    const t0 = setTimeout(() => {
+      const iv = setInterval(() => {
+        if (i < text.length) { setOutput(text.slice(0, ++i)) }
+        else { clearInterval(iv); setTimeout(() => setCursor(false), 800) }
+      }, speed)
+      return () => clearInterval(iv)
+    }, startDelay)
+    const blink = setInterval(() => setCursor(c => !c), 530)
+    return () => { clearTimeout(t0); clearInterval(blink) }
+  }, [text, speed, startDelay])
+  return { output, cursor }
+}
+
+// ── Hero live cycling status line ─────────────────────────────────────────────
+const TYPING_LINES = [
+  '11 detection layers running in parallel.',
+  'Hallucination detected — shadow jury applied.',
+  'Prompt injection intercepted before LLM call.',
+  'Auto-correction engine engaged.',
+  'Zero false positives. Zero missed attacks.',
+]
+function HeroTypingLine() {
+  const [lineIdx, setLineIdx] = useState(0)
+  const [charIdx, setCharIdx] = useState(0)
+  const [phase, setPhase]     = useState('typing')
+  useEffect(() => {
+    const line = TYPING_LINES[lineIdx]; let t
+    if (phase === 'typing') {
+      if (charIdx < line.length) t = setTimeout(() => setCharIdx(c => c + 1), 36)
+      else t = setTimeout(() => setPhase('pause'), 1900)
+    } else if (phase === 'pause') {
+      t = setTimeout(() => setPhase('erasing'), 350)
+    } else {
+      if (charIdx > 0) t = setTimeout(() => setCharIdx(c => c - 1), 14)
+      else { setLineIdx(i => (i + 1) % TYPING_LINES.length); setPhase('typing') }
+    }
+    return () => clearTimeout(t)
+  }, [phase, charIdx, lineIdx])
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(0,212,255,0.4)' }}>›</span>
+      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: '#4a6680', letterSpacing: '0.01em', minWidth: '300px' }}>
+        {TYPING_LINES[lineIdx].slice(0, charIdx)}
+      </span>
+      <span style={{
+        display: 'inline-block', width: '6px', height: '13px',
+        background: '#00d4ff', opacity: 0.5,
+        animation: 'cursor-blink 1.1s step-end infinite',
+        verticalAlign: 'text-bottom', flexShrink: 0,
+      }}/>
+    </div>
+  )
+}
+
 function HeroSection({ loggedIn, copy, copied }) {
   const ROTATE_WORDS = ['Data', 'Models', 'Agents', 'Workflows']
   const { word, visible } = useRotateWord(ROTATE_WORDS, 2200)
+  const { output: typedDesc, cursor: showCursor } = useTypewriter(
+    'A production-grade safety layer for LLMs — intercepts adversarial attacks before they hit your model, detects hallucinations in real time, and auto-corrects failures before they reach your users.',
+    18, 1200
+  )
+
+  // Scroll-driven parallax — headline drifts up slightly slower than page scroll
+  const { scrollY } = useScroll()
+  const rawY = useTransform(scrollY, [0, 700], [0, -55])
+  const paraY = useSpring(rawY, { stiffness: 300, damping: 50 })
 
   return (
     <section className="hero-shell">
       <div className="hero-grid" style={{ gap: '48px', alignItems: 'center' }}>
 
-        {/* ── LEFT — framer stagger ── */}
-        <motion.div variants={heroContainer} initial="hidden" animate="visible">
-{/* Headline — Syne font, cinematic shimmer */}
+        {/* ── LEFT — framer stagger + scroll parallax ── */}
+        <motion.div variants={heroContainer} initial="hidden" animate="visible" style={{ y: paraY }}>
           <motion.h1 variants={heroItem} style={{
-            fontFamily: 'Syne, inter',
-            fontSize: 'clamp(68px, 6vw, 100px)',
-            fontWeight: 700, 
-            lineHeight: 1.15,         /* Bumped up from 0.68 */
-            paddingBottom: '24px',  /* Adds a safe zone for the 'g' tail */
-            letterSpacing: '-0.035em',
-            color: '#f4ecff', marginBottom: '32px',
-            maxWidth: '680px',
-            overflow: 'visible'
+            fontFamily: 'Syne, sans-serif',
+            fontSize: 'clamp(42px, 4.8vw, 82px)',
+            fontWeight: 700,
+            lineHeight: 1.08,
+            letterSpacing: '-0.04em',
+            color: '#f4ecff',
+            marginBottom: '28px',
+            maxWidth: '700px',
+            overflow: 'visible',
           }}>
-             The runtime firewall for your LLMs.
+            The Runtime Firewall<br/>for your LLMs.
           </motion.h1>
 
           {/* Rotating keyword line */}
@@ -1261,9 +1601,16 @@ function HeroSection({ loggedIn, copy, copied }) {
             <span style={{ fontSize: 'clamp(18px, 1.75vw, 26px)', color: '#f4f0ff', fontWeight: 750, letterSpacing: '-0.025em' }}>at runtime.</span>
           </motion.div>
 
-          {/* Description */}
-          <motion.p variants={heroItem} style={{ fontSize: 'clamp(16px, 1.2vw, 20px)', lineHeight: 1.55, color: 'rgba(244,240,255,0.62)', maxWidth: '560px', marginBottom: '30px', fontWeight: 500, letterSpacing: '-0.01em' }}>
-            A runtime reliability and adversarial defense layer for LLM systems.Catches prompt attacks before they hit production.Streaming output interception with output-side adversarial scanning.
+          {/* Description — typewriter */}
+          <motion.p variants={heroItem} style={{
+            fontSize: 'clamp(15px, 1.1vw, 18px)', lineHeight: 1.72,
+            color: 'rgba(220,230,248,0.75)', maxWidth: '560px', marginBottom: '32px',
+            fontWeight: 400, letterSpacing: '0em', minHeight: '72px',
+          }}>
+            {typedDesc}
+            {showCursor && (
+              <span style={{ display: 'inline-block', width: '2px', height: '1em', background: '#00d4ff', marginLeft: '2px', verticalAlign: 'text-bottom', borderRadius: '1px', opacity: 0.9 }}/>
+            )}
           </motion.p>
 
           {/* CTAs with magnetic effect */}
@@ -1278,19 +1625,11 @@ function HeroSection({ loggedIn, copy, copied }) {
             </MagneticButton>
           </motion.div>
 
-          {/* Install pill */}
-          <motion.div variants={heroItem} style={{ display: 'inline-flex', alignItems: 'center', gap: '14px', padding: '10px 16px', borderRadius: '9px', background: 'rgba(5,9,20,0.8)', border: '1px solid #1c2d42', backdropFilter: 'blur(8px)' }}>
-            <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12.5px', color: '#7a9bb8' }}>
-              <span style={{ color: '#00d4ff', opacity: 0.6, userSelect: 'none' }}>$ </span>pip install fie-sdk
-            </code>
-            <div style={{ width: '1px', height: '14px', background: '#1c2d42' }}/>
-            <button onClick={copy} aria-label="Copy install command" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 4px', color: copied ? '#00ff88' : '#3a5470', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', transition: 'color 0.2s', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {copied
-                ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>copied</>
-                : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>copy</>
-              }
-            </button>
+          {/* Live cycling status line */}
+          <motion.div variants={heroItem} style={{ marginTop: '4px' }}>
+            <HeroTypingLine />
           </motion.div>
+
         </motion.div>
 
         {/* ── RIGHT — HeroPanel with radar rings + floating chips ── */}
@@ -1331,7 +1670,7 @@ function ConnectivityFlowViz() {
       { x: 350, y: 220, label: "Regex" },
       { x: 350, y: 260, label: "PromptGuard" },
       { x: 350, y: 300, label: "Many-Shot" },
-      { x: 350, y: 340, label: "GCG Suffix" },
+      { x: 350, y: 340, label: "Suffix" },
       { x: 350, y: 380, label: "Direct Harm" },
     ],
     
@@ -1773,8 +2112,8 @@ function UnifiedArchitectureSection() {
         <div style={{ textAlign: 'center', marginBottom: '90px' }}>
           <div className="section-label" style={{ justifyContent: 'center' }}>The FIE Architecture</div>
           <h2 style={{ 
-            fontFamily: 'Syne, sans-serif', fontSize: 'clamp(32px, 4.5vw, 48px)', 
-            fontWeight: 800, letterSpacing: '-0.03em', color: '#f4ecff', lineHeight: 1.1 
+            fontFamily: 'Syne, Bebas Neue', fontSize: 'clamp(46px, 5.5vw, 47px)', 
+            fontWeight: 750, letterSpacing: '-0.03em', color: '#f4ecff', lineHeight: 1.1 
           }}>
             Trust Across Your <span style={{ color: '#00d4ff' }}>AI Pipeline</span>
           </h2>
@@ -1796,8 +2135,8 @@ function UnifiedArchitectureSection() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <div style={{ marginBottom: '40px' }}>
                 <h2 style={{ 
-                  fontFamily: 'Syne, sans-serif', fontSize: 'clamp(36px, 4vw, 52px)', 
-                  fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', 
+                  fontFamily: 'Syne, sans-serif', fontSize: 'clamp(46px, 5.5vw, 47px)', 
+                  fontWeight: 750, lineHeight: 1.1, letterSpacing: '-0.03em', 
                   color: '#f4ecff', margin: '0 0 20px 0'
                 }}>
                   Intelligence<br/>In Motion.
@@ -1942,11 +2281,11 @@ function FeatSection1({ loggedIn }) {
       <div className="feat-grid">
         <div ref={tRef} style={tStyle}>
           <div className="section-label">Adversarial Defense</div>
-          <h2 style={{ fontSize: 'clamp(24px,3.2vw,38px)', fontWeight: 800, letterSpacing: '-0.03em', color: '#e8f0fa', lineHeight: 1.14, marginBottom: '20px' }}>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px,3.2vw,40px)', fontWeight: 800, letterSpacing: '-0.034em', color: '#f0f6ff', lineHeight: 1.1, marginBottom: '20px' }}>
             Stop attacks before<br/>they reach your model.
           </h2>
-          <p style={{ fontSize: '14.5px', lineHeight: 1.78, color: '#7a9bb8', marginBottom: '32px', maxWidth: '440px' }}>
-            11 detection layers run in parallel — regex, GCG, PAIR/SVM, many-shot, virtualization, indirect injection, and more. Total overhead under 15ms.
+          <p style={{ fontSize: '15.5px', lineHeight: 1.72, color: '#8da8c4', marginBottom: '32px', maxWidth: '440px' }}>
+            11 detection layers run in parallel — regex, PAIR/SVM, many-shot, virtualization, indirect injection, and more. Total overhead under 15ms.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
             {[
@@ -1992,10 +2331,10 @@ function FeatSection2({ loggedIn }) {
         </div>
         <div ref={tRef} style={tStyle}>
           <div className="section-label">Hallucination Detection</div>
-          <h2 style={{ fontSize: 'clamp(24px,3.2vw,38px)', fontWeight: 800, letterSpacing: '-0.03em', color: '#e8f0fa', lineHeight: 1.14, marginBottom: '20px' }}>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px,3.2vw,40px)', fontWeight: 800, letterSpacing: '-0.034em', color: '#f0f6ff', lineHeight: 1.1, marginBottom: '20px' }}>
             Never ship a hallucination<br/>to your users.
           </h2>
-          <p style={{ fontSize: '14.5px', lineHeight: 1.78, color: '#7a9bb8', marginBottom: '32px', maxWidth: '440px' }}>
+          <p style={{ fontSize: '15.5px', lineHeight: 1.72, color: '#8da8c4', marginBottom: '32px', maxWidth: '440px' }}>
             A shadow ensemble of 3 independent models answers the same prompt in parallel. Disagreement is your strongest hallucination signal — the #1 predictor in the XGBoost classifier.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
@@ -2027,6 +2366,15 @@ function FeatSection2({ loggedIn }) {
   )
 }
 
+const LLM_PROVIDERS = [
+  { name: 'OpenAI',      color: '#10b981' },
+  { name: 'Anthropic',   color: '#a78bfa' },
+  { name: 'Groq',        color: '#00d4ff' },
+  { name: 'Ollama',      color: '#fb923c' },
+  { name: 'Mistral',     color: '#f59e0b' },
+  { name: 'Any OpenAI-compatible', color: '#6e90b0' },
+]
+
 function FeatSection3({ loggedIn }) {
   const [tRef, tStyle] = useReveal('left')
   const [vRef, vStyle] = useReveal('right', 80)
@@ -2034,18 +2382,33 @@ function FeatSection3({ loggedIn }) {
     <section style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
       <div className="feat-grid">
         <div ref={tRef} style={tStyle}>
-          <div className="section-label">Integration</div>
-          <h2 style={{ fontSize: 'clamp(24px,3.2vw,38px)', fontWeight: 800, letterSpacing: '-0.03em', color: '#e8f0fa', lineHeight: 1.14, marginBottom: '20px' }}>
-            One decorator.<br/>Total coverage.
+          <div className="section-label">Compatibility</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px,3.2vw,40px)', fontWeight: 800, letterSpacing: '-0.034em', color: '#f0f6ff', lineHeight: 1.1, marginBottom: '20px' }}>
+            Works with every<br/>LLM you already use.
           </h2>
-          <p style={{ fontSize: '14.5px', lineHeight: 1.78, color: '#7a9bb8', marginBottom: '32px', maxWidth: '440px' }}>
-            Works with OpenAI, Anthropic, Groq, Ollama — anything that returns a string. No infrastructure. No API key. Full protection runs on your machine.
+          <p style={{ fontSize: '15.5px', lineHeight: 1.72, color: '#8da8c4', marginBottom: '28px', maxWidth: '440px' }}>
+            FIE wraps any function that calls a language model — it doesn't care which provider, which model, or which SDK. If it returns a string, FIE protects it.
           </p>
+
+          {/* Provider chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
+            {LLM_PROVIDERS.map(p => (
+              <div key={p.name} style={{
+                padding: '5px 12px', borderRadius: '20px',
+                background: `rgba(${p.color === '#10b981' ? '16,185,129' : p.color === '#a78bfa' ? '167,139,250' : p.color === '#00d4ff' ? '0,212,255' : p.color === '#fb923c' ? '251,146,60' : p.color === '#f59e0b' ? '245,158,11' : '110,144,176'},0.08)`,
+                border: `1px solid ${p.color}28`,
+                fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
+                fontWeight: 600, color: p.color, letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+              }}>{p.name}</div>
+            ))}
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
             {[
-              'Local mode — zero network calls, runs entirely offline',
-              'Connect your own enterprise LLM via any OpenAI-compatible endpoint',
-              'Three outcomes: VALIDATED · CORRECTED · BLOCKED — each explained',
+              'No SDK changes — wrap your existing LLM call, nothing else moves',
+              'Enterprise endpoints via any OpenAI-compatible API base URL',
+              'Outputs VALIDATED, CORRECTED, or BLOCKED — every decision explained',
             ].map((t, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                 <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', marginTop: '7px', flexShrink: 0 }}/>
@@ -2053,13 +2416,8 @@ function FeatSection3({ loggedIn }) {
               </div>
             ))}
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '14px', padding: '10px 16px', borderRadius: '9px', background: 'rgba(12,4,24,0.85)', border: '1px solid rgba(255,255,255,0.09)', marginBottom: '24px' }}>
-            <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: '#7a9bb8' }}>
-              <span style={{ color: '#0ea5e9', opacity: 0.7, userSelect: 'none' }}>$ </span>pip install fie-sdk
-            </code>
-          </div>
-          <br/>
-          <Link to={loggedIn ? '/dashboard' : '/login'} style={{
+
+          <Link to={loggedIn ? '/playground' : '/login'} style={{
             display: 'inline-flex', alignItems: 'center', gap: '7px',
             fontSize: '13px', fontWeight: 600, color: '#0ea5e9',
             textDecoration: 'none', transition: 'gap 0.2s ease',
@@ -2067,7 +2425,7 @@ function FeatSection3({ loggedIn }) {
             onMouseEnter={e => { e.currentTarget.style.gap = '11px' }}
             onMouseLeave={e => { e.currentTarget.style.gap = '7px' }}
           >
-            Get started in 2 minutes
+            Try it in the Playground
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </Link>
         </div>
@@ -2084,10 +2442,10 @@ function PipelineText({ loggedIn }) {
   return (
     <div ref={ref} style={style}>
       <div className="section-label">Pipeline</div>
-      <h2 style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 800, letterSpacing: '-0.028em', color: '#e8f0fa', marginBottom: '16px', lineHeight: 1.2 }}>
+      <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px,3vw,36px)', fontWeight: 800, letterSpacing: '-0.034em', color: '#f0f6ff', marginBottom: '16px', lineHeight: 1.1 }}>
         See the full pipeline<br/>run in real time.
       </h2>
-      <p style={{ fontSize: '14px', lineHeight: 1.78, color: '#7a9bb8', marginBottom: '28px' }}>
+      <p style={{ fontSize: '15.5px', lineHeight: 1.72, color: '#8da8c4', marginBottom: '28px' }}>
         Type any prompt and watch every decision — pre-flight guard, shadow ensemble, XGBoost classification, jury verdict — explained step by step.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '32px' }}>
@@ -2119,97 +2477,359 @@ function PipelineVizBlock() {
   )
 }
 
+// Code preview lines for each step
+const STEP_CODE = [
+  [
+    { t: '$ pip install fie-sdk', c: '#00d4ff' },
+    { t: '', c: '' },
+    { t: '✓  Resolving dependencies...', c: '#374f65' },
+    { t: '✓  Successfully installed',    c: '#00ff88' },
+  ],
+  [
+    { t: 'from fie import monitor', c: '#a78bfa' },
+    { t: '', c: '' },
+    { t: '@monitor(mode="local")', c: '#00d4ff' },
+    { t: 'def ask_llm(prompt: str):', c: '#dde8f5' },
+    { t: '    return llm(prompt)', c: '#6e90b0' },
+  ],
+  [
+    { t: '@monitor(', c: '#00d4ff' },
+    { t: '    mode="cloud",', c: '#6e90b0' },
+    { t: '    api_key=FIE_KEY,', c: '#6e90b0' },
+    { t: ')', c: '#00d4ff' },
+    { t: 'def ask_llm(prompt: str): …', c: '#dde8f5' },
+  ],
+]
+
+// ── Typewriter code line ──────────────────────────────────────────────────────
+function AnimatedCodeLine({ text, color, delay, visible }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    if (!visible) return
+    const t = setTimeout(() => setOn(true), delay)
+    return () => clearTimeout(t)
+  }, [visible, delay])
+  return (
+    <div style={{
+      fontFamily: 'JetBrains Mono, monospace', fontSize: '11.5px',
+      color: on ? (color || '#7a9bb8') : 'transparent',
+      lineHeight: 1.8, minHeight: text ? undefined : '14px',
+      transform: on ? 'translateX(0)' : 'translateX(-6px)',
+      transition: 'color 0.22s ease, transform 0.22s ease',
+    }}>{text || ' '}</div>
+  )
+}
+
+function StepCodeBlock({ lines, visible = false, baseDelay = 0 }) {
+  const cursorDelay = baseDelay + lines.length * 130 + 200
+  const [cursorOn, setCursorOn] = useState(false)
+  useEffect(() => {
+    if (!visible) return
+    const t = setTimeout(() => setCursorOn(true), cursorDelay)
+    return () => clearTimeout(t)
+  }, [visible, cursorDelay])
+
+  return (
+    <div style={{
+      marginTop: '22px', borderRadius: '10px',
+      background: 'rgba(0,0,0,0.35)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      overflow: 'hidden',
+    }}>
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '5px' }}>
+        {['#ff5f57','#febc2e','#28c840'].map(c => (
+          <div key={c} style={{ width: 7, height: 7, borderRadius: '50%', background: c, opacity: 0.55 }} />
+        ))}
+      </div>
+      <div style={{ padding: '14px 16px' }}>
+        {lines.map((l, i) => (
+          <AnimatedCodeLine key={i} text={l.t} color={l.c} delay={baseDelay + i * 130} visible={visible} />
+        ))}
+        {/* Blinking cursor */}
+        <span style={{
+          display: 'inline-block', width: '7px', height: '13px',
+          background: '#00d4ff', verticalAlign: 'text-bottom',
+          opacity: cursorOn ? 1 : 0,
+          animation: cursorOn ? 'cursor-blink 1.1s step-end infinite' : 'none',
+          transition: 'opacity 0.1s',
+        }}/>
+      </div>
+    </div>
+  )
+}
+
+// ── Animated flow connector between cards ─────────────────────────────────────
+function FlowConnector({ visible }) {
+  return (
+    <div style={{
+      position: 'absolute', top: '48px',
+      left: '68px', right: '68px',  // inset past the badge edges
+      height: '1px', zIndex: 0, pointerEvents: 'none',
+    }}>
+      {/* Dim base rail */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.06)', borderRadius: '1px' }} />
+
+      {/* Gradient line drawing in */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={visible ? { scaleX: 1 } : {}}
+        transition={{ duration: 1.1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(90deg, #00d4ff 0%, #a78bfa 50%, #00ff88 100%)',
+          transformOrigin: 'left center', borderRadius: '1px',
+          opacity: 0.65,
+        }}
+      />
+
+      {/* Racing particle — loops every ~4.5 s */}
+      <motion.div
+        initial={{ left: '0%', opacity: 0 }}
+        animate={visible ? {
+          left: ['0%', '100%'],
+          opacity: [0, 1, 1, 0],
+        } : {}}
+        transition={{
+          duration: 2,
+          times: [0, 0.06, 0.9, 1],
+          ease: 'linear',
+          repeat: Infinity,
+          repeatDelay: 2.2,
+          delay: 0.6,
+        }}
+        style={{
+          position: 'absolute', top: '-4px',
+          width: 9, height: 9, borderRadius: '50%',
+          background: '#00d4ff',
+          boxShadow: '0 0 12px 3px rgba(0,212,255,0.55)',
+        }}
+      />
+    </div>
+  )
+}
+
 function HowItWorksSection() {
+  const [hRef, hStyle]         = useReveal('up')
+  const [gridRef, gridVisible] = useScrollReveal()
+
   return (
     <section style={{ position: 'relative', zIndex: 2 }}>
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
-        <HowItWorksHeader />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '2px' }} className="grid-3">
-          {STEPS.map((s, i) => (
-            <HowItWorksStep key={s.n} s={s} i={i} last={i === STEPS.length - 1} />
-          ))}
+
+        {/* Header */}
+        <div ref={hRef} style={{ ...hStyle, marginBottom: '64px' }}>
+          <div className="section-label">How it works</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px,3vw,38px)', fontWeight: 800, letterSpacing: '-0.028em', color: '#e8f0fa', lineHeight: 1.12, marginBottom: '14px' }}>
+            Production-ready in three lines of code.
+          </h2>
+          <p style={{ fontSize: '15px', color: '#6e90b0', maxWidth: '480px', lineHeight: 1.65 }}>
+            Start in offline mode with zero config. Upgrade to full cloud power whenever you're ready.
+          </p>
+        </div>
+
+        {/* Cards + flow connector */}
+        <div ref={gridRef} style={{ position: 'relative' }}>
+          <FlowConnector visible={gridVisible} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px', alignItems: 'stretch' }} className="grid-3">
+            {STEPS.map((s, i) => (
+              <HowItWorksStep key={s.n} s={s} i={i} last={i === STEPS.length - 1} code={STEP_CODE[i]} visible={gridVisible} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
   )
 }
 
-function HowItWorksHeader() {
-  const [ref, style] = useReveal('up')
+function HowItWorksStep({ s, i, last, code, visible }) {
+  const STEP_COLORS = ['#00d4ff', '#a78bfa', '#00ff88']
+  const color  = STEP_COLORS[i]
+  const rgb    = color === '#00d4ff' ? '0,212,255' : color === '#a78bfa' ? '167,139,250' : '0,255,136'
+  const delay  = 0.08 + i * 0.16
+
   return (
-    <div ref={ref} style={{ ...style, marginBottom: '60px' }}>
-      <div className="section-label">How it works</div>
-      <h2 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-0.028em', color: '#e8f0fa', lineHeight: 1.2 }}>
-        Up and running in three steps.
-      </h2>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 38, scale: 0.95 }}
+      animate={visible ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        padding: '28px', borderRadius: '16px',
+        background: `linear-gradient(135deg, rgba(${rgb},0.04) 0%, rgba(9,15,25,0.95) 60%)`,
+        border: `1px solid rgba(${rgb},0.16)`,
+        position: 'relative', overflow: 'hidden',
+        height: '100%', display: 'flex', flexDirection: 'column',
+        willChange: 'transform, opacity',
+      }}
+    >
+      {/* Top accent line */}
+      <div style={{
+        position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px',
+        background: `linear-gradient(90deg, transparent, rgba(${rgb},0.5), transparent)`,
+      }}/>
+
+      {/* Number badge — glow pulse when visible */}
+      <motion.div
+        animate={visible ? {
+          boxShadow: [`0 0 18px rgba(${rgb},0.15)`, `0 0 36px rgba(${rgb},0.5)`, `0 0 18px rgba(${rgb},0.15)`],
+        } : {}}
+        transition={{ duration: 1.8, delay: delay + 0.45, ease: 'easeInOut' }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: '40px', height: '40px', borderRadius: '10px',
+          background: `rgba(${rgb},0.1)`, border: `1px solid rgba(${rgb},0.3)`,
+          fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 800,
+          color, marginBottom: '20px', zIndex: 1, position: 'relative',
+        }}
+      >{s.n}</motion.div>
+
+      {/* Arrow connector */}
+      {!last && (
+        <motion.div
+          animate={visible ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.4, delay: delay + 0.5 }}
+          style={{
+            position: 'absolute', top: '44px', right: '-12px',
+            width: '24px', height: '24px', borderRadius: '50%',
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 2,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#374f65" strokeWidth="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </motion.div>
+      )}
+
+      <div style={{ fontSize: '16px', fontWeight: 700, color: '#e8f0fa', marginBottom: '8px', letterSpacing: '-0.015em' }}>{s.title}</div>
+      <div style={{ fontSize: '13px', lineHeight: 1.72, color: '#6e90b0', flex: 1 }}>{s.desc}</div>
+
+      <StepCodeBlock lines={code} visible={visible} baseDelay={Math.round((delay + 0.45) * 1000)} />
+    </motion.div>
   )
 }
 
-function HowItWorksStep({ s, i, last }) {
-  const [ref, style] = useReveal('up', i * 100)
-  return (
-    <div ref={ref} style={{ ...style, padding: '36px 40px 36px 0', borderRight: !last ? '1px solid rgba(255,255,255,0.07)' : 'none', position: 'relative' }} className={last ? '' : ''}>
-      <div style={{
-        width: '44px', height: '44px', borderRadius: '12px',
-        background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.18)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: 800,
-        color: '#0ea5e9', marginBottom: '20px',
-      }}>{s.n}</div>
-      <div style={{ fontSize: '16px', fontWeight: 700, color: '#e8f0fa', marginBottom: '10px', letterSpacing: '-0.015em' }}>{s.title}</div>
-      <div style={{ fontSize: '13px', lineHeight: 1.75, color: '#7a9bb8' }}>{s.desc}</div>
-    </div>
-  )
-}
+// Detection coverage data — these are the real layers in the pipeline
+const ATTACK_LAYERS = [
+  { name: 'Prompt Injection',      desc: 'Detects attempts to override system instructions or hijack model context.',      color: '#ff4466' },
+  { name: 'Jailbreak Attempts',    desc: 'Catches persona-based, roleplay, and constraint-removal jailbreak patterns.',     color: '#ff4466' },
+  { name: 'Many-Shot Attacks',     desc: 'Identifies priming sequences that gradually shift model behaviour over turns.',    color: '#ff6680' },
+  { name: 'Indirect Injection',    desc: 'Flags malicious payloads embedded in retrieved documents or tool outputs.',        color: '#ff4466' },
+  { name: 'Token Smuggling',       desc: 'Catches obfuscated instructions hiding inside encoded or fragmented text.',        color: '#ff6680' },
+  { name: 'Crescendo (Multi-turn)','desc': 'Session-aware tracking detects foot-in-the-door escalation across turns.',      color: '#ff4466' },
+]
+
+const OUTPUT_LAYERS = [
+  { name: 'Factual Hallucination', desc: 'Shadow jury of 3 models cross-checks factual claims before they reach the user.', color: '#00d4ff' },
+  { name: 'Confidence Collapse',   desc: 'XGBoost classifier flags low-agreement outputs via Failure Signal Vector.',        color: '#00d4ff' },
+  { name: 'Model Extraction',      desc: 'Detects systematic probing designed to reverse-engineer system prompt or weights.', color: '#a78bfa' },
+  { name: 'Virtualization',        desc: 'Catches roleplay and fictional framing used to bypass safety guidelines.',          color: '#a78bfa' },
+]
 
 function BenchmarksSection() {
-  const [hRef, hStyle] = useReveal('up')
-  const [lRef, lStyle] = useReveal('left', 60)
-  const [rRef, rStyle] = useReveal('right', 60)
+  const [hRef, hStyle]   = useReveal('up')
+  const [lRef, lVisible] = useScrollReveal()
+  const [rRef, rVisible] = useScrollReveal()
+
+  const LayerRow = ({ name, desc, color, last, idx, visible }) => (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: '14px',
+      padding: '14px 0',
+      borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)',
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateX(0)' : 'translateX(-10px)',
+      transition: `opacity 0.45s ease ${idx * 70}ms, transform 0.45s ease ${idx * 70}ms`,
+      willChange: 'opacity, transform',
+    }}>
+      <div style={{
+        width: 7, height: 7, borderRadius: '50%',
+        background: color, marginTop: 7, flexShrink: 0,
+        boxShadow: `0 0 10px ${color}90`,
+        opacity: visible ? 1 : 0,
+        transition: `opacity 0.4s ease ${idx * 70 + 120}ms`,
+      }}/>
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#dde8f5', marginBottom: '3px', letterSpacing: '-0.01em' }}>{name}</div>
+        <div style={{ fontSize: '12px', color: '#4a6680', lineHeight: 1.6 }}>{desc}</div>
+      </div>
+    </div>
+  )
+
   return (
     <section style={{ borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 2, background: 'rgba(12,4,24,0.68)' }}>
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
-        <div ref={hRef} style={{ ...hStyle, marginBottom: '52px' }}>
-          <div className="section-label">Benchmarks</div>
-          <h2 style={{ fontSize: 'clamp(22px,3vw,34px)', fontWeight: 800, letterSpacing: '-0.028em', color: '#e8f0fa', marginBottom: '10px' }}>Numbers that matter.</h2>
-          <p style={{ fontSize: '13px', color: '#3a5470', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.02em' }}>
-            Evaluated on 1,757 labeled examples · JailbreakBench (Chao et al., 2024)
+
+        {/* Header */}
+        <div ref={hRef} style={{ ...hStyle, marginBottom: '64px' }}>
+          <div className="section-label">Detection Coverage</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px,3vw,38px)', fontWeight: 800, letterSpacing: '-0.028em', color: '#e8f0fa', lineHeight: 1.12, marginBottom: '16px' }}>
+            Full-spectrum protection,<br/>layer by layer.
+          </h2>
+          <p style={{ fontSize: '15px', color: '#6e90b0', maxWidth: '540px', lineHeight: 1.65 }}>
+            Every request passes through 11 parallel detection layers before reaching your model. Every response is verified before reaching your users.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="grid-2">
-          <div ref={lRef} style={lStyle}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#3a5470', marginBottom: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>Hallucination Detection</div>
-            <div style={{ borderRadius: '12px', border: '1px solid #1c2d42', overflow: 'hidden', background: '#0c0418' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '11px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                {['Method','Recall','FPR','AUC'].map(h => <span key={h} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: '#3a5470', textTransform: 'uppercase' }}>{h}</span>)}
+
+        {/* Two-column coverage grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }} className="grid-2">
+
+          {/* Adversarial attacks */}
+          <div ref={lRef} style={{ opacity: lVisible ? 1 : 0, transform: lVisible ? 'translateX(0)' : 'translateX(-28px)', transition: 'opacity 0.6s ease, transform 0.6s ease', willChange: 'opacity, transform' }}>
+            <div style={{
+              borderRadius: '16px', overflow: 'hidden',
+              border: '1px solid rgba(255,68,102,0.15)',
+              background: 'linear-gradient(135deg, rgba(255,68,102,0.04) 0%, rgba(12,4,24,0.9) 50%)',
+            }}>
+              {/* Panel header */}
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(255,68,102,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4466', boxShadow: '0 0 12px rgba(255,68,102,0.5)' }}/>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', fontWeight: 700, color: '#ff4466', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Adversarial Attacks</span>
+                <span style={{ marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#3a5470' }}>Pre-flight guard</span>
               </div>
-              {BENCHMARKS.map((r, i) => (
-                <div key={i} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '14px 18px', background: r.highlight ? 'rgba(14,165,233,0.03)' : 'transparent' }}>
-                  <span style={{ fontSize: '12px', color: r.highlight ? '#e8f0fa' : '#3a5470', fontWeight: r.highlight ? 600 : 400 }}>{r.method}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: r.highlight ? '#0ea5e9' : '#3a5470', fontWeight: r.highlight ? 700 : 400 }}>{r.recall}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: '#3a5470' }}>{r.fpr}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: r.highlight ? '#10b981' : '#3a5470' }}>{r.auc}</span>
-                </div>
-              ))}
+              <div style={{ padding: '4px 24px 8px' }}>
+                {ATTACK_LAYERS.map((l, i) => (
+                  <LayerRow key={l.name} {...l} idx={i} visible={lVisible} last={i === ATTACK_LAYERS.length - 1} />
+                ))}
+              </div>
             </div>
           </div>
-          <div ref={rRef} style={rStyle}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#3a5470', marginBottom: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>Adversarial Detection · JailbreakBench</div>
-            <div style={{ borderRadius: '12px', border: '1px solid #1c2d42', overflow: 'hidden', background: '#0c0418' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', padding: '11px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                {['Attack Type','Detection','FPR'].map(h => <span key={h} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: '#3a5470', textTransform: 'uppercase' }}>{h}</span>)}
+
+          {/* Output failures */}
+          <div ref={rRef} style={{ opacity: rVisible ? 1 : 0, transform: rVisible ? 'translateX(0)' : 'translateX(28px)', transition: 'opacity 0.6s ease 80ms, transform 0.6s ease 80ms', willChange: 'opacity, transform' }}>
+            <div style={{
+              borderRadius: '16px', overflow: 'hidden',
+              border: '1px solid rgba(0,212,255,0.12)',
+              background: 'linear-gradient(135deg, rgba(0,212,255,0.04) 0%, rgba(12,4,24,0.9) 50%)',
+            }}>
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(0,212,255,0.08)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 12px rgba(0,212,255,0.4)' }}/>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', fontWeight: 700, color: '#00d4ff', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Output Failures</span>
+                <span style={{ marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#3a5470' }}>Shadow jury</span>
               </div>
-              {ATTACK_BENCHMARKS.map((r, i) => (
-                <div key={i} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', padding: '14px 18px' }}>
-                  <span style={{ fontSize: '12px', color: '#7a9bb8' }}>{r.method}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: parseFloat(r.detection) > 80 ? '#10b981' : '#0ea5e9', fontWeight: 700 }}>{r.detection}</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: '#10b981' }}>{r.fpr}</span>
-                </div>
-              ))}
+              <div style={{ padding: '4px 24px 8px' }}>
+                {OUTPUT_LAYERS.map((l, i) => (
+                  <LayerRow key={l.name} {...l} idx={i} visible={rVisible} last={i === OUTPUT_LAYERS.length - 1} />
+                ))}
+              </div>
             </div>
-            <div style={{ fontSize: '11px', color: '#3a5470', marginTop: '10px', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.02em' }}>282 attacks + 100 benign (Stanford Alpaca)</div>
+
+            {/* Honest benchmark note */}
+            <div style={{
+              marginTop: '16px', padding: '14px 18px',
+              borderRadius: '10px',
+              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'rgba(255,255,255,0.02)',
+              display: 'flex', alignItems: 'flex-start', gap: '10px',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6e90b0" strokeWidth="2" style={{ marginTop: 1, flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p style={{ fontSize: '12px', color: '#4a6680', lineHeight: 1.65, margin: 0 }}>
+                Independent benchmarks on public datasets are in progress and will be published transparently on GitHub. Architecture and detection logic are fully open-source — every decision is inspectable.
+              </p>
+            </div>
           </div>
+
         </div>
       </div>
     </section>
@@ -2225,12 +2845,12 @@ function CTASection({ loggedIn }) {
       <div style={{ maxWidth: '620px', margin: '0 auto', padding: '120px 28px', textAlign: 'center', position: 'relative' }}>
         <div ref={ref} style={style}>
           <div className="section-label" style={{ justifyContent: 'center' }}>Get started</div>
-          <h2 style={{ fontSize: 'clamp(28px,4.5vw,46px)', fontWeight: 800, letterSpacing: '-0.034em', color: '#e8f0fa', margin: '14px 0 20px', lineHeight: 1.12 }}>
-            Your LLM is already failing.<br/>
-            <span style={{ color: '#0ea5e9' }}>Start catching it.</span>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(30px,4.5vw,50px)', fontWeight: 800, letterSpacing: '-0.038em', color: '#f0f6ff', margin: '14px 0 20px', lineHeight: 1.06 }}>
+            Every LLM has blind spots.<br/>
+            <span style={{ background: 'linear-gradient(90deg, #0ea5e9, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>FIE closes them.</span>
           </h2>
-          <p style={{ fontSize: '15px', color: '#7a9bb8', lineHeight: 1.7, marginBottom: '44px' }}>
-            Free. Open source. Apache 2.0. Works in three lines of code.
+          <p style={{ fontSize: '15px', color: '#8da8c4', lineHeight: 1.72, marginBottom: '44px' }}>
+            Free. Open-source. Apache 2.0. Up and running in three lines of code.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {loggedIn
@@ -2255,6 +2875,12 @@ export default function LandingPage() {
   const loggedIn = isLoggedIn()
   const [copied, setCopied] = useState(false)
   const [statsRef, statsVisible] = useScrollReveal()
+
+  // Nav scroll awareness
+  const { scrollY: pageScrollY } = useScroll()
+  const navBg     = useTransform(pageScrollY, [0, 80], ['rgba(12,4,24,0.55)', 'rgba(12,4,24,0.97)'])
+  const navBorder = useTransform(pageScrollY, [0, 80], ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.1)'])
+  const navShadow = useTransform(pageScrollY, [0, 80], ['none', '0 8px 40px rgba(0,0,0,0.45)'])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -2759,17 +3385,27 @@ export default function LandingPage() {
         }
         .cta-secondary:active { transform: translateY(0); }
 
+        /* Compositor-layer promotion for all scroll-animated sections */
+        section { contain: layout style; }
+
         .section-label {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 10px; font-weight: 700;
-          letter-spacing: 0.2em; color: #0ea5e9;
-          text-transform: uppercase; margin-bottom: 16px;
-          display: flex; align-items: center; gap: 8px;
+          font-size: 10.5px; font-weight: 700;
+          letter-spacing: 0.22em; color: #0ea5e9;
+          text-transform: uppercase; margin-bottom: 18px;
+          display: flex; align-items: center; gap: 10px;
         }
         .section-label::before {
           content: ''; display: block;
-          width: 18px; height: 1px;
-          background: #0ea5e9; opacity: 0.7;
+          width: 22px; height: 1px; flex-shrink: 0;
+          background: linear-gradient(90deg, transparent, #0ea5e9, #a78bfa, #0ea5e9, transparent);
+          background-size: 300% 100%;
+          animation: label-sweep 3.5s ease-in-out infinite;
+        }
+        @keyframes label-sweep {
+          0%   { background-position: 0% 50%;   opacity: 0.45; }
+          50%  { background-position: 100% 50%; opacity: 1;    }
+          100% { background-position: 0% 50%;   opacity: 0.45; }
         }
 
         .table-row:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.06); }
@@ -2901,6 +3537,27 @@ export default function LandingPage() {
           .hero-grid { grid-template-columns: 1fr !important; }
           .hero-right { display: none !important; }
         }
+        @keyframes orbit-ring-pulse {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50%       { opacity: 0.9; transform: scale(1.015); }
+        }
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        /* Desktop: show circle animation, hide simple grid */
+        @media (min-width: 901px) {
+          .feat-cards-desktop { display: block; }
+          .feat-cards-mobile  { display: none !important; }
+        }
+        /* Mobile/tablet: hide circle animation, show simple grid */
+        @media (max-width: 900px) {
+          .feat-cards-desktop { display: none !important; }
+          .feat-cards-mobile  { display: grid !important; grid-template-columns: repeat(2,1fr); gap: 12px; }
+        }
+        @media (max-width: 560px) {
+          .feat-cards-mobile  { grid-template-columns: 1fr !important; }
+        }
         @media (max-width: 768px) {
           .hide-mobile { display: none !important; }
           .grid-3 { grid-template-columns: 1fr !important; }
@@ -2913,17 +3570,24 @@ export default function LandingPage() {
 
       <div style={{ minHeight: '100vh', background: 'transparent', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', overflowX: 'hidden' }}>
 
+        {/* ── Scroll progress bar ── */}
+        <ScrollProgressBar />
+        {/* ── Cursor glow ── */}
+        <CursorGlow />
         {/* ── Aurora orb background ── */}
         <AuroraBackground />
         {/* ── Starfield background ── */}
         <StarBackground />
 
         {/* ── Nav ──────────────────────────────────────────────────── */}
-        <nav className="fi d1" style={{
+        <motion.nav className="fi d1" style={{
           position: 'sticky', top: 0, zIndex: 100,
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          background: 'rgba(12,4,24,0.88)',
+          borderBottom: '1px solid',
+          borderBottomColor: navBorder,
+          background: navBg,
+          boxShadow: navShadow,
           backdropFilter: 'blur(24px) saturate(1.6)',
+          transition: 'backdrop-filter 0.3s',
         }}>
           {/* Top accent line */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent 5%, rgba(139,92,246,0.35) 30%, rgba(0,212,255,0.4) 50%, rgba(139,92,246,0.35) 70%, transparent 95%)', pointerEvents: 'none' }}/>
@@ -2965,27 +3629,33 @@ export default function LandingPage() {
               }
             </div>
           </div>
-        </nav>
+        </motion.nav>
 
         {/* ── Hero ─────────────────────────────────────────────────── */}
         <HeroSection loggedIn={loggedIn} copy={copy} copied={copied} />
-        {/* --- 1. FIRST: STATE THE PROBLEM --- */}
-        
-        <ProblemStatementSection />
-        <UnifiedArchitectureSection />
+
         {/* ══════════════════════════════════════════════════════════ */}
         {/* Stats strip                                              */}
         {/* ══════════════════════════════════════════════════════════ */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.82)', position: 'relative', zIndex: 2 }}>
-          <div ref={statsRef} style={{ maxWidth: '1120px', margin: '0 auto', padding: '0 28px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }} className="grid-4">
+          <div ref={statsRef} style={{ maxWidth: '860px', margin: '0 auto', padding: '0 28px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }} className="grid-4">
             {STATS.map(({ value, suffix, label }, i) => (
-              <div key={label} style={{ borderRight: i < 3 ? '1px solid #1c2d42' : 'none' }}>
+              <div key={label} style={{ borderRight: i < 2 ? '1px solid #1c2d42' : 'none' }}>
                 <StatCard value={value} suffix={suffix} label={label} visible={statsVisible} />
               </div>
             ))}
           </div>
         </div>
-        {/* ------------------------- */}
+
+        {/* ══════════════════════════════════════════════════════════ */}
+        {/* Feature Cards — 3D arc entrance                         */}
+        {/* ══════════════════════════════════════════════════════════ */}
+        <FeatureCardsSection />
+
+        {/* ══════════════════════════════════════════════════════════ */}
+        {/* Architecture showcase                                   */}
+        {/* ══════════════════════════════════════════════════════════ */}
+        <UnifiedArchitectureSection />
 
         {/* ══════════════════════════════════════════════════════════ */}
         {/* Feature 1 — Adversarial Defense (text left, viz right)   */}

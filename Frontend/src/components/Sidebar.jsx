@@ -118,6 +118,7 @@ function NavItem({ path, label, icon, shortcut }) {
   return (
     <NavLink
       to={path}
+      className="nav-item-link"
       title={shortcut ? `${label} (${shortcut})` : label}
       style={({ isActive }) => ({
         display: 'flex',
@@ -171,6 +172,18 @@ export default function Sidebar() {
   return (
     <>
       <style>{`
+        @keyframes pulse-dot {
+          0%,100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.75); }
+        }
+        @keyframes logo-glow {
+          0%,100% { box-shadow: 0 0 0 0 rgba(0,212,255,0); }
+          50%      { box-shadow: 0 0 12px 2px rgba(0,212,255,0.18); }
+        }
+        @keyframes sidebar-in {
+          from { opacity: 0; transform: translateX(-8px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         .sidebar-nav-group-label {
           font-family: 'JetBrains Mono', monospace;
           font-size: 9px;
@@ -182,6 +195,8 @@ export default function Sidebar() {
           margin: 14px 0 4px;
         }
         .sidebar-nav-group-label:first-child { margin-top: 0; }
+        .nav-item-link { transition: all 0.15s cubic-bezier(0.16,1,0.3,1) !important; }
+        .nav-item-link:hover { transform: translateX(2px); }
       `}</style>
 
       <aside className="layout-sidebar" style={{
@@ -194,6 +209,7 @@ export default function Sidebar() {
         flexDirection: 'column',
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border)',
+        animation: 'sidebar-in 0.4s cubic-bezier(0.16,1,0.3,1) both',
       }}>
 
         {/* ── Logo ───────────────────────────────────────────────── */}
@@ -202,11 +218,12 @@ export default function Sidebar() {
             <div style={{
               width: '30px', height: '30px', borderRadius: '7px', flexShrink: 0,
               background: 'linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.05))',
-              border: '1px solid rgba(0,212,255,0.2)',
+              border: '1px solid rgba(0,212,255,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '9px', fontWeight: 800,
               color: 'var(--accent-cyan)', letterSpacing: '0.04em',
+              animation: 'logo-glow 4s ease-in-out infinite',
             }}>FIE</div>
             <div>
               <div style={{
@@ -221,24 +238,6 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* System status row */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '6px 9px', borderRadius: '6px',
-            background: 'rgba(0,255,136,0.04)',
-            border: '1px solid rgba(0,255,136,0.12)',
-          }}>
-            <div style={{
-              width: '5px', height: '5px', borderRadius: '50%',
-              background: 'var(--accent-green)',
-              animation: 'pulse-dot 2.5s ease-in-out infinite',
-              flexShrink: 0,
-            }}/>
-            <span style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '10px', color: 'var(--accent-green)', fontWeight: 600,
-            }}>All systems operational</span>
-          </div>
         </div>
 
         {/* ── Home link ──────────────────────────────────────────── */}

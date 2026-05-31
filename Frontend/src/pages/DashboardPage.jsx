@@ -84,15 +84,17 @@ function KPICard({ label, value, suffix = '', decimals = 0, sub, color, delay = 
       animation: `kpiIn 0.5s cubic-bezier(0.16,1,0.3,1) ${delay}ms both`,
       position: 'relative',
       overflow: 'hidden',
-      transition: 'border-color 0.2s, box-shadow 0.2s',
+      transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s cubic-bezier(0.16,1,0.3,1)',
     }}
     onMouseEnter={e => {
-      e.currentTarget.style.borderColor = 'var(--border-bright)'
-      e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.3)`
+      e.currentTarget.style.borderColor = color
+      e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px ${color}20`
+      e.currentTarget.style.transform = 'translateY(-2px)'
     }}
     onMouseLeave={e => {
       e.currentTarget.style.borderColor = 'var(--border)'
       e.currentTarget.style.boxShadow = 'none'
+      e.currentTarget.style.transform = 'translateY(0)'
     }}
     >
       {/* Color accent stripe */}
@@ -426,16 +428,41 @@ export default function DashboardPage() {
 
   return (
     <div className="dash-page" style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+      <style>{`
+        @keyframes kpiIn {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideRow {
+          from { opacity: 0; transform: translateX(-6px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        @keyframes pulse-dot {
+          0%,100% { opacity: 1;   transform: scale(1); }
+          50%     { opacity: 0.4; transform: scale(0.75); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes header-in {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
       {/* ── Page header ──────────────────────────────────────────── */}
       <div style={{
         marginBottom: '20px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        animation: 'kpiIn 0.45s ease both',
+        animation: 'header-in 0.5s cubic-bezier(0.16,1,0.3,1) both',
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
               Overview
             </h1>
             <span style={{
@@ -502,36 +529,6 @@ export default function DashboardPage() {
             Refresh
           </button>
         </div>
-      </div>
-
-      {/* ── System status strip ───────────────────────────────────── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px',
-        marginBottom: '20px',
-        animation: 'kpiIn 0.45s ease 0.06s both',
-      }}>
-        {[
-          { label: 'Pipeline',    value: 'LangGraph',          color: 'var(--accent-cyan)',  icon: '⬡' },
-          { label: 'Guard layers', value: '9 active',          color: 'var(--accent-green)', icon: '⬡' },
-          { label: 'Jury agents', value: '3 online',           color: 'var(--accent-green)', icon: '⬡' },
-          { label: 'Threshold',   value: 'entropy > 0.75',     color: 'var(--text-muted)',   icon: '⬡' },
-          { label: 'Tracked',     value: kpis.total > 0 ? `${kpis.total} inferences` : 'awaiting data',
-            color: kpis.total > 0 ? 'var(--accent-cyan)' : 'var(--text-muted)', icon: '⬡' },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{
-            padding: '10px 12px', borderRadius: '8px',
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-          }}>
-            <div style={{
-              fontFamily: 'JetBrains Mono, monospace', fontSize: '9px',
-              color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: '4px',
-            }}>{label.toUpperCase()}</div>
-            <div style={{
-              fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
-              fontWeight: 700, color,
-            }}>{value}</div>
-          </div>
-        ))}
       </div>
 
       {/* ── Degradation alert ─────────────────────────────────────── */}
