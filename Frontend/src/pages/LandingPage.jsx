@@ -5,9 +5,9 @@ import { isLoggedIn } from '../lib/auth'
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { value: 11, suffix: '',   label: 'Detection Layers'       },
-  { value: 96, suffix: '%',  label: 'Adversarial Recall'     },
-  { value: 10, suffix: 'ms', label: 'Avg. Interception Time' },
+  { value: 97,   suffix: '%',  label: 'Detection Precision'   },
+  { value: 11,   suffix: '',   label: 'Detection Layers'       },
+  { value: 2006, suffix: '',   label: 'Prompts Evaluated'      },
 ]
 
 const FEATURES = [
@@ -2710,127 +2710,148 @@ function HowItWorksStep({ s, i, last, code, visible }) {
 }
 
 // Detection coverage data — these are the real layers in the pipeline
-const ATTACK_LAYERS = [
-  { name: 'Prompt Injection',      desc: 'Detects attempts to override system instructions or hijack model context.',      color: '#ff4466' },
-  { name: 'Jailbreak Attempts',    desc: 'Catches persona-based, roleplay, and constraint-removal jailbreak patterns.',     color: '#ff4466' },
-  { name: 'Many-Shot Attacks',     desc: 'Identifies priming sequences that gradually shift model behaviour over turns.',    color: '#ff6680' },
-  { name: 'Indirect Injection',    desc: 'Flags malicious payloads embedded in retrieved documents or tool outputs.',        color: '#ff4466' },
-  { name: 'Token Smuggling',       desc: 'Catches obfuscated instructions hiding inside encoded or fragmented text.',        color: '#ff6680' },
-  { name: 'Crescendo (Multi-turn)','desc': 'Session-aware tracking detects foot-in-the-door escalation across turns.',      color: '#ff4466' },
+// Real evaluation results — 2,006 prompts across 8 public benchmark datasets
+const OVERALL_METRICS = [
+  { label: 'Precision',  value: '97.5%', sub: 'of flagged prompts were real attacks',     color: '#00ff88' },
+  { label: 'Recall',     value: '65.8%', sub: 'of real attacks detected',                 color: '#00d4ff' },
+  { label: 'F1 Score',   value: '0.785', sub: 'harmonic mean precision / recall',         color: '#a78bfa' },
+  { label: 'ROC-AUC',    value: '0.792', sub: 'area under the ROC curve',                 color: '#fb923c' },
 ]
 
-const OUTPUT_LAYERS = [
-  { name: 'Factual Hallucination', desc: 'Shadow jury of 3 models cross-checks factual claims before they reach the user.', color: '#00d4ff' },
-  { name: 'Confidence Collapse',   desc: 'XGBoost classifier flags low-agreement outputs via Failure Signal Vector.',        color: '#00d4ff' },
-  { name: 'Model Extraction',      desc: 'Detects systematic probing designed to reverse-engineer system prompt or weights.', color: '#a78bfa' },
-  { name: 'Virtualization',        desc: 'Catches roleplay and fictional framing used to bypass safety guidelines.',          color: '#a78bfa' },
+const CATEGORY_RESULTS = [
+  { cat: 'Prompt Injection',   precision: '99.3%', recall: '76.0%', f1: '0.861', fpr: '2.9%', prompts: 634,  highlight: true  },
+  { cat: 'GCG Suffix',         precision: '98.1%', recall: '95.8%', f1: '0.969', fpr: '3.3%', prompts: 255,  highlight: true  },
+  { cat: 'Indirect Injection', precision: '65.2%', recall: '100%',  f1: '0.790', fpr: '11.4%',prompts: 85,   highlight: false },
+  { cat: 'Fiction-Wrapped',    precision: '90.9%', recall: '64.5%', f1: '0.755', fpr: '2.7%', prompts: 106,  highlight: false },
+  { cat: 'Virtualization',     precision: '97.1%', recall: '61.8%', f1: '0.754', fpr: '2.8%', prompts: 182,  highlight: false },
+  { cat: 'Crescendo',          precision: '100%',  recall: '56.3%', f1: '0.720', fpr: '0.0%', prompts: 16,   highlight: false },
+  { cat: 'Multilingual',       precision: '85.7%', recall: '35.3%', f1: '0.500', fpr: '11.4%',prompts: 206,  highlight: false },
+]
+
+const EVAL_DATASETS = [
+  'AdvBench (Zou et al. 2023)',
+  'JailbreakBench 2024',
+  'Anthropic Red Team',
+  'HarmBench (Mazeika et al. 2024)',
+  'OpenAI Moderation Eval',
+  'Benign Baseline (Stanford Alpaca)',
 ]
 
 function BenchmarksSection() {
-  const [hRef, hStyle]   = useReveal('up')
-  const [lRef, lVisible] = useScrollReveal()
-  const [rRef, rVisible] = useScrollReveal()
+  const [hRef, hStyle]       = useReveal('up')
+  const [metricsRef, mVis]   = useScrollReveal()
+  const [tableRef, tableVis] = useScrollReveal()
 
-  const LayerRow = ({ name, desc, color, last, idx, visible }) => (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: '14px',
-      padding: '14px 0',
-      borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)',
-      opacity: visible ? 1 : 0,
-      transform: visible ? 'translateX(0)' : 'translateX(-10px)',
-      transition: `opacity 0.45s ease ${idx * 70}ms, transform 0.45s ease ${idx * 70}ms`,
-      willChange: 'opacity, transform',
-    }}>
-      <div style={{
-        width: 7, height: 7, borderRadius: '50%',
-        background: color, marginTop: 7, flexShrink: 0,
-        boxShadow: `0 0 10px ${color}90`,
-        opacity: visible ? 1 : 0,
-        transition: `opacity 0.4s ease ${idx * 70 + 120}ms`,
-      }}/>
-      <div>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#dde8f5', marginBottom: '3px', letterSpacing: '-0.01em' }}>{name}</div>
-        <div style={{ fontSize: '12px', color: '#4a6680', lineHeight: 1.6 }}>{desc}</div>
-      </div>
-    </div>
-  )
+  const scoreColor = (val) => {
+    const n = parseFloat(val)
+    if (n >= 0.9 || val.endsWith('%') && parseFloat(val) >= 90) return '#00ff88'
+    if (n >= 0.75 || val.endsWith('%') && parseFloat(val) >= 75) return '#00d4ff'
+    if (n >= 0.6  || val.endsWith('%') && parseFloat(val) >= 60) return '#fb923c'
+    return '#ff4466'
+  }
 
   return (
     <section style={{ borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 2, background: 'rgba(12,4,24,0.68)' }}>
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
 
         {/* Header */}
-        <div ref={hRef} style={{ ...hStyle, marginBottom: '64px' }}>
-          <div className="section-label">Detection Coverage</div>
-          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px,3vw,38px)', fontWeight: 800, letterSpacing: '-0.028em', color: '#e8f0fa', lineHeight: 1.12, marginBottom: '16px' }}>
-            Full-spectrum protection,<br/>layer by layer.
+        <div ref={hRef} style={{ ...hStyle, marginBottom: '56px' }}>
+          <div className="section-label">Evaluation Results</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(26px,3.2vw,42px)', fontWeight: 800, letterSpacing: '-0.033em', color: '#f0f6ff', lineHeight: 1.1, marginBottom: '16px' }}>
+            Evaluated on real attacks.<br/>
+            <span style={{ color: '#6e90b0', fontWeight: 600, fontSize: 'clamp(18px,2.2vw,28px)' }}>Not on synthetic data.</span>
           </h2>
-          <p style={{ fontSize: '15px', color: '#6e90b0', maxWidth: '540px', lineHeight: 1.65 }}>
-            Every request passes through 11 parallel detection layers before reaching your model. Every response is verified before reaching your users.
+          <p style={{ fontSize: '15px', color: '#6e90b0', maxWidth: '580px', lineHeight: 1.65 }}>
+            2,006 prompts across 8 public benchmark datasets — AdvBench, JailbreakBench, HarmBench, Anthropic Red Team, and more. All results use the local 11-layer pipeline only. No external API calls.
           </p>
         </div>
 
-        {/* Two-column coverage grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }} className="grid-2">
-
-          {/* Adversarial attacks */}
-          <div ref={lRef} style={{ opacity: lVisible ? 1 : 0, transform: lVisible ? 'translateX(0)' : 'translateX(-28px)', transition: 'opacity 0.6s ease, transform 0.6s ease', willChange: 'opacity, transform' }}>
-            <div style={{
-              borderRadius: '16px', overflow: 'hidden',
-              border: '1px solid rgba(255,68,102,0.15)',
-              background: 'linear-gradient(135deg, rgba(255,68,102,0.04) 0%, rgba(12,4,24,0.9) 50%)',
-            }}>
-              {/* Panel header */}
-              <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(255,68,102,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4466', boxShadow: '0 0 12px rgba(255,68,102,0.5)' }}/>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', fontWeight: 700, color: '#ff4466', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Adversarial Attacks</span>
-                <span style={{ marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#3a5470' }}>Pre-flight guard</span>
+        {/* Overall metric cards */}
+        <div
+          ref={metricsRef}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '48px' }}
+          className="grid-4"
+        >
+          {OVERALL_METRICS.map((m, i) => {
+            const rgb = m.color === '#00ff88' ? '0,255,136' : m.color === '#00d4ff' ? '0,212,255' : m.color === '#a78bfa' ? '167,139,250' : '251,146,60'
+            return (
+              <div key={m.label} style={{
+                padding: '24px 22px', borderRadius: '14px',
+                background: `linear-gradient(135deg, rgba(${rgb},0.06) 0%, rgba(9,15,25,0.95) 60%)`,
+                border: `1px solid rgba(${rgb},0.18)`,
+                opacity: mVis ? 1 : 0,
+                transform: mVis ? 'translateY(0)' : 'translateY(18px)',
+                transition: `opacity 0.5s ease ${i * 80}ms, transform 0.5s ease ${i * 80}ms`,
+                willChange: 'opacity, transform',
+              }}>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: m.color, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px', opacity: 0.8 }}>{m.label}</div>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(22px,2.5vw,30px)', fontWeight: 800, color: m.color, letterSpacing: '-0.03em', marginBottom: '8px', lineHeight: 1 }}>{m.value}</div>
+                <div style={{ fontSize: '11.5px', color: '#4a6680', lineHeight: 1.5 }}>{m.sub}</div>
               </div>
-              <div style={{ padding: '4px 24px 8px' }}>
-                {ATTACK_LAYERS.map((l, i) => (
-                  <LayerRow key={l.name} {...l} idx={i} visible={lVisible} last={i === ATTACK_LAYERS.length - 1} />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Output failures */}
-          <div ref={rRef} style={{ opacity: rVisible ? 1 : 0, transform: rVisible ? 'translateX(0)' : 'translateX(28px)', transition: 'opacity 0.6s ease 80ms, transform 0.6s ease 80ms', willChange: 'opacity, transform' }}>
-            <div style={{
-              borderRadius: '16px', overflow: 'hidden',
-              border: '1px solid rgba(0,212,255,0.12)',
-              background: 'linear-gradient(135deg, rgba(0,212,255,0.04) 0%, rgba(12,4,24,0.9) 50%)',
-            }}>
-              <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(0,212,255,0.08)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 12px rgba(0,212,255,0.4)' }}/>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', fontWeight: 700, color: '#00d4ff', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Output Failures</span>
-                <span style={{ marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#3a5470' }}>Shadow jury</span>
-              </div>
-              <div style={{ padding: '4px 24px 8px' }}>
-                {OUTPUT_LAYERS.map((l, i) => (
-                  <LayerRow key={l.name} {...l} idx={i} visible={rVisible} last={i === OUTPUT_LAYERS.length - 1} />
-                ))}
-              </div>
-            </div>
-
-            {/* Honest benchmark note */}
-            <div style={{
-              marginTop: '16px', padding: '14px 18px',
-              borderRadius: '10px',
-              border: '1px solid rgba(255,255,255,0.06)',
-              background: 'rgba(255,255,255,0.02)',
-              display: 'flex', alignItems: 'flex-start', gap: '10px',
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6e90b0" strokeWidth="2" style={{ marginTop: 1, flexShrink: 0 }}>
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <p style={{ fontSize: '12px', color: '#4a6680', lineHeight: 1.65, margin: 0 }}>
-                Independent benchmarks on public datasets are in progress and will be published transparently on GitHub. Architecture and detection logic are fully open-source — every decision is inspectable.
-              </p>
-            </div>
-          </div>
-
+            )
+          })}
         </div>
+
+        {/* Per-category table */}
+        <div ref={tableRef} style={{
+          opacity: tableVis ? 1 : 0, transform: tableVis ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s',
+        }}>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#3a5470', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Per attack category
+          </div>
+          <div style={{ borderRadius: '14px', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden', background: 'rgba(9,15,25,0.8)' }}>
+            {/* Table header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+              {['Attack Category', 'Precision', 'Recall', 'F1', 'FPR', 'Prompts'].map(h => (
+                <span key={h} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: '#3a5470', textTransform: 'uppercase' }}>{h}</span>
+              ))}
+            </div>
+            {/* Table rows */}
+            {CATEGORY_RESULTS.map((r, i) => (
+              <div key={r.cat} style={{
+                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px',
+                padding: '14px 20px',
+                borderBottom: i < CATEGORY_RESULTS.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                background: r.highlight ? 'rgba(0,212,255,0.025)' : 'transparent',
+                opacity: tableVis ? 1 : 0,
+                transform: tableVis ? 'translateX(0)' : 'translateX(-8px)',
+                transition: `opacity 0.45s ease ${i * 55 + 200}ms, transform 0.45s ease ${i * 55 + 200}ms`,
+              }}>
+                <span style={{ fontSize: '13px', color: r.highlight ? '#dde8f5' : '#8da8c4', fontWeight: r.highlight ? 600 : 400 }}>{r.cat}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: scoreColor(r.precision), fontWeight: 700 }}>{r.precision}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: scoreColor(r.recall) }}>{r.recall}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: scoreColor(r.f1) }}>{r.f1}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: parseFloat(r.fpr) > 10 ? '#ff6680' : '#6e90b0' }}>{r.fpr}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: '#3a5470' }}>{r.prompts}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {EVAL_DATASETS.map(d => (
+                <span key={d} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#3a5470', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>{d}</span>
+              ))}
+            </div>
+            <a href="https://github.com/AyushSingh110/Failure_Intelligence_System" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: '#0ea5e9', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
+              Full methodology on GitHub
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+
+          {/* Honest scope note */}
+          <div style={{ marginTop: '20px', padding: '14px 18px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.015)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6e90b0" strokeWidth="2" style={{ marginTop: 1, flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p style={{ fontSize: '12px', color: '#4a6680', lineHeight: 1.7, margin: 0 }}>
+              <strong style={{ color: '#6e90b0', fontWeight: 600 }}>Scope note:</strong> FIE is an adversarial prompt detector, not a general content moderator. It will not reliably catch hate speech or self-harm requests phrased as normal conversation. The OpenAI Moderation category (54% recall) reflects this boundary. When FIE does flag something, it is almost always right — 97.5% precision.
+            </p>
+          </div>
+        </div>
+
       </div>
     </section>
   )

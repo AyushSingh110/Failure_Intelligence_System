@@ -12,7 +12,8 @@ def _ping_telemetry(version: str) -> None:
 
     def _send():
         try:
-            import urllib.request, json
+            import urllib.request
+            import json
             payload = json.dumps({
                 "version": version,
                 "os": platform.system(),
