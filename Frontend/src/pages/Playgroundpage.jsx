@@ -165,8 +165,228 @@ function JuryDetails({ result }) {
   )
 }
 
+// ── Simple CSV parser ─────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(Boolean)
+  if (lines.length < 2) return { headers: [], rows: [] }
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+  const rows = lines.slice(1).map(line => {
+    const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+    return headers.reduce((obj, h, i) => ({ ...obj, [h]: vals[i] || '' }), {})
+  })
+  return { headers, rows }
+}
+
+function downloadCSV(rows, filename) {
+  if (!rows.length) return
+  const keys = Object.keys(rows[0])
+  const lines = [keys.join(','), ...rows.map(r => keys.map(k => `"${String(r[k] || '').replace(/"/g, '""')}"`).join(','))]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+// ── Batch evaluation tab ──────────────────────────────────────────────────────
+function BatchEvalTab({ session }) {
+  const [file, setFile]           = useState(null)
+  const [parsed, setParsed]       = useState(null)
+  const [promptCol, setPromptCol] = useState('')
+  const [running, setRunning]     = useState(false)
+  const [progress, setProgress]   = useState(0)
+  const [results, setResults]     = useState([])
+  const [error, setError]         = useState('')
+
+  const handleFile = e => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFile(f); setResults([]); setError('')
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const { headers, rows } = parseCSV(ev.target.result)
+      setParsed({ headers, rows })
+      const auto = headers.find(h => /prompt|input|text|question/i.test(h)) || headers[0] || ''
+      setPromptCol(auto)
+    }
+    reader.readAsText(f)
+  }
+
+  const handleRun = async () => {
+    if (!parsed || !promptCol) return
+    setRunning(true); setProgress(0); setResults([]); setError('')
+    const out = []
+    for (let i = 0; i < parsed.rows.length; i++) {
+      const row = parsed.rows[i]
+      const prompt = row[promptCol] || ''
+      try {
+        const res = await fetch(`${BASE}/playground`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.token}` },
+          body: JSON.stringify({ prompt }),
+        })
+        const data = res.ok ? await res.json() : { error: `HTTP ${res.status}` }
+        out.push({
+          ...row,
+          fie_status:    data.fie_status     || 'ERROR',
+          confidence:    data.metrics?.confidence != null ? (data.metrics.confidence * 100).toFixed(1) + '%' : '—',
+          entropy:       data.metrics?.entropy != null ? data.metrics.entropy.toFixed(3) : '—',
+          latency_ms:    data.total_latency_ms?.toFixed(0) || '—',
+          fie_response:  data.final_response || data.error || '',
+        })
+      } catch (e) {
+        out.push({ ...row, fie_status: 'ERROR', confidence: '—', entropy: '—', latency_ms: '—', fie_response: e.message })
+      }
+      setProgress(Math.round(((i + 1) / parsed.rows.length) * 100))
+      setResults([...out])
+      // small throttle to avoid hammering backend
+      if (i < parsed.rows.length - 1) await new Promise(r => setTimeout(r, 120))
+    }
+    setRunning(false)
+  }
+
+  const statusColor = { BLOCKED: '#ff4466', CORRECTED: '#ffaa00', VALIDATED: '#00ff88', ERROR: '#6e90b0' }
+
+  return (
+    <div style={{ padding: '28px 32px', flex: 1, overflowY: 'auto' }}>
+      <style>{`@keyframes kpiIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }`}</style>
+
+      <div style={{ marginBottom: '24px', animation: 'kpiIn 0.5s ease both' }}>
+        <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em', marginBottom: '4px' }}>Batch Evaluation</h1>
+        <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
+          Upload a CSV, run every prompt through the FIE pipeline, download results.
+        </p>
+      </div>
+
+      {/* Upload + config */}
+      <div style={{ padding: '20px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', marginBottom: '16px', animation: 'kpiIn 0.5s ease 0.1s both' }}>
+        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '14px' }}>UPLOAD CSV</div>
+
+        <label style={{
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
+          padding: '9px 16px', borderRadius: '8px', cursor: 'pointer',
+          border: '1px dashed var(--border-bright)', background: 'rgba(0,212,255,0.03)',
+          fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: 'var(--accent-cyan)',
+          transition: 'all 0.15s ease', marginBottom: '14px',
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+          {file ? file.name : 'Choose CSV file'}
+          <input type="file" accept=".csv,text/csv" onChange={handleFile} style={{ display: 'none' }}/>
+        </label>
+
+        {parsed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
+              {parsed.rows.length} rows · {parsed.headers.length} columns
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Prompt column:</span>
+              <select value={promptCol} onChange={e => setPromptCol(e.target.value)} style={{
+                fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
+                background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px',
+              }}>
+                {parsed.headers.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={handleRun}
+              disabled={running || !promptCol}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 16px', borderRadius: '7px', border: 'none',
+                background: running ? 'rgba(0,212,255,0.1)' : 'var(--accent-cyan)',
+                color: running ? 'var(--accent-cyan)' : '#07111c',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', fontWeight: 700,
+                cursor: running ? 'not-allowed' : 'pointer', letterSpacing: '0.06em',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {running ? `Running ${progress}%…` : 'Run Evaluation'}
+            </button>
+            {results.length > 0 && !running && (
+              <button
+                onClick={() => downloadCSV(results, `fie_batch_${new Date().toISOString().slice(0,10)}.csv`)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  padding: '7px 14px', borderRadius: '7px',
+                  border: '1px solid rgba(0,255,136,0.3)', background: 'rgba(0,255,136,0.06)',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--accent-green)',
+                  cursor: 'pointer', transition: 'all 0.15s ease',
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Export CSV
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Progress bar */}
+        {running && (
+          <div style={{ marginTop: '14px', height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)' }}>
+            <div style={{ height: '100%', borderRadius: '2px', width: `${progress}%`, background: 'var(--accent-cyan)', transition: 'width 0.2s ease', boxShadow: '0 0 8px rgba(0,212,255,0.4)' }}/>
+          </div>
+        )}
+
+        {error && <div style={{ marginTop: '10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>{error}</div>}
+      </div>
+
+      {/* Results table */}
+      {results.length > 0 && (
+        <div style={{ padding: '20px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', animation: 'kpiIn 0.4s ease both' }}>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '14px' }}>
+            RESULTS — {results.length} / {parsed?.rows.length} processed
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {['#', 'PROMPT', 'STATUS', 'CONF', 'ENTROPY', 'MS'].map(h => (
+                    <th key={h} style={{ padding: '7px 10px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '9px', letterSpacing: '0.1em', fontWeight: 700 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((r, i) => {
+                  const sc = statusColor[r.fie_status] || '#6e90b0'
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '8px 10px', color: 'var(--text-muted)', minWidth: '28px' }}>{i + 1}</td>
+                      <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r[promptCol] || ''}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <span style={{ padding: '2px 7px', borderRadius: '4px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
+                          {r.fie_status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px 10px', color: sc, fontWeight: 600 }}>{r.confidence}</td>
+                      <td style={{ padding: '8px 10px', color: parseFloat(r.entropy) > 0.75 ? 'var(--accent-red)' : 'var(--text-muted)' }}>{r.entropy}</td>
+                      <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>{r.latency_ms}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PlaygroundPage() {
   const session = getSession()
+  const [tab, setTab]                   = useState('prompt')
   const [prompt, setPrompt]             = useState('')
   const [primaryModel, setPrimaryModel] = useState('llama-3.1-8b-instant')
   const [customEndpoint, setCustomEndpoint] = useState('')
@@ -214,6 +434,8 @@ export default function PlaygroundPage() {
   const fieStatus = result?.fie_status || null
   const statusCfg = fieStatus ? STATUS_CONFIG[fieStatus] : null
 
+  if (tab === 'batch') return <BatchEvalTab session={session} />
+
   return (
     <>
       <style>{`
@@ -224,9 +446,22 @@ export default function PlaygroundPage() {
 
       <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-        {/* Header */}
+        {/* Header + tab switcher */}
         <div style={{ animation: 'kpiIn 0.4s ease both' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Playground</h1>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '4px' }}>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Playground</h1>
+            <div style={{ display: 'flex', gap: '4px', padding: '3px', borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              {[['prompt', 'Single prompt'], ['batch', 'Batch eval']].map(([t, l]) => (
+                <button key={t} onClick={() => setTab(t)} style={{
+                  padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', fontWeight: tab === t ? 700 : 400,
+                  background: tab === t ? 'rgba(0,212,255,0.1)' : 'transparent',
+                  color: tab === t ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                  transition: 'all 0.15s ease',
+                }}>{l}</button>
+              ))}
+            </div>
+          </div>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
             Type any prompt and see what your primary model says vs what FIE protects, corrects, and delivers in real time — full pipeline, side by side.
           </p>

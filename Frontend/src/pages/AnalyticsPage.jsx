@@ -94,6 +94,12 @@ function SectionLabel({ children }) {
   )
 }
 
+// ── Percentile helper ────────────────────────────────────────────────────────
+function pct(sorted, p) {
+  if (!sorted.length) return 0
+  return sorted[Math.min(Math.floor(sorted.length * p), sorted.length - 1)]
+}
+
 export default function AnalyticsPage() {
   const { data: inferences, loading } = useInferences()
   const { data: trend }               = useTrend()
@@ -137,7 +143,52 @@ export default function AnalyticsPage() {
     .slice(0, 6)
     .map(([name, count]) => ({ name: name.slice(0, 20), count }))
 
-  // Entropy distribution buckets
+  // ── Confidence histogram ──────────────────────────────────────────────────
+  const confBuckets = Array.from({ length: 10 }, (_, i) => ({
+    range: `${i * 10}–${(i + 1) * 10}%`,
+    count: 0,
+    color: i < 3 ? '#ff4466' : i < 5 ? '#ffaa00' : i < 7 ? '#00d4ff' : '#00ff88',
+  }))
+  inferences.forEach(r => {
+    const c = r.metrics?.confidence ?? r.metrics?.classifier_confidence ?? null
+    if (c === null) return
+    const idx = Math.min(Math.floor(c * 10), 9)
+    confBuckets[idx].count++
+  })
+
+  // ── Attack trend by day ───────────────────────────────────────────────────
+  const byDay = {}
+  inferences.forEach(r => {
+    if (!r.timestamp) return
+    const day = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (!byDay[day]) byDay[day] = { day, attacks: 0, safe: 0, risk: 0 }
+    if (r.is_adversarial === true || r.adversarial?.is_attack === true) byDay[day].attacks++
+    else if ((r.metrics?.entropy || 0) > 0.75) byDay[day].risk++
+    else byDay[day].safe++
+  })
+  const trendData = Object.values(byDay).slice(-14)
+
+  // ── Latency percentiles ───────────────────────────────────────────────────
+  const latencies = inferences
+    .map(r => r.metrics?.latency_ms ?? r.latency_ms ?? r.total_latency_ms ?? null)
+    .filter(v => v !== null && v > 0)
+    .sort((a, b) => a - b)
+  const latP50 = pct(latencies, 0.50)
+  const latP95 = pct(latencies, 0.95)
+  const latP99 = pct(latencies, 0.99)
+
+  // ── Low-confidence detections ─────────────────────────────────────────────
+  const suspectDetections = inferences
+    .filter(r => (r.is_adversarial === true || r.adversarial?.is_attack === true))
+    .map(r => ({
+      ...r,
+      _conf: r.metrics?.confidence ?? r.metrics?.classifier_confidence ?? 1,
+    }))
+    .filter(r => r._conf < 0.65)
+    .sort((a, b) => a._conf - b._conf)
+    .slice(0, 15)
+
+  // ── Entropy distribution buckets
   const entropyBuckets = [
     { range: '0.0–0.2', count: 0, color: '#00ff88' },
     { range: '0.2–0.4', count: 0, color: '#00d4ff' },
@@ -384,6 +435,143 @@ export default function AnalyticsPage() {
             </div>
           </div>
         )}
+
+        {/* ── NEW: Confidence histogram + Attack trend ─────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px' }}>
+
+          {/* Confidence histogram */}
+          <div style={{ padding: '20px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', animation: 'kpiIn 0.5s ease 0.5s both' }}>
+            <SectionLabel>DETECTION CONFIDENCE DISTRIBUTION</SectionLabel>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
+              Histogram of classifier confidence across all flagged inferences. Low bars at high confidence may indicate under-triggering.
+            </p>
+            {confBuckets.some(b => b.count > 0) ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={confBuckets} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.03)" strokeDasharray="4 4" vertical={false}/>
+                  <XAxis dataKey="range" tick={{ fontFamily: 'JetBrains Mono', fontSize: 8, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} angle={-20} textAnchor="end"/>
+                  <YAxis tick={{ fontFamily: 'JetBrains Mono', fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}/>
+                  <Tooltip content={<ChartTooltip />}/>
+                  <Bar dataKey="count" radius={[4,4,0,0]} animationDuration={900}>
+                    {confBuckets.map((b, i) => <Cell key={i} fill={b.color} opacity={0.85}/>)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px' }}>
+                No confidence data yet
+              </div>
+            )}
+          </div>
+
+          {/* Attack trend by day */}
+          <div style={{ padding: '20px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', animation: 'kpiIn 0.5s ease 0.55s both' }}>
+            <SectionLabel>DAILY THREAT TREND — LAST 14 DAYS</SectionLabel>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
+              Breakdown of adversarial attacks, high-risk outputs, and safe inferences per day.
+            </p>
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={trendData} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.03)" strokeDasharray="4 4" vertical={false}/>
+                  <XAxis dataKey="day" tick={{ fontFamily: 'JetBrains Mono', fontSize: 8, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}/>
+                  <YAxis tick={{ fontFamily: 'JetBrains Mono', fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}/>
+                  <Tooltip content={<ChartTooltip />}/>
+                  <Bar dataKey="attacks" stackId="a" fill="#ff4466" opacity={0.85} radius={[0,0,0,0]}/>
+                  <Bar dataKey="risk"    stackId="a" fill="#ffaa00" opacity={0.85} radius={[0,0,0,0]}/>
+                  <Bar dataKey="safe"   stackId="a" fill="#00ff88" opacity={0.6}  radius={[4,4,0,0]}/>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px' }}>
+                No data yet
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
+              {[['#ff4466','Attacks'],['#ffaa00','High risk'],['#00ff88','Safe']].map(([c,l]) => (
+                <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: c, opacity: 0.85 }}/>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── NEW: Latency percentiles ──────────────────────────────── */}
+        {latencies.length > 0 && (
+          <div style={{ padding: '20px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', marginTop: '14px', animation: 'kpiIn 0.5s ease 0.6s both' }}>
+            <SectionLabel>PIPELINE LATENCY PERCENTILES</SectionLabel>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '18px', lineHeight: 1.6 }}>
+              Computed from {latencies.length} inferences with latency data. Stage-level breakdown (preflight / shadow / jury) requires backend instrumentation.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              {[
+                { label: 'P50 (MEDIAN)', val: latP50, color: '#00ff88' },
+                { label: 'P95',          val: latP95, color: '#ffaa00' },
+                { label: 'P99',          val: latP99, color: '#ff4466' },
+              ].map(({ label, val, color }) => (
+                <div key={label} style={{ padding: '16px 18px', borderRadius: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: '10px' }}>{label}</div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '28px', fontWeight: 800, color, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                    {val ? `${val.toFixed(0)}` : '—'}
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>ms</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── NEW: Low-confidence detections ───────────────────────── */}
+        {suspectDetections.length > 0 && (
+          <div style={{ padding: '20px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid rgba(255,170,0,0.2)', marginTop: '14px', animation: 'kpiIn 0.5s ease 0.65s both' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <SectionLabel>LOW-CONFIDENCE DETECTIONS</SectionLabel>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(255,170,0,0.1)', color: '#ffaa00', border: '1px solid rgba(255,170,0,0.2)' }}>
+                confidence &lt; 65%
+              </span>
+            </div>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
+              Flagged prompts where the classifier was uncertain. These are the most likely false positives — review them to tune your pipeline.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto auto', gap: '10px', padding: '0 8px 8px', borderBottom: '1px solid var(--border)', marginBottom: '6px' }}>
+              {['', 'PROMPT', 'CONF', 'ENTROPY', 'TIME'].map((h, i) => (
+                <div key={i} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em', textAlign: i > 1 ? 'right' : 'left' }}>{h}</div>
+              ))}
+            </div>
+            {suspectDetections.map((r, i) => {
+              const conf = r._conf
+              const confColor = conf < 0.4 ? '#ff4466' : conf < 0.55 ? '#ffaa00' : '#6e90b0'
+              const entropy = r.metrics?.entropy || 0
+              const time = r.timestamp ? new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+              return (
+                <div key={r.request_id || i} style={{
+                  display: 'grid', gridTemplateColumns: '10px 1fr auto auto auto', gap: '10px',
+                  padding: '8px 8px', borderRadius: '6px', marginBottom: '2px',
+                  background: i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,170,0,0.04)'}
+                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent'}
+                >
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: confColor, marginTop: 5, boxShadow: `0 0 4px ${confColor}` }}/>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(r.input_text || '').slice(0, 90)}
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', fontWeight: 700, color: confColor, textAlign: 'right' }}>
+                    {(conf * 100).toFixed(0)}%
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: entropy > 0.75 ? 'var(--accent-red)' : 'var(--text-muted)', textAlign: 'right' }}>
+                    {entropy.toFixed(3)}
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right' }}>{time}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
       </div>
     </>
   )
