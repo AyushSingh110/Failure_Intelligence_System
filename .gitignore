@@ -105,3 +105,4 @@ nosetests.xml
 .streamlit/config.toml
 static/
 docs/
+scripts/
