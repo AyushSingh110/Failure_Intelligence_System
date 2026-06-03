@@ -242,27 +242,29 @@ function FeatureCard({ icon, title, desc, color }) {
   return (
     <div
       ref={ref}
+      className="premium-feature-card"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => { setHov(false); handleLeave() }}
       onMouseMove={handleMove}
       style={{
-        padding: '28px 28px 32px', borderRadius: '14px',
+        padding: '28px 28px 32px', borderRadius: '16px',
         background: hov
-          ? `rgba(${rgb},0.07)`
-          : `linear-gradient(135deg, rgba(${rgb},0.035) 0%, var(--bg-card) 60%)`,
-        border: `1px solid ${hov ? `rgba(${rgb},0.38)` : `rgba(${rgb},0.14)`}`,
+          ? `linear-gradient(145deg, rgba(${rgb},0.11) 0%, rgba(12,18,30,0.92) 52%, rgba(8,10,19,0.96) 100%)`
+          : `linear-gradient(145deg, rgba(${rgb},0.055) 0%, rgba(12,18,30,0.88) 48%, rgba(8,10,19,0.94) 100%)`,
+        border: `1px solid ${hov ? `rgba(${rgb},0.46)` : `rgba(${rgb},0.18)`}`,
         transition: hov
           ? 'border-color 0.12s, background 0.12s, box-shadow 0.12s'
-          : 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
+          : 'all 0.65s cubic-bezier(0.16,1,0.3,1)',
         transform: tilt.active
-          ? `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(4px)`
-          : 'perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0px)',
+          ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(10px)`
+          : 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)',
         boxShadow: hov
-          ? `0 20px 50px rgba(${rgb},0.14), 0 4px 16px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(${rgb},0.08)`
-          : `0 1px 3px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(${rgb},0.04)`,
+          ? `0 28px 72px rgba(${rgb},0.18), 0 16px 42px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(${rgb},0.1)`
+          : `0 16px 38px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 0 1px rgba(${rgb},0.045)`,
         cursor: 'default',
         position: 'relative', overflow: 'hidden',
         willChange: 'transform',
+        backdropFilter: 'blur(18px) saturate(1.15)',
         /* equal-height cards — fill the grid row */
         height: '100%',
         minHeight: '260px',
@@ -272,12 +274,19 @@ function FeatureCard({ icon, title, desc, color }) {
     >
       {/* Shine overlay follows cursor */}
       <div style={{
-        position: 'absolute', inset: 0, borderRadius: '14px', pointerEvents: 'none',
+        position: 'absolute', inset: 0, borderRadius: '16px', pointerEvents: 'none',
         background: tilt.active
-          ? `radial-gradient(circle at ${tilt.ox}% ${tilt.oy}%, rgba(255,255,255,0.07) 0%, transparent 55%)`
+          ? `radial-gradient(circle at ${tilt.ox}% ${tilt.oy}%, rgba(255,255,255,0.12) 0%, rgba(${rgb},0.08) 18%, transparent 58%)`
           : 'none',
         transition: tilt.active ? 'none' : 'opacity 0.4s',
         opacity: tilt.active ? 1 : 0,
+      }}/>
+      <div style={{
+        position: 'absolute', inset: '1px', borderRadius: '15px', pointerEvents: 'none',
+        background: `linear-gradient(135deg, rgba(255,255,255,0.08), transparent 32%, rgba(${rgb},0.08) 100%)`,
+        opacity: hov ? 0.72 : 0.38,
+        transition: 'opacity 0.35s ease',
+        mixBlendMode: 'screen',
       }}/>
       {/* Top-edge accent line */}
       <div style={{
@@ -550,8 +559,8 @@ const FC_W        = 344          // card width  (fills 3-col grid in 1064 px)
 const FC_H        = 260          // card height (equal for all cards)
 const FC_GAP      = 16
 const FC_CX       = 532          // orbit centre x  (1064 / 2)
-const FC_CY       = 310          // orbit centre y  (slightly below top card)
-const FC_R        = 175          // orbit radius
+const FC_CY       = 326          // orbit centre y  (slightly below top card)
+const FC_R        = 205          // orbit radius
 const FC_GRID_H   = FC_H * 2 + FC_GAP   // 536
 
 // grid top-left of card i
@@ -573,6 +582,14 @@ function _fcCircle(i) {
 
 // spoke angle: card points outward from circle centre (fan / playing-card look)
 function _fcSpoke(i) { return (i / 6) * 360 - 90 }
+function _fcDepth(i) {
+  const a = (i / 6) * Math.PI * 2 - Math.PI / 2
+  return {
+    z: Math.round((Math.sin(a) + 1) * 34),
+    rotateY: Math.round(Math.cos(a) * -16),
+    rotateX: Math.round(Math.sin(a) * 8),
+  }
+}
 
 // stacked centre (where all cards begin — the "deck" point)
 const FC_STACK_X = FC_CX - FC_W / 2   // 360
@@ -594,15 +611,15 @@ function FeatureCardsSection() {
       // slight pause so the header text is readable first
       setTimeout(() => {
         setPhase('fan')                              // cards fan out to circle
-        setTimeout(() => setPhase('grid'), 1100)    // then snap to grid slots
-      }, 200)
+        setTimeout(() => setPhase('grid'), 1750)    // then settle into grid slots
+      }, 180)
     }, { threshold: 0.12 })
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
 
   return (
-    <section style={{ position: 'relative', zIndex: 2, padding: '128px 28px', overflow: 'hidden' }}>
+    <section className="premium-section capabilities-section" style={{ position: 'relative', zIndex: 2, padding: '128px 28px', overflow: 'hidden' }}>
       {/* Ambient glow */}
       <div style={{
         position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
@@ -639,28 +656,27 @@ function FeatureCardsSection() {
           <motion.div
             initial={{ opacity: 0, scale: 0.7 }}
             animate={
-              phase === 'fan'  ? { opacity: 1, scale: 1 } :
+              phase === 'fan'  ? { opacity: 1, scale: [0.86, 1.02, 1] } :
               phase === 'grid' ? { opacity: 0, scale: 1.05 } : {}
             }
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.78, ease: [0.16, 1, 0.3, 1] }}
+            className="feature-orbit-ring"
             style={{
               position: 'absolute',
               left: '50%', top: 0,
               marginLeft: -(FC_R + 2),
               marginTop: 80 + FC_CY - FC_R - 2,   // aligns ring with orbit centre
               width: (FC_R + 2) * 2, height: (FC_R + 2) * 2,
-              borderRadius: '50%',
-              border: '1px dashed rgba(167,139,250,0.25)',
-              boxShadow: '0 0 48px rgba(0,212,255,0.07), inset 0 0 48px rgba(167,139,250,0.04)',
               pointerEvents: 'none',
             }}
           />
 
           {/* Cards container — height morphs from circle height → grid height */}
           <motion.div
+            className="feature-carousel-stage"
             style={{ position: 'relative', width: '1064px', maxWidth: '100%', margin: '0 auto', overflow: 'visible', willChange: 'height' }}
             animate={{ height: phase === 'grid' ? FC_GRID_H : FC_CIRCLE_H }}
-            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: phase === 'grid' ? 0.6 : 0 }}
+            transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1], delay: phase === 'grid' ? 0.55 : 0 }}
           >
             {/* Central glow pulse while fanning */}
             <motion.div
@@ -669,15 +685,14 @@ function FeatureCardsSection() {
                 phase === 'fan'  ? { opacity: 1, scale: 1 } :
                 phase === 'grid' ? { opacity: 0, scale: 0 } : {}
               }
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.62 }}
+              className="feature-carousel-core"
               style={{
                 position: 'absolute',
                 left: FC_STACK_X + FC_W / 2 - 60,
                 top:  FC_STACK_Y + FC_H / 2 - 60,
                 width: 120, height: 120,
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(0,212,255,0.22) 0%, rgba(167,139,250,0.12) 50%, transparent 70%)',
-                filter: 'blur(18px)',
                 pointerEvents: 'none',
               }}
             />
@@ -686,6 +701,7 @@ function FeatureCardsSection() {
               const gp   = _fcGrid(i)
               const cp   = _fcCircle(i)
               const spk  = _fcSpoke(i)
+              const depth = _fcDepth(i)
 
               // offset from grid position → stacked centre
               const stackDx = FC_STACK_X - gp.left
@@ -699,16 +715,26 @@ function FeatureCardsSection() {
               let trans = {}
 
               if (phase === 'fan') {
-                anim  = { x: fanDx, y: fanDy, scale: 0.82, opacity: 1, rotateZ: spk }
-                trans = { duration: 0.6, delay: i * 0.09, ease: [0.25, 1, 0.5, 1] }
+                anim  = {
+                  x: fanDx,
+                  y: fanDy,
+                  z: depth.z,
+                  scale: 0.86,
+                  opacity: 1,
+                  rotateZ: spk * 0.42,
+                  rotateY: depth.rotateY,
+                  rotateX: depth.rotateX,
+                }
+                trans = { duration: 0.88, delay: i * 0.075, ease: [0.22, 1, 0.36, 1] }
               } else if (phase === 'grid') {
-                anim  = { x: 0, y: 0, scale: 1, opacity: 1, rotateZ: 0 }
-                trans = { duration: 0.65, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }
+                anim  = { x: 0, y: 0, z: 0, scale: 1, opacity: 1, rotateZ: 0, rotateY: 0, rotateX: 0 }
+                trans = { duration: 0.82, delay: i * 0.085, ease: [0.16, 1, 0.3, 1] }
               }
 
               return (
                 <motion.div
                   key={feat.title}
+                  className="feature-card-shell"
                   style={{
                     position: 'absolute',
                     left: gp.left, top: gp.top,
@@ -717,9 +743,10 @@ function FeatureCardsSection() {
                     transformOrigin: 'center center',
                     willChange: 'transform, opacity',
                   }}
-                  initial={{ x: stackDx, y: stackDy, scale: 0, opacity: 0, rotateZ: 0 }}
+                  initial={{ x: stackDx, y: stackDy, z: -80, scale: 0.42, opacity: 0, rotateZ: 0, rotateY: 0, rotateX: 12 }}
                   animate={anim}
                   transition={trans}
+                  whileHover={{ y: -10, z: 42, scale: 1.018 }}
                 >
                   <FeatureCard {...feat} />
                 </motion.div>
@@ -804,17 +831,22 @@ function _genStars(n, range = 2000) {
     out.push(`${Math.floor(Math.random() * range)}px ${Math.floor(Math.random() * range)}px #fff`)
   return out.join(',')
 }
-const _S1 = _genStars(700)   // 1px — tiny, dense
-const _S2 = _genStars(200)   // 2px — medium
-const _S3 = _genStars(100)   // 3px — large, sparse
+const _S1 = _genStars(240)   // 1px - tiny, restrained
+const _S2 = _genStars(80)    // 2px - medium
+const _S3 = _genStars(28)    // 3px - sparse
 
 function StarBackground() {
   return (
     <>
       <style>{`
         .fie-bg {
-          position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
-          background: radial-gradient(ellipse at bottom, #321b35 0%, #090a0f 100%);
+          position: absolute; inset: 0 0 auto 0; height: 980px; z-index: 0; pointer-events: none; overflow: hidden;
+          background:
+            radial-gradient(ellipse at 74% 24%, rgba(0,212,255,0.16) 0%, transparent 34%),
+            radial-gradient(ellipse at 22% 8%, rgba(167,139,250,0.18) 0%, transparent 32%),
+            linear-gradient(180deg, rgba(8,10,18,0.98) 0%, rgba(10,8,20,0.88) 48%, rgba(8,11,18,0) 100%);
+          -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,0.88) 52%, transparent 100%);
+          mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,0.88) 52%, transparent 100%);
         }
         @keyframes fie-star-drift {
           from { transform: translateY(0px); }
@@ -824,6 +856,7 @@ function StarBackground() {
           position: absolute; width: 1px; height: 1px; background: transparent;
           box-shadow: ${_S1};
           animation: fie-star-drift 60s linear infinite;
+          opacity: 0.42;
         }
         .fie-s1::after {
           content: ''; position: absolute; top: 2000px;
@@ -833,6 +866,7 @@ function StarBackground() {
           position: absolute; width: 2px; height: 2px; background: transparent;
           box-shadow: ${_S2};
           animation: fie-star-drift 120s linear infinite;
+          opacity: 0.28;
         }
         .fie-s2::after {
           content: ''; position: absolute; top: 2000px;
@@ -842,6 +876,7 @@ function StarBackground() {
           position: absolute; width: 3px; height: 3px; background: transparent;
           box-shadow: ${_S3};
           animation: fie-star-drift 200s linear infinite;
+          opacity: 0.18;
         }
         .fie-s3::after {
           content: ''; position: absolute; top: 2000px;
@@ -1571,6 +1606,10 @@ function HeroSection({ loggedIn, copy, copied }) {
 
         {/* ── LEFT — framer stagger + scroll parallax ── */}
         <motion.div variants={heroContainer} initial="hidden" animate="visible" style={{ y: paraY }}>
+          <motion.div variants={heroItem} className="hero-eyebrow">
+            <span className="hero-eyebrow-dot" />
+            Runtime LLM Security Layer
+          </motion.div>
           <motion.h1 variants={heroItem} style={{
             fontFamily: 'Syne, sans-serif',
             fontSize: 'clamp(42px, 4.8vw, 82px)',
@@ -1625,8 +1664,13 @@ function HeroSection({ loggedIn, copy, copied }) {
             </MagneticButton>
           </motion.div>
 
+          <motion.div variants={heroItem} className="hero-command-strip">
+            <code>pip install fie-sdk</code>
+            <button type="button" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+          </motion.div>
+
           {/* Live cycling status line */}
-          <motion.div variants={heroItem} style={{ marginTop: '4px' }}>
+          <motion.div variants={heroItem} style={{ marginTop: '14px' }}>
             <HeroTypingLine />
           </motion.div>
 
@@ -2105,7 +2149,7 @@ function UnifiedArchitectureSection() {
   const [ref, visible] = useScrollReveal('up');
 
   return (
-    <section style={{ padding: '140px 28px', position: 'relative', zIndex: 2 }}>
+    <section className="premium-section architecture-section" style={{ padding: '140px 28px', position: 'relative', zIndex: 2 }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
         
         {/* ── NEW SECTION HEADING ── */}
@@ -2277,7 +2321,7 @@ function FeatSection1({ loggedIn }) {
   const [tRef, tStyle] = useReveal('left')
   const [vRef, vStyle] = useReveal('right', 80)
   return (
-    <section id="features" style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
+    <section id="features" className="premium-section feature-detail-section" style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
       <div className="feat-grid">
         <div ref={tRef} style={tStyle}>
           <div className="section-label">Adversarial Defense</div>
@@ -2324,7 +2368,7 @@ function FeatSection2({ loggedIn }) {
   const [vRef, vStyle] = useReveal('left', 80)
   const [tRef, tStyle] = useReveal('right')
   return (
-    <section style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
+    <section className="premium-section feature-detail-section" style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
       <div className="feat-grid">
         <div ref={vRef} style={vStyle} className="feat-viz-swap">
           <EnsembleViz />
@@ -2379,7 +2423,7 @@ function FeatSection3({ loggedIn }) {
   const [tRef, tStyle] = useReveal('left')
   const [vRef, vStyle] = useReveal('right', 80)
   return (
-    <section style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
+    <section className="premium-section feature-detail-section" style={{ maxWidth: '1120px', margin: '0 auto', padding: '120px 28px', position: 'relative', zIndex: 2 }}>
       <div className="feat-grid">
         <div ref={tRef} style={tStyle}>
           <div className="section-label">Compatibility</div>
@@ -2613,7 +2657,7 @@ function HowItWorksSection() {
   const [gridRef, gridVisible] = useScrollReveal()
 
   return (
-    <section style={{ position: 'relative', zIndex: 2 }}>
+    <section className="premium-section how-section" style={{ position: 'relative', zIndex: 2 }}>
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
 
         {/* Header */}
@@ -2830,7 +2874,7 @@ function BenchmarksSection() {
   }
 
   return (
-    <section style={{ borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 2, background: 'rgba(12,4,24,0.68)' }}>
+    <section className="premium-section benchmark-section" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 2, background: 'rgba(12,4,24,0.68)' }}>
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
 
         {/* ── Header ────────────────────────────────────────────────── */}
@@ -2967,7 +3011,7 @@ function BenchmarksSection() {
 function CTASection({ loggedIn }) {
   const [ref, style] = useReveal('scale')
   return (
-    <section style={{ borderTop: '1px solid #1c2d42', position: 'relative', zIndex: 1, overflow: 'hidden' }}>
+    <section className="premium-section final-cta-section" style={{ borderTop: '1px solid #1c2d42', position: 'relative', zIndex: 1, overflow: 'hidden' }}>
       {/* Soft spotlight */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 55% 70% at 50% 60%, rgba(139,92,246,0.12) 0%, transparent 70%)' }}/>
       <div style={{ maxWidth: '620px', margin: '0 auto', padding: '120px 28px', textAlign: 'center', position: 'relative' }}>
@@ -3110,6 +3154,152 @@ export default function LandingPage() {
         }
         .nav-link:hover { color: #dde8f5; }
 
+        .landing-page-shell {
+          position: relative;
+          isolation: isolate;
+          background:
+            linear-gradient(180deg, rgba(7,10,18,0) 0 760px, #080b12 1040px),
+            radial-gradient(circle at 12% 34%, rgba(0,212,255,0.055), transparent 26%),
+            radial-gradient(circle at 86% 56%, rgba(167,139,250,0.065), transparent 28%),
+            linear-gradient(180deg, #090b12 0%, #080b12 42%, #070910 100%) !important;
+        }
+        .landing-page-shell::before {
+          content: '';
+          position: absolute;
+          inset: 760px 0 0;
+          pointer-events: none;
+          z-index: 0;
+          background:
+            linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+          background-size: 72px 72px;
+          -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.34) 52%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 14%, rgba(0,0,0,0.34) 52%, transparent 100%);
+          opacity: 0.55;
+        }
+        .landing-page-shell section {
+          position: relative;
+        }
+        .landing-page-shell section::after {
+          content: '';
+          position: absolute;
+          left: max(28px, calc((100vw - 1120px) / 2));
+          right: max(28px, calc((100vw - 1120px) / 2));
+          bottom: 0;
+          height: 1px;
+          pointer-events: none;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+          opacity: 0.56;
+        }
+        .premium-section {
+          overflow: hidden;
+        }
+        .premium-section::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: -1;
+          opacity: 0.8;
+          background:
+            radial-gradient(circle at 18% 12%, rgba(0,212,255,0.045), transparent 28%),
+            radial-gradient(circle at 82% 78%, rgba(167,139,250,0.05), transparent 30%);
+        }
+        .capabilities-section::before {
+          background:
+            radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.08), transparent 45%),
+            radial-gradient(ellipse at 50% 56%, rgba(167,139,250,0.045), transparent 48%);
+        }
+        .architecture-section {
+          background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0));
+        }
+        .feature-detail-section .feat-grid > div:last-child,
+        .feature-detail-section .feat-grid > div:first-child.feat-viz-swap {
+          filter: drop-shadow(0 26px 58px rgba(0,0,0,0.24));
+        }
+        .feature-detail-section .feat-grid > div:last-child > div,
+        .feature-detail-section .feat-grid > div:first-child.feat-viz-swap > div,
+        .pipeline-section .pipeline-grid > div:last-child > div,
+        .benchmark-section [style*="border-radius: 14px"] {
+          box-shadow: 0 34px 82px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.045) !important;
+        }
+        .pipeline-section {
+          background:
+            linear-gradient(180deg, rgba(10,13,23,0.84), rgba(9,11,18,0.9)) !important;
+          border-color: rgba(255,255,255,0.08) !important;
+        }
+        .benchmark-section {
+          background:
+            radial-gradient(circle at 76% 18%, rgba(0,212,255,0.055), transparent 28%),
+            linear-gradient(180deg, rgba(8,11,18,0.92), rgba(8,10,16,0.98)) !important;
+        }
+        .final-cta-section {
+          background:
+            radial-gradient(ellipse 58% 70% at 50% 50%, rgba(167,139,250,0.12), transparent 68%),
+            linear-gradient(180deg, rgba(8,11,18,0.96), rgba(6,8,13,1)) !important;
+          border-color: rgba(255,255,255,0.08) !important;
+        }
+
+        .hero-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 7px 12px;
+          margin-bottom: 22px;
+          border-radius: 999px;
+          color: #a8c5dc;
+          background: rgba(255,255,255,0.045);
+          border: 1px solid rgba(255,255,255,0.09);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+        .hero-eyebrow-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #00ff88;
+          box-shadow: 0 0 16px rgba(0,255,136,0.75);
+        }
+        .hero-command-strip {
+          width: fit-content;
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          padding: 9px 10px 9px 14px;
+          border-radius: 12px;
+          background: rgba(7,12,21,0.78);
+          border: 1px solid rgba(255,255,255,0.09);
+          box-shadow: 0 18px 46px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+          backdrop-filter: blur(16px) saturate(1.25);
+        }
+        .hero-command-strip code {
+          color: #dce8f8;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px;
+          letter-spacing: 0;
+        }
+        .hero-command-strip button {
+          border: 0;
+          border-radius: 8px;
+          padding: 7px 11px;
+          background: rgba(0,212,255,0.12);
+          color: #9eeaff;
+          font-family: 'Inter', sans-serif;
+          font-size: 12px;
+          font-weight: 750;
+          cursor: pointer;
+          transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+        }
+        .hero-command-strip button:hover {
+          transform: translateY(-1px);
+          background: rgba(0,212,255,0.18);
+          color: #f1fbff;
+        }
+
         .hero-shell {
           min-height: calc(100vh - 56px);
           position: relative;
@@ -3195,8 +3385,10 @@ export default function LandingPage() {
           min-height: auto !important;
           padding: clamp(76px, 10vh, 118px) 28px 96px !important;
           background:
-            radial-gradient(circle at 78% 28%, rgba(0,212,255,0.10), transparent 28%),
-            linear-gradient(135deg, rgba(12,4,24,0.16), rgba(7,11,18,0.36));
+            linear-gradient(115deg, rgba(255,255,255,0.055), transparent 18%),
+            radial-gradient(circle at 78% 28%, rgba(0,212,255,0.13), transparent 30%),
+            radial-gradient(circle at 18% 22%, rgba(167,139,250,0.12), transparent 28%),
+            linear-gradient(180deg, rgba(8,10,18,0.42), rgba(7,11,18,0.22));
         }
         .hero-shell::before,
         .hero-shell::after,
@@ -3209,18 +3401,19 @@ export default function LandingPage() {
           gap: clamp(42px, 6vw, 84px) !important;
           align-items: center !important;
           max-width: 1180px !important;
-          min-height: 560px !important;
+          min-height: 600px !important;
         }
         .hero-shell h1 {
           font-family: 'Syne', sans-serif !important;
           font-size: clamp(44px, 5.4vw, 76px) !important;
-          line-height: 1.15 !important;        /* Increased slightly from 1.02 */
+          line-height: 1.06 !important;
           padding-bottom: 24px !important;   /* Protects the descenders */
-          letter-spacing: -0.035em !important;
+          letter-spacing: -0.032em !important;
           overflow: visible !important;
           max-width: 680px !important;
-          margin-bottom: 22px !important;
+          margin-bottom: 18px !important;
           color: #f4ecff !important;
+          text-shadow: 0 22px 72px rgba(0,0,0,0.4);
         }
         .hero-shell h1::after {
           content: '';
@@ -3252,6 +3445,7 @@ export default function LandingPage() {
           border-radius: 50%;
           overflow: visible;
           isolation: isolate;
+          filter: drop-shadow(0 34px 68px rgba(0,0,0,0.32));
         }
         .hero-shell .hero-right > * {
           display: none !important;
@@ -3669,6 +3863,69 @@ export default function LandingPage() {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50%       { opacity: 0.9; transform: scale(1.015); }
         }
+        .feature-carousel-stage {
+          perspective: 1200px;
+          transform-style: preserve-3d;
+          isolation: isolate;
+        }
+        .feature-card-shell {
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+          filter: drop-shadow(0 20px 36px rgba(0,0,0,0.2));
+        }
+        .premium-feature-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          background:
+            linear-gradient(115deg, transparent 0 28%, rgba(255,255,255,0.08) 36%, transparent 46%),
+            radial-gradient(circle at 78% 0%, rgba(255,255,255,0.08), transparent 30%);
+          opacity: 0.5;
+          transform: translateX(-22%);
+          transition: opacity 0.4s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
+        }
+        .premium-feature-card:hover::before {
+          opacity: 0.95;
+          transform: translateX(18%);
+        }
+        .premium-feature-card::after {
+          content: '';
+          position: absolute;
+          left: 18px;
+          right: 18px;
+          bottom: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+          opacity: 0.42;
+          pointer-events: none;
+        }
+        .feature-orbit-ring {
+          border-radius: 50%;
+          border: 1px solid rgba(167,139,250,0.2);
+          background:
+            radial-gradient(circle, transparent 58%, rgba(0,212,255,0.08) 59%, transparent 62%),
+            conic-gradient(from 90deg, rgba(0,212,255,0), rgba(0,212,255,0.28), rgba(167,139,250,0.22), rgba(0,255,136,0.16), rgba(0,212,255,0));
+          -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 62%, transparent 63%);
+          mask: radial-gradient(circle, transparent 58%, #000 59%, #000 62%, transparent 63%);
+          box-shadow: 0 0 72px rgba(0,212,255,0.09), inset 0 0 54px rgba(167,139,250,0.08);
+          animation: featureOrbitSpin 10s linear infinite;
+        }
+        .feature-carousel-core {
+          background:
+            radial-gradient(circle, rgba(0,212,255,0.28) 0%, rgba(167,139,250,0.18) 42%, transparent 72%);
+          filter: blur(20px);
+          animation: featureCorePulse 2.8s ease-in-out infinite;
+        }
+        @keyframes featureOrbitSpin {
+          from { rotate: 0deg; }
+          to   { rotate: 360deg; }
+        }
+        @keyframes featureCorePulse {
+          0%, 100% { transform: scale(0.92); opacity: 0.62; }
+          50% { transform: scale(1.08); opacity: 1; }
+        }
         @keyframes cursor-blink {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0; }
@@ -3682,6 +3939,9 @@ export default function LandingPage() {
         @media (max-width: 900px) {
           .feat-cards-desktop { display: none !important; }
           .feat-cards-mobile  { display: grid !important; grid-template-columns: repeat(2,1fr); gap: 12px; }
+          .premium-feature-card {
+            min-height: 230px !important;
+          }
         }
         @media (max-width: 560px) {
           .feat-cards-mobile  { grid-template-columns: 1fr !important; }
@@ -3696,7 +3956,7 @@ export default function LandingPage() {
         }
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: 'transparent', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', overflowX: 'hidden' }}>
+      <div className="landing-page-shell" style={{ minHeight: '100vh', background: 'transparent', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', overflowX: 'hidden' }}>
 
         {/* ── Scroll progress bar ── */}
         <ScrollProgressBar />
@@ -3813,7 +4073,7 @@ export default function LandingPage() {
         {/* ══════════════════════════════════════════════════════════ */}
         {/* Pipeline showcase — full-width dark band                 */}
         {/* ══════════════════════════════════════════════════════════ */}
-        <section style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.72)', position: 'relative', zIndex: 2 }}>
+        <section className="premium-section pipeline-section" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.72)', position: 'relative', zIndex: 2 }}>
           <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '80px', alignItems: 'start' }} className="pipeline-grid">
               <PipelineText loggedIn={loggedIn} />
