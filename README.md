@@ -10,6 +10,7 @@ FIE wraps any LLM with a single decorator. It runs 11 detection layers in parall
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Deployed](https://img.shields.io/badge/Live-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
 [![Downloads](https://img.shields.io/pypi/dm/fie-sdk?label=PyPI%20downloads&color=brightgreen)](https://pypi.org/project/fie-sdk)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20536639-blue)](https://doi.org/10.5281/zenodo.20536639)
 
 > Built and maintained solo. 867 developers installed FIE this month. If you tried it — I'd genuinely like to hear what you thought. [Open a discussion](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions) or [email directly](mailto:ayushsingh355vns@gmail.com).
 
@@ -393,6 +394,14 @@ cd Frontend
 npm install && npm run dev
 # Dashboard: http://localhost:5173
 ```
+
+---
+
+## Research Paper
+
+Singh, A. (2026). *Hard-Positive Training and Threshold Calibration for Out-of-Distribution Adversarial Prompt Detection.* Zenodo. https://doi.org/10.5281/zenodo.20536639
+
+The paper documents the full Phase 2 research cycle — architecture vs. training distribution comparison, unknown category benchmarks, hard-positive retraining, threshold calibration, and weight comparison experiments.
 
 ---
 
