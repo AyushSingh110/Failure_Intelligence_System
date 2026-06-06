@@ -63,6 +63,15 @@ def label_flag(
         found = apply_label(event_id, body.label)   # type: ignore[arg-type]
         if not found:
             raise HTTPException(status_code=404, detail="event not found")
+        # Stage or dismiss hard-positive candidate for PAIR retraining.
+        try:
+            from engine.hard_positive_collector import confirm_hard_positive, dismiss_candidate
+            if body.label == "true_positive":
+                confirm_hard_positive(event_id)
+            else:
+                dismiss_candidate(event_id)
+        except Exception as _hpc_exc:
+            logger.debug("hard_positive_collector wiring error (non-fatal): %s", _hpc_exc)
         return {"status": "ok", "event_id": event_id, "label": body.label}
     except HTTPException:
         raise
@@ -79,6 +88,33 @@ def export_tps(authorization: str = Header(default="")):
         from fie.feedback_store import export_confirmed_tps
         tps = export_confirmed_tps()
         return {"count": len(tps), "true_positives": tps}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/flags/hard-positives/stats")
+def hard_positive_stats(authorization: str = Header(default="")):
+    """Return hard-positive collection stats (admin only)."""
+    require_admin(authorization)
+    try:
+        from engine.hard_positive_collector import get_stats
+        return get_stats()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/flags/hard-positives/export")
+def export_hard_positives(authorization: str = Header(default="")):
+    """
+    Export confirmed hard positives for PAIR retraining (admin only).
+    Returns list of {event_id, prompt, flag_type, zone, confidence, confirmed_at}.
+    Pass to scripts/retrain_pair_v4.py --hard-positives-path <file>.
+    """
+    require_admin(authorization)
+    try:
+        from engine.hard_positive_collector import export_for_retraining
+        records = export_for_retraining()
+        return {"count": len(records), "hard_positives": records}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

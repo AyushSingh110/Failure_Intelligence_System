@@ -2147,12 +2147,23 @@ def scan_prompt(
         # Feedback loop: record input block for human review
         try:
             from fie.feedback_store import record as _fb_record
-            _fb_record(
+            _clear_event_id = _fb_record(
                 kind="input_block", flag_type=best_type,
                 confidence=round(best_conf, 4),
                 prompt=prompt, matched=matched_text or "",
                 session_id=session_id,
             )
+            try:
+                from engine.hard_positive_collector import stage_candidate
+                stage_candidate(
+                    event_id=_clear_event_id,
+                    prompt=prompt,
+                    flag_type=best_type,
+                    confidence=round(best_conf, 4),
+                    zone="CLEAR_ATTACK",
+                )
+            except Exception:
+                pass
         except Exception:
             pass
         _scan_cache.set(_cache_prompt, result)
@@ -2226,6 +2237,33 @@ def scan_prompt(
                 mitigation   = "",
                 evidence     = best_evidence | {"llama_guard": "unavailable_allowed"},
             )
+
+    # Record UNCERTAIN-zone blocks in the feedback store (for human review queue)
+    # and stage a hard-positive candidate if collection is enabled.
+    if result.is_attack:
+        try:
+            from fie.feedback_store import record as _fb_record
+            _unc_event_id = _fb_record(
+                kind="input_block",
+                flag_type=result.attack_type or "UNCERTAIN_BLOCKED",
+                confidence=result.confidence,
+                prompt=prompt,
+                matched=matched_text or "",
+                session_id=session_id,
+            )
+            try:
+                from engine.hard_positive_collector import stage_candidate
+                stage_candidate(
+                    event_id=_unc_event_id,
+                    prompt=prompt,
+                    flag_type=result.attack_type or "UNCERTAIN_BLOCKED",
+                    confidence=result.confidence,
+                    zone="UNCERTAIN",
+                )
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     _scan_cache.set(_cache_prompt, result)
     # Pass is_uncertain=True so session tracker marks this turn for crescendo detection
