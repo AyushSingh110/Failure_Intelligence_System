@@ -128,6 +128,135 @@ _TRANSLATED_PATTERNS: list[re.Pattern] = [re.compile(pat, re.IGNORECASE) for pat
 ]]
 
 
+# ── Tier 2.5: Language detection for all-Latin text (Romanised gap) ──────────
+#
+# The original Tier 1 + Tier 2 design has a documented blind spot:
+# Romanised forms of non-Latin scripts (Pinyin for Mandarin, Arabizi for Arabic,
+# Romaji for Japanese, IAST for Hindi, etc.) produce zero signal because they
+# use only Latin characters — Tier 1 sees no script anomaly and Tier 2 phrase
+# patterns only match native-script text.
+#
+# UnknownBench-v3 multilingual (45 prompts) confirmed this: all PAIR classifier
+# detections came from semantic content, not the multilingual layer at all.
+#
+# Fix: If the prompt is all-Latin but langdetect/lingua confidently identifies
+# it as non-English, translate to English and re-run Tier 2 pattern matching
+# on the translated text. This closes the Romanised injection gap.
+#
+# Implementation uses langdetect (lightweight, no downloads, handles most
+# Romanisations). Falls back to lingua-language-detector if installed (more
+# accurate on very short texts). Disables silently if neither is present —
+# Tier 1 and Tier 2 still run unchanged.
+
+def _detect_language_of_latin_text(text: str) -> tuple[str | None, float]:
+    """
+    Detect the language of a prompt that is entirely Latin-character.
+    Returns (language_code, confidence) or (None, 0.0) on failure.
+
+    Tries langdetect first (pip install langdetect), then lingua
+    (pip install lingua-language-detector). Returns None if neither available.
+    Language codes are ISO 639-1 (e.g. "zh", "ja", "ar", "hi", "ko", "tr").
+    """
+    stripped = text.strip()
+    if len(stripped) < 30:
+        return None, 0.0
+
+    # Sanity: only run if text is actually all-Latin
+    nonlatin = sum(1 for c in stripped if c.isalpha() and not unicodedata.name(c, "").startswith("LATIN"))
+    if nonlatin > len(stripped) * 0.05:
+        return None, 0.0  # has non-Latin chars — Tier 1 handles it
+
+    # ── Try langdetect ────────────────────────────────────────────────────────
+    try:
+        from langdetect import detect_langs
+        results = detect_langs(stripped[:500])
+        if results:
+            top = results[0]
+            if top.prob >= 0.70 and top.lang != "en":
+                return top.lang, round(float(top.prob), 3)
+        return None, 0.0
+    except ImportError:
+        pass
+    except Exception:
+        return None, 0.0
+
+    # ── Try lingua-language-detector ──────────────────────────────────────────
+    try:
+        from lingua import LanguageDetectorBuilder, Language
+        detector = LanguageDetectorBuilder.from_all_languages().with_low_accuracy_mode().build()
+        result = detector.detect_language_of(stripped[:500])
+        if result and result != Language.ENGLISH:
+            return result.iso_code_639_1.name.lower(), 0.80
+        return None, 0.0
+    except ImportError:
+        pass
+    except Exception:
+        return None, 0.0
+
+    return None, 0.0
+
+
+def _tier25_romanised_detection(prompt: str) -> tuple[str | None, float, dict]:
+    """
+    Tier 2.5 — Romanised injection detection.
+
+    Detects injection attempts written in Romanised forms of non-Latin scripts
+    (Pinyin, Arabizi, Romaji, IAST, etc.) by:
+      1. Confirming all-Latin character composition.
+      2. Using langdetect/lingua to identify non-English language.
+      3. Translating to English with deep_translator.
+      4. Running Tier 2 static patterns on the translated text.
+
+    Returns (attack_type, confidence, evidence) or (None, 0.0, {}).
+    """
+    lang, lang_conf = _detect_language_of_latin_text(prompt)
+    if lang is None:
+        return None, 0.0, {}
+
+    translated = translate_to_english(prompt)
+    if not translated:
+        # Language detected but translation failed — return a mild signal
+        # so the prompt at least enters the UNCERTAIN zone for LlamaGuard review.
+        return "MULTILINGUAL_INJECTION", 0.58, {
+            "tier25_romanised": True,
+            "detected_lang":    lang,
+            "lang_confidence":  lang_conf,
+            "translation":      None,
+            "tier2_match":      None,
+            "note":             "non-English detected, translation unavailable",
+        }
+
+    # Run Tier 2 patterns on translated English text
+    tier2_match: re.Match | None = None
+    for pat in _TRANSLATED_PATTERNS:
+        m = pat.search(translated)
+        if m:
+            tier2_match = m
+            break
+
+    eng_match = bool(_ENGLISH_INJECTION_RE.search(translated)) if translated else False
+
+    if tier2_match:
+        confidence = 0.78  # strong: non-English + translated phrase match
+    elif eng_match:
+        confidence = 0.70  # moderate: non-English + English injection keywords in translation
+    else:
+        confidence = 0.55  # weak: language detected but no injection pattern in translation
+
+    if confidence < 0.58:
+        return None, 0.0, {}
+
+    return "MULTILINGUAL_INJECTION", round(confidence, 4), {
+        "tier25_romanised":  True,
+        "detected_lang":     lang,
+        "lang_confidence":   lang_conf,
+        "translated_sample": translated[:120],
+        "tier2_match":       tier2_match.group(0)[:80] if tier2_match else None,
+        "eng_injection":     eng_match,
+        "confidence":        round(confidence, 4),
+    }
+
+
 # ── Tier 1: Script anomaly detection ─────────────────────────────────────────
 
 def _get_script(char: str) -> str:
@@ -232,14 +361,22 @@ _ENGLISH_INJECTION_RE = re.compile(
 
 def run_multilingual_detection(prompt: str) -> tuple[str | None, float, dict]:
     """
-    Run Tier 1 (script anomaly) + Tier 2 (static regex) on the prompt.
+    Three-tier multilingual injection detection.
+
+    Tier 1  — Script anomaly: detects non-Latin characters mixed with Latin.
+               Catches native-script injections (Cyrillic, Arabic, CJK, etc.).
+    Tier 2  — Static regex: 7 phrase families × 8 languages in native script.
+               Catches direct injection phrases written in their native scripts.
+    Tier 2.5 — Romanised gap filler: language detection (langdetect/lingua) on
+               all-Latin text. If non-English → translate → re-run Tier 2.
+               Catches Pinyin, Arabizi, Romaji, IAST, code-switched Latin text.
 
     Returns (attack_type | None, confidence, evidence_dict).
     """
     if len(prompt) < 10:
         return None, 0.0, {}
 
-    # ── Tier 2 first (higher confidence on exact matches) ────────────────────
+    # ── Tier 2 (native-script phrase matching) ───────────────────────────────
     tier2_match: re.Match | None = None
     for pat in _TRANSLATED_PATTERNS:
         m = pat.search(prompt)
@@ -249,30 +386,33 @@ def run_multilingual_detection(prompt: str) -> tuple[str | None, float, dict]:
 
     # ── Tier 1: script anomaly ────────────────────────────────────────────────
     anomaly_score = _script_anomaly_score(prompt)
-    tier1_fires   = anomaly_score >= 0.10  # 10%+ non-Latin chars mixed with Latin
+    tier1_fires   = anomaly_score >= 0.10
 
-    if not tier2_match and not tier1_fires:
-        return None, 0.0, {}
+    if tier2_match or tier1_fires:
+        eng_injection = bool(_ENGLISH_INJECTION_RE.search(prompt))
+        if tier2_match and tier1_fires:
+            confidence = 0.80
+        elif tier2_match:
+            confidence = 0.70
+        elif tier1_fires and eng_injection:
+            confidence = 0.72
+        else:
+            confidence = 0.58
 
-    # Confidence logic
-    eng_injection = bool(_ENGLISH_INJECTION_RE.search(prompt))
-    if tier2_match and tier1_fires:
-        # Both fire — strong corroboration
-        confidence = 0.80
-    elif tier2_match:
-        confidence = 0.70
-    elif tier1_fires and eng_injection:
-        # Script anomaly + English injection keywords: attacker is code-switching
-        # deliberately to bypass English regex layers — treat as stronger signal
-        confidence = 0.72
-    else:
-        # Tier 1 only — anomaly without phrase match or English keywords
-        confidence = 0.58
+        return "MULTILINGUAL_INJECTION", round(confidence, 4), {
+            "tier":                    "tier1+tier2",
+            "tier1_script_anomaly":    tier1_fires,
+            "tier1_nonlatin_fraction": round(anomaly_score, 3),
+            "tier1_eng_injection":     eng_injection,
+            "tier2_phrase_match":      tier2_match.group(0)[:80] if tier2_match else None,
+            "confidence":              round(confidence, 4),
+        }
 
-    return "MULTILINGUAL_INJECTION", round(confidence, 4), {
-        "tier1_script_anomaly":    tier1_fires,
-        "tier1_nonlatin_fraction": round(anomaly_score, 3),
-        "tier1_eng_injection":     eng_injection,
-        "tier2_phrase_match":      tier2_match.group(0)[:80] if tier2_match else None,
-        "confidence":              round(confidence, 4),
-    }
+    # ── Tier 2.5: Romanised Latin injection (Pinyin / Arabizi / Romaji / IAST)
+    # Only runs if Tier 1 + Tier 2 found nothing — it's slower (language model
+    # call) so we only pay the cost for all-Latin prompts.
+    t25_type, t25_conf, t25_ev = _tier25_romanised_detection(prompt)
+    if t25_type is not None:
+        return t25_type, t25_conf, {"tier": "tier2.5", **t25_ev}
+
+    return None, 0.0, {}

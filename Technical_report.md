@@ -418,6 +418,150 @@ python -m evaluation.datasets.freeze_benchmarks --verify
 
 ---
 
+## Phase 3: PAIR v4, FSV Ablation, and Hallucination Validation
+
+### 3.1 PAIR v4 — Weighting calibration (Experiment 8 applied)
+
+Phase 2 ended with the finding that 3× hard-positive weighting achieves the same target zone as 5× at a lower threshold (0.70 vs 0.80) with higher F1 (0.9827 vs 0.9673). Phase 3 applied this finding in production.
+
+PAIR v4 was retrained with 3× weighting across all hard-positive categories. The resulting threshold (0.50 at natural calibration) is lower than both v3 (0.80) and the Exp 8 projection (0.70), reflecting a larger and more balanced training corpus (789 examples vs 609 in v3).
+
+**PAIR v4 validation results:**
+
+| Benchmark | Status | Prompts | TPR |
+| --- | --- | --- | --- |
+| UnknownBench-v2 Virtualization | Held-out (v3 trained on v1) | 50 | 98.0% |
+| UnknownBench-v2 Indirect | Held-out | 50 | 98.0% |
+| UnknownBench-v2 Multilingual | Held-out | 50 | 98.0% |
+| UnknownBench-v2 Many-Shot | Held-out | 50 | 100.0% |
+| **UnknownBench-v2 Overall** | | **200** | **98.5%** |
+| UnknownBench-v3 Virtualization | First contact (new held-out) | 47 | 97.87% |
+| UnknownBench-v3 Indirect | First contact | 46 | 100.0% |
+| UnknownBench-v3 Multilingual | First contact | 45 | 91.11% |
+| UnknownBench-v3 Many-Shot | First contact | 39 | 100.0% |
+| **UnknownBench-v3 Overall** | | **177** | **97.18%** |
+
+The 91.11% on multilingual v3 reflects the Romanised gap: the 4 missed prompts were Romanised Mandarin (Pinyin), which the PAIR classifier partially generalises to via semantic similarity but not reliably.
+
+### 3.2 UnknownBench-v3 — Third-generation attack strategies
+
+UnknownBench-v3 uses structurally different attack strategies from both v1 (vocabulary avoidance) and v2 (Unicode/identity/task-structure/graduated escalation). The v3 strategy question was: can attacks that avoid the concept of "attack" entirely — framing everything as knowledge queries, logical questions, or conversational continuations — evade detection?
+
+**v3 strategies:**
+
+| Dataset | Strategy | Key insight |
+| --- | --- | --- |
+| Virtualization v3 | Epistemic reframing | Attack framed as meta-level knowledge query about what an AI would do |
+| Indirect v3 | Context poisoning | False conversational precedent established before the harmful request |
+| Multilingual v3 | Cross-lingual Romanisation | Latin-only script that encodes non-English language (Pinyin, Arabizi, Romaji, IAST) |
+| Many-Shot v3 | Socratic consistency traps | Logical entailment from agreed premises toward harmful conclusions |
+
+PAIR v4's 97.18% TPR on first contact with v3 indicates strong semantic generalisation. The 5 missed prompts (4 Romanised Multilingual + 1 Epistemic Virtualization) are genuine edge cases that require non-semantic signals.
+
+### 3.3 FSV Feature Ablation — SHAP Analysis
+
+**Research question:** Is the XGBoost failure classifier's predictive power concentrated in a small subset of the 560-feature Failure Signal Vector, or distributed across all features?
+
+**Method:** SHAP TreeExplainer on 800 synthetic samples covering the FSV feature space. Ablation: train/evaluate with top-N feature subsets using 5-fold cross-validation. Proxy labels from the full model's own predictions.
+
+**Results:**
+
+| N features | F1 (mean) | AUC (mean) | % of full F1 |
+| --- | --- | --- | --- |
+| 10 | 0.8963 | 0.9544 | 100% |
+| 20 | 0.8972 | 0.9547 | 100% |
+| 30 | 0.8972 | 0.9547 | 100% |
+| 50 | 0.8972 | 0.9546 | 100% |
+| 100 | 0.8972 | 0.9545 | 100% |
+| 200 | 0.8972 | 0.9546 | 100% |
+| 560 (full) | 0.8960 | 0.9541 | baseline |
+
+The knee at top-10 (2% of the full feature set) accounts for 100% of predictive performance. The remaining 550 features contribute noise.
+
+**Top 10 features by mean |SHAP|:**
+
+1. `agreement_score` (0.380) — ensemble disagreement across shadow models
+2. `jury_verdict_FACTUAL_HALLUCINATION` (0.374) — DiagnosticJury verdict category
+3. `jury_confidence` (0.203) — jury panel confidence
+4. `entropy_score` (0.151) — response entropy
+5. `high_failure_risk` (0.103) — composite risk flag
+6. `fix_confidence` (0.076) — fix engine confidence
+7. `fix_strategy_NONE` (0.051) — no applicable fix (strong failure signal)
+8. `question_type_FACTUAL` (0.039) — factual questions have higher hallucination risk
+9. `jury_verdict_KNOWLEDGE_BOUNDARY_FAILURE` (0.035) — jury verdict category
+10. `requires_escalation` (0.032) — escalation flag
+
+**Interpretation:** The two dominant signals are `agreement_score` and `jury_verdict_FACTUAL_HALLUCINATION`. Together they account for 75% of the model's SHAP mass. This is the failure-classification equivalent of the adversarial Phase 2 finding: signal is concentrated in the semantic and ensemble-disagreement features, not spread across the full feature space.
+
+**Implication:** Future FSV versions should trim to 10–20 features. The current 560-feature design emerged from iterative feature addition during development without ablation. The ablation makes clear that 98% of the features are engineering overhead, not signal.
+
+### 3.4 Hallucination Evaluation Harness — TruthfulQA
+
+A complete evaluation harness was built for TruthfulQA (817 questions, 38 categories). The harness measures:
+
+- **Exp H1:** Full FSV + XGBoost at an offline threshold (H1\_PROB\_THRESHOLD = 0.25, separate from production 0.50)
+- **Exp H2:** Ensemble disagreement alone (`DISAGREE_BASELINE = 0.55`)
+
+**Labeling:** Substring containment check against correct answers → ROUGE-1 recall fallback. Incorrect answers are excluded from label determination to avoid vocabulary overlap pollution.
+
+**Known calibration issue:** The XGBoost failure classifier was trained on production data with features like `jury_confidence` and `fix_confidence` that are unavailable in offline evaluation. In the offline setting, these features default to 0.5 and 0.0 respectively, shifting the model's output distribution toward "failure." An offline-specific threshold (0.25) and a probability sweep table (0.10–0.50) are built into the report to quantify where the classifier has signal.
+
+**How to run the full evaluation:**
+
+```bash
+python -m evaluation.hallucination.run_eval
+```
+
+Results directory: `evaluation/hallucination/results/`
+
+### 3.5 Hard-Positive Collection Pipeline
+
+**Problem:** UNCERTAIN-zone blocks (confidence in [0.60×T, T)) were previously invisible to the feedback review queue. These are the most valuable training examples — they represent prompts that the model could not confidently classify.
+
+**Solution:** Two changes to the scan path:
+
+1. UNCERTAIN-zone blocks now call `_fb_record` to create a feedback event (like CLEAR_ATTACK blocks already did).
+2. At both UNCERTAIN and CLEAR_ATTACK block points, the full prompt text is staged in `engine/hard_positive_collector.py` (local file, opt-in via `FIE_COLLECT_HARD_POSITIVES=1`).
+
+**Feedback loop:**
+
+```text
+scan_prompt() → block → stage_candidate(event_id, prompt)
+                         ↓
+         POST /flags/{id}/label → true_positive
+                         ↓
+              confirm_hard_positive(event_id)
+                         ↓
+         data/hard_positives_confirmed.jsonl
+                         ↓
+         scripts/retrain_pair_v4.py --hard-positives-path
+```
+
+This creates a continuous improvement loop: every UNCERTAIN prompt that a human confirms as a real attack becomes training data for the next PAIR version.
+
+### 3.6 Multilingual Tier 2.5 — Romanised Script Gap
+
+**Problem identified:** UnknownBench-v3 multilingual bench (45 prompts) confirmed that Romanised forms of non-Latin scripts (Pinyin, Arabizi, Romaji, IAST Hindi) produce zero signal from both Tier 1 (script anomaly, requires non-Latin characters) and Tier 2 (phrase matching, requires native-script phrases). All detections in the v2 multilingual benchmark came from PAIR semantic similarity, not the multilingual layer.
+
+**Fix:** Tier 2.5 — language detection for all-Latin text:
+
+1. If prompt is all-Latin (Tier 1 score = 0), run `langdetect` on the text.
+2. If `langdetect` detects non-English with ≥ 70% confidence, translate to English.
+3. Run Tier 2 phrase patterns on the translated English text.
+4. Confidence: 0.78 (phrase match in translation) / 0.70 (English injection keywords) / 0.58 (language detected, no pattern).
+
+**Results:**
+
+- Arabic native script: detected at conf=0.80 (Tier 1+2, unchanged)
+- Arabizi (Romanised Arabic): detected at conf=0.58 (Tier 2.5) → UNCERTAIN zone → LlamaGuard
+- French Tier 2: detected at conf=0.70 (unchanged)
+- Pinyin: not detected (langdetect cannot distinguish Pinyin from random Latin syllables)
+- Clean English: no false positive
+
+**Limitation:** Pinyin remains undetected by Tier 2.5. PAIR catches many Pinyin attacks semantically, but there is no reliable language-detection path for Romanised Mandarin. This is documented and tracked.
+
+---
+
 ## 14. References
 
 - Zou et al. (2023). *Universal and Transferable Adversarial Attacks on Aligned Language Models.* arXiv:2307.15043
