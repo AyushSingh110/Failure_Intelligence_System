@@ -17,11 +17,12 @@ from engine.agents.adversarial.injection  import (
     run_faiss_detection,
     run_indirect_injection_detection,
 )
-from engine.agents.adversarial.many_shot  import run_many_shot_detection
-from engine.agents.adversarial.gcg        import run_gcg_detection
-from engine.agents.adversarial.perplexity import run_perplexity_proxy
-from engine.agents.adversarial.semantic   import run_semantic_consistency, run_exfiltration_detection
-from engine.agents.adversarial.llm_intent import run_llm_intent_check
+from engine.agents.adversarial.many_shot                import run_many_shot_detection
+from engine.agents.adversarial.gcg                      import run_gcg_detection
+from engine.agents.adversarial.perplexity               import run_perplexity_proxy
+from engine.agents.adversarial.semantic                 import run_semantic_consistency, run_exfiltration_detection
+from engine.agents.adversarial.llm_intent               import run_llm_intent_check
+from engine.agents.adversarial.multilingual_romanisation import run_romanisation_detection
 
 
 _MITIGATION_MAP: dict[str, str] = {
@@ -104,6 +105,15 @@ _MITIGATION_MAP: dict[str, str] = {
         "instructions that fictional framing does not suspend content policies. "
         "(3) Flag prompts combining narrative framing with harmful topic keywords."
     ),
+    "CROSS_LINGUAL_ROMANISATION_ATTACK": (
+        "A cross-lingual romanisation attack was detected — the prompt is written in "
+        "a romanised non-Latin script (Pinyin / Arabizi / Romaji / Korean RR / IAST) "
+        "to bypass English-language safety filters. "
+        "Mitigations: (1) Apply script-aware normalisation before pattern matching. "
+        "(2) Flag any prompt with a high romanisation score for secondary review. "
+        "(3) Consider rejecting or escalating prompts that combine a detected script "
+        "with harm-adjacent vocabulary in that script."
+    ),
 }
 
 _DEFAULT_MITIGATION = (
@@ -126,6 +136,8 @@ class AdversarialSpecialist(BaseJuryAgent):
         faiss_hit, faiss_confidence = run_faiss_detection(context.prompt)
         # Layer 3b: many-shot / few-shot jailbreak
         many_root, many_confidence, many_evidence = run_many_shot_detection(context.prompt)
+        # Layer 3d: cross-lingual romanisation attack (Pinyin / Arabizi / Romaji / Korean RR / IAST)
+        roman_root, roman_confidence, roman_evidence = run_romanisation_detection(context.prompt)
         # Layer 3c: roleplay / narrative wrapper jailbreak
         try:
             from engine.roleplay_detector import detect_roleplay_jailbreak
@@ -168,6 +180,7 @@ class AdversarialSpecialist(BaseJuryAgent):
             or (sem_root      is not None and sem_confidence      >= 0.80)
             or (many_root     is not None and many_confidence     >= 0.80)
             or (roleplay_root is not None and roleplay_confidence >= 0.80)
+            or (roman_root    is not None and roman_confidence    >= 0.80)
         )
         intent_root, intent_confidence, intent_evidence = None, 0.0, {}
         if not _high_conf_structural:
@@ -176,7 +189,7 @@ class AdversarialSpecialist(BaseJuryAgent):
                 pattern_hit is None and faiss_hit is None and guard_root is None
                 and indirect_root is None and gcg_root is None and perp_root is None
                 and exfil_root is None and sem_root is None and many_root is None
-                and roleplay_root is None
+                and roleplay_root is None and roman_root is None
             ):
                 return self._skip(
                     "No adversarial patterns detected by regex, semantic search, prompt guard, "
@@ -225,6 +238,9 @@ class AdversarialSpecialist(BaseJuryAgent):
         elif roleplay_root is not None:
             root_cause   = roleplay_root
             pattern_conf = roleplay_confidence
+        elif roman_root is not None:
+            root_cause   = roman_root
+            pattern_conf = roman_confidence
         elif intent_root is not None:
             root_cause   = intent_root
             pattern_conf = intent_confidence
@@ -254,6 +270,8 @@ class AdversarialSpecialist(BaseJuryAgent):
             active_confidences.append(many_confidence)
         if roleplay_root is not None:
             active_confidences.append(roleplay_confidence)
+        if roman_root is not None:
+            active_confidences.append(roman_confidence)
         if intent_root is not None:
             active_confidences.append(intent_confidence)
 
@@ -376,6 +394,17 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "confidence":            roleplay_confidence,
                 "framing_matched":       roleplay_evidence.get("framing_matched"),
                 "harmful_topic_matched": roleplay_evidence.get("harmful_topic_matched"),
+            }
+
+        if roman_root is not None:
+            evidence["detection_layers_fired"].append("romanisation")
+            evidence["romanisation"] = {
+                "confidence":   roman_confidence,
+                "script":       roman_evidence.get("best_script"),
+                "script_score": roman_evidence.get("script_score"),
+                "harm_vocab":   roman_evidence.get("harm_vocab_hit"),
+                "harm_terms":   roman_evidence.get("harm_terms"),
+                "all_scores":   roman_evidence.get("all_scores"),
             }
 
         return self._verdict(
