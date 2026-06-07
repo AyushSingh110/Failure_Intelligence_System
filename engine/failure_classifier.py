@@ -9,36 +9,57 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Paths — v4 takes priority, falls back to v3, then v2
-_HERE         = os.path.dirname(os.path.dirname(__file__))
-_MODEL_V4     = os.path.join(_HERE, "models", "failure_classifier_v4.pkl")
-_COLS_V4      = os.path.join(_HERE, "models", "feature_columns_v4.pkl")
-_MODEL_V3     = os.path.join(_HERE, "models", "failure_classifier_v3.pkl")
-_COLS_V3      = os.path.join(_HERE, "models", "feature_columns_v3.pkl")
-_MODEL_V2     = os.path.join(_HERE, "models", "failure_classifier_v2.pkl")
-_COLS_V2      = os.path.join(_HERE, "models", "feature_columns_v2.pkl")
+# Paths — slim takes priority (10 features, same AUC), then v4, v3, v2
+_HERE          = os.path.dirname(os.path.dirname(__file__))
+_MODEL_SLIM    = os.path.join(_HERE, "models", "failure_classifier_slim.pkl")
+_COLS_SLIM     = os.path.join(_HERE, "models", "feature_columns_slim.pkl")
+_MODEL_V4      = os.path.join(_HERE, "models", "failure_classifier_v4.pkl")
+_COLS_V4       = os.path.join(_HERE, "models", "feature_columns_v4.pkl")
+_MODEL_V3      = os.path.join(_HERE, "models", "failure_classifier_v3.pkl")
+_COLS_V3       = os.path.join(_HERE, "models", "feature_columns_v3.pkl")
+_MODEL_V2      = os.path.join(_HERE, "models", "failure_classifier_v2.pkl")
+_COLS_V2       = os.path.join(_HERE, "models", "feature_columns_v2.pkl")
 
-if os.path.exists(_MODEL_V4):
+# Slim model: 10 features only — no pandas, no get_dummies, no 560-col reindex.
+# SHAP ablation confirmed 10 features == full 560-feature performance (June 2026).
+_SLIM_FEATURES = [
+    "agreement_score",
+    "jury_verdict_FACTUAL_HALLUCINATION",
+    "jury_confidence",
+    "entropy_score",
+    "high_failure_risk",
+    "fix_confidence",
+    "fix_strategy_NONE",
+    "question_type_FACTUAL",
+    "jury_verdict_KNOWLEDGE_BOUNDARY_FAILURE",
+    "requires_escalation",
+]
+
+if os.path.exists(_MODEL_SLIM):
+    _MODEL_PATH, _COLS_PATH = _MODEL_SLIM, _COLS_SLIM
+    _VERSION    = "slim-v1"
+    _USE_SLIM   = True
+elif os.path.exists(_MODEL_V4):
     _MODEL_PATH, _COLS_PATH = _MODEL_V4, _COLS_V4
     _VERSION    = "v4"
+    _USE_SLIM   = False
 elif os.path.exists(_MODEL_V3):
     _MODEL_PATH, _COLS_PATH = _MODEL_V3, _COLS_V3
     _VERSION    = "v3"
+    _USE_SLIM   = False
     logger.warning(
-        "failure_classifier: v4 model not found at %s — falling back to v3. "
-        "AUC drops from 0.840 to 0.749. To fix: ensure failure_classifier_v4.pkl "
-        "and feature_columns_v4.pkl are present in the models/ directory.",
-        _MODEL_V4,
+        "failure_classifier: slim and v4 models not found — falling back to v3.",
     )
 else:
     _MODEL_PATH, _COLS_PATH = _MODEL_V2, _COLS_V2
     _VERSION    = "v2"
+    _USE_SLIM   = False
     logger.warning(
-        "failure_classifier: v4 and v3 models not found — falling back to v2. "
-        "Significant accuracy loss. Ensure failure_classifier_v4.pkl is in models/.",
+        "failure_classifier: slim/v4/v3 not found — falling back to v2. "
+        "Significant accuracy loss.",
     )
 
-_USING_V3 = _VERSION in ("v3", "v4")  # both v3 and v4 share the same feature schema
+_USING_V3 = _VERSION in ("v3", "v4", "slim-v1")
 
 # Fallback threshold used only when fie_config is unavailable.
 # The live value is always pulled from fie_config.get_threshold() at inference time.
@@ -99,8 +120,8 @@ def _load() -> None:
         _model     = joblib.load(_MODEL_PATH)
         _feat_cols = joblib.load(_COLS_PATH)
         logger.info(
-            "FIE failure_classifier_%s loaded (%d features, threshold=%.3f)",
-            _VERSION, len(_feat_cols), CLASSIFIER_THRESHOLD,
+            "FIE failure_classifier_%s loaded (%d features, threshold=%.3f, slim=%s)",
+            _VERSION, len(_feat_cols), CLASSIFIER_THRESHOLD, _USE_SLIM,
         )
     except Exception as exc:
         logger.warning(
@@ -161,32 +182,51 @@ def _infer(
         )
 
     try:
-        row = {
-            "agreement_score"    : agreement_score,
-            "entropy_score"      : entropy_score,
-            "jury_confidence"    : jury_confidence,
-            "fix_confidence"     : fix_confidence,
-            "gt_confidence"      : gt_confidence,
-            "high_failure_risk"  : int(high_failure_risk),
-            "fix_applied"        : int(fix_applied),
-            "requires_escalation": int(requires_escalation),
-            "gt_override"        : int(gt_override),
-            "archetype"          : archetype        or "NONE",
-            "jury_verdict"       : jury_verdict_str or "NONE",
-            "fix_strategy"       : fix_strategy     or "NONE",
-            "gt_source"          : gt_source        or "none",
-            "question_type"      : qt,
-            "provenance_category"    : provenance_category    or "GENERAL_KNOWLEDGE",
-            "provenance_label"       : provenance_label       or "UNVERIFIED_MODEL_INFERENCE",
-            "reasoning_failure_type" : reasoning_failure_type or "NOT_APPLICABLE",
-            "reasoning_confidence"   : float(reasoning_confidence or 0.0),
-        }
+        if _USE_SLIM:
+            # Fast path: 10-float vector — no pandas, no one-hot encoding.
+            jv = (jury_verdict_str or "NONE").upper()
+            fs = (fix_strategy     or "NONE").upper()
+            import numpy as _np
+            vec = _np.array([[
+                float(agreement_score),
+                float(jv == "FACTUAL_HALLUCINATION"),
+                float(jury_confidence),
+                float(entropy_score),
+                float(bool(high_failure_risk)),
+                float(fix_confidence),
+                float(fs == "NONE"),
+                float(qt == "FACTUAL"),
+                float(jv == "KNOWLEDGE_BOUNDARY_FAILURE"),
+                float(bool(requires_escalation)),
+            ]])
+            raw_prob = float(_model.predict_proba(vec)[0, 1])
+        else:
+            # Legacy path: 560-column one-hot pipeline.
+            row = {
+                "agreement_score"    : agreement_score,
+                "entropy_score"      : entropy_score,
+                "jury_confidence"    : jury_confidence,
+                "fix_confidence"     : fix_confidence,
+                "gt_confidence"      : gt_confidence,
+                "high_failure_risk"  : int(high_failure_risk),
+                "fix_applied"        : int(fix_applied),
+                "requires_escalation": int(requires_escalation),
+                "gt_override"        : int(gt_override),
+                "archetype"          : archetype        or "NONE",
+                "jury_verdict"       : jury_verdict_str or "NONE",
+                "fix_strategy"       : fix_strategy     or "NONE",
+                "gt_source"          : gt_source        or "none",
+                "question_type"      : qt,
+                "provenance_category"    : provenance_category    or "GENERAL_KNOWLEDGE",
+                "provenance_label"       : provenance_label       or "UNVERIFIED_MODEL_INFERENCE",
+                "reasoning_failure_type" : reasoning_failure_type or "NOT_APPLICABLE",
+                "reasoning_confidence"   : float(reasoning_confidence or 0.0),
+            }
+            df     = pd.DataFrame([row])
+            df_enc = pd.get_dummies(df, columns=_CATS, prefix=_CATS)
+            df_enc = df_enc.reindex(columns=_feat_cols, fill_value=0).astype(float)
+            raw_prob = float(_model.predict_proba(df_enc)[0, 1])
 
-        df     = pd.DataFrame([row])
-        df_enc = pd.get_dummies(df, columns=_CATS, prefix=_CATS)
-        df_enc = df_enc.reindex(columns=_feat_cols, fill_value=0).astype(float)
-
-        raw_prob  = float(_model.predict_proba(df_enc)[0, 1])
         cal_prob  = _apply_temperature(raw_prob, temperature)
 
         is_failure     = cal_prob >= threshold

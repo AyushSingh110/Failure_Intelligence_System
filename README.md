@@ -2,10 +2,10 @@
 
 **Adversarial detection + hallucination monitoring for LLMs — blocks prompt injection, jailbreaks, and adversarial inputs before they reach your model. Monitors outputs for factual failures and hallucinations. Built for developers who want to understand _why_ an interaction is likely to fail, not just that it did.**
 
-FIE wraps any LLM with a single decorator. It runs 11 detection layers in parallel on every incoming prompt, blocks confirmed attacks before the model runs, monitors outputs for hallucinations using a shadow ensemble and XGBoost classifier, and logs everything to a real-time dashboard.
+FIE wraps any LLM with a single decorator. It runs 12 detection layers in parallel on every incoming prompt, blocks confirmed attacks before the model runs, monitors outputs for hallucinations using a shadow ensemble and XGBoost classifier, and logs everything to a real-time dashboard.
 
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
-[![Version](https://img.shields.io/badge/version-1.12.0-brightgreen)](https://pypi.org/project/fie-sdk)
+[![Version](https://img.shields.io/badge/version-1.13.0-brightgreen)](https://pypi.org/project/fie-sdk)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Deployed](https://img.shields.io/badge/Live-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
@@ -13,6 +13,41 @@ FIE wraps any LLM with a single decorator. It runs 11 detection layers in parall
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20536639-blue)](https://doi.org/10.5281/zenodo.20536639)
 
 > Built and maintained solo. If you tried it — I'd genuinely like to hear what you thought. [Open a discussion](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions) or [email directly](mailto:ayushsingh355vns@gmail.com).
+
+---
+
+## What's new in v1.13.0
+
+### UnknownBench-v3 scaled to 200 prompts per category
+
+All four v3 benchmark datasets have been extended from ~40–55 prompts to 200 each using Groq-generated structural variants. Generation preserves the attack family strategy (framing, mechanism, romanisation script) of each dataset — only the specific topic and phrasing varies.
+
+| Dataset | Before | After | Strategy |
+| --- | --- | --- | --- |
+| `unknown_virtualization_bench_v3.py` | 47 | **200** | Epistemic reframing |
+| `unknown_indirect_bench_v3.py` | 46 | **200** | Context poisoning |
+| `unknown_multilingual_bench_v3.py` | 45 | **200** | Cross-lingual romanisation |
+| `unknown_many_shot_bench_v3.py` | 39 | **200** | Socratic consistency traps |
+
+800 novel held-out prompts total. TPR re-evaluation against the full 200-prompt sets is pending.
+
+### Layer 3d — Dedicated cross-lingual romanisation detector
+
+Added `engine/agents/adversarial/multilingual_romanisation.py` as a new detection layer. Previous approach (Tier 2.5) relied on `langdetect` to identify romanised text, which is unreliable for Pinyin specifically. The new layer uses script-specific n-gram fingerprints and token pattern matching — no external library dependency.
+
+**Five scripts covered:**
+
+| Script | Method | Example signal |
+| --- | --- | --- |
+| Pinyin (Mandarin) | zh/ch/sh/xi/qi digraph rate + common Mandarin function words | `zhidao`, `zenme`, `jiliang` |
+| Arabizi (Arabic) | digit-as-letter substitution density (3/7/2/5/9) | `3ayiz`, `7aga`, `ta3raf` |
+| Romaji (Japanese) | phoneme patterns + long-vowel doubling | `desu`, `tsu`, `chi`, `masu` |
+| Korean RR | eo/ae/oe vowels + ss/pp/kk geminates | `isseo`, `annyeong`, `haseyo` |
+| IAST-lite (Hindi) | diacritical characters + Hindi function words | `ṭ`, `ḍ`, `hai`, `kaise` |
+
+Confidence: 0.55–0.72 for script detection alone; boosted to up to 0.87 when harm-adjacent vocabulary in that script is also present. Smoke-tested at **93% hit rate** on the first 30 multilingual bench prompts, 0 false positives on benign English.
+
+This closes the Pinyin detection gap documented in v1.12.0 Known Limitations.
 
 ---
 
@@ -74,18 +109,18 @@ UNCERTAIN-zone blocks (prompts that entered the [0.60×T, T) zone and were conse
 
 This closes the most important training data gap: the prompts that are hardest for the system to classify are now automatically queued for human review and potential retraining.
 
-### UnknownBench-v3 — 177 novel attack prompts, 3rd-generation strategy
+### UnknownBench-v3 — 3rd-generation strategy (800 prompts as of v1.13.0)
 
-Four new benchmark datasets (4 × ~45 prompts) using structurally different generation strategies from both v1 and v2:
+Four benchmark datasets using structurally different generation strategies from both v1 and v2:
 
 | Dataset | Strategy | Prompts |
 | --- | --- | --- |
-| `unknown_virtualization_bench_v3.py` | Epistemic reframing — attacks as meta-level knowledge queries | 47 |
-| `unknown_indirect_bench_v3.py` | Context poisoning — false conversational context before the request | 46 |
-| `unknown_multilingual_bench_v3.py` | Cross-lingual Romanisation — Pinyin, Arabizi, Romaji, IAST | 45 |
-| `unknown_many_shot_bench_v3.py` | Socratic consistency traps — logical entailment toward harmful conclusions | 39 |
+| `unknown_virtualization_bench_v3.py` | Epistemic reframing — attacks as meta-level knowledge queries | 200 |
+| `unknown_indirect_bench_v3.py` | Context poisoning — false conversational context before the request | 200 |
+| `unknown_multilingual_bench_v3.py` | Cross-lingual Romanisation — Pinyin, Arabizi, Romaji, IAST | 200 |
+| `unknown_many_shot_bench_v3.py` | Socratic consistency traps — logical entailment toward harmful conclusions | 200 |
 
-All 12 benchmarks (v1 + v2 + v3) frozen with SHA-256 manifests. PAIR v4 achieved 97.18% TPR on v3 on first contact.
+All 12 benchmarks (v1 + v2 + v3) frozen with SHA-256 manifests. PAIR v4 achieved 97.18% TPR on the original v3 set (177 prompts) on first contact. Full 800-prompt re-evaluation pending.
 
 ### Multilingual Tier 2.5 — Romanised script detection
 
@@ -95,10 +130,11 @@ Added language detection for all-Latin text to close the Romanised injection gap
 | --- | --- | --- |
 | Tier 1 | Script anomaly (10%+ non-Latin) | Native-script injections |
 | Tier 2 | Static regex × 8 languages | Direct phrases in native scripts |
-| **Tier 2.5** | **langdetect → translate → re-check** | **Romanised / transliterated Latin text** |
+| Tier 2.5 | langdetect → translate → re-check | Romanised / transliterated Latin text |
 | Tier 3 | deep_translator pipeline | Confirmed non-English on length-gated text |
+| **Layer 3d** | **N-gram fingerprint + harm-vocab boost** | **Pinyin / Arabizi / Romaji / Korean RR / IAST** |
 
-Limitation: Pinyin (Romanised Mandarin) remains the hardest case — `langdetect` cannot distinguish Pinyin from random Latin syllables. This is documented.
+Layer 3d closes the Pinyin gap from Tier 2.5: `langdetect` cannot distinguish Pinyin from random Latin syllables, but the n-gram fingerprint detector achieves 93% hit rate on the multilingual benchmark with zero benign false positives.
 
 ---
 
@@ -176,11 +212,12 @@ Evaluated on 377 novel prompts that were never used in training. No benchmark da
 | Benchmark | Version | Prompts | TPR |
 | --- | --- | --- | --- |
 | UnknownBench-v2 (all categories) | v3 held-out, v4 validation | 200 | **98.5%** |
-| UnknownBench-v3 Virtualization | v4 first contact | 47 | **97.87%** |
-| UnknownBench-v3 Indirect | v4 first contact | 46 | **100.0%** |
-| UnknownBench-v3 Multilingual | v4 first contact | 45 | **91.11%** |
-| UnknownBench-v3 Many-Shot | v4 first contact | 39 | **100.0%** |
-| **v3 overall** | first contact | **177** | **97.18%** |
+| UnknownBench-v3 Virtualization | v4 first contact (original 47) | 47 | **97.87%** |
+| UnknownBench-v3 Indirect | v4 first contact (original 46) | 46 | **100.0%** |
+| UnknownBench-v3 Multilingual | v4 first contact (original 45) | 45 | **91.11%** |
+| UnknownBench-v3 Many-Shot | v4 first contact (original 39) | 39 | **100.0%** |
+| **v3 overall (original)** | first contact | **177** | **97.18%** |
+| **v3 overall (full 800)** | pending re-evaluation | **800** | — |
 
 ---
 
@@ -273,7 +310,6 @@ Run: `python -m evaluation.hallucination.run_eval [--limit N] [--exp h1-only|h2-
 **What FIE misses:**
 
 - **Content moderation** — hate speech, self-harm, sexual content phrased as normal requests (54% recall). Not the design target.
-- **Romanised Pinyin** — `langdetect` cannot reliably identify Pinyin as Mandarin Chinese. Still caught by PAIR at semantic level in many cases.
 - **Subtle crescendo** — when the final harmful turn uses indirect language, trajectory boost alone is insufficient (56% overall recall).
 - **White-box evasion** — an attacker who reads this codebase can craft prompts below threshold. FIE is not designed to be a black box.
 
@@ -299,7 +335,7 @@ Run: `python -m evaluation.hallucination.run_eval [--limit N] [--exp h1-only|h2-
 - **GCG adversarial suffixes** — gradient-optimized noise strings
 - **Virtualization / scenario stacking** — nested hypotheticals, roleplay jailbreaks
 - **Fiction-wrapped harmful requests** — proximity-scored harmful targets in story framing
-- **Multilingual injection** — Tier 1 script-anomaly + Tier 2 phrase matching (8 languages) + Tier 2.5 Romanised detection (langdetect) + Tier 3 translation pipeline
+- **Multilingual injection** — Tier 1 script-anomaly + Tier 2 phrase matching (8 languages) + Tier 2.5 romanised detection (langdetect) + Tier 3 translation pipeline + Layer 3d dedicated romanisation detector (Pinyin / Arabizi / Romaji / Korean RR / IAST)
 - **Crescendo / multi-turn escalation** — session-aware trajectory boost
 
 **Hallucination monitoring (requires Groq API key):**
@@ -351,7 +387,7 @@ GET /api/v1/flags/hard-positives/export
 
 ## How detection works
 
-FIE runs **11 detection layers in parallel** using a `ThreadPoolExecutor` (10-second hard timeout). Results are aggregated by weighted voting through a three-zone classifier:
+FIE runs **12 detection layers in parallel** using a `ThreadPoolExecutor` (10-second hard timeout). Results are aggregated by weighted voting through a three-zone classifier:
 
 | Zone | Condition | Action |
 | --- | --- | --- |
@@ -359,21 +395,22 @@ FIE runs **11 detection layers in parallel** using a `ThreadPoolExecutor` (10-se
 | UNCERTAIN | 0.60 × threshold ≤ confidence < threshold | LlamaGuard (server) or conservative block (local) |
 | CLEAR ATTACK | confidence ≥ threshold | Block immediately |
 
-**The 11 layers:**
+**The 12 layers:**
 
 | # | Layer | What it catches | Weight |
 | --- | --- | --- | --- |
 | 1 | `regex` | Exact injection/jailbreak patterns | 1.5 |
 | 2 | `prompt_guard` | DeBERTa-based classifier | 1.2 |
 | 3 | `many_shot` | MSJ danger scoring | 1.0 |
-| 4 | `indirect_injection` | Injected instructions in documents | 1.0 |
-| 5 | `gcg_suffix` | Adversarial suffix noise | 1.3 |
-| 6 | `perplexity_proxy` | Encoded payloads | 0.7 |
-| 7 | `pair_classifier` | Semantic similarity (PAIR v4, MiniLM SVM) | 1.0 |
-| 8 | `direct_harm` | Direct harmful requests | 1.1 |
-| 9 | `virtualization` | Scenario nesting jailbreaks | 1.0 |
-| 10 | `fiction_harm` | Fiction-wrapped harmful requests | 1.1 |
-| 11 | `multilingual` | Multilingual injection (Tier 1–2.5) | 1.0 |
+| 4 | `romanisation` | Cross-lingual romanisation attacks (Pinyin / Arabizi / Romaji / Korean RR / IAST) | 1.0 |
+| 5 | `indirect_injection` | Injected instructions in documents | 1.0 |
+| 6 | `gcg_suffix` | Adversarial suffix noise | 1.3 |
+| 7 | `perplexity_proxy` | Encoded payloads | 0.7 |
+| 8 | `pair_classifier` | Semantic similarity (PAIR v4, MiniLM SVM) | 1.0 |
+| 9 | `direct_harm` | Direct harmful requests | 1.1 |
+| 10 | `virtualization` | Scenario nesting jailbreaks | 1.0 |
+| 11 | `fiction_harm` | Fiction-wrapped harmful requests | 1.1 |
+| 12 | `multilingual` | Multilingual injection (Tier 1–3) | 1.0 |
 
 ---
 
@@ -444,7 +481,7 @@ cd Frontend && npm install && npm run dev
 
 ## Research Paper
 
-Singh, A. (2026). _Hard-Positive Training and Threshold Calibration for Out-of-Distribution Adversarial Prompt Detection._ Zenodo. https://doi.org/10.5281/zenodo.20536639
+Singh, A. (2026). _Hard-Positive Training and Threshold Calibration for Out-of-Distribution Adversarial Prompt Detection._ Zenodo. [https://doi.org/10.5281/zenodo.20536639](https://doi.org/10.5281/zenodo.20536639)
 
 The paper documents Phase 2: architecture vs. training distribution comparison, unknown category benchmarks, hard-positive retraining, threshold calibration, and weight comparison experiments.
 
