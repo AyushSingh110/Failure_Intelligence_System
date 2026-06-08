@@ -70,24 +70,21 @@ def _pair_similarity(text_a: str, text_b: str) -> float:
     )
 
     if is_long:
-        try:
-            from engine.encoder import get_encoder
-            encoder = get_encoder()
-            if encoder.available:
-                vecs = encoder.encode_batch([text_a.strip(), text_b.strip()])
-                sim  = float(np.dot(vecs[0], vecs[1]))
-                sim  = max(0.0, min(1.0, sim))
+        from engine.encoder import get_encoder
+        encoder = get_encoder()
+        if encoder.available:
+            vecs = encoder.encode_batch([text_a.strip(), text_b.strip()])
+            sim  = float(np.dot(vecs[0], vecs[1]))
+            sim  = max(0.0, min(1.0, sim))
 
-                # If the clustering algorithm would group these together
-                # (sim >= SEMANTIC_SIMILARITY_THRESHOLD), treat as full agreement.
-                # This prevents short/long paraphrase pairs from triggering
-                # false ensemble disagreement.
-                if sim >= SEMANTIC_SIMILARITY_THRESHOLD:
-                    return 1.0
+            # If the clustering algorithm would group these together
+            # (sim >= SEMANTIC_SIMILARITY_THRESHOLD), treat as full agreement.
+            # This prevents short/long paraphrase pairs from triggering
+            # false ensemble disagreement.
+            if sim >= SEMANTIC_SIMILARITY_THRESHOLD:
+                return 1.0
 
-                return sim
-        except Exception:
-            pass   # fall through to TF cosine
+            return sim
 
     # Short answers or encoder unavailable → TF cosine
     tf_a = _build_term_frequency(_content_tokens(text_a))

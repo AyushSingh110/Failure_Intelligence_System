@@ -38,24 +38,16 @@ def _transformer_similarity(text_a: str, text_b: str) -> float | None:
     """
     encoder = get_encoder()
 
-    try:
-        # encode_batch is more efficient than two encode() calls —
-        # the model processes both texts in one forward pass
-        vecs = encoder.encode_batch([text_a, text_b])   # shape (2, 384), L2-normalised
-
-        # Force lazy-load attempt first; if unavailable, caller should fallback.
-        if not encoder.available:
-            return None
-
-        # L2-normalised → dot product = cosine similarity
-        similarity = float(np.dot(vecs[0], vecs[1]))
-
-        # Numerical safety clip: fp32 dot product can land just outside [-1, 1]
-        return max(0.0, min(1.0, similarity))
-
-    except Exception as exc:
-        logger.warning("Transformer similarity failed, falling back to n-gram: %s", exc)
+    if not encoder.available:
         return None
+
+    vecs = encoder.encode_batch([text_a, text_b])   # shape (2, 384), L2-normalised
+
+    # L2-normalised → dot product = cosine similarity
+    similarity = float(np.dot(vecs[0], vecs[1]))
+
+    # Numerical safety clip: fp32 dot product can land just outside [-1, 1]
+    return max(0.0, min(1.0, similarity))
 
 
 

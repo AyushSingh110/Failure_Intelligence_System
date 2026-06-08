@@ -94,12 +94,8 @@ def _semantic_cluster(
     """
     Groups outputs into semantic clusters using a two-rule approach:
     """
-    try:
-        from engine.encoder import get_encoder
-        encoder = get_encoder()
-    except Exception as exc:
-        logger.warning("Could not import encoder: %s", exc)
-        return None
+    from engine.encoder import get_encoder
+    encoder = get_encoder()
 
     if not encoder.available:
         return None
@@ -107,11 +103,7 @@ def _semantic_cluster(
     # Pre-compute encoding representatives (first sentence for long outputs)
     enc_reprs = [_encoding_repr(o) for o in normalized_outputs]
 
-    try:
-        vecs = encoder.encode_batch(enc_reprs)
-    except Exception as exc:
-        logger.warning("Semantic clustering encoding failed: %s", exc)
-        return None
+    vecs = encoder.encode_batch(enc_reprs)
 
     cluster_centroids: list[np.ndarray] = []
     cluster_labels:    list[str]        = []
@@ -205,12 +197,8 @@ def is_primary_outlier(primary_output: str, shadow_outputs: list[str]) -> bool:
         return False   # primary agrees — not an outlier
 
     # Semantic embedding check
-    try:
-        from engine.encoder import get_encoder
-        encoder = get_encoder()
-    except Exception:
-        # Encoder unavailable — fall back to exact string check
-        return normalized_primary.strip() != majority_label.strip()
+    from engine.encoder import get_encoder
+    encoder = get_encoder()
 
     if not encoder.available:
         return normalized_primary.strip() != majority_label.strip()
@@ -218,13 +206,9 @@ def is_primary_outlier(primary_output: str, shadow_outputs: list[str]) -> bool:
     primary_repr  = _encoding_repr(normalized_primary)
     majority_repr = _encoding_repr(majority_label)
 
-    try:
-        vecs = encoder.encode_batch([primary_repr, majority_repr])
-        sim  = float(np.dot(vecs[0], vecs[1]))
-        # Primary is an outlier only if it is semantically far from shadow majority
-        return sim < SEMANTIC_SIMILARITY_THRESHOLD
-    except Exception:
-        return normalized_primary.strip() != majority_label.strip()
+    vecs = encoder.encode_batch([primary_repr, majority_repr])
+    sim  = float(np.dot(vecs[0], vecs[1]))
+    return sim < SEMANTIC_SIMILARITY_THRESHOLD
 
 
 #Public API
