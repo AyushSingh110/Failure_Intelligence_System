@@ -34,6 +34,7 @@ class SentenceEncoder:
     @property
     def available(self) -> bool:
         """True if sentence-transformers loaded successfully."""
+        self._get_model()   # trigger lazy load if not yet done
         return self._loaded and not self._failed
 
     def encode(self, text: str) -> np.ndarray:
