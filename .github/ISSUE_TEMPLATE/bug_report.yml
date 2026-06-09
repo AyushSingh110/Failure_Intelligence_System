@@ -1,0 +1,88 @@
+name: Bug Report
+description: Something in FIE is broken or behaving unexpectedly.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, please search existing issues to avoid duplicates. Include as much detail as you can — logs and reproduction steps are the fastest path to a fix.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which part of FIE is broken?
+      options:
+        - fie-sdk (Python decorator / pre-flight guard)
+        - Adversarial detection pipeline (PAIR classifier / specialist layers)
+        - Hallucination monitoring (shadow ensemble / XGBoost FSV)
+        - Semantic encoder (sentence-transformers / consistency / embedding)
+        - FastAPI backend (routes / auth / MongoDB)
+        - Dashboard (Frontend / React)
+        - Evaluation harness (benchmarks / TruthfulQA / ablation)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. Include what you expected vs what actually occurred.
+      placeholder: "Expected: ... | Got: ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably trigger the bug.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      description: Paste any stack traces, log lines, or API responses here.
+      render: text
+
+  - type: input
+    id: fie_version
+    attributes:
+      label: fie-sdk version
+      placeholder: "e.g. 1.13.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      placeholder: "e.g. 3.11.4"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "e.g. Ubuntu 22.04 / Windows 11 / macOS 14"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am not reporting a security vulnerability (use private email for that).
+          required: true

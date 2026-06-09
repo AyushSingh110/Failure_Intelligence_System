@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question / start a discussion
+    url: https://github.com/AyushSingh110/Failure_Intelligence_System/discussions
+    about: General questions, ideas, or anything that doesn't fit a bug or feature request.
+  - name: Security vulnerability
+    url: mailto:ayushsingh355vns@gmail.com
+    about: "Please do not report security vulnerabilities as public issues. Email directly: subject [SECURITY]."
