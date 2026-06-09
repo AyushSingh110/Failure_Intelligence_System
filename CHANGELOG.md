@@ -4,6 +4,46 @@ All notable changes to FIE (Failure Intelligence Engine) are documented here.
 
 ---
 
+## [1.13.0] — 2026-06-09
+
+### Added
+
+#### Layer 3d — Cross-lingual romanisation detector
+
+- `engine/agents/adversarial/multilingual_romanisation.py`: dedicated n-gram fingerprint detector for five romanised scripts — no external library dependency
+- Five script scorers: `_score_pinyin`, `_score_arabizi` (digit-as-letter substitution), `_score_romaji`, `_score_korean`, `_score_iast`
+- `_HARM_VOCAB_RE`: harm-vocabulary regex covering romanised harmful terms across all five scripts
+- Public API: `run_romanisation_detection(prompt) → (root_cause | None, confidence, evidence)`
+- Confidence range: 0.42–0.72 for script signal alone; +0.15 harm-vocab boost; hard cap 0.87
+- Skip condition: `non_ascii_ratio > 0.35` — prompts already handled upstream by non-ASCII detectors
+- Smoke test: 93% hit rate on first 30 multilingual bench prompts, 0 false positives on benign English
+- Closes the Pinyin detection gap documented in v1.12.0 Known Limitations
+
+#### UnknownBench-v3 extended to 200 prompts per category
+
+- All four v3 datasets extended from 39–47 → 200 prompts each via `scripts/extend_benchmarks.py`
+- Groq-powered generation (llama-3.3-70b-versatile) with per-family system prompts that preserve attack strategy (framing, mechanism, romanisation script) — only topic and phrasing varies
+- 800 novel held-out prompts total across four structural attack families
+
+### Fixed
+
+- **Encoder lazy-load bug** (`engine/encoder.py`): `SentenceEncoder.available` now calls `_get_model()` before returning
+  - Root cause: `_loaded` is only set inside `_get_model()`. Without this call, `available` always returned `False` on cold start even when `sentence-transformers` was installed and functional
+  - Effect before fix: `consistency.py`, `ensemble.py`, and `embedding.py` all silently fell back to TF-IDF or exact string matching on every request
+- **Removed silent encoder fallback catches** in `engine/detector/consistency.py`, `engine/detector/ensemble.py`, `engine/detector/embedding.py`
+  - Broad `except Exception` blocks were swallowing encoder load failures and masking the bug above
+  - Encoder errors now propagate correctly — no more invisible degradation
+
+### Changed
+
+- `engine/agents/adversarial/specialist.py`: Layer 3d wired into the priority detection chain; `CROSS_LINGUAL_ROMANISATION_ATTACK` added to mitigation map
+- Multilingual Tier 2.5 (`langdetect`) is now a complement to Layer 3d, not the sole romanisation path
+- README Known Limitations: "Romanised Pinyin" gap removed (closed by Layer 3d)
+- UnknownBench-v3 benchmark counts updated in README table: 47/46/45/39 → 200 each
+- `pyproject.toml`: version `1.12.0` → `1.13.0`
+
+---
+
 ## [1.12.0] — 2026-06-06
 
 ### Added

@@ -1,0 +1,69 @@
+name: Feature Request
+description: Suggest a new detection layer, evaluation method, SDK feature, or dashboard improvement.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Well-scoped requests that include motivation and a concrete proposal merge fastest. Vague requests may be closed in favour of a Discussion thread.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of FIE does this affect?
+      options:
+        - Adversarial detection — new layer or improvement to existing layer
+        - Hallucination monitoring — FSV features, shadow models, thresholds
+        - fie-sdk — public API, decorator behaviour, configuration
+        - Evaluation / benchmarking — new dataset, new experiment, harness improvement
+        - Dashboard — new view, chart, or filter
+        - Backend API — new endpoint or change to existing
+        - Developer experience — setup, docs, CI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the gap or limitation you're hitting. Link to a related bug or detection report if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        Be specific. For a new detection layer: describe the signal, scoring method, and how it would wire into specialist.py.
+        For a new FSV feature: describe the computation and what failure mode it would catch.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you consider, and why is your proposal better?
+
+  - type: dropdown
+    id: willing_to_implement
+    attributes:
+      label: Are you willing to implement this?
+      options:
+        - "Yes — I will open a PR"
+        - "Maybe — I can contribute but need guidance"
+        - "No — requesting someone else implement it"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions and this has not been proposed before.
+          required: true

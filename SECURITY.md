@@ -4,9 +4,10 @@
 
 | Version | Supported |
 | --- | --- |
-| fie-sdk v1.5.x (latest) | Yes |
-| fie-sdk v1.4.x | Critical fixes only |
-| fie-sdk < v1.4.0 | No |
+| fie-sdk v1.13.x (latest) | Yes |
+| fie-sdk v1.12.x | Critical fixes only |
+| fie-sdk v1.11.x | Critical fixes only |
+| fie-sdk < v1.11.0 | No |
 
 ---
 

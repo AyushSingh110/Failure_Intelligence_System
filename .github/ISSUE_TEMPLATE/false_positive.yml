@@ -1,0 +1,84 @@
+name: Detection Report (False Positive / False Negative)
+description: FIE blocked a safe prompt it should have allowed, or missed an attack it should have blocked.
+title: "[Detection] "
+labels: ["detection-quality"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Detection quality reports are the most valuable contribution to FIE. Each confirmed case directly improves the training data for PAIR and the evaluation benchmarks.
+
+        **Do not paste real harmful prompts here.** Describe the attack structure in abstract terms if the prompt itself is sensitive.
+
+  - type: dropdown
+    id: report_type
+    attributes:
+      label: Report type
+      options:
+        - "False positive — safe prompt was blocked"
+        - "False negative — attack prompt was not blocked"
+        - "Wrong confidence zone — routed to wrong tier (SAFE / UNCERTAIN / BLOCK)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Detection layer involved (if known)
+      description: Which layer flagged or missed the prompt?
+      options:
+        - PAIR v4 classifier
+        - Layer 3d — cross-lingual romanisation
+        - Multilingual Tier 2.5 (langdetect)
+        - LlamaGuard (Tier 3 tiebreaker)
+        - Entropy detector
+        - GCG / suffix detector
+        - Crescendo trajectory
+        - Semantic consistency
+        - Not sure
+    validations:
+      required: false
+
+  - type: textarea
+    id: prompt_description
+    attributes:
+      label: Prompt description
+      description: |
+        Describe the prompt structure in abstract terms. Do not paste content that violates GitHub's Terms of Service.
+        Safe example: "A many-shot prompt with 6 fictional dialogue turns establishing precedent for harmful content."
+      placeholder: Describe the attack family, framing, and mechanism — not the literal content.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fie_output
+    attributes:
+      label: FIE output
+      description: Paste the full JSON response from `/diagnose` or `/preflight`, or the SDK return value.
+      render: json
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should FIE have done?
+      description: Describe the correct outcome and why.
+    validations:
+      required: true
+
+  - type: input
+    id: fie_version
+    attributes:
+      label: fie-sdk version
+      placeholder: "e.g. 1.13.0"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I confirm this prompt does not contain content that violates GitHub's Terms of Service.
+          required: true
