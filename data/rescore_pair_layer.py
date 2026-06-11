@@ -1,17 +1,4 @@
-"""
-Re-score existing JailbreakBench raw JSONL with the updated scan_prompt()
-that now includes Layer 7 (PAIR semantic intent classifier).
-
-No Groq API calls — reuses saved LLM outputs and judge verdicts.
-Writes an updated summary JSON alongside the original.
-
-Usage:
-    python data/rescore_pair_layer.py [path/to/raw_*.jsonl]
-
-If no path given, uses the most recent raw_*.jsonl in data/jbb_tier1/.
-"""
 from __future__ import annotations
-
 import json
 import os
 import sys

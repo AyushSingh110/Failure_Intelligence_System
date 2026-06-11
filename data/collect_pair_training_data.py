@@ -1,28 +1,4 @@
-"""
-Collect semantic jailbreak training data for the PAIR-detection package-tier classifier.
-
-Attack sources:
-  1. JailbreakBench (all methods)   — 282 real attacks from our own Tier 1 eval results
-  2. Anthropic HH-RLHF red-team    — 600 human red-team attempts (PAIR-like natural language)
-  3. lmsys/toxic-chat               — real user toxic interactions (ungated)
-  4. declare-lab/HarmfulQA          — 1960 harmful questions across 10 harm categories
-
-Benign sources:
-  1. Stanford Alpaca                — clean instruction-following
-  2. Anthropic HH-RLHF helpful     — legitimate user questions
-
-Output:
-  data/pair_training/train.jsonl  — 80% split
-  data/pair_training/val.jsonl    — 10% split
-  data/pair_training/test.jsonl   — 10% split (held out — do not use until final eval)
-  data/pair_training/stats.json   — dataset statistics
-
-Each row:
-  {"prompt": "...", "label": 1, "source": "...", "category": "..."}
-  label: 1 = adversarial/jailbreak, 0 = benign
-"""
 from __future__ import annotations
-
 import json
 import os
 import random

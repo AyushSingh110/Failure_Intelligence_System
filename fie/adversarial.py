@@ -1605,7 +1605,11 @@ def _load_pair_classifier() -> bool:
         _repo_models = Path(__file__).parent.parent / "models"
         _models_dir  = _pkg_models if (_pkg_models / "pair_intent_classifier.pkl").exists() else _repo_models
 
-        # Prefer v3 > v2 > v1 (each version adds harder training examples)
+        # Prefer v4 > v3 > v2 > v1 (each version adds harder training examples).
+        # v4 = 3× hard-positive weighting at the natural 0.50 threshold —
+        # the version the README and paper results refer to.
+        _v4_clf  = _models_dir / "pair_intent_classifier_v4.pkl"
+        _v4_meta = _models_dir / "pair_intent_meta_v4.json"
         _v3_clf  = _models_dir / "pair_intent_classifier_v3.pkl"
         _v3_meta = _models_dir / "pair_intent_meta_v3.json"
         _v2_clf  = _models_dir / "pair_intent_classifier_v2.pkl"
@@ -1613,7 +1617,10 @@ def _load_pair_classifier() -> bool:
         _v1_clf  = _models_dir / "pair_intent_classifier.pkl"
         _v1_meta = _models_dir / "pair_intent_meta.json"
 
-        if _v3_clf.exists():
+        if _v4_clf.exists():
+            clf_path  = _v4_clf
+            meta_path = _v4_meta
+        elif _v3_clf.exists():
             clf_path  = _v3_clf
             meta_path = _v3_meta
         elif _v2_clf.exists():

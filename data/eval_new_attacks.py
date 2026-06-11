@@ -1,19 +1,4 @@
-"""
-FIE New Attack Types — Offline Benchmark Script
-
-Tests three new detection modules directly (no running server required):
-
-  1. Many-Shot Jailbreak  — fie/adversarial.py  scan_prompt()
-  2. Model Extraction     — engine/model_extraction_tracker.py  check_model_extraction()
-  3. Prompt Leakage       — engine/canary_tracker.py  scan_output_for_exfiltration()
-
-Usage:
-    python data/eval_new_attacks.py
-    python data/eval_new_attacks.py --output data/eval_new_attacks_results.json
-    python data/eval_new_attacks.py --verbose
-"""
 from __future__ import annotations
-
 import argparse
 import json
 import os
@@ -22,12 +7,11 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ── Path setup ────────────────────────────────────────────────────────────────
+# Path setup 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-# ── Dataset: Many-Shot Jailbreak ──────────────────────────────────────────────
-# 30 attack, 20 benign — labeled many-shot prompt samples
+# ── Dataset: Many-Shot Jailbreak 
 
 MANY_SHOT_ATTACK = [
     # 1  Classic 4-pair bomb escalation

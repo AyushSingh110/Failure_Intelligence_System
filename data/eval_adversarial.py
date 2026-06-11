@@ -1,34 +1,4 @@
-"""
-FIE Adversarial Detection Evaluation Harness — FIE-Eval-200
-
-Evaluates FIE adversarial detection (all 8 layers) against a labeled JSONL dataset.
-Uses the /diagnose endpoint — no Groq shadow-model calls, no rate-limit risk.
-
-Usage:
-    # Make sure FIE server is running first:
-    #   uvicorn app.main:app --reload
-
-    # Validate dataset without calling the API:
-    python data/eval_adversarial.py --dry-run
-
-    # Run all 200 prompts (single pass):
-    python data/eval_adversarial.py
-
-    # Seed-based chunked evaluation (40 prompts × 5 seeds, saves after each seed):
-    python data/eval_adversarial.py --seeds 5 --chunk-size 40 --seed 1
-    python data/eval_adversarial.py --seeds 5 --chunk-size 40 --seed 2
-    # ... repeat for seeds 3-5, or omit --seed to run all seeds sequentially:
-    python data/eval_adversarial.py --seeds 5 --chunk-size 40
-
-    # Merge all saved seed result files into a final combined report:
-    python data/eval_adversarial.py --merge
-
-    # Per-layer ablation study:
-    python data/eval_adversarial.py --layers-ablation
-"""
-
 from __future__ import annotations
-
 import argparse
 import json
 import sys
@@ -39,10 +9,8 @@ from typing import Any
 
 import requests
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
+# Constants
 ATTACK_LABEL = "attack"
 BENIGN_LABEL = "benign"
 
@@ -73,9 +41,9 @@ BENIGN_CATEGORIES = [
     "benign_technical",
 ]
 
-# ---------------------------------------------------------------------------
+
 # CLI argument parsing
-# ---------------------------------------------------------------------------
+
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -164,9 +132,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     return p
 
-# ---------------------------------------------------------------------------
+
 # Dataset loading
-# ---------------------------------------------------------------------------
+
 
 def load_dataset(path: str) -> list[dict]:
     """Load and validate a JSONL evaluation dataset."""
@@ -237,9 +205,9 @@ def print_dataset_stats(records: list[dict], dataset_path: str) -> None:
     print("  Dataset looks valid. Ready for evaluation.")
     print("=" * 60)
 
-# ---------------------------------------------------------------------------
+
 # API call — /diagnose (no Groq calls, no rate-limit risk)
-# ---------------------------------------------------------------------------
+
 
 def call_diagnose(
     prompt: str,
@@ -321,9 +289,9 @@ def extract_verdict(response: dict | None) -> dict:
         "api_error":        False,
     }
 
-# ---------------------------------------------------------------------------
+
 # Metrics computation
-# ---------------------------------------------------------------------------
+
 
 def compute_metrics(results: list[dict]) -> dict:
     tp = fp = fn = tn = 0
@@ -432,9 +400,9 @@ def compute_per_layer(results: list[dict]) -> dict[str, dict]:
         "incremental": layer_incremental,
     }
 
-# ---------------------------------------------------------------------------
+
 # Report printing
-# ---------------------------------------------------------------------------
+
 
 def print_report(
     dataset_path: str,
@@ -499,9 +467,9 @@ def print_report(
     print(SEP)
     print()
 
-# ---------------------------------------------------------------------------
+
 # Ablation study
-# ---------------------------------------------------------------------------
+
 
 def run_ablation(results: list[dict]) -> dict[str, dict]:
     baseline_metrics = compute_metrics(results)
@@ -563,9 +531,9 @@ def print_ablation_table(baseline: dict, ablation: dict[str, dict]) -> None:
     print(SEP)
     print()
 
-# ---------------------------------------------------------------------------
+
 # Seed-based intermediate file helpers
-# ---------------------------------------------------------------------------
+
 
 def seed_result_path(seed_dir: str, seed_num: int) -> Path:
     return Path(seed_dir) / f"seed_{seed_num:02d}.jsonl"
@@ -607,9 +575,9 @@ def load_seed_results(seed_dir: str) -> list[dict]:
     all_results.sort(key=lambda r: r.get("idx", 0))
     return all_results
 
-# ---------------------------------------------------------------------------
+
 # Core evaluation loop
-# ---------------------------------------------------------------------------
+
 
 def _classify_outcome(label: str, predicted_adversarial: bool, api_error: bool) -> str:
     if api_error:
@@ -683,9 +651,9 @@ def run_chunk(
     print()
     return results
 
-# ---------------------------------------------------------------------------
+
 # JSON report saving
-# ---------------------------------------------------------------------------
+
 
 def save_report(
     output_path: str,
@@ -723,9 +691,9 @@ def save_report(
 
     print(f"Full report saved to: {output_path}")
 
-# ---------------------------------------------------------------------------
+
 # Entry point
-# ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = build_parser()

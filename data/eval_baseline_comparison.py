@@ -1,19 +1,4 @@
-"""
-Baseline comparison: FIE vs Llama Prompt Guard 2-22M vs Llama Prompt Guard 2-86M
-on the JailbreakBench dataset (282 attack prompts + 100 benign).
-
-Reads existing raw JSONL (LLM outputs + JBB ground truth already saved).
-Makes ~764 Groq API calls (2 guard models x 382 prompts).
-Writes:
-  data/jbb_tier1/baseline_comparison.json      — raw scores per prompt
-  data/jbb_tier1/baseline_summary.json         — metrics table
-  notebooks/pair_classifier_plots/fig_baseline_comparison.png
-
-Usage:
-    python data/eval_baseline_comparison.py [--resume]
-"""
 from __future__ import annotations
-
 import argparse
 import json
 import os

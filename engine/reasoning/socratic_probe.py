@@ -1,33 +1,4 @@
-"""
-engine.reasoning.socratic_probe
-================================
-Generates adversarial follow-up questions that challenge the primary
-model's reasoning, then checks if shadow model responses contradict it.
-
-Why this matters
-----------------
-Step-level verification catches arithmetic errors and factual premise
-failures, but misses a subtler class: reasoning that is internally
-consistent yet built on a hidden false assumption.
-
-Example: "The function runs in O(n) time because it uses a single loop."
-  → No arithmetic error, no factual claim → step_verifier passes it.
-  → But if the loop body contains a nested call that is O(n) itself →
-    Socratic probe: "Does the loop body perform any O(n) operations?"
-  → Shadow models say "yes, the inner call is O(n)" → CONTRADICTION.
-
-Two probe strategies
---------------------
-CONTRAPOSITIVE  — "What would happen if [key premise] were false?"
-EDGE_CASE       — "Does this reasoning still hold when [boundary condition]?"
-
-Offline mode (Groq unavailable)
---------------------------------
-Uses static probe templates derived from the question_type and step types.
-These cover the most common reasoning failure patterns without any API call.
-"""
 from __future__ import annotations
-
 import logging
 import re
 from dataclasses import dataclass, field

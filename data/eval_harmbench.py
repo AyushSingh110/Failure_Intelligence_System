@@ -1,34 +1,4 @@
-"""
-FIE x HarmBench Evaluation
-
-HarmBench [Mazeika et al., 2024] is a standardized benchmark for evaluating
-LLM robustness against harmful behaviors across 7 semantic categories.
-
-This script evaluates FIE's package-tier scan_prompt() on HarmBench attack
-prompts loaded from HuggingFace. Two sources are used:
-
-  1. Direct behaviors  — raw harmful requests (tests semantic intent detection)
-  2. WildJailbreak adversarial variants — iteratively rephrased jailbreaks
-     mapped to HarmBench categories (tests PAIR-style detection)
-
-No LLM responses are generated — this measures FIE's ability to detect the
-*input* before it reaches a model.
-
-Output:
-  data/jbb_tier1/harmbench_results.json
-  notebooks/pair_classifier_plots/figH1_harmbench.png
-
-Usage:
-    python data/eval_harmbench.py
-    python data/eval_harmbench.py --n 50   # limit per category (default: all)
-
-Citation:
-    Mazeika et al. (2024). HarmBench: A Standardized Evaluation Framework for
-    Automated Red Teaming and Robust Refusal.
-    https://arxiv.org/abs/2402.04249
-"""
 from __future__ import annotations
-
 import argparse
 import json
 import sys

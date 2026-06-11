@@ -27,8 +27,29 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build twine
 
+      # STRICT: model files are not in git, so a wheel built from a bare
+      # checkout would ship without them and `pip install fie-sdk` local mode
+      # would silently degrade to regex-only detection. Fail the release
+      # instead — publish the models release first (see docs/OPERATIONS.md).
+      - name: Download model artifacts (strict)
+        run: python scripts/download_models.py --strict
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build package
         run: python -m build
+
+      - name: Verify wheel bundles models
+        run: |
+          python -c "
+          import zipfile, glob
+          wheel = glob.glob('dist/*.whl')[0]
+          with zipfile.ZipFile(wheel) as z:
+              models = [n for n in z.namelist() if n.startswith('fie/models/') and n.endswith(('.pkl', '.json'))]
+          assert models, 'REFUSING TO PUBLISH: wheel contains no model files'
+          print(f'Wheel bundles {len(models)} model files:')
+          for m in models: print(' -', m)
+          "
 
       - name: Check distribution
         run: python -m twine check dist/*

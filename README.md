@@ -98,6 +98,11 @@ A complete evaluation harness for measuring the XGBoost failure classifier on Tr
 
 Run: `python -m evaluation.hallucination.run_eval`
 
+> **Note:** the `evaluation/` harness contains red-team prompt datasets and is
+> kept out of the public repo. Researchers who want to reproduce the numbers
+> can [open a discussion](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions)
+> or email for access. Full methodology is in [Technical_report.md](Technical_report.md).
+
 ### Hard-positive collection pipeline
 
 UNCERTAIN-zone blocks (prompts that entered the [0.60×T, T) zone and were conservatively blocked) are now:
@@ -446,7 +451,17 @@ def ask_ai(prompt: str) -> str:
 git clone https://github.com/AyushSingh110/Failure_Intelligence_System.git
 cd Failure_Intelligence_System
 pip install -r requirements.txt
+
+# Trained models (.pkl classifiers, FAISS index) are distributed as GitHub
+# Release assets, not git files. This fetches and SHA-256-verifies them:
+python scripts/download_models.py
 ```
+
+> **Why a download step?** The model artifacts are pinned by checksum in
+> [scripts/model_manifest.json](scripts/model_manifest.json) and hosted as release
+> assets — see [docs/OPERATIONS.md](docs/OPERATIONS.md). Without them the server
+> still boots, but detection layers degrade to rule-based fallbacks
+> (`/health/deep` will report which components are degraded).
 
 Create a `.env` file (never commit this):
 

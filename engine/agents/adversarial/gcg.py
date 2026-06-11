@@ -1,13 +1,4 @@
-"""
-Layer 5: GCG (Greedy Coordinate Gradient) adversarial suffix detection.
-
-GCG attacks append a high-entropy token sequence to a benign prompt.
-The suffix looks like garbage but statistically shifts model behavior past
-safety training. Key signals: high Shannon entropy in the prompt tail,
-dense punctuation blocks, low recognizable-word ratio.
-"""
 from __future__ import annotations
-
 import collections
 import math
 import re

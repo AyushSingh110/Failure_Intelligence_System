@@ -1,11 +1,4 @@
-"""
-Attack pattern definitions — Layer 1 regex patterns.
-
-Each _AttackPattern maps a compiled regex to a category, root_cause label,
-and base confidence score used when that pattern fires in isolation.
-"""
 from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 

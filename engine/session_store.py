@@ -1,24 +1,4 @@
-"""
-Session context store — auto-threads conversation history per session_id.
-
-When a client sends requests with the same session_id, FIE automatically
-stores each turn and injects prior history as context[] for shadow models.
-This eliminates the CONTEXT_DEPENDENT misclassification that occurs when
-single-turn fragments arrive without their conversation history.
-
-Storage: MongoDB with 24-hour TTL index on `expires_at`.
-Fallback: in-memory dict (no persistence across restarts).
-
-Context summarization:
-  When stored turns reach _COMPRESS_AFTER, the oldest turns are compressed
-  into a rolling text summary via Groq (llama-3.1-8b-instant, fast + cheap).
-  Only the last _KEEP_RAW turns stay as raw turns; everything older becomes
-  part of `summary`. get_context() prepends the summary as a system turn so
-  shadow models always have full conversation history without token blowup.
-  If summarization fails for any reason, raw turns are kept unchanged.
-"""
 from __future__ import annotations
-
 import logging
 import threading
 from datetime import datetime, timedelta, timezone

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "1.12.0"
+version         = "1.13.0"
 description     = "Failure Intelligence Engine — adversarial detection + hallucination monitoring for LLMs. PAIR v4 classifier (97.18% TPR on held-out unknown attacks), 11-layer parallel pipeline, three-zone routing, FSV feature ablation (10/560 features dominate), TruthfulQA hallucination harness, hard-positive collection pipeline, Romanised multilingual detection. Works fully offline or with a server."
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"

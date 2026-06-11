@@ -1,22 +1,4 @@
-"""
-Layer ablation study for FIE package-tier scan_prompt().
-
-For each ablation condition (one layer removed at a time, plus each layer alone),
-re-runs detection on the JailbreakBench dataset and computes:
-  - Overall recall, FPR, F1
-  - Per-method recall (GCG / PAIR / JBC)
-
-All processing is local — no API calls.
-
-Output:
-  data/jbb_tier1/ablation_results.json
-  notebooks/pair_classifier_plots/fig_ablation_study.png
-
-Usage:
-    python data/eval_ablation_study.py
-"""
 from __future__ import annotations
-
 import json
 import sys
 from pathlib import Path

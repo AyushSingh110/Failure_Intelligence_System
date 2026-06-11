@@ -104,5 +104,28 @@ nosetests.xml
 #Streamlit
 .streamlit/config.toml
 static/
-docs/
-scripts/
+
+# docs/ is mostly private drafts (articles, paper sources) — excluded by
+# default, but the public reference docs that README links to are kept.
+# NOTE: must be `docs/*` (not `docs/`) so the negations below can re-include.
+docs/*
+!docs/ARCHITECTURE.md
+!docs/CODEBASE.md
+!docs/OPERATIONS.md
+
+# scripts/ holds local retraining experiments — excluded by default, but the
+# model-artifact tooling that CI and the Dockerfile depend on is kept.
+scripts/*
+!scripts/download_models.py
+!scripts/model_manifest.json
+!scripts/extend_benchmarks.py
+
+# Node / frontend dependencies are restored by `npm install` — never commit.
+node_modules/
+
+# Accidental root-level npm install (the real frontend lives in Frontend/)
+/package.json
+/package-lock.json
+
+# OS noise
+.DS_Store

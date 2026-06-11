@@ -4,9 +4,11 @@ import os
 from typing import Optional
 
 import requests as http_requests
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
+from app.limiter import rate_limit
 
 load_dotenv()
 
@@ -32,11 +34,6 @@ class GoogleCallbackRequest(BaseModel):
     code:         str
     redirect_uri: str = "http://localhost:5173"
 
-class GoogleLoginRequest(BaseModel):
-    email:   str
-    name:    str
-    picture: str = ""
-
 class LoginResponse(BaseModel):
     token:       str
     email:       str
@@ -60,8 +57,12 @@ class UserInfo(BaseModel):
 
 
 # Endpoints
+# Rate limits protect the login surface from brute-force / credential-stuffing.
+# Limits are per client IP (slowapi get_remote_address) and no-op when slowapi
+# is not installed, so local development is unaffected.
 @router.post("/google-callback", response_model=LoginResponse)
-def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
+@rate_limit("10/minute")
+def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginResponse:
     """
     React sends Google auth code here.
     We exchange it for user info, then create/fetch user.
@@ -151,25 +152,10 @@ def google_callback(body: GoogleCallbackRequest) -> LoginResponse:
         raise HTTPException(status_code=500, detail=f"Login failed: {exc}")
 
 
-@router.post("/google", response_model=LoginResponse)
-def google_login(body: GoogleLoginRequest) -> LoginResponse:
-    """Direct login with email/name (used by Streamlit)."""
-    from app.auth import get_or_create_user, create_session_token
-    try:
-        user  = get_or_create_user(email=body.email, name=body.name, picture=body.picture)
-        token = create_session_token(user)
-        return LoginResponse(
-            token=token, email=user["email"], name=user["name"],
-            api_key=user["api_key"], tenant_id=user["tenant_id"],
-            plan=user.get("plan","free"), is_admin=user.get("is_admin",False),
-            calls_used=user.get("calls_used",0), calls_limit=user.get("calls_limit",1000),
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Login failed: {exc}")
-
-
 @router.get("/me", response_model=UserInfo)
+@rate_limit("60/minute")
 def get_me(
+    request:       Request,
     authorization: Optional[str] = Header(None),
     x_api_key:     Optional[str] = Header(None, alias="X-API-Key"),
 ) -> UserInfo:
@@ -192,7 +178,8 @@ def get_me(
 
 
 @router.get("/users")
-def get_users(authorization: Optional[str] = Header(None)) -> list[dict]:
+@rate_limit("30/minute")
+def get_users(request: Request, authorization: Optional[str] = Header(None)) -> list[dict]:
     from app.auth import verify_session_token, get_all_users
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authorization required")
@@ -203,7 +190,8 @@ def get_users(authorization: Optional[str] = Header(None)) -> list[dict]:
 
 
 @router.post("/regenerate-key")
-def regenerate_key_endpoint(authorization: Optional[str] = Header(None)) -> dict:
+@rate_limit("5/minute")
+def regenerate_key_endpoint(request: Request, authorization: Optional[str] = Header(None)) -> dict:
     from app.auth import verify_session_token, regenerate_api_key
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authorization required")

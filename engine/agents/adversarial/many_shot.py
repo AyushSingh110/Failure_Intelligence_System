@@ -1,11 +1,4 @@
-"""
-Layer 3b: Many-shot / few-shot jailbreak detection.
-
-Many-shot jailbreaks embed 8-20+ scripted Q/A exchanges in a single prompt
-to shift model behavior via in-context learning (Anil et al., 2024).
-"""
 from __future__ import annotations
-
 import re
 
 

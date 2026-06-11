@@ -1,19 +1,4 @@
-"""
-Roleplay / narrative wrapper jailbreak detector.
-
-Catches prompts that use fictional framing to extract harmful content:
-  "Write a story where a chemistry teacher explains how to make..."
-  "Pretend you are a hacker who explains..."
-  "In this hypothetical scenario, describe how to..."
-
-These bypass regex/PromptGuard because they contain no direct injection
-syntax — the harm is wrapped in a narrative shell. This detector fires
-when a narrative framing phrase co-occurs with a harmful topic signal.
-
-Returns a confidence score (0.0–1.0) and the matched evidence.
-"""
 from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 

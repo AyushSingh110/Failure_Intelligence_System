@@ -17,6 +17,25 @@ import logging
 import os
 logger = logging.getLogger("fie.server")
 
+# Error tracking — strictly opt-in. Does nothing unless SENTRY_DSN is set,
+# and degrades silently if sentry-sdk is not installed, so local development
+# and existing deployments are unaffected.
+_SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if _SENTRY_DSN:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn                      = _SENTRY_DSN,
+            environment              = os.getenv("SENTRY_ENVIRONMENT", "production"),
+            traces_sample_rate       = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+            send_default_pii         = False,   # never ship prompts/user data to Sentry
+        )
+        logger.info("startup=sentry status=enabled")
+    except ImportError:
+        logger.warning("startup=sentry status=skipped reason=sentry-sdk not installed")
+    except Exception as _sentry_exc:
+        logger.warning("startup=sentry status=failed reason=%s", _sentry_exc)
+
 #Route packages
 from app.routes import router
 from app.auth_routes import router as auth_router

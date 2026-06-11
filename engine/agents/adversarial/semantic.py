@@ -1,15 +1,4 @@
-"""
-Layer 7 (exfiltration) and Layer 8 (semantic consistency).
-
-Layer 7: Canary token + output exfiltration detection.
-  Detects system prompt leakage via canary token matching and disclosure phrases.
-
-Layer 8: Output semantic consistency check.
-  Detects when model output is topically disconnected from the prompt,
-  which indicates a successful adversarial injection.
-"""
 from __future__ import annotations
-
 import re
 
 

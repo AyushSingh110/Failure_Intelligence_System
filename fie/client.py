@@ -11,8 +11,32 @@ from fie.config import FIEConfig
 
 logger = logging.getLogger("fie")
 
-# Package version (bumped on each release)
-SDK_VERSION = "1.4.1"
+# Single source of truth for the SDK version is pyproject.toml.
+# Resolution order:
+#   1. pyproject.toml sitting next to the package — running from a source
+#      checkout (takes priority so a stale pip-installed copy can't lie)
+#   2. installed package metadata — normal `pip install fie-sdk` case
+#   3. pinned literal fallback
+def _resolve_sdk_version() -> str:
+    import re
+    from pathlib import Path
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    try:
+        if pyproject.exists():
+            m = re.search(r'^version\s*=\s*"([^"]+)"',
+                          pyproject.read_text(encoding="utf-8"), re.MULTILINE)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+    try:
+        from importlib.metadata import version
+        return version("fie-sdk")
+    except Exception:
+        return "1.13.0"
+
+
+SDK_VERSION = _resolve_sdk_version()
 
 
 class FIEClient:

@@ -1,29 +1,4 @@
-"""
-Structured JSON logging for the Failure Intelligence Engine.
-
-Sets up a root logger that emits newline-delimited JSON to stdout.
-Each record carries a correlation ID (rid) injected per HTTP request,
-making it trivial to trace a single request across all modules in log
-aggregators (Cloud Logging, Datadog, Loki, etc.).
-
-Usage
------
-  # At startup (lifespan):
-  from engine.logging_config import configure_logging
-  configure_logging(level="INFO")
-
-  # In every HTTP request handler (middleware):
-  from engine.logging_config import bind_request_id
-  with bind_request_id(request_id):
-      response = await call_next(request)
-
-  # Everywhere else — just use the standard logger:
-  import logging
-  logger = logging.getLogger(__name__)
-  logger.info("shadow_models=%d", n)   # rid is injected automatically
-"""
 from __future__ import annotations
-
 import contextlib
 import contextvars
 import json
