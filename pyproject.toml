@@ -101,13 +101,11 @@ Issues        = "https://github.com/AyushSingh110/Failure_Intelligence_System/is
 Documentation = "https://github.com/AyushSingh110/Failure_Intelligence_System#readme"
 Changelog     = "https://github.com/AyushSingh110/Failure_Intelligence_System/releases"
 
+[tool.hatch.build]
+artifacts = [
+    "fie/models/*.pkl",
+    "fie/models/*.json",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["fie"]
-artifacts = [
-    "fie/models/failure_classifier_v4.pkl",
-    "fie/models/feature_columns_v4.pkl",
-    "fie/models/pair_intent_classifier_v4.pkl",
-    "fie/models/pair_intent_meta_v4.json",
-    "fie/models/pair_intent_classifier_v3.pkl",
-    "fie/models/pair_intent_meta_v3.json",
-]
