@@ -111,3 +111,13 @@ artifacts = [
     "fie/models/pair_intent_classifier_v3.pkl",
     "fie/models/pair_intent_meta_v3.json",
 ]
+
+[tool.hatch.build.targets.sdist]
+artifacts = [
+    "fie/models/failure_classifier_v4.pkl",
+    "fie/models/feature_columns_v4.pkl",
+    "fie/models/pair_intent_classifier_v4.pkl",
+    "fie/models/pair_intent_meta_v4.json",
+    "fie/models/pair_intent_classifier_v3.pkl",
+    "fie/models/pair_intent_meta_v3.json",
+]
