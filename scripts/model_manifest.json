@@ -1,0 +1,109 @@
+{
+  "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the 'path' with '/' replaced by '__' (release assets are a flat namespace). See docs/OPERATIONS.md for the upload procedure.",
+  "release_tag": "models-v1.13.0",
+  "repo": "AyushSingh110/Failure_Intelligence_System",
+  "artifacts": [
+    {
+      "path": "fie/models/failure_classifier_v4.pkl",
+      "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
+      "size": 190524,
+      "used_by": "SDK local mode — XGBoost failure classifier (bundled in PyPI wheel)"
+    },
+    {
+      "path": "fie/models/feature_columns_v4.pkl",
+      "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
+      "size": 24207,
+      "used_by": "SDK local mode — feature column ordering for the v4 classifier"
+    },
+    {
+      "path": "fie/models/pair_intent_classifier_v4.pkl",
+      "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+      "size": 11349,
+      "used_by": "SDK Layer 8 — PAIR v4 semantic classifier (97.18% TPR, threshold 0.50)"
+    },
+    {
+      "path": "fie/models/pair_intent_meta_v4.json",
+      "sha256": "00cf2aa50df6911f11454098619f7de2a0083dfa97943c475a4b3747350dc127",
+      "size": 2153,
+      "used_by": "SDK Layer 8 — PAIR v4 threshold + embed model metadata"
+    },
+    {
+      "path": "fie/models/pair_intent_classifier_v3.pkl",
+      "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+      "size": 11349,
+      "used_by": "SDK Layer 8 — PAIR v3 fallback"
+    },
+    {
+      "path": "fie/models/pair_intent_meta_v3.json",
+      "sha256": "97df4a1acca8a13c95b7c4abbd2efb396bd657f193aa77a9a68b74f755c9558d",
+      "size": 1003,
+      "used_by": "SDK Layer 8 — PAIR v3 metadata"
+    },
+    {
+      "path": "fie/models/pair_intent_classifier.pkl",
+      "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+      "size": 18325,
+      "used_by": "SDK Layer 8 — PAIR v1 fallback (also the package-dir sentinel in fie/adversarial.py)"
+    },
+    {
+      "path": "fie/models/pair_intent_meta.json",
+      "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
+      "size": 866,
+      "used_by": "SDK Layer 8 — PAIR v1 metadata"
+    },
+    {
+      "path": "models/failure_classifier_slim.pkl",
+      "sha256": "128fd0bd3023d4d3d7621cc9813f664444ade7cb2c81b06f57ee3b48845096c0",
+      "size": 225611,
+      "used_by": "Server — slim 10-feature XGBoost classifier (preferred, see engine/failure_classifier.py)"
+    },
+    {
+      "path": "models/feature_columns_slim.pkl",
+      "sha256": "8ae05f38ae4aeaa910ea8451e4526263186f10ed60934125c033ea778e7c9b3f",
+      "size": 250,
+      "used_by": "Server — slim classifier feature columns"
+    },
+    {
+      "path": "models/failure_classifier_slim_meta.json",
+      "sha256": "1fb7a6ffa26189049f48bba3a0e5ed584fc16c5fecf808f5996e82bd3dceb3e7",
+      "size": 771,
+      "used_by": "Server — slim classifier metadata"
+    },
+    {
+      "path": "models/failure_classifier_v4.pkl",
+      "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
+      "size": 190524,
+      "used_by": "Server — v4 XGBoost classifier fallback"
+    },
+    {
+      "path": "models/feature_columns_v4.pkl",
+      "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
+      "size": 24207,
+      "used_by": "Server — v4 feature columns"
+    },
+    {
+      "path": "models/pair_intent_classifier.pkl",
+      "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+      "size": 18325,
+      "used_by": "Repo-root fallback when running the SDK from source without fie/models populated"
+    },
+    {
+      "path": "models/pair_intent_meta.json",
+      "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
+      "size": 866,
+      "used_by": "Repo-root fallback metadata"
+    },
+    {
+      "path": "storage/faiss_adversarial.index",
+      "sha256": "6cfd907daf81dec72f97837724cb225136364c6d457531fbac491a945387a59d",
+      "size": 122925,
+      "used_by": "Server — FAISS adversarial archetype index (engine/archetypes/registry.py)"
+    },
+    {
+      "path": "storage/faiss_adversarial_meta.json",
+      "sha256": "ebb61d690211d83c1857ebeae784cacba527c19481fee1509c9ad545f2b3caf1",
+      "size": 13344,
+      "used_by": "Server — FAISS index metadata (config.faiss_meta_path)"
+    }
+  ]
+}
