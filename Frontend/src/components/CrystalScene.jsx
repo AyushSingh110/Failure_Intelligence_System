@@ -27,7 +27,9 @@ import * as THREE from 'three'
 // xF = horizontal position as a fraction of the half-viewport (world units)
 const POSES = [
   { id: 'hero',     xF:  0.52, y:  0.05, z:  0.0, s: 1.30, glow: 1.00, spin: 0.14, color: '#00d4ff' },
-  { id: 'features', xF:  0.00, y:  0.30, z: -2.6, s: 0.78, glow: 0.50, spin: 0.30, color: '#7c8cff' },
+  // during the pinned card deck the gem retreats far into the distance —
+  // a small glint between the cards, never on top of them
+  { id: 'features', xF:  0.00, y: -0.05, z: -6.0, s: 0.45, glow: 0.25, spin: 0.30, color: '#7c8cff' },
   { id: 'arch',     xF: -0.56, y:  0.00, z: -0.9, s: 1.05, glow: 0.78, spin: 0.20, color: '#a78bfa' },
   { id: 'pipeline', xF:  0.56, y:  0.00, z: -1.4, s: 0.88, glow: 0.62, spin: 0.26, color: '#00d4ff' },
   { id: 'bench',    xF:  0.00, y:  0.18, z: -2.8, s: 0.70, glow: 0.42, spin: 0.36, color: '#67e8f9' },

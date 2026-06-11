@@ -256,7 +256,7 @@ function FeatureCard({ icon, title, desc, color }) {
         background: hov
           ? `linear-gradient(145deg, rgba(${rgb},0.11) 0%, rgba(12,18,30,0.92) 52%, rgba(8,10,19,0.96) 100%)`
           : `linear-gradient(145deg, rgba(${rgb},0.055) 0%, rgba(12,18,30,0.88) 48%, rgba(8,10,19,0.94) 100%)`,
-        border: `1px solid ${hov ? `rgba(${rgb},0.46)` : `rgba(${rgb},0.18)`}`,
+        border: `1px solid ${hov ? `rgba(${rgb},0.5)` : `rgba(${rgb},0.3)`}`,
         transition: hov
           ? 'border-color 0.12s, background 0.12s, box-shadow 0.12s'
           : 'all 0.65s cubic-bezier(0.16,1,0.3,1)',
@@ -312,7 +312,7 @@ function FeatureCard({ icon, title, desc, color }) {
         flexShrink: 0,
       }}>{icon}</div>
       <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#f0f6ff', marginBottom: '10px', letterSpacing: '-0.02em', lineHeight: 1.25, position: 'relative', zIndex: 2 }}>{title}</div>
-      <div style={{ fontSize: '13px', lineHeight: 1.72, color: hov ? '#9ab5cc' : 'var(--text-muted)', transition: 'color 0.3s', position: 'relative', zIndex: 2, flex: 1 }}>{desc}</div>
+      <div style={{ fontSize: '13px', lineHeight: 1.72, color: hov ? '#a8c2d8' : '#90abc6', transition: 'color 0.3s', position: 'relative', zIndex: 2, flex: 1 }}>{desc}</div>
     </div>
   )
 }
@@ -533,249 +533,81 @@ function PipelineDemo() {
   )
 }
 
-// ── Feature Cards Section — true circle-orbit-to-grid ────────────────────────
+// ── Feature Cards — 3D cascade reveal ─────────────────────────────────────────
 //
-//  Geometry (desktop, 1064 px inner container):
-//    • FC_W / FC_H   — card dimensions (fixed so all cards are equal height)
-//    • FC_CX / FC_CY — orbit centre inside the container
-//    • FC_R          — orbit radius; all positions stay within 0…1064 × 0…640
-//
-//  Animation phases:
-//    idle     → cards invisible at their circle positions
-//    circle   → cards scale/fade in on the circle (staggered)
-//    spinning → every card orbits one full 360 ° (4 equidistant keyframes)
-//    grid     → cards translate staggered from circle pos → grid pos + scale to 1
+//  Cards enter once with a staggered 3D rise (tilted back, settling flat) the
+//  first time the grid scrolls into view, then stay fully opaque forever —
+//  readability is never tied to scroll position. Depth comes from the per-card
+//  hover tilt, a slow parallax drift on the whole grid, and the crystal
+//  glinting far behind the section.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Feature Cards — stack → fan circle → snap to grid ────────────────────────
-//
-//  Phase 1  'fan'  : cards erupt from a single stacked point, spreading outward
-//                    into a circle formation. Each card rotates to face outward
-//                    (like playing cards being fanned). Stagger: 90 ms / card.
-//
-//  Phase 2  'grid' : after the full circle is visible, each card snaps one-by-one
-//                    to its grid slot. rotateZ → 0, scale → 1. Stagger: 100 ms.
-//
-//  Geometry is fixed at 1064 px inner width (desktop). Mobile gets a simple
-//  stagger-up grid via a separate DOM branch + media query.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const FC_W        = 344          // card width  (fills 3-col grid in 1064 px)
-const FC_H        = 260          // card height (equal for all cards)
-const FC_GAP      = 16
-const FC_CX       = 532          // orbit centre x  (1064 / 2)
-const FC_CY       = 326          // orbit centre y  (slightly below top card)
-const FC_R        = 205          // orbit radius
-const FC_GRID_H   = FC_H * 2 + FC_GAP   // 536
-
-// grid top-left of card i
-function _fcGrid(i) {
-  return {
-    left : (i % 3) * (FC_W + FC_GAP),
-    top  : Math.floor(i / 3) * (FC_H + FC_GAP),
-  }
+function FeatureCardsHeader() {
+  return (
+    <>
+      <div className="section-label" style={{ justifyContent: 'center', marginBottom: '18px' }}>Capabilities</div>
+      <h2 style={{
+        fontFamily: 'Syne, sans-serif', fontSize: 'clamp(30px, 3.8vw, 48px)',
+        fontWeight: 800, letterSpacing: '-0.033em',
+        color: '#f4ecff', lineHeight: 1.08, marginBottom: '20px',
+      }}>
+        Everything your stack needs<br/>
+        <span style={{
+          background: 'linear-gradient(90deg, #00d4ff 0%, #a78bfa 100%)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        }}>to ship AI you can trust.</span>
+      </h2>
+      <p style={{ fontSize: '16px', color: '#8da8c4', maxWidth: '520px', margin: '0 auto', lineHeight: 1.68 }}>
+        From millisecond adversarial interception to shadow-jury hallucination detection — FIE runs invisibly alongside your existing stack.
+      </p>
+    </>
+  )
 }
-
-// circle top-left of card i (12 o'clock start, clockwise)
-function _fcCircle(i) {
-  const a = (i / 6) * Math.PI * 2 - Math.PI / 2
-  return {
-    left : FC_CX + Math.cos(a) * FC_R - FC_W / 2,
-    top  : FC_CY + Math.sin(a) * FC_R - FC_H / 2,
-  }
-}
-
-// spoke angle: card points outward from circle centre (fan / playing-card look)
-function _fcSpoke(i) { return (i / 6) * 360 - 90 }
-function _fcDepth(i) {
-  const a = (i / 6) * Math.PI * 2 - Math.PI / 2
-  return {
-    z: Math.round((Math.sin(a) + 1) * 34),
-    rotateY: Math.round(Math.cos(a) * -16),
-    rotateX: Math.round(Math.sin(a) * 8),
-  }
-}
-
-// stacked centre (where all cards begin — the "deck" point)
-const FC_STACK_X = FC_CX - FC_W / 2   // 360
-const FC_STACK_Y = FC_CY - FC_H / 2   // 180
-
-// container height just large enough to contain the full circle
-const FC_CIRCLE_H = Math.ceil(FC_CY + FC_R + FC_H / 2) + 24  // ≈ 615
 
 function FeatureCardsSection() {
-  const triggerRef = useRef(null)
-  const [phase, setPhase] = useState('idle')   // idle → fan → grid
-
-  useEffect(() => {
-    const el = triggerRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return
-      obs.disconnect()
-      // slight pause so the header text is readable first
-      setTimeout(() => {
-        setPhase('fan')                              // cards fan out to circle
-        setTimeout(() => setPhase('grid'), 1750)    // then settle into grid slots
-      }, 180)
-    }, { threshold: 0.12 })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-
   return (
-    <section id="s3d-features" className="premium-section capabilities-section" style={{ position: 'relative', zIndex: 2, padding: '128px 28px', overflow: 'hidden' }}>
+    <section id="s3d-features" className="capabilities-section" style={{ position: 'relative', zIndex: 2, padding: '128px 28px' }}>
       {/* Ambient glow */}
       <div style={{
         position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '900px', height: '520px',
-        background: 'radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.08) 0%, rgba(0,212,255,0.05) 40%, transparent 70%)',
+        width: '940px', height: '560px',
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.09) 0%, rgba(0,212,255,0.055) 40%, transparent 70%)',
         pointerEvents: 'none',
       }}/>
 
-      <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1120px', margin: '0 auto', position: 'relative' }}>
 
         {/* Section header */}
-        <Parallax range={30}>
-        <div ref={triggerRef} style={{ textAlign: 'center', marginBottom: '80px' }}>
-          <div className="section-label" style={{ justifyContent: 'center', marginBottom: '18px' }}>Capabilities</div>
-          <h2 style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 'clamp(30px, 3.8vw, 48px)',
-            fontWeight: 800, letterSpacing: '-0.033em',
-            color: '#f4ecff', lineHeight: 1.08, marginBottom: '20px',
-          }}>
-            Everything your stack needs<br/>
-            <span style={{
-              background: 'linear-gradient(90deg, #00d4ff 0%, #a78bfa 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>to ship AI you can trust.</span>
-          </h2>
-          <p style={{ fontSize: '16px', color: '#8da8c4', maxWidth: '520px', margin: '0 auto', lineHeight: 1.68 }}>
-            From millisecond adversarial interception to shadow-jury hallucination detection — FIE runs invisibly alongside your existing stack.
-          </p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          style={{ textAlign: 'center', marginBottom: '64px' }}
+        >
+          <FeatureCardsHeader />
+        </motion.div>
+
+        {/* Card grid — one-shot 3D cascade, then permanently solid */}
+        <Parallax range={20}>
+          <div className="feat-grid-cards" style={{ perspective: '1200px' }}>
+            {FEATURES.map((feat, i) => (
+              <motion.div
+                key={feat.title}
+                initial={{ opacity: 0, y: 56, rotateX: 16, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+                viewport={{ once: true, margin: '-10%' }}
+                transition={{
+                  delay: (i % 3) * 0.1 + Math.floor(i / 3) * 0.18,
+                  duration: 0.75, ease: [0.16, 1, 0.3, 1],
+                }}
+                style={{ transformPerspective: 1100 }}
+              >
+                <FeatureCard {...feat} />
+              </motion.div>
+            ))}
+          </div>
         </Parallax>
-
-        {/* ── DESKTOP  circle animation ─────────────────────────────────────── */}
-        <div className="feat-cards-desktop">
-
-          {/* Decorative orbit ring — fades in with the fan, fades out with grid */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={
-              phase === 'fan'  ? { opacity: 1, scale: [0.86, 1.02, 1] } :
-              phase === 'grid' ? { opacity: 0, scale: 1.05 } : {}
-            }
-            transition={{ duration: 0.78, ease: [0.16, 1, 0.3, 1] }}
-            className="feature-orbit-ring"
-            style={{
-              position: 'absolute',
-              left: '50%', top: 0,
-              marginLeft: -(FC_R + 2),
-              marginTop: 80 + FC_CY - FC_R - 2,   // aligns ring with orbit centre
-              width: (FC_R + 2) * 2, height: (FC_R + 2) * 2,
-              pointerEvents: 'none',
-            }}
-          />
-
-          {/* Cards container — height morphs from circle height → grid height */}
-          <motion.div
-            className="feature-carousel-stage"
-            style={{ position: 'relative', width: '1064px', maxWidth: '100%', margin: '0 auto', overflow: 'visible', willChange: 'height' }}
-            animate={{ height: phase === 'grid' ? FC_GRID_H : FC_CIRCLE_H }}
-            transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1], delay: phase === 'grid' ? 0.55 : 0 }}
-          >
-            {/* Central glow pulse while fanning */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={
-                phase === 'fan'  ? { opacity: 1, scale: 1 } :
-                phase === 'grid' ? { opacity: 0, scale: 0 } : {}
-              }
-              transition={{ duration: 0.62 }}
-              className="feature-carousel-core"
-              style={{
-                position: 'absolute',
-                left: FC_STACK_X + FC_W / 2 - 60,
-                top:  FC_STACK_Y + FC_H / 2 - 60,
-                width: 120, height: 120,
-                borderRadius: '50%',
-                pointerEvents: 'none',
-              }}
-            />
-
-            {FEATURES.map((feat, i) => {
-              const gp   = _fcGrid(i)
-              const cp   = _fcCircle(i)
-              const spk  = _fcSpoke(i)
-              const depth = _fcDepth(i)
-
-              // offset from grid position → stacked centre
-              const stackDx = FC_STACK_X - gp.left
-              const stackDy = FC_STACK_Y - gp.top
-
-              // offset from grid position → circle position
-              const fanDx = cp.left - gp.left
-              const fanDy = cp.top  - gp.top
-
-              let anim  = {}
-              let trans = {}
-
-              if (phase === 'fan') {
-                anim  = {
-                  x: fanDx,
-                  y: fanDy,
-                  z: depth.z,
-                  scale: 0.86,
-                  opacity: 1,
-                  rotateZ: spk * 0.42,
-                  rotateY: depth.rotateY,
-                  rotateX: depth.rotateX,
-                }
-                trans = { duration: 0.88, delay: i * 0.075, ease: [0.22, 1, 0.36, 1] }
-              } else if (phase === 'grid') {
-                anim  = { x: 0, y: 0, z: 0, scale: 1, opacity: 1, rotateZ: 0, rotateY: 0, rotateX: 0 }
-                trans = { duration: 0.82, delay: i * 0.085, ease: [0.16, 1, 0.3, 1] }
-              }
-
-              return (
-                <motion.div
-                  key={feat.title}
-                  className="feature-card-shell"
-                  style={{
-                    position: 'absolute',
-                    left: gp.left, top: gp.top,
-                    width: FC_W,
-                    zIndex: i + 1,
-                    transformOrigin: 'center center',
-                    willChange: 'transform, opacity',
-                  }}
-                  initial={{ x: stackDx, y: stackDy, z: -80, scale: 0.42, opacity: 0, rotateZ: 0, rotateY: 0, rotateX: 12 }}
-                  animate={anim}
-                  transition={trans}
-                  whileHover={{ y: -10, z: 42, scale: 1.018 }}
-                >
-                  <FeatureCard {...feat} />
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        </div>
-
-        {/* ── MOBILE  simple stagger ───────────────────────────────────────────── */}
-        <div className="feat-cards-mobile">
-          {FEATURES.map((feat, i) => (
-            <motion.div
-              key={feat.title + '-m'}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-8%' }}
-              transition={{ delay: i * 0.07, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <FeatureCard {...feat} />
-            </motion.div>
-          ))}
-        </div>
 
       </div>
     </section>
@@ -807,7 +639,7 @@ function FilmOverlay() {
       }}/>
       <div style={{
         position: 'fixed', inset: 0, zIndex: 50, pointerEvents: 'none',
-        background: 'radial-gradient(ellipse 130% 95% at 50% 45%, transparent 62%, rgba(0,0,0,0.38) 100%)',
+        background: 'radial-gradient(ellipse 130% 95% at 50% 45%, transparent 68%, rgba(0,0,0,0.28) 100%)',
       }}/>
     </>
   )
@@ -3980,21 +3812,16 @@ export default function LandingPage() {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0; }
         }
-        /* Desktop: show circle animation, hide simple grid */
-        @media (min-width: 901px) {
-          .feat-cards-desktop { display: block; }
-          .feat-cards-mobile  { display: none !important; }
-        }
-        /* Mobile/tablet: hide circle animation, show simple grid */
+        /* Capability card grid — responsive columns */
+        .feat-grid-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
         @media (max-width: 900px) {
-          .feat-cards-desktop { display: none !important; }
-          .feat-cards-mobile  { display: grid !important; grid-template-columns: repeat(2,1fr); gap: 12px; }
+          .feat-grid-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
           .premium-feature-card {
             min-height: 230px !important;
           }
         }
         @media (max-width: 560px) {
-          .feat-cards-mobile  { grid-template-columns: 1fr !important; }
+          .feat-grid-cards { grid-template-columns: 1fr; }
         }
         @media (max-width: 768px) {
           .hide-mobile { display: none !important; }
