@@ -1,7 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'framer-motion'
 import { isLoggedIn } from '../lib/auth'
+
+import Lenis from 'lenis'
+
+// Full-page scroll-scrubbed WebGL scene — lazy so three.js never blocks first paint
+const CrystalScene = lazy(() => import('../components/CrystalScene'))
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
@@ -619,7 +624,7 @@ function FeatureCardsSection() {
   }, [])
 
   return (
-    <section className="premium-section capabilities-section" style={{ position: 'relative', zIndex: 2, padding: '128px 28px', overflow: 'hidden' }}>
+    <section id="s3d-features" className="premium-section capabilities-section" style={{ position: 'relative', zIndex: 2, padding: '128px 28px', overflow: 'hidden' }}>
       {/* Ambient glow */}
       <div style={{
         position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
@@ -631,6 +636,7 @@ function FeatureCardsSection() {
       <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
 
         {/* Section header */}
+        <Parallax range={30}>
         <div ref={triggerRef} style={{ textAlign: 'center', marginBottom: '80px' }}>
           <div className="section-label" style={{ justifyContent: 'center', marginBottom: '18px' }}>Capabilities</div>
           <h2 style={{
@@ -648,6 +654,7 @@ function FeatureCardsSection() {
             From millisecond adversarial interception to shadow-jury hallucination detection — FIE runs invisibly alongside your existing stack.
           </p>
         </div>
+        </Parallax>
 
         {/* ── DESKTOP  circle animation ─────────────────────────────────────── */}
         <div className="feat-cards-desktop">
@@ -773,6 +780,45 @@ function FeatureCardsSection() {
       </div>
     </section>
   )
+}
+
+// ── Lenis smooth scrolling ────────────────────────────────────────────────────
+function useSmoothScroll() {
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const lenis = new Lenis({ duration: 1.15, smoothWheel: true })
+    let raf
+    const loop = (t) => { lenis.raf(t); raf = requestAnimationFrame(loop) }
+    raf = requestAnimationFrame(loop)
+    return () => { cancelAnimationFrame(raf); lenis.destroy() }
+  }, [])
+}
+
+// ── Film grain + vignette overlay ─────────────────────────────────────────────
+const NOISE_URI = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
+
+function FilmOverlay() {
+  return (
+    <>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 120, pointerEvents: 'none',
+        backgroundImage: NOISE_URI, backgroundRepeat: 'repeat',
+        opacity: 0.045, mixBlendMode: 'overlay',
+      }}/>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 50, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 130% 95% at 50% 45%, transparent 62%, rgba(0,0,0,0.38) 100%)',
+      }}/>
+    </>
+  )
+}
+
+// ── Scroll-linked parallax wrapper — content drifts slower than the page ──────
+function Parallax({ children, range = 36, style }) {
+  const ref = useRef(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
+  const y = useTransform(scrollYProgress, [0, 1], [range, -range])
+  return <motion.div ref={ref} style={{ ...style, y }}>{children}</motion.div>
 }
 
 // ── Scroll progress bar ───────────────────────────────────────────────────────
@@ -1601,7 +1647,7 @@ function HeroSection({ loggedIn, copy, copied }) {
   const paraY = useSpring(rawY, { stiffness: 300, damping: 50 })
 
   return (
-    <section className="hero-shell">
+    <section id="s3d-hero" className="hero-shell">
       <div className="hero-grid" style={{ gap: '48px', alignItems: 'center' }}>
 
         {/* ── LEFT — framer stagger + scroll parallax ── */}
@@ -1684,7 +1730,7 @@ function HeroSection({ loggedIn, copy, copied }) {
           animate="visible"
           style={{ position: 'relative' }}
         >
-          <HeroBubbleSystem />
+          {/* the fixed CrystalScene canvas floats the glass gem in this column */}
         </motion.div>
 
       </div>
@@ -2149,7 +2195,7 @@ function UnifiedArchitectureSection() {
   const [ref, visible] = useScrollReveal('up');
 
   return (
-    <section className="premium-section architecture-section" style={{ padding: '140px 28px', position: 'relative', zIndex: 2 }}>
+    <section id="s3d-arch" className="premium-section architecture-section" style={{ padding: '140px 28px', position: 'relative', zIndex: 2 }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
         
         {/* ── NEW SECTION HEADING ── */}
@@ -2874,10 +2920,11 @@ function BenchmarksSection() {
   }
 
   return (
-    <section className="premium-section benchmark-section" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 2, background: 'rgba(12,4,24,0.68)' }}>
+    <section id="s3d-bench" className="premium-section benchmark-section" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 2, background: 'rgba(12,4,24,0.35)' }}>
       <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
 
         {/* ── Header ────────────────────────────────────────────────── */}
+        <Parallax range={26}>
         <div ref={hRef} style={{ ...hStyle, marginBottom: '56px', maxWidth: '680px' }}>
           <div className="section-label">Evaluation Results</div>
 
@@ -2906,6 +2953,7 @@ function BenchmarksSection() {
             ))}
           </div>
         </div>
+        </Parallax>
 
         {/* ── Metric cards ──────────────────────────────────────────── */}
         <div
@@ -3011,10 +3059,11 @@ function BenchmarksSection() {
 function CTASection({ loggedIn }) {
   const [ref, style] = useReveal('scale')
   return (
-    <section className="premium-section final-cta-section" style={{ borderTop: '1px solid #1c2d42', position: 'relative', zIndex: 1, overflow: 'hidden' }}>
+    <section id="s3d-cta" className="premium-section final-cta-section" style={{ borderTop: '1px solid #1c2d42', position: 'relative', zIndex: 2, overflow: 'hidden' }}>
       {/* Soft spotlight */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 55% 70% at 50% 60%, rgba(139,92,246,0.12) 0%, transparent 70%)' }}/>
       <div style={{ maxWidth: '620px', margin: '0 auto', padding: '120px 28px', textAlign: 'center', position: 'relative' }}>
+        <Parallax range={30}>
         <div ref={ref} style={style}>
           <div className="section-label" style={{ justifyContent: 'center' }}>Get started</div>
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(30px,4.5vw,50px)', fontWeight: 800, letterSpacing: '-0.038em', color: '#f0f6ff', margin: '14px 0 20px', lineHeight: 1.06 }}>
@@ -3035,6 +3084,7 @@ function CTASection({ loggedIn }) {
             </a>
           </div>
         </div>
+        </Parallax>
       </div>
     </section>
   )
@@ -3047,6 +3097,7 @@ export default function LandingPage() {
   const loggedIn = isLoggedIn()
   const [copied, setCopied] = useState(false)
   const [statsRef, statsVisible] = useScrollReveal()
+  useSmoothScroll()
 
   // Nav scroll awareness
   const { scrollY: pageScrollY } = useScroll()
@@ -3158,7 +3209,6 @@ export default function LandingPage() {
           position: relative;
           isolation: isolate;
           background:
-            linear-gradient(180deg, rgba(7,10,18,0) 0 760px, #080b12 1040px),
             radial-gradient(circle at 12% 34%, rgba(0,212,255,0.055), transparent 26%),
             radial-gradient(circle at 86% 56%, rgba(167,139,250,0.065), transparent 28%),
             linear-gradient(180deg, #090b12 0%, #080b12 42%, #070910 100%) !important;
@@ -3225,18 +3275,18 @@ export default function LandingPage() {
         }
         .pipeline-section {
           background:
-            linear-gradient(180deg, rgba(10,13,23,0.84), rgba(9,11,18,0.9)) !important;
+            linear-gradient(180deg, rgba(10,13,23,0.5), rgba(9,11,18,0.55)) !important;
           border-color: rgba(255,255,255,0.08) !important;
         }
         .benchmark-section {
           background:
             radial-gradient(circle at 76% 18%, rgba(0,212,255,0.055), transparent 28%),
-            linear-gradient(180deg, rgba(8,11,18,0.92), rgba(8,10,16,0.98)) !important;
+            linear-gradient(180deg, rgba(8,11,18,0.55), rgba(8,10,16,0.62)) !important;
         }
         .final-cta-section {
           background:
             radial-gradient(ellipse 58% 70% at 50% 50%, rgba(167,139,250,0.12), transparent 68%),
-            linear-gradient(180deg, rgba(8,11,18,0.96), rgba(6,8,13,1)) !important;
+            linear-gradient(180deg, rgba(8,11,18,0.5), rgba(6,8,13,0.7)) !important;
           border-color: rgba(255,255,255,0.08) !important;
         }
 
@@ -3964,8 +4014,12 @@ export default function LandingPage() {
         <CursorGlow />
         {/* ── Aurora orb background ── */}
         <AuroraBackground />
-        {/* ── Starfield background ── */}
-        <StarBackground />
+        {/* ── Full-page scroll-scrubbed 3D scene ── */}
+        <Suspense fallback={null}>
+          <CrystalScene />
+        </Suspense>
+        {/* ── Film grain + vignette ── */}
+        <FilmOverlay />
 
         {/* ── Nav ──────────────────────────────────────────────────── */}
         <motion.nav className="fi d1" style={{
@@ -4025,7 +4079,7 @@ export default function LandingPage() {
         {/* ══════════════════════════════════════════════════════════ */}
         {/* Stats strip                                              */}
         {/* ══════════════════════════════════════════════════════════ */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.82)', position: 'relative', zIndex: 2 }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.55)', position: 'relative', zIndex: 2 }}>
           <div ref={statsRef} style={{ maxWidth: '860px', margin: '0 auto', padding: '0 28px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }} className="grid-4">
             {STATS.map(({ value, suffix, label }, i) => (
               <div key={label} style={{ borderRight: i < 2 ? '1px solid #1c2d42' : 'none' }}>
@@ -4073,7 +4127,7 @@ export default function LandingPage() {
         {/* ══════════════════════════════════════════════════════════ */}
         {/* Pipeline showcase — full-width dark band                 */}
         {/* ══════════════════════════════════════════════════════════ */}
-        <section className="premium-section pipeline-section" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.72)', position: 'relative', zIndex: 2 }}>
+        <section id="s3d-pipeline" className="premium-section pipeline-section" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(12,4,24,0.4)', position: 'relative', zIndex: 2 }}>
           <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '108px 28px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '80px', alignItems: 'start' }} className="pipeline-grid">
               <PipelineText loggedIn={loggedIn} />
