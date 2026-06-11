@@ -1,24 +1,4 @@
-"""
-Layer 3d: Cross-lingual romanisation attack detector.
-
-Detects prompts written in romanised forms of non-Latin scripts:
-  - Pinyin     (Mandarin Chinese romanised)
-  - Arabizi    (Arabic romanised, uses digit substitutions)
-  - Romaji     (Japanese romanised, Hepburn system)
-  - Korean RR  (Korean Revised Romanisation)
-  - IAST-lite  (Hindi/Sanskrit romanised, simplified without diacritics)
-
-Why this matters: These attacks are entirely Latin-character, so they bypass
-the non-ASCII ratio guard in the perplexity layer and all regex patterns that
-look for known English jailbreak phrases. The KL divergence signal partially
-catches them but is too weak to fire alone.
-
-Detection strategy: script-specific n-gram fingerprints + token pattern
-matching. Base confidence is moderate (0.55); boosted if harm-adjacent
-vocabulary is present in the romanised form.
-"""
 from __future__ import annotations
-
 import re
 import collections
 from dataclasses import dataclass, field

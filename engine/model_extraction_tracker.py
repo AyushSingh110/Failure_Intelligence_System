@@ -1,19 +1,4 @@
-"""
-engine/model_extraction_tracker.py — Model extraction / model stealing detection.
-
-Model extraction attacks probe an LLM systematically to replicate its behavior
-without access to the weights. Detection signals:
-
-  1. Capability probing   — "what can you do", "can you X", "what are your limits"
-  2. Boundary testing     — rapid alternation of similar allowed/refused queries
-  3. Output harvesting    — many near-identical prompts varying one token at a time
-  4. High request rate    — >20 requests in 5 minutes from the same tenant
-
-All signals are tracked per-tenant in MongoDB with a 1-hour TTL.
-Falls back gracefully to in-memory if MongoDB is unavailable.
-"""
 from __future__ import annotations
-
 import hashlib
 import logging
 import re

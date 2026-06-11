@@ -3,11 +3,36 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
+def _resolve_version() -> str:
+    """Single source of truth is pyproject.toml (package fie-sdk).
+
+    The server always runs from the repo, so the local pyproject.toml is
+    authoritative; installed-package metadata is only a fallback (a stale
+    pip-installed fie-sdk must not override the checkout's version).
+    """
+    import os
+    import re
+    pyproject = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pyproject.toml")
+    try:
+        if os.path.exists(pyproject):
+            with open(pyproject, encoding="utf-8") as f:
+                m = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.MULTILINE)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+    try:
+        from importlib.metadata import version
+        return version("fie-sdk")
+    except Exception:
+        return "1.13.0"
+
+
 class Settings(BaseSettings):
 
     # Application identity
     app_name:    str  = "Failure Intelligence Engine"
-    app_version: str  = "3.0.0"
+    app_version: str  = _resolve_version()
     debug:       bool = False
     log_level:   str  = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
 

@@ -23,10 +23,8 @@ async function request(method, path, body = null, token = null) {
 }
 
 export const api = {
-  // Auth
-  loginGoogle: (email, name, picture) =>
-    request('POST', '/auth/google', { email, name, picture }),
-
+  // Auth — login goes through the Google OAuth code flow only
+  // (see auth.js getGoogleAuthUrl + POST /auth/google-callback).
   getMe: (token) =>
     request('GET', '/auth/me', null, token),
 

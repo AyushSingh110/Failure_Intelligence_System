@@ -33,9 +33,18 @@ cd Failure_Intelligence_System
 
 ```bash
 pip install -r requirements.txt
+
+# Trained model artifacts are GitHub Release assets, not git files.
+# This downloads and SHA-256-verifies all of them (see docs/OPERATIONS.md):
+python scripts/download_models.py
+
 cp .env.example .env   # fill in GROQ_API_KEY, MONGODB_URI, etc.
 uvicorn app.main:app --reload --port 8000
 ```
+
+Without the model download the server still runs, but the XGBoost classifier,
+PAIR layer, and FAISS index fall back to rule-based detection —
+`GET /health/deep` shows exactly which components are degraded.
 
 ### 3. Set up the frontend
 
@@ -103,6 +112,12 @@ Frontend/src/
 ```
 
 ---
+
+> **Note:** the `evaluation/` directory referenced below contains red-team
+> prompt datasets and is kept out of the public repo. If you are contributing
+> a detection layer and need it, open a
+> [discussion](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions)
+> to request access.
 
 ## Running the Evaluations
 

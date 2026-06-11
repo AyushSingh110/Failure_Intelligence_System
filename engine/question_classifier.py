@@ -1,24 +1,4 @@
-"""
-Rule-based question-type classifier.
-
-Classifies a prompt into one of five types before the jury runs so that:
-  - the GT pipeline can be routed correctly (FACTUAL → Wikidata+Serper,
-    TEMPORAL → Serper only, REASONING/CODE/OPINION → no external lookup)
-  - XGBoost uses a per-type threshold tuned for that failure mode
-  - signal_logs carry question_type for per-domain calibration
-
-Types
------
-FACTUAL   — verifiable, static fact (who/what/when/where/which + noun phrase)
-TEMPORAL  — current state, live data, "latest", "now", "today", prices, news
-REASONING — why/how/explain/prove/analyze/compare/calculate/derive
-CODE      — programming tasks, debugging, algorithms, scripts
-OPINION   — subjective, normative, recommendation, belief, preference
-
-Returns "UNKNOWN" when none of the patterns fire confidently enough.
-"""
 from __future__ import annotations
-
 import re
 
 # ── Pattern sets (ordered: first match wins within a tier) ────────────────────

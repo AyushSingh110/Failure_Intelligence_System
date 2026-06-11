@@ -1,23 +1,8 @@
-"""
-XGBoost v3 training script.
-Adds question_type as a categorical feature to the existing labeled dataset.
-For records missing question_type in fie_result, infers it from the question text
-using the same rule-based classifier used in production.
-
-Run from the project root:
-    python data/train_v3.py
-
-Saves:
-    models/failure_classifier_v3.pkl
-    models/feature_columns_v3.pkl
-"""
 from __future__ import annotations
-
 import glob
 import json
 import os
 import sys
-
 import joblib
 import pandas as pd
 from xgboost import XGBClassifier

@@ -1,31 +1,4 @@
-"""
-engine.reasoning.chain_decomposer
-==================================
-Splits a reasoning output into typed atomic steps.
-
-Each step gets a type label that determines which verifier handles it:
-  FACTUAL_PREMISE  — a stated fact that can be checked externally
-                     ("The speed of light is 3×10⁸ m/s")
-  ARITHMETIC       — a numeric calculation that can be eval'd deterministically
-                     ("500 / 60 = 8.33")
-  LOGICAL_INFERENCE — a deductive conclusion drawn from prior steps
-                     ("Therefore, since A and B, C must follow")
-  DEFINITION       — a term being defined or scoped
-                     ("Let n be the number of elements")
-  CONCLUSION       — the final claim / answer
-                     ("So the answer is 8.3 minutes")
-  UNKNOWN          — step type couldn't be determined (treated as LOGICAL_INFERENCE)
-
-Offline mode (Groq unavailable):
-  Uses rule-based sentence splitting + regex typing.
-  Precision is lower but the system never blocks.
-
-Groq mode:
-  Asks groq_fast_model to return structured JSON with step type tags.
-  Much higher accuracy on implicit multi-sentence reasoning.
-"""
 from __future__ import annotations
-
 import json
 import logging
 import re

@@ -3,6 +3,7 @@ import logging
 import os
 import secrets
 import string
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -41,15 +42,30 @@ def _generate_tenant_id(email: str) -> str:
 
 
 # MongoDB Operations
+#
+# A single module-level MongoClient is reused across all auth lookups.
+# MongoClient maintains its own connection pool — creating a new client per
+# request bypasses the pool, leaks connections, and exhausts the Atlas
+# free-tier connection cap (500) under load.
+_mongo_client = None
+_mongo_lock   = threading.Lock()
+
+
 def _get_users_collection():
-    """Returns MongoDB users collection."""
+    """Returns the MongoDB users collection, reusing one pooled client."""
+    global _mongo_client
     try:
         from config import get_settings
         from pymongo import MongoClient
         from pymongo.server_api import ServerApi
         settings = get_settings()
-        client   = MongoClient(settings.mongodb_uri, server_api=ServerApi('1'))
-        db       = client[settings.mongodb_db_name]
+        if _mongo_client is None:
+            with _mongo_lock:
+                if _mongo_client is None:
+                    _mongo_client = MongoClient(
+                        settings.mongodb_uri, server_api=ServerApi('1')
+                    )
+        db = _mongo_client[settings.mongodb_db_name]
         return db["users"]
     except Exception as exc:
         logger.error("MongoDB connection failed: %s", exc)
@@ -95,9 +111,10 @@ def get_or_create_user(
     }
 
     collection.insert_one(new_user)
+    # Never log the API key itself — keys in log sinks outlive rotation.
     logger.info(
-        "New user created | email=%s | tenant_id=%s | api_key=%s | admin=%s",
-        email, tenant_id, api_key, is_admin,
+        "New user created | email=%s | tenant_id=%s | admin=%s",
+        email, tenant_id, is_admin,
     )
     return new_user
 

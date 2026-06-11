@@ -1,24 +1,4 @@
-"""
-XGBoost retraining buffer.
-
-Every time a user submits feedback via /feedback/{request_id}, the signal
-log entry (with all 434 features) gets labeled and written to this buffer.
-When the buffer accumulates RETRAIN_THRESHOLD new labeled examples, a
-retrain is triggered in a background thread.
-
-The retrain:
-1. Pulls all labeled signal logs from MongoDB (existing + new buffer)
-2. Re-trains XGBoost on the full labeled set
-3. Evaluates AUC on a 20% holdout
-4. Only replaces the production model if new AUC >= current AUC - 0.01
-   (allows up to 1pp degradation to account for label noise)
-5. Saves the new model to models/xgboost_retrained.pkl
-
-The production server picks up the new model on next startup, or when
-/api/v1/monitor/reload-model is called (admin only).
-"""
 from __future__ import annotations
-
 import logging
 import threading
 from datetime import datetime, timezone

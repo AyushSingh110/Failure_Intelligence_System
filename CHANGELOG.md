@@ -4,6 +4,71 @@ All notable changes to FIE (Failure Intelligence Engine) are documented here.
 
 ---
 
+## [Unreleased] — production-hardening pass (2026-06-11)
+
+### Security
+
+- **Removed the unverified `POST /api/v1/auth/google` endpoint.** It accepted
+  a raw `{email, name}` body with no token verification and returned a session
+  JWT + API key for any address — including the admin's. Login now goes
+  exclusively through the Google OAuth code flow (`/auth/google-callback`).
+  The dashboard already used the OAuth flow; only the dead `loginGoogle`
+  helper in `Frontend/src/lib/api.js` was removed.
+  `tests/stress_test_suite.py` now authenticates via `FIE_API_KEY` (X-API-Key
+  header) instead.
+- API keys are no longer written to application logs on user creation
+  (`app/auth.py`).
+- All `/auth/*` endpoints are rate-limited per client IP (slowapi; no-op when
+  slowapi is not installed): `google-callback` 10/min, `me` 60/min,
+  `users` 30/min, `regenerate-key` 5/min.
+
+### Fixed
+
+- **PAIR v4 was bundled but never loaded.** `fie/adversarial.py` preferred
+  v3 > v2 > v1 — the wheel shipped `pair_intent_classifier_v4.pkl` while the
+  runtime silently used v3. The preference chain is now v4 > v3 > v2 > v1, so
+  detection behavior matches the published v4 results (natural 0.50 threshold).
+- **Version drift.** README said 1.13.0, `pyproject.toml` 1.12.0,
+  `fie/__init__.py` 1.10.1, `fie/client.py` 1.4.1, server `config.py` 3.0.0.
+  `pyproject.toml` is now the single source of truth (1.13.0); all other
+  locations resolve it from package metadata at runtime.
+- `requirements.txt` was missing runtime dependencies that CI hand-installed
+  (`xgboost`, `scikit-learn`, `joblib`, `pandas`, `deep-translator`,
+  `langdetect`) — a fresh clone now gets a fully functional server from
+  `pip install -r requirements.txt`.
+- `app/auth.py` created a new `MongoClient` on every auth lookup, bypassing
+  connection pooling; it now reuses one module-level client.
+
+### Added
+
+- **Model artifact distribution** (`scripts/download_models.py` +
+  `scripts/model_manifest.json`): trained models and the FAISS index are
+  distributed as GitHub Release assets pinned by SHA-256. Wired into the
+  Dockerfile and CI (best-effort) and into `publish-pypi.yml` in `--strict`
+  mode — a wheel without bundled models can no longer be published.
+  Procedure: `docs/OPERATIONS.md`.
+- `docs/OPERATIONS.md` — runbook for model releases, SDK releases, UptimeRobot
+  uptime monitoring, Sentry error tracking, Codecov, Cloud Run secrets
+  hygiene, git history cleanup, and a Hugging Face Hub mirror.
+- Opt-in Sentry error tracking in `app/main.py` (active only when
+  `SENTRY_DSN` is set; `send_default_pii=False` hard-coded).
+- Coverage reporting in CI (`pytest --cov` → Codecov upload, never fails the
+  build).
+- `.env.example` and `Frontend/.env.local.example` (CONTRIBUTING referenced
+  them, but they did not exist).
+- `docs/ARCHITECTURE.md` and `docs/CODEBASE.md` are now tracked — the README
+  architecture link previously 404'd for anyone cloning the repo.
+
+### Changed
+
+- README and CONTRIBUTING now state explicitly that the `evaluation/` harness
+  is private (red-team datasets) and how to request access, instead of
+  pointing at a directory that is not in the repo.
+- Untracked from git: root-level `node_modules/` (29 files), accidental root
+  `package.json`/`package-lock.json`, and `.DS_Store`.
+
+---
+
 ## [1.13.0] — 2026-06-09
 
 ### Added

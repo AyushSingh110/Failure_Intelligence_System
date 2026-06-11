@@ -16,8 +16,11 @@ if hasattr(sys.stdout, "reconfigure"):
 
 BASE = "http://localhost:8000/api/v1"
 REPORT_PATH = Path("storage/stress_test_report.json")
-AUTH_EMAIL = os.getenv("FIE_STRESS_EMAIL") or os.getenv("ADMIN_EMAIL") or "stress-test@local.dev"
-AUTH_NAME = os.getenv("FIE_STRESS_NAME", "FIE Stress Test")
+# Auth uses an API key (X-API-Key) instead of the removed unverified
+# /auth/google endpoint. Set FIE_API_KEY in the server's environment and
+# pass the same value here (works even when MongoDB is down — see
+# app/auth.py get_user_by_api_key env fallback).
+API_KEY = os.getenv("FIE_API_KEY", "")
 
 
 @dataclass
@@ -47,18 +50,13 @@ class StressResult:
 
 
 def _login_headers() -> dict[str, str]:
-    response = requests.post(
-        f"{BASE}/auth/google",
-        json={"email": AUTH_EMAIL, "name": AUTH_NAME, "picture": ""},
-        timeout=30,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    token = payload.get("token")
-    if not token:
-        raise RuntimeError("Login succeeded but no session token was returned.")
+    if not API_KEY:
+        raise RuntimeError(
+            "FIE_API_KEY is not set. Start the server with FIE_API_KEY=<key> in its "
+            "environment and export the same value before running this suite."
+        )
     return {
-        "Authorization": f"Bearer {token}",
+        "X-API-Key": API_KEY,
         "Content-Type": "application/json",
     }
 
@@ -199,7 +197,7 @@ def main() -> int:
 
     try:
         headers = _login_headers()
-        print(f"[OK] Authenticated as {AUTH_EMAIL}")
+        print("[OK] Authenticated via FIE_API_KEY")
         _clear_database(headers)
     except Exception as exc:
         print(f"[ERROR] Could not clear database: {exc}")

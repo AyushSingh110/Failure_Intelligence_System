@@ -1,14 +1,4 @@
-"""
-Obfuscation normalization — Layer 0.
-
-Attackers bypass regex detection by spacing characters, using Cyrillic
-homoglyphs, leet-speak substitutions, or zero-width unicode. This module
-normalizes text before any pattern matching layer runs.
-
-Used by: injection.py (_run_pattern_detection, _run_guard_detection)
-"""
 from __future__ import annotations
-
 import re
 import unicodedata
 

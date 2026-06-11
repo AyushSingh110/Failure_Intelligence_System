@@ -8,7 +8,8 @@ from fie.stream_guard import stream_guard, astream_guard
 from fie import integrations
 from fie._telemetry import _ping_telemetry
 
-__version__ = "1.10.1"
+# Kept in sync with pyproject.toml via package metadata (see fie/client.py).
+from fie.client import SDK_VERSION as __version__
 
 # anonymous usage ping — disable with FIE_NO_TELEMETRY=1
 _ping_telemetry(__version__)

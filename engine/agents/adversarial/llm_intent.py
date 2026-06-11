@@ -1,10 +1,5 @@
 """
 Layer 9: LLM semantic intent check (PAIR-style attack detection).
-
-Only fires when all deterministic layers (1-8) produced no high-confidence hit.
-Makes ONE Groq API call to classify whether the prompt is adversarial at the
-semantic/intent level — catches iteratively-rewritten PAIR attacks that look
-like natural language and have no structural anomalies.
 """
 from __future__ import annotations
 

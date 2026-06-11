@@ -1,30 +1,4 @@
-"""
-engine/multi_turn_tracker.py — Multi-turn adversarial intent drift detection.
-
-Detects Crescendo-style attacks where no single turn looks malicious but
-the conversation trajectory escalates toward a harmful goal across turns.
-
-How it works:
-  1. Each /monitor call with a conversation_id stores the turn in MongoDB
-     (collection: conversation_turns, TTL: 2 hours)
-  2. On each new turn, FIE loads the last 7 turns and checks for:
-     - REPEATED_REFUSED: user keeps rephrasing a request already flagged adversarial
-     - GRADUAL_ESCALATION: multiple distinct concern categories appear across turns
-     - PERSISTENT_CONCERN: one concern category appears 4+ times across turns
-  3. Returns MultiTurnResult which the /monitor route adds to the response
-
-Usage (routes.py):
-    from engine.multi_turn_tracker import check_multi_turn_escalation
-    mt_result = check_multi_turn_escalation(
-        conversation_id=body.conversation_id,
-        prompt=body.prompt,
-        question_type=_question_type,
-        is_adversarial=jury_is_adversarial,
-        adversarial_confidence=jury_confidence,
-    )
-"""
 from __future__ import annotations
-
 import re
 import logging
 from dataclasses import dataclass, field

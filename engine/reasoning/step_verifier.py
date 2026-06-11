@@ -1,29 +1,4 @@
-"""
-engine.reasoning.step_verifier
-================================
-Verifies each ReasoningStep using the right sub-verifier for its type.
-
-Sub-verifier routing:
-  ARITHMETIC        → _verify_arithmetic()  — deterministic Python eval sandbox
-                      (100% offline, no network, no GPU, no API key)
-  FACTUAL_PREMISE   → _verify_factual()     — Wikidata first, Serper fallback
-                      (offline if Wikidata/Serper disabled in config)
-  LOGICAL_INFERENCE → _verify_logical()     — shadow ensemble consistency
-                      (offline: falls back to text-overlap scoring)
-  CONCLUSION        → _verify_conclusion()  — checks alignment with prior steps
-  DEFINITION/UNKNOWN→ passthrough (confidence=1.0, not verified)
-
-Each sub-verifier returns a StepVerificationResult with:
-  is_correct  : bool   (False = failure detected here)
-  confidence  : float  (how confident the sub-verifier is about the verdict)
-  method      : str    (which verification path ran)
-  note        : str    (human-readable explanation)
-
-The step-level failure is the FIRST step where is_correct=False and
-confidence > STEP_FAIL_THRESHOLD (0.55).  That is the root cause.
-"""
 from __future__ import annotations
-
 import ast
 import logging
 import math

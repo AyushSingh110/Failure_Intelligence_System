@@ -1,10 +1,5 @@
 """
 Injection detection layers: 1 (regex), 2 (guard), 3 (FAISS), 4 (indirect).
-
-Layer 1: Regex — matches known attack patterns after obfuscation normalization.
-Layer 2: Statistical prompt guard — ML-based score on prompt features.
-Layer 3: FAISS semantic search — cosine similarity against known attack embeddings.
-Layer 4: Indirect prompt injection — instructions hidden inside document content.
 """
 from __future__ import annotations
 
@@ -15,7 +10,6 @@ from engine.agents.adversarial.normalization import normalize_for_detection
 from engine.agents.adversarial.patterns import _AttackPattern, _ATTACK_PATTERNS
 from engine.archetypes.registry import adversarial_registry, FAISSSearchResult
 from engine.prompt_guard import score_prompt_attack
-
 
 # ── Layer 4 helpers: indirect prompt injection ────────────────────────────────
 

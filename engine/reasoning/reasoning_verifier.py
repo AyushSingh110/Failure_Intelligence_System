@@ -1,35 +1,4 @@
-"""
-engine.reasoning.reasoning_verifier
-=====================================
-Orchestrates the full reasoning verification pipeline:
-
-  decompose_reasoning_chain()   →  list of typed steps
-        ↓
-  verify_steps()                →  per-step verdicts (arithmetic, factual, logical)
-        ↓
-  run_socratic_probe()          →  adversarial challenge result
-        ↓
-  ReasoningVerificationResult   →  single unified verdict
-
-Failure classification
-----------------------
-ARITHMETIC_ERROR       — a calculation in the chain is provably wrong
-FACTUAL_GROUNDING_FAIL — a stated fact contradicts Wikidata/Serper
-LOGICAL_GAP            — a step is semantically disconnected from prior context
-SOCRATIC_CONTRADICTION — shadow models contradict the reasoning when probed
-UPSTREAM_PROPAGATION   — conclusion drawn from a failed earlier step
-NO_FAILURE_DETECTED    — all checks passed (or no signal above threshold)
-
-Output for the pipeline
------------------------
-ReasoningVerificationResult is added to MonitorState and:
-  - written into FailureSignalVector (new fields: reasoning_failure_type,
-    reasoning_confidence, first_failed_step)
-  - carried in MonitorResponse for the frontend dashboard
-  - used by the XGBoost classifier as new categorical features
-"""
 from __future__ import annotations
-
 import logging
 from dataclasses import dataclass, field
 from typing import Optional

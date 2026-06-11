@@ -1,26 +1,8 @@
-"""
-XGBoost v4 training script.
-Trained on the expanded dataset: TruthfulQA (1,104) + HaluEval (835) + MMLU (518) + builtin (20)
-= 2,477 total labeled examples.
-
-Key difference from v3: ~480 additional HaluEval examples that were added after v3 was trained.
-HaluEval is a document-grounded hallucination benchmark — stronger signal for factual failures,
-leading to better calibrated FPR without sacrificing recall.
-
-Run from the project root:
-    python data/train_v4.py
-
-Saves:
-    models/failure_classifier_v4.pkl
-    models/feature_columns_v4.pkl
-"""
 from __future__ import annotations
-
 import glob
 import json
 import os
 import sys
-
 import joblib
 import pandas as pd
 from xgboost import XGBClassifier

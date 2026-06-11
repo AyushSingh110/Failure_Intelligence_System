@@ -1,20 +1,4 @@
-"""
-Layer 6: Perplexity proxy detector.
-
-True perplexity requires a language model. These six cheap statistical signals
-correlate strongly with perplexity and catch GCG suffixes, base64 payloads,
-and encoded/obfuscated attacks that bypass keyword-based Layers 1–5.
-
-Signals:
-  A) zlib compression ratio
-  B) Non-dictionary token density (English only)
-  C) Character-type entropy
-  D) Token length variance
-  E) Base64 block detection
-  F) Letter frequency KL divergence from English (catches Caesar/ROT ciphers)
-"""
 from __future__ import annotations
-
 import collections
 import math
 import re

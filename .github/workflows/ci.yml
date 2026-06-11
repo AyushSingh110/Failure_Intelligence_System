@@ -64,15 +64,22 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
+      # Model artifacts are not in git — fetch them from the GitHub Release
+      # (scripts/model_manifest.json pins SHA-256 for every file). Best-effort:
+      # tests are written to pass with rule-based fallbacks if the release is
+      # not reachable, and the script only fails hard on checksum mismatch.
+      - name: Download model artifacts
+        run: python scripts/download_models.py
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov httpx scikit-learn xgboost joblib pandas sentence-transformers slowapi
+          pip install pytest pytest-cov httpx
 
       - name: Run offline unit tests
         run: |
-          pytest tests/test_core.py -v --tb=short
+          pytest tests/test_core.py -v --tb=short --cov=fie --cov=engine --cov=app --cov-report=xml
 
       - name: Run integration tests
         env:
@@ -81,7 +88,18 @@ jobs:
           JWT_SECRET_KEY: "ci-secret-key-minimum-32-chars-long"
           ADMIN_EMAIL: "ci@example.com"
         run: |
-          pytest tests/test_integration.py -v --tb=short
+          pytest tests/test_integration.py -v --tb=short --cov=fie --cov=engine --cov=app --cov-append --cov-report=xml
+
+      # Free for public repos. Add the CODECOV_TOKEN repo secret (from
+      # codecov.io) to enable; the step never fails the build either way.
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
       - name: Smoke-test adversarial scan
         run: |
@@ -136,6 +154,12 @@ jobs:
       - name: Install build tools
         run: pip install build hatchling
 
+      # Best-effort here (CI checkout has no models); the publish-pypi
+      # workflow runs this in --strict mode so a real release can never
+      # ship a wheel without the bundled models.
+      - name: Download model artifacts
+        run: python scripts/download_models.py
+
       - name: Build wheel
         run: python -m build --wheel
 
@@ -149,8 +173,13 @@ jobs:
           with zipfile.ZipFile(wheels[0]) as z:
               names = z.namelist()
               assert any('fie/' in n for n in names), 'fie/ not in wheel'
+              models = [n for n in names if n.startswith('fie/models/') and n.endswith(('.pkl', '.json'))]
               print('Wheel OK — fie/ package present')
-              print(f'Files: {len(names)}')
+              print(f'Files: {len(names)}, bundled models: {len(models)}')
+              if not models:
+                  print('WARNING: no model files in wheel — local mode would run '
+                        'with rule-based fallbacks. Publish the models release '
+                        '(docs/OPERATIONS.md) so CI can bundle them.')
           "
 
   # ── Health-check smoke test (against built server) ────────────────────
@@ -163,6 +192,8 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - name: Download model artifacts
+        run: python scripts/download_models.py
       - name: Install server deps
         run: |
           pip install --upgrade pip
