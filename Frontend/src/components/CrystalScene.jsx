@@ -1,39 +1,43 @@
 // ── CrystalScene — full-page scroll-scrubbed WebGL scene ─────────────────────
 //
-//  One persistent fixed canvas behind the whole landing page. A faceted glass
-//  crystal travels through a keyframed timeline as the user scrolls:
+//  One persistent fixed canvas behind the whole landing page. The centerpiece
+//  is the GUARDIAN CORE — a glowing AI core wrapped in two counter-rotating
+//  geodesic shield shells. Incoming attack streaks fly in from off-screen and
+//  are BLOCKED at the shield with a flash + shield pulse: the FIE story told
+//  in one object.
+//
+//  The assembly travels a keyframed timeline as the user scrolls:
 //
 //    hero      → floats in the hero's right column
-//    features  → recedes deep behind the capability cards
+//    features  → tiny distant glint behind the capability cards
 //    arch      → drifts to the left of the architecture diagram
 //    pipeline  → swings to the right of the pipeline band
 //    bench     → sinks far back behind the benchmark table
-//    cta       → returns huge and bright behind the final CTA
+//    cta       → returns big and bright behind the final CTA
 //
 //  Keyframe stops are measured from real DOM section offsets (by element id),
 //  so the timeline stays accurate regardless of content height. All motion is
-//  frame-damped — scrolling fast spins the crystal harder; everything settles
-//  softly. The camera eases toward the cursor for parallax.
+//  frame-damped; the camera eases toward the cursor for parallax.
 //
-//  Rendering pauses for prefers-reduced-motion users.
+//  Rendering is skipped entirely for prefers-reduced-motion users.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useRef, useMemo, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { MeshTransmissionMaterial, Environment, Lightformer, Sparkles, Float } from '@react-three/drei'
+import { Environment, Lightformer, Sparkles, Float } from '@react-three/drei'
 import * as THREE from 'three'
 
 // ── Scroll timeline ───────────────────────────────────────────────────────────
 // xF = horizontal position as a fraction of the half-viewport (world units)
 const POSES = [
-  { id: 'hero',     xF:  0.52, y:  0.05, z:  0.0, s: 1.30, glow: 1.00, spin: 0.14, color: '#00d4ff' },
-  // during the pinned card deck the gem retreats far into the distance —
+  { id: 'hero',     xF:  0.52, y:  0.05, z:  0.0, s: 1.15, glow: 1.00, spin: 0.14, color: '#00d4ff' },
+  // during the card deck the guardian retreats far into the distance —
   // a small glint between the cards, never on top of them
   { id: 'features', xF:  0.00, y: -0.05, z: -6.0, s: 0.45, glow: 0.25, spin: 0.30, color: '#7c8cff' },
-  { id: 'arch',     xF: -0.56, y:  0.00, z: -0.9, s: 1.05, glow: 0.78, spin: 0.20, color: '#a78bfa' },
-  { id: 'pipeline', xF:  0.56, y:  0.00, z: -1.4, s: 0.88, glow: 0.62, spin: 0.26, color: '#00d4ff' },
-  { id: 'bench',    xF:  0.00, y:  0.18, z: -2.8, s: 0.70, glow: 0.42, spin: 0.36, color: '#67e8f9' },
-  { id: 'cta',      xF:  0.00, y: -0.05, z:  0.9, s: 1.60, glow: 1.30, spin: 0.55, color: '#00ff88' },
+  { id: 'arch',     xF: -0.70, y:  0.05, z: -2.8, s: 0.65, glow: 0.55, spin: 0.20, color: '#a78bfa' },
+  { id: 'pipeline', xF:  0.60, y:  0.05, z: -2.2, s: 0.70, glow: 0.55, spin: 0.26, color: '#00d4ff' },
+  { id: 'bench',    xF:  0.00, y:  0.18, z: -2.8, s: 0.62, glow: 0.42, spin: 0.36, color: '#67e8f9' },
+  { id: 'cta',      xF:  0.00, y: -0.05, z:  0.9, s: 1.35, glow: 1.30, spin: 0.55, color: '#00ff88' },
 ]
 
 const _colA = new THREE.Color()
@@ -73,7 +77,6 @@ function useSectionStops() {
 
 function currentPose(stops, scrollYpx) {
   if (!stops) return { ...POSES[0], color: _colA.set(POSES[0].color) }
-  // collect valid (offset, pose) pairs in order
   const pts = []
   for (let i = 0; i < POSES.length; i++) if (stops[i] != null) pts.push([stops[i], POSES[i]])
   if (pts.length === 0) return { ...POSES[0], color: _colA.set(POSES[0].color) }
@@ -87,24 +90,109 @@ function currentPose(stops, scrollYpx) {
   return { ...last, color: _colA.set(last.color) }
 }
 
-// ── Crystal ───────────────────────────────────────────────────────────────────
-function Crystal({ stops }) {
+// ── Attack interceptors ───────────────────────────────────────────────────────
+// A small pool of hostile streaks that fly in from off-screen and die at the
+// shield radius with a flash. Each impact pulses the shield via onImpact().
+const ATTACK_N = 5
+const SPAWN_R  = 6.2
+
+function _spawnAttack(initial = false) {
+  const dir = new THREE.Vector3().randomDirection()
+  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir)
+  return {
+    dir, quat,
+    t: initial ? -Math.random() * 2.2 : -(0.5 + Math.random() * 2.0), // negative t = waiting to launch
+    speed: 0.5 + Math.random() * 0.45,
+  }
+}
+
+function Interceptors({ shieldR = 1.62, onImpact }) {
+  const heads   = useRef([])
+  const flashes = useRef([])
+  const attacks = useRef(Array.from({ length: ATTACK_N }, () => _spawnAttack(true)))
+  const flashLife = useRef(new Array(ATTACK_N).fill(0))
+
+  useFrame((_, dt) => {
+    attacks.current.forEach((a, i) => {
+      const head = heads.current[i]
+      const flash = flashes.current[i]
+      if (!head || !flash) return
+
+      a.t += dt * a.speed
+      if (a.t >= 1) {
+        // impact — flash at the shield, pulse it, respawn the attacker
+        flashLife.current[i] = 1
+        flash.position.copy(a.dir).multiplyScalar(shieldR)
+        onImpact?.()
+        attacks.current[i] = _spawnAttack()
+      }
+
+      if (a.t > 0 && a.t < 1) {
+        const r = SPAWN_R + (shieldR - SPAWN_R) * a.t
+        head.visible = true
+        head.position.copy(a.dir).multiplyScalar(r)
+        head.quaternion.copy(a.quat)
+        // streak brightens as it closes in
+        head.children.forEach(c => { c.material.opacity = 0.25 + a.t * 0.7 })
+      } else {
+        head.visible = false
+      }
+
+      // flash decay
+      const l = flashLife.current[i]
+      if (l > 0) {
+        flashLife.current[i] = Math.max(l - dt * 2.6, 0)
+        flash.visible = true
+        flash.scale.setScalar(0.12 + (1 - l) * 0.55)
+        flash.material.opacity = l * 0.85
+      } else {
+        flash.visible = false
+      }
+    })
+  })
+
+  return (
+    <>
+      {Array.from({ length: ATTACK_N }, (_, i) => (
+        <group key={`a${i}`}>
+          {/* streak: head + tail, oriented along the flight path */}
+          <group ref={el => { heads.current[i] = el }} visible={false}>
+            <mesh>
+              <sphereGeometry args={[0.035, 10, 10]} />
+              <meshBasicMaterial color="#ff4466" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
+            </mesh>
+            <mesh position={[0, 0.3, 0]}>
+              <cylinderGeometry args={[0.004, 0.016, 0.55, 6]} />
+              <meshBasicMaterial color="#ff7755" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
+            </mesh>
+          </group>
+          {/* impact flash */}
+          <mesh ref={el => { flashes.current[i] = el }} visible={false}>
+            <sphereGeometry args={[1, 12, 12]} />
+            <meshBasicMaterial color="#ff5566" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </mesh>
+        </group>
+      ))}
+    </>
+  )
+}
+
+// ── Guardian Core — glowing model core inside counter-rotating shield shells ──
+function GuardianCore({ stops }) {
   const group = useRef(null)      // timeline position/scale
   const spinner = useRef(null)    // continuous rotation
+  const shieldA = useRef(null)
+  const shieldB = useRef(null)
+  const shieldAMat = useRef(null)
+  const shieldBMat = useRef(null)
   const coreMat = useRef(null)
+  const haloMat = useRef(null)
   const coreLight = useRef(null)
-  const edgesMat = useRef(null)
+  const pulse = useRef(0)         // shield-hit feedback, decays each frame
   const { viewport } = useThree()
 
   const vel = useRef(0)
   const lastY = useRef(typeof window !== 'undefined' ? window.scrollY : 0)
-
-  const gemGeo = useMemo(() => {
-    const g = new THREE.IcosahedronGeometry(1, 0)
-    g.scale(1, 1.38, 1) // elongate into a gem
-    return g
-  }, [])
-  const edgesGeo = useMemo(() => new THREE.EdgesGeometry(gemGeo), [gemGeo])
 
   useFrame(({ camera, pointer, clock }, dt) => {
     const g = group.current
@@ -119,7 +207,7 @@ function Crystal({ stops }) {
 
     const pose = currentPose(stops.current, yPx)
 
-    // narrow screens: keep the crystal centred and further back
+    // narrow screens: keep the guardian centred and further back
     const narrow = viewport.aspect < 1
     const halfW = viewport.width / 2
     const targetX = (narrow ? pose.xF * 0.25 : pose.xF) * halfW
@@ -131,24 +219,37 @@ function Crystal({ stops }) {
     const k = THREE.MathUtils.damp(g.scale.x, pose.s, 3.2, dt)
     g.scale.setScalar(k)
 
-    // continuous spin + velocity kick + slight pointer-follow tilt
+    // assembly spin + velocity kick + slight pointer-follow tilt
     const sp = spinner.current
     if (sp) {
       sp.rotation.y += dt * (pose.spin + Math.min(Math.abs(vel.current) * 0.0004, 0.9))
-      sp.rotation.x = THREE.MathUtils.damp(sp.rotation.x, Math.sin(t * 0.23) * 0.18 + pointer.y * 0.12, 2, dt)
-      sp.rotation.z = THREE.MathUtils.damp(sp.rotation.z, THREE.MathUtils.clamp(-vel.current * 0.00012, -0.22, 0.22), 2, dt)
+      sp.rotation.x = THREE.MathUtils.damp(sp.rotation.x, Math.sin(t * 0.2) * 0.14 + pointer.y * 0.1, 2, dt)
+      sp.rotation.z = THREE.MathUtils.damp(sp.rotation.z, THREE.MathUtils.clamp(-vel.current * 0.0001, -0.18, 0.18), 2, dt)
     }
+
+    // shields counter-rotate independently of the assembly
+    if (shieldA.current) { shieldA.current.rotation.y += dt * 0.22; shieldA.current.rotation.x += dt * 0.05 }
+    if (shieldB.current) { shieldB.current.rotation.y -= dt * 0.15; shieldB.current.rotation.z += dt * 0.04 }
+
+    // shield-hit pulse decays; brightens shield + core for a beat
+    pulse.current = THREE.MathUtils.damp(pulse.current, 0, 4, dt)
+    const p = pulse.current
+    if (shieldAMat.current) shieldAMat.current.opacity = (0.22 + p * 0.5) * Math.min(pose.glow + 0.25, 1)
+    if (shieldBMat.current) shieldBMat.current.opacity = (0.09 + p * 0.2) * Math.min(pose.glow + 0.25, 1)
 
     // glow color + intensity follow the timeline
     if (coreMat.current) {
-      coreMat.current.color.copy(pose.color)
-      coreMat.current.opacity = 0.5 + 0.25 * Math.sin(t * 1.8) * pose.glow
+      coreMat.current.emissive.copy(pose.color)
+      coreMat.current.emissiveIntensity = 1.2 * pose.glow + p * 1.4 + Math.sin(t * 1.7) * 0.18
+    }
+    if (haloMat.current) {
+      haloMat.current.color.copy(pose.color)
+      haloMat.current.opacity = 0.13 * pose.glow + p * 0.2
     }
     if (coreLight.current) {
       coreLight.current.color.copy(pose.color)
-      coreLight.current.intensity = 26 * pose.glow
+      coreLight.current.intensity = 24 * pose.glow + p * 30
     }
-    if (edgesMat.current) edgesMat.current.opacity = 0.1 + 0.1 * pose.glow
 
     // camera parallax toward the cursor
     camera.position.x = THREE.MathUtils.damp(camera.position.x, pointer.x * 0.45, 2.5, dt)
@@ -158,39 +259,37 @@ function Crystal({ stops }) {
 
   return (
     <group ref={group}>
-      <Float speed={1.3} rotationIntensity={0.18} floatIntensity={0.5}>
+      <Float speed={1.2} rotationIntensity={0.14} floatIntensity={0.45}>
         <group ref={spinner}>
-          {/* glass gem */}
-          <mesh geometry={gemGeo}>
-            <MeshTransmissionMaterial
-              transmission={1}
-              thickness={1.4}
-              roughness={0.08}
-              ior={1.45}
-              chromaticAberration={0.35}
-              anisotropicBlur={0.25}
-              distortion={0.18}
-              distortionScale={0.4}
-              temporalDistortion={0.12}
-              attenuationColor="#a78bfa"
-              attenuationDistance={2.2}
-              samples={4}
-              resolution={384}
-              flatShading
-            />
+          {/* the protected model — glowing core */}
+          <mesh>
+            <icosahedronGeometry args={[0.58, 3]} />
+            <meshStandardMaterial ref={coreMat} color="#0a1626" emissive="#00d4ff" emissiveIntensity={1.2} roughness={0.3} metalness={0.55} />
           </mesh>
-          {/* facet edges */}
-          <lineSegments geometry={edgesGeo} scale={1.002}>
-            <lineBasicMaterial ref={edgesMat} color="#dceaff" transparent opacity={0.16} />
-          </lineSegments>
-          {/* inner energy core */}
-          <mesh scale={0.42}>
-            <icosahedronGeometry args={[1, 1]} />
-            <meshBasicMaterial ref={coreMat} color="#00d4ff" transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
+          {/* soft halo around the core */}
+          <mesh scale={1.16}>
+            <icosahedronGeometry args={[0.58, 2]} />
+            <meshBasicMaterial ref={haloMat} color="#00d4ff" transparent opacity={0.13} blending={THREE.AdditiveBlending} depthWrite={false} />
           </mesh>
-          <pointLight ref={coreLight} intensity={26} color="#00d4ff" distance={8} decay={2} />
+          {/* inner shield — primary detection mesh */}
+          <mesh ref={shieldA}>
+            <icosahedronGeometry args={[1.45, 1]} />
+            <meshBasicMaterial ref={shieldAMat} color="#00d4ff" wireframe transparent opacity={0.22} />
+          </mesh>
+          {/* outer shield — fine secondary lattice, counter-rotating */}
+          <mesh ref={shieldB}>
+            <icosahedronGeometry args={[1.62, 2]} />
+            <meshBasicMaterial ref={shieldBMat} color="#a78bfa" wireframe transparent opacity={0.09} />
+          </mesh>
+          {/* faint energy skin between the shells */}
+          <mesh>
+            <sphereGeometry args={[1.53, 32, 32]} />
+            <meshBasicMaterial color="#00d4ff" transparent opacity={0.025} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </mesh>
+          <pointLight ref={coreLight} intensity={24} color="#00d4ff" distance={9} decay={2} />
         </group>
-        <Sparkles count={48} scale={4.4} size={2.2} speed={0.35} color="#bfd9ff" opacity={0.5} />
+        <Interceptors shieldR={1.6} onImpact={() => { pulse.current = 1 }} />
+        <Sparkles count={36} scale={4} size={2} speed={0.3} color="#9ecbff" opacity={0.4} />
       </Float>
     </group>
   )
@@ -238,14 +337,13 @@ function Scene() {
   return (
     <>
       <ambientLight intensity={0.35} />
-      {/* local lightformer env — no network fetch, drives the glass reflections */}
+      {/* local lightformer env — no network fetch, gives the metals something to reflect */}
       <Environment resolution={128}>
         <Lightformer intensity={2.2} position={[4, 3, 5]} scale={[6, 2, 1]} color="#00d4ff" />
         <Lightformer intensity={1.6} position={[-5, -2, -3]} scale={[5, 2, 1]} color="#a78bfa" />
         <Lightformer intensity={1.2} position={[0, 5, -4]} scale={[8, 1.5, 1]} color="#ffffff" />
-        <Lightformer intensity={0.8} position={[2, -4, 2]} scale={[4, 1.5, 1]} color="#00ff88" />
       </Environment>
-      <Crystal stops={stops} />
+      <GuardianCore stops={stops} />
       <StarLayer positions={STARS_NEAR} size={0.035} opacity={0.5}  drift={0.012} parallax={5} />
       <StarLayer positions={STARS_FAR}  size={0.025} opacity={0.32} drift={0.006} parallax={2.4} />
     </>
