@@ -506,7 +506,83 @@ Phase 3 research (FSV ablation, hallucination evaluation, PAIR v4, hard-positive
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical reference.
+Every prompt is screened **before** it reaches your model. Every answer is checked **after**, in the background. Here is the whole system on one page:
+
+```mermaid
+flowchart TD
+    U["User / App<br/>wraps any LLM call with @monitor()"]
+    U -->|prompt| FP
+
+    subgraph GUARD["PRE-FLIGHT GUARD — runs before your model, under 20ms"]
+        direction TB
+        FP["Fast-path check<br/>known-attack and whitelist hashes (instant)"]
+        L["12 detection layers, all at once<br/>regex · prompt-guard · GCG suffix · many-shot ·<br/>indirect injection · multilingual · romanisation · …"]
+        AGG["Weighted vote + domain and session boosts"]
+        FP --> L --> AGG
+    end
+
+    AGG --> ROUTE{"How risky<br/>is it?"}
+    ROUTE -->|"high — clear attack"| BLOCK["BLOCKED<br/>your model never runs · event logged"]
+    ROUTE -->|"borderline"| LG["LlamaGuard tie-breaker<br/>fail-secure: blocks if unavailable"]
+    ROUTE -->|"low — safe"| LLM
+    LG -->|unsafe| BLOCK
+    LG -->|safe| LLM
+
+    LLM["Your LLM runs<br/>answer returned to the user immediately"]
+    LLM --> MON
+
+    subgraph MON["OUTPUT MONITORING — in the background, zero added latency"]
+        direction TB
+        SHADOW["Shadow ensemble: 3 models answer in parallel<br/>disagreement = strongest hallucination signal"]
+        FSV["Failure Signal Vector → XGBoost classifier (under 10ms)"]
+        JURY["DiagnosticJury: 3 specialist agents review the answer"]
+        SHADOW --> FSV --> JURY
+    end
+
+    MON --> OUT{"Verdict?"}
+    OUT -->|"answer is correct"| VAL["VALIDATED<br/>delivered as-is"]
+    OUT -->|"hallucination"| COR["CORRECTED<br/>shadow consensus replaces the answer"]
+    OUT -->|"attack confirmed"| BLK2["BLOCKED"]
+
+    BLOCK -.confirmed labels.-> FB["Feedback store<br/>next identical prompt → instant decision"]
+    BLK2 -.-> FB
+    FB -.learned hash.-> FP
+
+    classDef user   fill:#e0e7ff,stroke:#4f46e5,color:#1e1b4b;
+    classDef guard  fill:#fef3c7,stroke:#d97706,color:#78350f;
+    classDef gate   fill:#ede9fe,stroke:#7c3aed,color:#4c1d95;
+    classDef block  fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+    classDef safe   fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef mon    fill:#cffafe,stroke:#0891b2,color:#164e63;
+    classDef warn   fill:#ffedd5,stroke:#ea580c,color:#7c2d12;
+    classDef store  fill:#f1f5f9,stroke:#64748b,color:#1e293b;
+
+    class U user;
+    class FP,L,AGG guard;
+    class ROUTE,OUT gate;
+    class BLOCK,BLK2 block;
+    class LLM,LG,VAL safe;
+    class SHADOW,FSV,JURY mon;
+    class COR warn;
+    class FB store;
+```
+
+**Reading the colours:** blue = your request · amber = the pre-flight guard · purple = a decision point · red = blocked · green = the safe path and your model · cyan = background hallucination monitoring · grey = the learning loop.
+
+**The three things that can happen to any prompt:**
+
+| Outcome | What it means | When |
+| --- | --- | --- |
+| **VALIDATED** ✅ | The answer was checked and trusted | Clean prompt, model agrees with the shadow ensemble |
+| **CORRECTED** 🔧 | A hallucination was caught and fixed | Model diverges from shadow consensus — the consensus answer is returned |
+| **BLOCKED** 🚫 | An attack was stopped | Caught at the guard (before the model) or confirmed by the jury |
+
+Want the deep version? Two interactive diagrams ship in the repo — open them in any browser:
+
+- **[docs/fie_flowchart.html](docs/fie_flowchart.html)** — the request lifecycle, stage by stage, in plain English
+- **[docs/fie_architecture.html](docs/fie_architecture.html)** — the full animated system map, every component and data path
+
+Or read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete technical reference.
 
 ---
 

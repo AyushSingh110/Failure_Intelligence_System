@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { isLoggedIn } from './lib/auth'
+import ErrorBoundary from './components/ErrorBoundary'
 import LandingPage   from './pages/LandingPage'
 import LoginPage     from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -25,6 +26,7 @@ function Protected({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <Routes>
         {/* Public */}
         <Route path="/"      element={<LandingPage />} />
@@ -43,6 +45,7 @@ export default function App() {
         {/* Catch-all → landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }
