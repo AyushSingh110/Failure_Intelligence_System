@@ -4,9 +4,14 @@ import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'fram
 import { isLoggedIn } from '../lib/auth'
 
 import Lenis from 'lenis'
+import ErrorBoundary from '../components/ErrorBoundary'
 
 // Full-page scroll-scrubbed WebGL scene — lazy so three.js never blocks first paint
 const CrystalScene = lazy(() => import('../components/CrystalScene'))
+
+// ── External links — swap these for the real URLs ─────────────────────────────
+const PAPER_URL = 'https://zenodo.org/me/uploads?q=&f=shared_with_me%3Afalse&l=list&p=1&s=10&sort=newest'
+const BLOG_URL  = 'https://medium.com/@ayushsingh355vns' // TODO: replace with the blog link
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
@@ -3276,6 +3281,100 @@ function BenchmarksSection() {
   )
 }
 
+// ── Research & writing — the paper and blog behind the numbers ────────────────
+const RESEARCH_CARDS = [
+  {
+    href: PAPER_URL,
+    label: 'RESEARCH PAPER',
+    title: 'The science behind the firewall',
+    desc: 'Full methodology — the 434-feature Failure Signal Vector, XGBoost training, and evaluation across 2,006 prompts and 8 public datasets.',
+    cta: 'Read the paper',
+    color: '#a78bfa',
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  },
+  {
+    href: BLOG_URL,
+    label: 'ENGINEERING BLOG',
+    title: 'Building the runtime guardrail',
+    desc: 'Behind-the-scenes write-ups — designing the 11-layer guard, the shadow jury, and shipping the SDK to production.',
+    cta: 'Read the blog',
+    color: '#00d4ff',
+    icon: 'M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.586 7.586M11 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  },
+]
+
+function ResearchSection() {
+  return (
+    <section style={{ position: 'relative', zIndex: 2 }}>
+      <div style={{ maxWidth: '1020px', margin: '0 auto', padding: '96px 28px' }}>
+
+        <motion.div
+          initial={{ opacity: 0, y: 26 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+          style={{ textAlign: 'center', marginBottom: '44px' }}
+        >
+          <div className="section-label" style={{ justifyContent: 'center' }}>Go deeper</div>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 'clamp(24px, 2.8vw, 36px)', fontWeight: 800, letterSpacing: '-0.03em', color: '#f0f6ff', lineHeight: 1.12 }}>
+            Don't take the numbers on faith.
+          </h2>
+        </motion.div>
+
+        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+          {RESEARCH_CARDS.map((c, i) => {
+            const rgb = hexToRgb(c.color)
+            return (
+              <motion.a
+                key={c.label}
+                href={c.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 34 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-8%' }}
+                transition={{ delay: i * 0.12, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -6 }}
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: '14px',
+                  padding: '28px 28px 24px', borderRadius: '16px',
+                  background: `linear-gradient(150deg, rgba(${rgb},0.07) 0%, rgba(11,16,28,0.92) 55%)`,
+                  border: `1px solid rgba(${rgb},0.24)`,
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  textDecoration: 'none', cursor: 'pointer',
+                  position: 'relative', overflow: 'hidden',
+                }}
+              >
+                {/* top accent */}
+                <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px', background: `linear-gradient(90deg, transparent, rgba(${rgb},0.5), transparent)` }}/>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
+                    background: `rgba(${rgb},0.1)`, border: `1px solid rgba(${rgb},0.28)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color,
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d={c.icon}/></svg>
+                  </div>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.16em', color: c.color }}>{c.label}</span>
+                </div>
+
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '19px', fontWeight: 700, color: '#f0f6ff', letterSpacing: '-0.02em', lineHeight: 1.25 }}>{c.title}</div>
+                <div style={{ fontSize: '13px', lineHeight: 1.7, color: '#8da8c4', flex: 1 }}>{c.desc}</div>
+
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', fontWeight: 600, color: c.color, marginTop: '4px' }}>
+                  {c.cta}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+              </motion.a>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function CTASection({ loggedIn }) {
   const [ref, style] = useReveal('scale')
   return (
@@ -4093,9 +4192,12 @@ export default function LandingPage() {
         {/* ── Aurora orb background ── */}
         <AuroraBackground />
         {/* ── Full-page scroll-scrubbed 3D scene ── */}
-        <Suspense fallback={null}>
-          <CrystalScene />
-        </Suspense>
+        {/* isolated: a WebGL/GPU failure drops the scene, never blanks the page */}
+        <ErrorBoundary label="CrystalScene" fallback={null}>
+          <Suspense fallback={null}>
+            <CrystalScene />
+          </Suspense>
+        </ErrorBoundary>
         {/* ── Film grain + vignette ── */}
         <FilmOverlay />
         {/* ── Section dot navigation ── */}
@@ -4145,6 +4247,8 @@ export default function LandingPage() {
                 GitHub
               </a>
               <a href="https://pypi.org/project/fie-sdk/" target="_blank" rel="noopener noreferrer" className="nav-link hide-mobile">PyPI</a>
+              <a href={PAPER_URL} target="_blank" rel="noopener noreferrer" className="nav-link hide-mobile">Paper</a>
+              <a href={BLOG_URL} target="_blank" rel="noopener noreferrer" className="nav-link hide-mobile">Blog</a>
               {loggedIn
                 ? <Link to="/dashboard" className="cta-primary" style={{ padding: '7px 18px', fontSize: '12px' }}>Dashboard →</Link>
                 : <Link to="/login"     className="cta-primary" style={{ padding: '7px 18px', fontSize: '12px' }}>Sign in →</Link>
@@ -4223,6 +4327,11 @@ export default function LandingPage() {
         <BenchmarksSection />
 
         {/* ══════════════════════════════════════════════════════════ */}
+        {/* Research — paper + blog                                  */}
+        {/* ══════════════════════════════════════════════════════════ */}
+        <ResearchSection />
+
+        {/* ══════════════════════════════════════════════════════════ */}
         {/* CTA                                                      */}
         {/* ══════════════════════════════════════════════════════════ */}
         <CTASection loggedIn={loggedIn} />
@@ -4249,6 +4358,8 @@ export default function LandingPage() {
               {[
                 { label: 'GitHub', href: 'https://github.com/AyushSingh110/Failure_Intelligence_System' },
                 { label: 'PyPI',   href: 'https://pypi.org/project/fie-sdk/' },
+                { label: 'Paper',  href: PAPER_URL },
+                { label: 'Blog',   href: BLOG_URL },
                 { label: 'Issues', href: 'https://github.com/AyushSingh110/Failure_Intelligence_System/issues' },
               ].map(l => (
                 <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="nav-link" style={{ fontSize: '12px' }}>{l.label}</a>
