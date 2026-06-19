@@ -1,8 +1,20 @@
 {
   "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the plain filename (os.path.basename of path). See docs/OPERATIONS.md for the upload procedure.",
-  "release_tag": "models-v1.14.0",
+  "release_tag": "models-v1.15.0",
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
+    {
+      "path": "fie/models/pair_intent_classifier_v5.pkl",
+      "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+      "size": 11349,
+      "used_by": "SDK Layer 8 — PAIR v5 semantic classifier (88.9% TPR, 7.5% FPR, threshold 0.70, sklearn 1.7.2)"
+    },
+    {
+      "path": "fie/models/pair_intent_meta_v5.json",
+      "sha256": "d1b52dd543be53a4dd39c7267519cb385cf1f12b7af90509f94175d62598a343",
+      "size": 673,
+      "used_by": "SDK Layer 8 — PAIR v5 threshold + embed model metadata"
+    },
     {
       "path": "fie/models/meta_clf.pkl",
       "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",

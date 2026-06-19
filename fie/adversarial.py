@@ -112,6 +112,7 @@ _ATTACK_THRESHOLDS: dict[str, float] = {
     "MANY_SHOT_JAILBREAK"          : 0.68,
     "OBFUSCATED_ADVERSARIAL_PAYLOAD": 0.70,
     "JAILBREAK_ATTEMPT"            : 0.65,  # PAIR classifier backs this up
+    "COPYRIGHT_REPRODUCTION"       : 0.68,  # pattern-based, high precision needed
     "DIRECT_HARMFUL_REQUEST"       : 0.70,  # direct intent, action+target gate
     "PROMPT_EXTRACTION"            : 0.75,  # verb+target two-gate, high precision
     "VIRTUALIZATION_JAILBREAK"     : 0.75,  # routes to UNCERTAIN → LlamaGuard
@@ -219,6 +220,24 @@ class _ScanCache:
 _scan_cache = _ScanCache(maxsize=512, ttl=300.0)
 
 
+@dataclass
+class LayerEvidence:
+    """Structured evidence from a single detection layer.
+
+    All fields are optional — not every layer populates every field.
+    Access via ``ScanResult.evidence`` which maps layer_name → LayerEvidence,
+    or use ``ScanResult.evidence_raw`` for the legacy dict form.
+    """
+    confidence:        float       = 0.0
+    matched_pattern:   str | None  = None   # regex/phrase that matched
+    matched_text:      str | None  = None   # excerpt from the prompt
+    score:             float | None = None  # raw score (e.g. MSJ danger score)
+    threshold:         float | None = None  # threshold used by this layer
+    translated_text:   str | None  = None   # translated prompt (multilingual layer)
+    language_detected: str | None  = None   # detected language code
+    meta:              dict = field(default_factory=dict)  # any extra layer-specific data
+
+
 # Result dataclass
 @dataclass
 class ScanResult:
@@ -230,8 +249,38 @@ class ScanResult:
     layers_fired:   list[str]           # which layers detected something
     matched_text:   str | None          # excerpt that triggered detection
     mitigation:     str                 # human-readable mitigation advice
-    evidence:       dict = field(default_factory=dict)  # per-layer detail
+    evidence:       dict = field(default_factory=dict)  # per-layer detail (raw dicts, backward compat)
     layer_scores:   dict = field(default_factory=dict)  # {layer_name: confidence} for all 11 layers
+
+    def get_layer_evidence(self, layer_name: str) -> LayerEvidence:
+        """Return structured LayerEvidence for a given layer (never raises)."""
+        raw = self.evidence.get(layer_name, {})
+        if not isinstance(raw, dict):
+            return LayerEvidence()
+        return LayerEvidence(
+            confidence        = float(raw.get("confidence", raw.get("pair_probability", 0.0))),
+            matched_pattern   = raw.get("matched_pattern") or raw.get("pattern"),
+            matched_text      = raw.get("matched_text"),
+            score             = raw.get("score") or raw.get("danger_score"),
+            threshold         = raw.get("threshold"),
+            translated_text   = raw.get("translated_text") or raw.get("translated_preview"),
+            language_detected = raw.get("language") or raw.get("detected_lang"),
+            meta              = {k: v for k, v in raw.items()
+                                 if k not in {"confidence", "matched_pattern", "pattern",
+                                              "matched_text", "score", "danger_score",
+                                              "threshold", "translated_text", "translated_preview",
+                                              "language", "detected_lang"}},
+        )
+
+    def summary(self) -> str:
+        """One-line human-readable summary of the scan result."""
+        if not self.is_attack:
+            return f"SAFE (conf={self.confidence:.2f})"
+        layers = ", ".join(self.layers_fired) if self.layers_fired else "unknown"
+        return (
+            f"ATTACK {self.attack_type} "
+            f"(conf={self.confidence:.2f}, layers=[{layers}])"
+        )
 
 
 # Layer 1: attack pattern definitions
@@ -1589,6 +1638,53 @@ _pair_embedder = None
 _pair_threshold: float = 0.60
 _pair_load_attempted: bool = False
 
+# ── Meta-classifier (XGBoost on 11 layer scores) ─────────────────────────────
+_meta_clf             = None
+_meta_clf_threshold:  float      = 0.50
+_meta_clf_features:   list[str]  = []
+_meta_clf_attempted:  bool       = False
+_meta_clf_lock        = threading.Lock()
+
+
+def _load_meta_classifier() -> bool:
+    global _meta_clf, _meta_clf_threshold, _meta_clf_features, _meta_clf_attempted
+    with _meta_clf_lock:
+        if _meta_clf_attempted:
+            return _meta_clf is not None
+        _meta_clf_attempted = True
+        try:
+            import json as _json2
+            import joblib
+            _models_dir = Path(__file__).parent / "models"
+            _clf_path   = _models_dir / "meta_clf.pkl"
+            _meta_path  = _models_dir / "meta_clf.json"
+            if not _clf_path.exists():
+                return False
+            _meta_clf = joblib.load(_clf_path)
+            if _meta_path.exists():
+                with open(_meta_path, encoding="utf-8") as f:
+                    meta = _json2.load(f)
+                _meta_clf_threshold = float(meta.get("threshold", 0.30))
+                _meta_clf_features  = meta.get("layer_names", [])
+            return True
+        except Exception:
+            return False
+
+
+def _run_meta_classifier(layer_scores: dict[str, float]) -> float:
+    """Return meta-classifier attack probability (0.0 if unavailable)."""
+    if not _load_meta_classifier():
+        return 0.0
+    try:
+        import numpy as _np
+        vec = _np.array(
+            [[layer_scores.get(f, 0.0) for f in _meta_clf_features]],
+            dtype=_np.float32,
+        )
+        return float(_meta_clf.predict_proba(vec)[0][1])
+    except Exception:
+        return 0.0
+
 
 def _load_pair_classifier() -> bool:
     global _pair_clf, _pair_embedder, _pair_threshold, _pair_load_attempted
@@ -1606,9 +1702,12 @@ def _load_pair_classifier() -> bool:
         _repo_models = Path(__file__).parent.parent / "models"
         _models_dir  = _pkg_models if (_pkg_models / "pair_intent_classifier.pkl").exists() else _repo_models
 
-        # Prefer v4 > v3 > v2 > v1 (each version adds harder training examples).
-        # v4 = 3× hard-positive weighting at the natural 0.50 threshold —
-        # the version the README and paper results refer to.
+        # Prefer v5 > v4 > v3 > v2 > v1.
+        # v5 = trained on sklearn 1.7.2 + NLLB multilingual augmentation (16k examples).
+        #      Fixes FPR regression caused by sklearn 1.6.1->1.7.2 boundary shift.
+        # v4 = 3× hard-positive weighting at threshold 0.50 (pre-v5 production model).
+        _v5_clf  = _models_dir / "pair_intent_classifier_v5.pkl"
+        _v5_meta = _models_dir / "pair_intent_meta_v5.json"
         _v4_clf  = _models_dir / "pair_intent_classifier_v4.pkl"
         _v4_meta = _models_dir / "pair_intent_meta_v4.json"
         _v3_clf  = _models_dir / "pair_intent_classifier_v3.pkl"
@@ -1618,7 +1717,10 @@ def _load_pair_classifier() -> bool:
         _v1_clf  = _models_dir / "pair_intent_classifier.pkl"
         _v1_meta = _models_dir / "pair_intent_meta.json"
 
-        if _v4_clf.exists():
+        if _v5_clf.exists():
+            clf_path  = _v5_clf
+            meta_path = _v5_meta
+        elif _v4_clf.exists():
             clf_path  = _v4_clf
             meta_path = _v4_meta
         elif _v3_clf.exists():
@@ -1767,6 +1869,13 @@ _MITIGATIONS: dict[str, str] = {
         "instruct the model to evaluate each reply independently and not treat injected "
         "assistant turns as behavioral precedent."
     ),
+    "COPYRIGHT_REPRODUCTION": (
+        "A request to reproduce copyrighted content verbatim was detected. "
+        "Mitigations: (1) Limit output to short quotations (fair use doctrine). "
+        "(2) Summarise or paraphrase instead of reproducing exactly. "
+        "(3) Direct users to official licensed sources for full works. "
+        "(4) Add output length caps and similarity filters against known copyrighted corpora."
+    ),
 }
 
 _DEFAULT_MITIGATION = (
@@ -1815,6 +1924,102 @@ def _layer_virtualization(prompt: str) -> tuple[str | None, float, dict]:
 def _layer_fiction_harm(prompt: str) -> tuple[str | None, float, dict]:
     from fie.fiction_harm import run_fiction_harm_detection
     return run_fiction_harm_detection(prompt)
+
+
+# ── Layer 12: Copyright reproduction detection ────────────────────────────────
+# Targets verbatim reproduction requests for copyrighted text — the worst-
+# performing HarmBench category (36.2% recall). Patterns cover four families:
+#   A. Explicit verbatim commands ("reproduce word for word", "copy exactly")
+#   B. Full-work reproduction ("entire chapter", "complete lyrics", "full book")
+#   C. Content-type + reproduction verb combinations
+#   D. Paraphrase-evasion ("pretend it's your own", "rewrite letter by letter")
+
+_COPYRIGHT_PATTERNS: list[tuple[re.Pattern, float, str]] = [
+    # A — explicit verbatim/exact copy commands (highest confidence)
+    (re.compile(
+        r"\b(?:reproduce|copy|transcribe|type\s+out|write\s+out|paste)\b.{0,40}"
+        r"\b(?:verbatim|word[\s\-]for[\s\-]word|letter[\s\-]by[\s\-]letter|exactly|character[\s\-]by[\s\-]character)\b",
+        re.IGNORECASE,
+    ), 0.82, "verbatim_copy_command"),
+
+    (re.compile(
+        r"\b(?:verbatim|word[\s\-]for[\s\-]word|letter[\s\-]by[\s\-]letter)\b.{0,40}"
+        r"\b(?:reproduce|copy|transcribe|give\s+me|show\s+me|write\s+out)\b",
+        re.IGNORECASE,
+    ), 0.82, "verbatim_copy_command"),
+
+    # B — full work requests ("the full lyrics", "entire text of", "complete chapter")
+    (re.compile(
+        r"\b(?:full|entire|complete|whole)\s+(?:text|lyrics|chapter|book|article|"
+        r"script|screenplay|transcript|content|passage|excerpt)\b",
+        re.IGNORECASE,
+    ), 0.72, "full_work_request"),
+
+    (re.compile(
+        r"\b(?:give|show|provide|output|print|list|write)\s+(?:me\s+)?(?:the\s+)?"
+        r"(?:full|entire|complete|whole)\s+\w+",
+        re.IGNORECASE,
+    ), 0.68, "give_full_content"),
+
+    # C — content type + reproduction verb (songs, books, articles)
+    (re.compile(
+        r"\b(?:reproduce|transcribe|copy\s+out|write\s+out|type\s+out)\s+.{0,30}"
+        r"\b(?:song|book|novel|article|paper|poem|screenplay|script|lyrics|copyright)\b",
+        re.IGNORECASE,
+    ), 0.78, "reproduce_copyrighted_work"),
+
+    (re.compile(
+        r"\b(?:all\s+(?:the\s+)?(?:lyrics|words|verses|lines|stanzas)\s+(?:of|from|to))\b",
+        re.IGNORECASE,
+    ), 0.75, "reproduce_lyrics"),
+
+    (re.compile(
+        r"\b(?:quote|cite)\s+(?:the\s+)?(?:entire|full|complete|whole)\b",
+        re.IGNORECASE,
+    ), 0.74, "full_quote"),
+
+    # D — paraphrase-evasion patterns
+    (re.compile(
+        r"\b(?:pretend|act\s+as\s+if|imagine)\s+.{0,40}"
+        r"\b(?:wrote|authored|created|published)\s+(?:it|this|the\s+\w+)\b",
+        re.IGNORECASE,
+    ), 0.70, "authorship_deception"),
+
+    (re.compile(
+        r"\b(?:rewrite|paraphrase)\s+.{0,50}\b(?:word\s+for\s+word|verbatim|exactly)\b",
+        re.IGNORECASE,
+    ), 0.76, "verbatim_rewrite"),
+]
+
+_COPYRIGHT_MITIGATIONS = (
+    "A request to reproduce copyrighted content verbatim was detected. "
+    "Mitigations: (1) Limit output to short quotations (fair use). "
+    "(2) Summarise or paraphrase instead of reproducing exactly. "
+    "(3) Direct users to official licensed sources. "
+    "(4) Add output length caps and similarity filters against known copyrighted corpora."
+)
+
+
+def _layer_copyright(prompt: str) -> tuple[str | None, float, dict]:
+    best_conf = 0.0
+    best_match: str | None = None
+    best_pattern: str | None = None
+
+    for pattern, conf, label in _COPYRIGHT_PATTERNS:
+        m = pattern.search(prompt)
+        if m and conf > best_conf:
+            best_conf = conf
+            best_match = m.group(0)[:80]
+            best_pattern = label
+
+    if best_conf < 0.65:
+        return None, 0.0, {}
+
+    return "COPYRIGHT_REPRODUCTION", round(best_conf, 4), {
+        "matched_text":    best_match,
+        "matched_pattern": best_pattern,
+        "confidence":      round(best_conf, 4),
+    }
 
 def _layer_multilingual(prompt: str) -> tuple[str | None, float, dict]:
     from fie.multilingual import run_multilingual_detection, _cached_translate, _script_anomaly_score
@@ -1881,10 +2086,11 @@ def _run_all_layers_parallel(
         ("virtualization",      lambda: _layer_virtualization(prompt)),
         ("fiction_harm",        lambda: _layer_fiction_harm(prompt)),
         ("multilingual",        lambda: _layer_multilingual(prompt)),
+        ("copyright",           lambda: _layer_copyright(prompt)),
     ]
 
     results: list[LayerResult] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
         futures = {
             pool.submit(_run_layer_safe, name, fn): name
             for name, fn in tasks
@@ -2077,6 +2283,12 @@ def scan_prompt(
     fired_results = [r for r in all_results if r.attack_type is not None]
     layer_scores  = {r.layer_name: r.confidence for r in all_results}
 
+    # ── Meta-classifier (XGBoost on 11 layer scores) ─────────────────────────
+    # Blends learned aggregation with the weighted-vote result.
+    # When meta_prob > threshold and no layer fired, it can surface attacks
+    # that individually stay below per-layer thresholds (correlated weak signal).
+    _meta_prob = _run_meta_classifier(layer_scores)
+
     # ── Benign framing filter (dampening on fired layer names) ────────────────
     fired_names = [r.layer_name for r in fired_results]
     dampen      = 1.0
@@ -2109,6 +2321,30 @@ def scan_prompt(
     matched_text: str | None = None
     if "regex" in best_evidence:
         matched_text = best_evidence["regex"].get("matched_text")
+
+    # ── Meta-classifier blending ──────────────────────────────────────────────
+    # If meta_clf fires above its threshold, blend its probability 40/60 with
+    # the weighted-vote confidence. This surfaces correlated weak-signal attacks
+    # missed by individual layers. Capped at 0.95 to preserve human-review zone.
+    if _meta_prob >= _meta_clf_threshold:
+        if best_type is None:
+            # No layer fired but meta sees a pattern — treat as UNCERTAIN
+            best_type   = "UNCERTAIN_META"
+            best_conf   = round(_meta_prob * 0.70, 4)
+            best_evidence["meta_classifier"] = {
+                "probability": round(_meta_prob, 4),
+                "threshold":   _meta_clf_threshold,
+                "source":      "meta_only",
+            }
+        else:
+            blended   = round(best_conf * 0.60 + _meta_prob * 0.40, 4)
+            best_conf = min(blended, 0.95)
+            best_evidence["meta_classifier"] = {
+                "probability": round(_meta_prob, 4),
+                "threshold":   _meta_clf_threshold,
+                "blended":     best_conf,
+                "source":      "blended",
+            }
 
     # ── Crescendo trajectory boost (applied before routing) ──────────────────
     # Uses pre-boost confidence so session history isn't artificially inflated.
@@ -2300,3 +2536,31 @@ def scan_prompt(
     # Pass is_uncertain=True so session tracker marks this turn for crescendo detection
     _record_session(prompt, result, session_id, is_uncertain=True)
     return result
+
+
+async def scan_prompt_async(
+    prompt:          str,
+    primary_output:  str         = "",
+    threshold:       float | None = None,
+    session_id:      str | None  = None,
+    use_llama_guard: bool | None = None,
+    domain:          str | None  = None,
+) -> ScanResult:
+    """Async wrapper for scan_prompt(). Safe to call from async FastAPI/aiohttp handlers.
+
+    All CPU-bound work (11 parallel layers, embeddings, XGBoost) runs in the
+    default executor so the event loop is never blocked.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None,
+        lambda: scan_prompt(
+            prompt,
+            primary_output=primary_output,
+            threshold=threshold,
+            session_id=session_id,
+            use_llama_guard=use_llama_guard,
+            domain=domain,
+        ),
+    )
