@@ -1,5 +1,5 @@
 {
-  "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the 'path' with '/' replaced by '__' (release assets are a flat namespace). See docs/OPERATIONS.md for the upload procedure.",
+  "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the plain filename (os.path.basename of path). See docs/OPERATIONS.md for the upload procedure.",
   "release_tag": "models-v1.14.0",
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
@@ -7,13 +7,13 @@
       "path": "fie/models/meta_clf.pkl",
       "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
       "size": 179675,
-      "used_by": "SDK Layer meta — XGBoost meta-classifier on 11 layer scores (v1.14.0)"
+      "used_by": "SDK meta-layer — XGBoost meta-classifier on 11 layer scores (v1.14.0)"
     },
     {
       "path": "fie/models/meta_clf.json",
       "sha256": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
       "size": 602,
-      "used_by": "SDK Layer meta — meta-classifier threshold + feature names metadata"
+      "used_by": "SDK meta-layer — meta-classifier threshold + feature names metadata"
     },
     {
       "path": "fie/models/failure_classifier_v4.pkl",
@@ -55,7 +55,7 @@
       "path": "fie/models/pair_intent_classifier.pkl",
       "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
       "size": 18325,
-      "used_by": "SDK Layer 8 — PAIR v1 fallback (also the package-dir sentinel in fie/adversarial.py)"
+      "used_by": "SDK Layer 8 — PAIR v1 fallback"
     },
     {
       "path": "fie/models/pair_intent_meta.json",
@@ -67,7 +67,7 @@
       "path": "models/failure_classifier_slim.pkl",
       "sha256": "128fd0bd3023d4d3d7621cc9813f664444ade7cb2c81b06f57ee3b48845096c0",
       "size": 225611,
-      "used_by": "Server — slim 10-feature XGBoost classifier (preferred, see engine/failure_classifier.py)"
+      "used_by": "Server — slim 10-feature XGBoost classifier"
     },
     {
       "path": "models/feature_columns_slim.pkl",
@@ -82,40 +82,16 @@
       "used_by": "Server — slim classifier metadata"
     },
     {
-      "path": "models/failure_classifier_v4.pkl",
-      "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
-      "size": 190524,
-      "used_by": "Server — v4 XGBoost classifier fallback"
-    },
-    {
-      "path": "models/feature_columns_v4.pkl",
-      "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
-      "size": 24207,
-      "used_by": "Server — v4 feature columns"
-    },
-    {
-      "path": "models/pair_intent_classifier.pkl",
-      "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
-      "size": 18325,
-      "used_by": "Repo-root fallback when running the SDK from source without fie/models populated"
-    },
-    {
-      "path": "models/pair_intent_meta.json",
-      "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
-      "size": 866,
-      "used_by": "Repo-root fallback metadata"
-    },
-    {
       "path": "storage/faiss_adversarial.index",
       "sha256": "6cfd907daf81dec72f97837724cb225136364c6d457531fbac491a945387a59d",
       "size": 122925,
-      "used_by": "Server — FAISS adversarial archetype index (engine/archetypes/registry.py)"
+      "used_by": "Server — FAISS adversarial archetype index"
     },
     {
       "path": "storage/faiss_adversarial_meta.json",
       "sha256": "ebb61d690211d83c1857ebeae784cacba527c19481fee1509c9ad545f2b3caf1",
       "size": 13344,
-      "used_by": "Server — FAISS index metadata (config.faiss_meta_path)"
+      "used_by": "Server — FAISS index metadata"
     }
   ]
 }
