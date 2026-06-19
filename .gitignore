@@ -119,6 +119,8 @@ scripts/*
 !scripts/download_models.py
 !scripts/model_manifest.json
 !scripts/extend_benchmarks.py
+!scripts/train_meta_classifier.py
+!scripts/nllb_augment.py
 
 # Node / frontend dependencies are restored by `npm install` — never commit.
 node_modules/
