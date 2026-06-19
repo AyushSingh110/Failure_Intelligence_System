@@ -5,12 +5,13 @@
 FIE wraps any LLM with a single decorator. It runs 12 detection layers in parallel on every incoming prompt, blocks confirmed attacks before the model runs, monitors outputs for hallucinations using a shadow ensemble and XGBoost classifier, and logs everything to a real-time dashboard.
 
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
-[![Version](https://img.shields.io/badge/version-1.13.0-brightgreen)](https://pypi.org/project/fie-sdk)
+[![Version](https://img.shields.io/badge/version-1.14.0-brightgreen)](https://pypi.org/project/fie-sdk)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Deployed](https://img.shields.io/badge/Live-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
 [![Downloads](https://img.shields.io/pypi/dm/fie-sdk?label=PyPI%20downloads&color=brightgreen)](https://pypi.org/project/fie-sdk)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20536639-blue)](https://doi.org/10.5281/zenodo.20536639)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20623360-blue)](https://doi.org/10.5281/zenodo.20623360)
 
 > Built and maintained solo. If you tried it — I'd genuinely like to hear what you thought. [Open a discussion](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions) or [email directly](mailto:ayushsingh355vns@gmail.com).
 
@@ -573,11 +574,15 @@ cd Frontend && npm install && npm run dev
 
 ---
 
-## Research Paper
+## Research Papers
 
 Singh, A. (2026). _Hard-Positive Training and Threshold Calibration for Out-of-Distribution Adversarial Prompt Detection._ Zenodo. [https://doi.org/10.5281/zenodo.20536639](https://doi.org/10.5281/zenodo.20536639)
 
-The paper documents Phase 2: architecture vs. training distribution comparison, unknown category benchmarks, hard-positive retraining, threshold calibration, and weight comparison experiments.
+Documents Phase 2: architecture vs. training distribution comparison, unknown category benchmarks, hard-positive retraining, threshold calibration, and weight comparison experiments.
+
+Singh, A. (2026). _Adversarial Attack Signatures in Large Language Models: Entropy, Intent, and Generalisation Across Fourteen Attack Categories._ Zenodo. [https://doi.org/10.5281/zenodo.20623360](https://doi.org/10.5281/zenodo.20623360)
+
+Documents the structural, behavioural, and semantic signature classes across 14 attack categories — including the multilingual detection overhaul, translate-then-PAIR pipeline, NLLB-200 data augmentation, and layer score stacking introduced in v1.14.0.
 
 Phase 3 research (FSV ablation, hallucination evaluation, PAIR v4, hard-positive pipeline) is documented in [Technical_report.md](Technical_report.md).
 
