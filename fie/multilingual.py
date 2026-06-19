@@ -237,7 +237,7 @@ def _detect_language_of_latin_text(text: str) -> tuple[str | None, float]:
         results = detect_langs(stripped[:500])
         if results:
             top = results[0]
-            if top.prob >= 0.70 and top.lang != "en":
+            if top.prob >= 0.85 and top.lang != "en":
                 return top.lang, round(float(top.prob), 3)
         return None, 0.0
     except ImportError:
@@ -274,15 +274,22 @@ def _tier25_romanised_detection(prompt: str) -> tuple[str | None, float, dict]:
 
     Returns (attack_type, confidence, evidence) or (None, 0.0, {}).
     """
+    # Minimum length gate — langdetect is unreliable on short text and
+    # commonly misidentifies short English phrases as Romance languages.
+    if len(prompt.strip()) < 60:
+        return None, 0.0, {}
+
     lang, lang_conf = _detect_language_of_latin_text(prompt)
     if lang is None:
         return None, 0.0, {}
 
     translated = translate_to_english(prompt)
     if not translated:
-        # Language detected but translation failed — return a mild signal
-        # so the prompt at least enters the UNCERTAIN zone for LlamaGuard review.
-        return "MULTILINGUAL_INJECTION", 0.58, {
+        # Translation failed — only signal if language confidence is very high
+        # (> 0.90) to avoid false positives from misidentified English text.
+        if lang_conf < 0.90:
+            return None, 0.0, {}
+        return "MULTILINGUAL_INJECTION", 0.55, {
             "tier25_romanised": True,
             "detected_lang":    lang,
             "lang_confidence":  lang_conf,
