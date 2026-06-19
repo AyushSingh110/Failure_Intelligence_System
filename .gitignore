@@ -40,6 +40,11 @@ data/jbb_tier1/
 # PAIR classifier training corpus
 data/pair_training/
 
+# Generated checkpoint and augmentation output (never push)
+data/harmbench_checkpoint.jsonl
+data/meta_clf_checkpoint.jsonl
+data/nllb_augment_checkpoint.jsonl
+
 # Adversarial evaluation data 
 data/adversarial_eval_set.jsonl
 data/eval_new_attacks_results.json
