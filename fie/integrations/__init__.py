@@ -1,5 +1,5 @@
 """
-fie.integrations — Drop-in wrappers for popular LLM SDKs.
+fie.integrations — Drop-in wrappers for popular LLM SDKs and web frameworks.
 
 Usage:
     # OpenAI
@@ -12,12 +12,16 @@ Usage:
     client = anthropic.Client(api_key="sk-ant-...", fie_url="...", fie_api_key="...")
     response = client.messages.create(model="claude-3-5-sonnet-20241022", messages=[...])
 
-Both wrappers:
+    # FastAPI / Starlette (one-line middleware — protects every route)
+    from fie.integrations.fastapi import FIEMiddleware
+    app.add_middleware(FIEMiddleware)
+
+SDK wrappers:
   - Run FIE adversarial scan on the prompt BEFORE the API call (blocks attacks)
   - Send prompt + response to FIE server in background (mode="monitor")
   - Or block and return corrected answer (mode="correct")
   - Never raise if FIE is unreachable — always return the real LLM response
 """
-from fie.integrations import openai, anthropic
+from fie.integrations import openai, anthropic, fastapi
 
-__all__ = ["openai", "anthropic"]
+__all__ = ["openai", "anthropic", "fastapi"]

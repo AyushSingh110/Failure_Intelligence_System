@@ -7,6 +7,7 @@ import random
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -19,29 +20,92 @@ BENIGN_COUNT    = 100
 RANDOM_SEED     = 42
 
 
-#Data loading 
+#Data loading
+
+# JailbreakBench artifacts live in a separate GitHub repo: JailbreakBench/artifacts.
+# URL structure: .../attack-artifacts/{METHOD}/{attack_type}/{model}.json
+# We first fetch attack-info.json to discover which attack_type to use.
+_JBB_ARTIFACTS_BASE = (
+    "https://raw.githubusercontent.com/JailbreakBench/artifacts/main/attack-artifacts"
+)
+_JBB_MODEL = "vicuna-13b-v1.5"
+# Cache dir so re-runs don't re-download (mirrors what the jailbreakbench library does)
+_JBB_CACHE_DIR = Path(os.path.expanduser("~")) / ".cache" / "jailbreakbench" / "attack-artifacts"
+
+
+def _urllib_get(url: str) -> dict:
+    import urllib.request, urllib.error
+    req = urllib.request.Request(url, headers={"User-Agent": "fie-eval"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, urllib.error.HTTPError) as exc:
+        raise RuntimeError(f"Could not download {url}: {exc}") from exc
+
+
+def _fetch_jbb_artifact(method: str) -> list[dict]:
+    """Download one JailbreakBench artifact JSON via urllib (no extra deps).
+    Mirrors jailbreakbench.artifact logic without importing the package.
+    """
+    # Step 1: get attack-info.json to find which attack_type applies
+    info_cache = _JBB_CACHE_DIR / method / "attack-info.json"
+    if info_cache.exists():
+        with open(info_cache) as f:
+            info = json.load(f)
+    else:
+        info_url = f"{_JBB_ARTIFACTS_BASE}/{method}/attack-info.json"
+        info = _urllib_get(info_url)
+        info_cache.parent.mkdir(parents=True, exist_ok=True)
+        with open(info_cache, "w") as f:
+            json.dump(info, f)
+
+    # info["models"] = {"vicuna-13b-v1.5": ["white_box"], ...}
+    models = info.get("models", {})
+    attack_types = models.get(_JBB_MODEL, [])
+    if not attack_types:
+        raise RuntimeError(f"No attack types found for model {_JBB_MODEL} in {method}")
+    attack_type = attack_types[0] if isinstance(attack_types, list) else list(attack_types)[0]
+
+    # Step 2: fetch the artifact JSON
+    artifact_cache = _JBB_CACHE_DIR / method / attack_type / f"{_JBB_MODEL}.json"
+    if artifact_cache.exists():
+        with open(artifact_cache) as f:
+            data = json.load(f)
+    else:
+        url = f"{_JBB_ARTIFACTS_BASE}/{method}/{attack_type}/{_JBB_MODEL}.json"
+        data = _urllib_get(url)
+        artifact_cache.parent.mkdir(parents=True, exist_ok=True)
+        with open(artifact_cache, "w") as f:
+            json.dump(data, f)
+
+    return data.get("jailbreaks", [])
+
 
 def load_attack_prompts() -> list[dict]:
-    """Load real jailbreak prompts from JailbreakBench (3 attack methods)."""
-    import jailbreakbench as jbb
-
+    """Load real jailbreak prompts from JailbreakBench (3 attack methods).
+    Downloads artifact JSONs directly from GitHub — no jailbreakbench package needed.
+    """
     prompts: list[dict] = []
     for method in ATTACK_METHODS:
         print(f"  Loading JailbreakBench/{method}...", end=" ", flush=True)
         try:
-            artifact = jbb.read_artifact(method=method, model_name="vicuna-13b-v1.5")
-            for jb in artifact.jailbreaks:
-                if jb.prompt:
-                    prompts.append({
-                        "prompt":      jb.prompt,
-                        "label":       "attack",
-                        "source":      "jailbreakbench",
-                        "method":      method,
-                        "behavior":    jb.behavior,
-                        "category":    jb.category,
-                        "jailbroken":  jb.jailbroken,   # ground truth: did it succeed vs live model
-                    })
-            print(f"{len(artifact.jailbreaks)} prompts loaded")
+            jailbreaks = _fetch_jbb_artifact(method)
+            count = 0
+            for jb in jailbreaks:
+                prompt = jb.get("prompt") or jb.get("attacked_prompt") or ""
+                if not prompt:
+                    continue
+                prompts.append({
+                    "prompt":     prompt,
+                    "label":      "attack",
+                    "source":     "jailbreakbench",
+                    "method":     method,
+                    "behavior":   jb.get("behavior", ""),
+                    "category":   jb.get("category", "unknown"),
+                    "jailbroken": jb.get("jailbroken", None),
+                })
+                count += 1
+            print(f"{count} prompts loaded")
         except Exception as e:
             print(f"FAILED — {e}")
     return prompts
@@ -221,10 +285,15 @@ def main() -> None:
                         help="Number of benign prompts to sample (default: 100)")
     parser.add_argument("--delay",   type=float, default=0.15,
                         help="Delay between server requests in seconds (default: 0.15)")
+    parser.add_argument("--resume",  type=str,   default=None, metavar="PATH",
+                        help="Resume from an existing raw JSONL (skip already-scanned prompts)")
     args = parser.parse_args()
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    raw_path     = os.path.join(RESULTS_DIR, f"raw_{timestamp}.jsonl")
+    if args.resume:
+        raw_path = args.resume
+    else:
+        raw_path = os.path.join(RESULTS_DIR, f"raw_{timestamp}.jsonl")
     summary_path = os.path.join(RESULTS_DIR, f"summary_{timestamp}.json")
 
     print("  FIE × JailbreakBench Evaluation")
@@ -243,12 +312,25 @@ def main() -> None:
     print(f"  Attack        : {len(attack_prompts)}")
     print(f"  Benign        : {len(benign_prompts)}")
 
-    # Run detection 
-    print("\n[2/3] Running detection...")
-    rows: list[dict] = []
+    # Load existing rows if resuming
+    already_scanned: dict[str, dict] = {}
+    if args.resume and os.path.exists(args.resume):
+        with open(args.resume, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    obj = json.loads(line)
+                    already_scanned[obj["prompt"]] = obj
+        print(f"\n  Resuming: {len(already_scanned)} prompts already scanned from {args.resume}")
 
-    for i, entry in enumerate(all_prompts):
-        print(f"\r  Progress: {i+1}/{len(all_prompts)} "
+    # Run detection
+    print("\n[2/3] Running detection...")
+    rows: list[dict] = list(already_scanned.values())
+    pending = [e for e in all_prompts if e["prompt"] not in already_scanned]
+    print(f"  Scanning {len(pending)}/{len(all_prompts)} remaining prompts...")
+
+    for i, entry in enumerate(pending):
+        print(f"\r  Progress: {i+1}/{len(pending)} "
               f"({'attack' if entry['label'] == 'attack' else 'benign ':7s} "
               f"{entry['method']:<8s})", end="", flush=True)
 
@@ -277,14 +359,14 @@ def main() -> None:
             row["server_error"]       = "server not configured"
 
         rows.append(row)
+        already_scanned[row["prompt"]] = row
 
-        # Save after every 25 prompts — progress is preserved on crash
+        # Append-only checkpoint every 25 new prompts
         if (i + 1) % 25 == 0:
-            with open(raw_path, "w", encoding="utf-8") as f:
-                for r in rows:
-                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            with open(raw_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    # Final save of raw results
+    # Final save of all rows (overwrite with complete set)
     with open(raw_path, "w", encoding="utf-8") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")

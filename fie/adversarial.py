@@ -231,6 +231,7 @@ class ScanResult:
     matched_text:   str | None          # excerpt that triggered detection
     mitigation:     str                 # human-readable mitigation advice
     evidence:       dict = field(default_factory=dict)  # per-layer detail
+    layer_scores:   dict = field(default_factory=dict)  # {layer_name: confidence} for all 11 layers
 
 
 # Layer 1: attack pattern definitions
@@ -1816,8 +1817,24 @@ def _layer_fiction_harm(prompt: str) -> tuple[str | None, float, dict]:
     return run_fiction_harm_detection(prompt)
 
 def _layer_multilingual(prompt: str) -> tuple[str | None, float, dict]:
-    from fie.multilingual import run_multilingual_detection
-    return run_multilingual_detection(prompt)
+    from fie.multilingual import run_multilingual_detection, _cached_translate, _script_anomaly_score
+    attack_type, confidence, evidence = run_multilingual_detection(prompt)
+    # Translate-then-PAIR: if script anomaly or Tier 2.5 fired, translate and run
+    # PAIR v4 on the English translation — closes ~40-pt multilingual recall gap.
+    anomaly = _script_anomaly_score(prompt)
+    if (anomaly >= 0.10 or evidence.get("tier25_romanised")) and len(prompt.strip()) >= 30:
+        translated = evidence.get("translated_text") or _cached_translate(prompt)
+        if translated and len(translated.strip()) >= 20:
+            pair_type, pair_conf, pair_ev = _run_pair_classifier(translated)
+            if pair_type and pair_conf > confidence:
+                return "MULTILINGUAL_INJECTION", round(pair_conf, 4), {
+                    **evidence,
+                    "translate_pair_fired": True,
+                    "pair_confidence":      round(pair_conf, 4),
+                    "pair_threshold":       pair_ev.get("threshold"),
+                    "translated_preview":   translated[:150],
+                }
+    return attack_type, confidence, evidence
 
 
 # ── Parallel layer runner ─────────────────────────────────────────────────────
@@ -2058,6 +2075,7 @@ def scan_prompt(
     # ── Parallel layer execution ──────────────────────────────────────────────
     all_results   = _run_all_layers_parallel(prompt, primary_output)
     fired_results = [r for r in all_results if r.attack_type is not None]
+    layer_scores  = {r.layer_name: r.confidence for r in all_results}
 
     # ── Benign framing filter (dampening on fired layer names) ────────────────
     fired_names = [r.layer_name for r in fired_results]
@@ -2130,6 +2148,7 @@ def scan_prompt(
             matched_text = None,
             mitigation   = "",
             evidence     = best_evidence,
+            layer_scores = layer_scores,
         )
         _scan_cache.set(_cache_prompt, result)
         _record_session(prompt, result, session_id)
@@ -2150,6 +2169,7 @@ def scan_prompt(
             matched_text = matched_text,
             mitigation   = mitigation,
             evidence     = best_evidence,
+            layer_scores = layer_scores,
         )
         # Feedback loop: record input block for human review
         try:
@@ -2202,6 +2222,7 @@ def scan_prompt(
             matched_text = matched_text,
             mitigation   = mitigation,
             evidence     = best_evidence | {"llama_guard": "confirmed_attack"},
+            layer_scores = layer_scores,
         )
     elif lg_verdict is False:
         # LlamaGuard says safe → clear
@@ -2214,6 +2235,7 @@ def scan_prompt(
             matched_text = None,
             mitigation   = "",
             evidence     = best_evidence | {"llama_guard": "confirmed_safe"},
+            layer_scores = layer_scores,
         )
     else:
         # LlamaGuard unavailable or skipped — block conservatively instead of allowing
@@ -2231,6 +2253,7 @@ def scan_prompt(
                 matched_text = matched_text,
                 mitigation   = mitigation,
                 evidence     = best_evidence | {"llama_guard": "unavailable_blocked"},
+                layer_scores = layer_scores,
             )
         else:
             # FIE_UNCERTAIN_ALLOW=1 restores old pass-through behaviour (dev/test use)
@@ -2243,6 +2266,7 @@ def scan_prompt(
                 matched_text = None,
                 mitigation   = "",
                 evidence     = best_evidence | {"llama_guard": "unavailable_allowed"},
+                layer_scores = layer_scores,
             )
 
     # Record UNCERTAIN-zone blocks in the feedback store (for human review queue)

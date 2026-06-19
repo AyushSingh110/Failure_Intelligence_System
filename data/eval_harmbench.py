@@ -10,8 +10,9 @@ sys.path.insert(0, str(ROOT))
 from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 
-RESULTS_DIR = ROOT / "data" / "jbb_tier1"
-PLOTS_DIR   = ROOT / "notebooks" / "pair_classifier_plots"
+RESULTS_DIR      = ROOT / "data" / "jbb_tier1"
+PLOTS_DIR        = ROOT / "notebooks" / "pair_classifier_plots"
+CHECKPOINT_PATH  = ROOT / "data" / "harmbench_checkpoint.jsonl"
 PLOTS_DIR.mkdir(exist_ok=True)
 
 # HarmBench semantic categories (7 standard)
@@ -95,25 +96,57 @@ def load_harmbench_alpaca_benign(n: int = 200) -> list[dict]:
         return []
 
 
-# ── Detection ─────────────────────────────────────────────────────────────────
+# ── Detection (checkpoint-aware) ──────────────────────────────────────────────
 
-def run_fie(rows: list[dict]) -> list[dict]:
+def _load_checkpoint() -> dict[str, dict]:
+    """Load existing checkpoint rows keyed by prompt text."""
+    if not CHECKPOINT_PATH.exists():
+        return {}
+    seen: dict[str, dict] = {}
+    with open(CHECKPOINT_PATH, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                obj = json.loads(line)
+                seen[obj["prompt"]] = obj
+    return seen
+
+
+def run_fie(rows: list[dict], resume: bool = False) -> list[dict]:
     from fie.adversarial import scan_prompt
 
-    print(f"\n  Scanning {len(rows)} prompts with scan_prompt() (6 layers)...")
-    result = []
-    for i, row in enumerate(rows):
-        if (i + 1) % 100 == 0:
-            print(f"  [{i+1}/{len(rows)}]", end="\r", flush=True)
+    # Load existing results if resuming
+    checkpoint: dict[str, dict] = _load_checkpoint() if resume else {}
+    if checkpoint:
+        print(f"  Resuming: {len(checkpoint)} prompts already scanned")
+
+    CHECKPOINT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ckpt_file = open(CHECKPOINT_PATH, "a", encoding="utf-8")
+
+    total   = len(rows)
+    pending = [r for r in rows if r["prompt"] not in checkpoint]
+    print(f"\n  Scanning {len(pending)}/{total} prompts with scan_prompt() ...")
+
+    for i, row in enumerate(pending):
         r = dict(row)
         s = scan_prompt(r["prompt"])
         r["fie_detected"]    = s.is_attack
         r["fie_attack_type"] = s.attack_type
         r["fie_confidence"]  = s.confidence
         r["fie_layers"]      = s.layers_fired
-        result.append(r)
-    print("\n  Done.")
-    return result
+        checkpoint[r["prompt"]] = r
+        ckpt_file.write(json.dumps(r) + "\n")
+
+        if (i + 1) % 50 == 0:
+            ckpt_file.flush()
+            print(f"  [{i+1}/{len(pending)}] checkpoint flushed", end="\r", flush=True)
+
+    ckpt_file.flush()
+    ckpt_file.close()
+    print(f"\n  Done. ({len(checkpoint)} total in checkpoint)")
+
+    # Return rows in original order, merging checkpoint
+    return [checkpoint.get(r["prompt"], r) for r in rows]
 
 
 # ── Metrics ────────────────────────────────────────────────────────────────────
@@ -239,6 +272,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", type=int, default=None,
                         help="Max behaviors per category (default: all)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Resume from checkpoint — skip already-scanned prompts")
     args = parser.parse_args()
 
     print("FIE x HarmBench Evaluation")
@@ -263,7 +298,7 @@ def main() -> None:
 
     # Scan
     print("\n[2/3] Running FIE detection...")
-    all_rows = run_fie(all_rows)
+    all_rows = run_fie(all_rows, resume=args.resume)
 
     # Metrics
     metrics = compute_metrics(all_rows)

@@ -1,8 +1,20 @@
 {
   "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the 'path' with '/' replaced by '__' (release assets are a flat namespace). See docs/OPERATIONS.md for the upload procedure.",
-  "release_tag": "models-v1.13.0",
+  "release_tag": "models-v1.14.0",
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
+    {
+      "path": "fie/models/meta_clf.pkl",
+      "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+      "size": 179675,
+      "used_by": "SDK Layer meta — XGBoost meta-classifier on 11 layer scores (v1.14.0)"
+    },
+    {
+      "path": "fie/models/meta_clf.json",
+      "sha256": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
+      "size": 602,
+      "used_by": "SDK Layer meta — meta-classifier threshold + feature names metadata"
+    },
     {
       "path": "fie/models/failure_classifier_v4.pkl",
       "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
