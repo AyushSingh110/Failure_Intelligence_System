@@ -55,7 +55,8 @@ def _sha256(path: str) -> str:
 
 
 def _asset_name(rel_path: str) -> str:
-    return rel_path.replace("/", "__")
+    # Release assets use the plain filename (no path prefix).
+    return os.path.basename(rel_path)
 
 
 def _download(url: str, dest: str, token: str = "") -> None:
