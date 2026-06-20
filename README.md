@@ -5,7 +5,7 @@
 FIE wraps any LLM with a single decorator. It runs 12 detection layers in parallel on every incoming prompt, blocks confirmed attacks before the model runs, monitors outputs for hallucinations using a shadow ensemble and XGBoost classifier, and logs everything to a real-time dashboard.
 
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
-[![Version](https://img.shields.io/badge/version-1.15.0-brightgreen)](https://pypi.org/project/fie-sdk)
+[![Version](https://img.shields.io/badge/version-1.16.0-brightgreen)](https://pypi.org/project/fie-sdk)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Deployed](https://img.shields.io/badge/Live-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
@@ -14,6 +14,36 @@ FIE wraps any LLM with a single decorator. It runs 12 detection layers in parall
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20623360-blue)](https://doi.org/10.5281/zenodo.20623360)
 
 > Built and maintained solo. If you tried it — I'd genuinely like to hear what you thought. [Open a discussion](https://github.com/AyushSingh110/Failure_Intelligence_System/discussions) or [email directly](mailto:ayushsingh355vns@gmail.com).
+
+---
+
+## What's new in v1.16.0
+
+### PAIR v6 — out-of-distribution false positives fixed
+
+PAIR v5's reported 4% FPR was measured on a validation set drawn from the same Alpaca distribution it trained on. On **real out-of-distribution benign prompts** — medical, legal, coding, security-research questions — its false-positive rate was an order of magnitude worse. A guardrail's in-distribution FPR is not evidence of deployability.
+
+PAIR v6 retrains on a **domain-balanced corpus** (general / medical / legal / coding / factual benign + genuinely-harmful attacks from JailbreakBench, MaliciousInstruct, AdvBench, and policy-filtered forbidden-question data), plus local Llama-3 hard-positive paraphrase augmentation. Architecture, embedder, and classifier family are unchanged — only the training distribution changed.
+
+**Out-of-distribution benign FPR (full pipeline):**
+
+| Domain | PAIR v5 | PAIR v6 |
+| --- | --- | --- |
+| Medical | 71.2% | **0.0%** |
+| Coding | 8.8% | **1.2%** |
+| General | 15.0% | **6.2%** |
+| Factual (dark-but-benign) | 55.0% | **15.0%** |
+| Legal | 67.5% | 28.7% |
+| **Overall** | **41.5%** | **9.7%** |
+
+A **4.3× reduction** in out-of-distribution false positives with no architecture change, at comparable deployable attack recall (full-pipeline TPR 85.7%, precision 89.4%, threshold 0.50). Legal-domain benign remains a known training-data gap (questions like _"Legality of X"_ genuinely read as adversarial) — tracked for v6.2.
+
+Set `FIE_PAIR_VERSION=v5` to A/B against the previous model.
+
+### Two methodology findings
+
+- **In-distribution metrics lie.** Validating a guardrail on benign data from its own training distribution dramatically understates real-world FPR. v6 is evaluated on held-out, domain-shifted benign sets.
+- **"Forbidden" ≠ "adversarial."** Several popular "harmful" datasets (HarmfulQA, the Do-Anything-Now forbidden set) mix in benign questions or liability-restricted-but-harmless requests (financial/legal/health advice). Training a detector on these as attacks re-introduces the exact false positives it should avoid. A label-disagreement audit caught both.
 
 ---
 

@@ -1702,38 +1702,46 @@ def _load_pair_classifier() -> bool:
         _repo_models = Path(__file__).parent.parent / "models"
         _models_dir  = _pkg_models if (_pkg_models / "pair_intent_classifier.pkl").exists() else _repo_models
 
-        # Prefer v5 > v4 > v3 > v2 > v1.
-        # v5 = trained on sklearn 1.7.2 + NLLB multilingual augmentation (16k examples).
-        #      Fixes FPR regression caused by sklearn 1.6.1->1.7.2 boundary shift.
-        # v4 = 3× hard-positive weighting at threshold 0.50 (pre-v5 production model).
-        _v5_clf  = _models_dir / "pair_intent_classifier_v5.pkl"
-        _v5_meta = _models_dir / "pair_intent_meta_v5.json"
-        _v4_clf  = _models_dir / "pair_intent_classifier_v4.pkl"
-        _v4_meta = _models_dir / "pair_intent_meta_v4.json"
-        _v3_clf  = _models_dir / "pair_intent_classifier_v3.pkl"
-        _v3_meta = _models_dir / "pair_intent_meta_v3.json"
-        _v2_clf  = _models_dir / "pair_intent_classifier_v2.pkl"
-        _v2_meta = _models_dir / "pair_intent_meta_v2.json"
-        _v1_clf  = _models_dir / "pair_intent_classifier.pkl"
-        _v1_meta = _models_dir / "pair_intent_meta.json"
+        # Prefer v6 > v5 > v4 > v3 > v2 > v1.
+        # v6 = domain-balanced corpus (medical/legal/coding/factual benign +
+        #      genuinely-harmful attacks). Fixes the out-of-distribution benign
+        #      FPR (medical 71%, legal 67% on v5) caused by Alpaca-only benign data.
+        # v5 = sklearn 1.7.2 + NLLB multilingual augmentation. Fixed the
+        #      1.6.1->1.7.2 boundary-shift regression but kept Alpaca-only benign.
+        # v4 = 3× hard-positive weighting at threshold 0.50.
+        #
+        # Override with FIE_PAIR_VERSION=v5 (etc.) to force a specific model —
+        # used for A/B comparison in the v6 evaluation.
+        import os as _os
+        _force = (_os.environ.get("FIE_PAIR_VERSION") or "").strip().lower()
+        _versions = [
+            ("v6", _models_dir / "pair_intent_classifier_v6.pkl",
+                   _models_dir / "pair_intent_meta_v6.json"),
+            ("v5", _models_dir / "pair_intent_classifier_v5.pkl",
+                   _models_dir / "pair_intent_meta_v5.json"),
+            ("v4", _models_dir / "pair_intent_classifier_v4.pkl",
+                   _models_dir / "pair_intent_meta_v4.json"),
+            ("v3", _models_dir / "pair_intent_classifier_v3.pkl",
+                   _models_dir / "pair_intent_meta_v3.json"),
+            ("v2", _models_dir / "pair_intent_classifier_v2.pkl",
+                   _models_dir / "pair_intent_meta_v2.json"),
+            ("v1", _models_dir / "pair_intent_classifier.pkl",
+                   _models_dir / "pair_intent_meta.json"),
+        ]
 
-        if _v5_clf.exists():
-            clf_path  = _v5_clf
-            meta_path = _v5_meta
-        elif _v4_clf.exists():
-            clf_path  = _v4_clf
-            meta_path = _v4_meta
-        elif _v3_clf.exists():
-            clf_path  = _v3_clf
-            meta_path = _v3_meta
-        elif _v2_clf.exists():
-            clf_path  = _v2_clf
-            meta_path = _v2_meta
-        else:
-            clf_path  = _v1_clf
-            meta_path = _v1_meta
+        clf_path = meta_path = None
+        if _force:
+            for name, clf, meta in _versions:
+                if name == _force and clf.exists():
+                    clf_path, meta_path = clf, meta
+                    break
+        if clf_path is None:
+            for name, clf, meta in _versions:
+                if clf.exists():
+                    clf_path, meta_path = clf, meta
+                    break
 
-        if not clf_path.exists():
+        if clf_path is None or not clf_path.exists():
             return False
 
         _pair_clf = joblib.load(clf_path)
