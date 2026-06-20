@@ -1,0 +1,32 @@
+{
+  "total": 1430,
+  "attacks": 700,
+  "benign": 730,
+  "attack_buckets": {
+    "jailbreakbench": 100,
+    "malicious_instruct": 100,
+    "forbidden_qs": 210,
+    "advbench_mirror": 290
+  },
+  "benign_buckets": {
+    "general": 200,
+    "medical": 300,
+    "legal": 100,
+    "coding": 100,
+    "hard_benign": 30
+  },
+  "licenses": [
+    "CC-BY-4.0",
+    "CC-BY-NC-4.0",
+    "CC-BY-SA-4.0",
+    "MIT",
+    "self-authored"
+  ],
+  "dedup_against": [
+    "data\\pair_training\\train.jsonl",
+    "data\\pair_training\\val.jsonl",
+    "data\\pair_training\\test.jsonl"
+  ],
+  "seed": 42,
+  "notes": "Domain-balanced v6 corpus. Public research datasets + self-authored hard benign cases. No closed-model outputs, no scraped user chats."
+}

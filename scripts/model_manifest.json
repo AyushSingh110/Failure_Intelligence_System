@@ -4,6 +4,18 @@
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
     {
+      "path": "fie/models/pair_intent_classifier_v6.pkl",
+      "sha256": "9d7f3a1959785f2b7b7044fdefcd1f1e5591b6e5d3752a424e6902cbc2002e45",
+      "size": 11349,
+      "used_by": "SDK Layer 8 — PAIR v6 domain-balanced classifier (full-pipeline recall 85.7%, OOD benign FPR 9.7% vs v5 41.5%, threshold 0.50, sklearn 1.7.2)"
+    },
+    {
+      "path": "fie/models/pair_intent_meta_v6.json",
+      "sha256": "81fd1fb064263f5c0a56c2b6e0e1332ccb3e305e2ba47262133898d2a7bd9733",
+      "size": 1095,
+      "used_by": "SDK Layer 8 — PAIR v6 threshold + embed model metadata"
+    },
+    {
       "path": "fie/models/pair_intent_classifier_v5.pkl",
       "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
       "size": 11349,
