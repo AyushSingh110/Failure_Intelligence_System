@@ -1,0 +1,302 @@
+{
+  "FULL": {
+    "recall": 0.8521,
+    "tp": 438,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:regex": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1077,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.35,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:prompt_guard": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1077,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.35,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:many_shot": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1077,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.35,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:indirect_injection": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:gcg_suffix": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:perplexity_proxy": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1077,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.35,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:pair_classifier": {
+    "recall": 0.0603,
+    "tp": 31,
+    "fpr": 0.0038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0167,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "remove:direct_harm": {
+    "recall": 0.8521,
+    "tp": 438,
+    "fpr": 0.1077,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.35,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:virtualization": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:fiction_harm": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:multilingual": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "remove:copyright": {
+    "recall": 0.8541,
+    "tp": 439,
+    "fpr": 0.1077,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.35,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "only:regex": {
+    "recall": 0.0019,
+    "tp": 1,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:prompt_guard": {
+    "recall": 0.0117,
+    "tp": 6,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:many_shot": {
+    "recall": 0.0,
+    "tp": 0,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:indirect_injection": {
+    "recall": 0.0,
+    "tp": 0,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:gcg_suffix": {
+    "recall": 0.0,
+    "tp": 0,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:perplexity_proxy": {
+    "recall": 0.0019,
+    "tp": 1,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:pair_classifier": {
+    "recall": 0.8521,
+    "tp": 438,
+    "fpr": 0.1038,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3333,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.0667
+    }
+  },
+  "only:direct_harm": {
+    "recall": 0.0447,
+    "tp": 23,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:virtualization": {
+    "recall": 0.0,
+    "tp": 0,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:fiction_harm": {
+    "recall": 0.0156,
+    "tp": 8,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:multilingual": {
+    "recall": 0.0,
+    "tp": 0,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  },
+  "only:copyright": {
+    "recall": 0.0,
+    "tp": 0,
+    "fpr": 0.0,
+    "fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    }
+  }
+}

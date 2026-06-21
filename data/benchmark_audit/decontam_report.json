@@ -1,0 +1,32 @@
+{
+  "cutoff": 0.95,
+  "files": {
+    "data\\pair_training\\train.jsonl": {
+      "original": 2537,
+      "removed_exact": 148,
+      "removed_near": 3,
+      "kept": 2386,
+      "kept_attacks": 1201,
+      "kept_benign": 1185,
+      "output": "data\\pair_training\\train.decontam.jsonl"
+    },
+    "data\\pair_training_v6\\dataset_v6.jsonl": {
+      "original": 1430,
+      "removed_exact": 9,
+      "removed_near": 4,
+      "kept": 1417,
+      "kept_attacks": 687,
+      "kept_benign": 730,
+      "output": "data\\pair_training_v6\\dataset_v6.decontam.jsonl"
+    },
+    "data\\pair_training_v6\\augmented_v6.jsonl": {
+      "original": 175,
+      "removed_exact": 0,
+      "removed_near": 0,
+      "kept": 175,
+      "kept_attacks": 175,
+      "kept_benign": 0,
+      "output": "data\\pair_training_v6\\augmented_v6.decontam.jsonl"
+    }
+  }
+}

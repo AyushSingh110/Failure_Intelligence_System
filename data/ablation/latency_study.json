@@ -1,0 +1,41 @@
+{
+  "per_layer_ms": {
+    "fiction_harm": 8.23,
+    "indirect_injection": 6.86,
+    "gcg_suffix": 9.07,
+    "direct_harm": 5.9,
+    "prompt_guard": 4.39,
+    "perplexity_proxy": 13.12,
+    "many_shot": 11.14,
+    "regex": 9.26,
+    "virtualization": 7.27,
+    "copyright": 11.77,
+    "pair_classifier": 19.18,
+    "multilingual": 15.26
+  },
+  "full_ms": {
+    "mean": 32.5,
+    "p95": 41.8
+  },
+  "lean_ms": {
+    "mean": 27.0,
+    "p95": 35.5
+  },
+  "speedup": 1.2,
+  "full": {
+    "recall": 0.8571,
+    "fpr": 0.0784
+  },
+  "lean": {
+    "recall": 0.8571,
+    "fpr": 0.0784
+  },
+  "pruned": [
+    "direct_harm",
+    "fiction_harm",
+    "indirect_injection",
+    "many_shot",
+    "prompt_guard",
+    "virtualization"
+  ]
+}

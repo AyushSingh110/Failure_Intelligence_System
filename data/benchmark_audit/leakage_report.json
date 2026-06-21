@@ -1,0 +1,21 @@
+{
+  "jailbreakbench": {
+    "total": 282,
+    "exact": 148,
+    "near": 148,
+    "leaked": 148,
+    "leak_rate": 0.5248,
+    "clean_remaining": 134,
+    "near_cutoff": 0.92
+  },
+  "harmbench": {
+    "total": 400,
+    "exact": 9,
+    "near": 13,
+    "leaked": 13,
+    "leak_rate": 0.0325,
+    "clean_remaining": 387,
+    "near_cutoff": 0.92
+  },
+  "training_prompts": 4142
+}
