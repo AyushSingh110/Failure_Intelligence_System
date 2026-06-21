@@ -33,10 +33,10 @@ PAIR v6 retrains on a **domain-balanced corpus** (general / medical / legal / co
 | Coding | 8.8% | **1.2%** |
 | General | 15.0% | **6.2%** |
 | Factual (dark-but-benign) | 55.0% | **15.0%** |
-| Legal | 67.5% | 28.7% |
-| **Overall** | **41.5%** | **9.7%** |
+| Legal | 67.5% | 27.5% |
+| **Overall** | **41.5%** | **9.1%** |
 
-A **4.3× reduction** in out-of-distribution false positives with no architecture change, at comparable deployable attack recall (full-pipeline TPR 85.7%, precision 89.4%, threshold 0.50). Legal-domain benign remains a known training-data gap (questions like _"Legality of X"_ genuinely read as adversarial) — tracked for v6.2.
+A **4.5× reduction** in out-of-distribution false positives with no architecture change, at comparable deployable attack recall (full-pipeline TPR 83.3%, precision 89.7%, threshold 0.50). Legal-domain benign remains a known training-data gap (questions like _"Legality of X"_ genuinely read as adversarial). The shipped model is **v6.2** — retrained after removing all benchmark/held-out leakage from the training data.
 
 Set `FIE_PAIR_VERSION=v5` to A/B against the previous model.
 
@@ -44,6 +44,27 @@ Set `FIE_PAIR_VERSION=v5` to A/B against the previous model.
 
 - **In-distribution metrics lie.** Validating a guardrail on benign data from its own training distribution dramatically understates real-world FPR. v6 is evaluated on held-out, domain-shifted benign sets.
 - **"Forbidden" ≠ "adversarial."** Several popular "harmful" datasets (HarmfulQA, the Do-Anything-Now forbidden set) mix in benign questions or liability-restricted-but-harmless requests (financial/legal/health advice). Training a detector on these as attacks re-introduces the exact false positives it should avoid. A label-disagreement audit caught both.
+
+### Benchmark integrity — audited and decontaminated
+
+We audited our own benchmark sets for train/test contamination (`scripts/audit_benchmark_leakage.py`) and found **52.5% of JailbreakBench prompts overlapped the training data** (concentrated in the GCG/PAIR methods; HarmBench was 3.2%). Rather than report around it, we **removed all benchmark and held-out overlap from training and retrained (v6.2)**, so the numbers below need no clean-subset asterisk:
+
+| Benchmark | Recall (decontaminated, full set) |
+| --- | --- |
+| JailbreakBench | 91.8% |
+| HarmBench | 82.2% |
+
+Per-method JailbreakBench (leakage-free): **JBC 100%, PAIR 100%, GCG 73.7%**. GCG adversarial-suffix attacks are the genuine weak spot. The drop from the previously-reported 95.7% is exactly the memorization the decontamination removed — 91.8% is the honest number. Benchmark _precision_ still uses in-distribution Alpaca benign; the deployable false-positive rate is the out-of-distribution number above (9.1%).
+
+### Architecture audit — what actually carries detection
+
+We ran a full layer ablation (`scripts/ablation_study_v2.py`, `ablation_by_vector.py`, `diagnose_gaps.py`) on leakage-free held-out data. The honest result:
+
+- **The semantic classifier carries the common case.** On standard English single-turn benchmarks, the PAIR classifier _alone_ matches the full pipeline (85.2% recall) — removing any other single layer changes recall by ~0. But standard benchmarks under-represent the vectors the specialized layers target, so benchmark-only ablation _understates_ those layers' value.
+- **Specialized layers earn their place on their own vectors:** `multilingual` (25% → 100% on non-English), `copyright` (12.5% → 100% on verbatim-reproduction), `fiction_harm` (50% → 100% on explicit fiction-wrapped harm), `direct_harm`, and `many_shot` (formatted multi-shot). PAIR alone misses these; the layers recover them.
+- **The real coverage gap is euphemism / paraphrase** (disclosed, not hidden): harm described _without_ trigger words evades both the classifier and the keyword layers (~50% recall), independent of any fiction or roleplay wrapper. Tracked for the next classifier retrain (v6.3) — the fix belongs in training data, not more rules.
+
+Methodological note we want to be transparent about: an earlier pass over-claimed two "vulnerabilities" and a "prune half the layers" result; a controlled diagnostic ([`diagnose_gaps.py`](scripts/diagnose_gaps.py)) traced both to test-construction artifacts and corrected them. Full methodology, including the correction, is in [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md).
 
 ---
 

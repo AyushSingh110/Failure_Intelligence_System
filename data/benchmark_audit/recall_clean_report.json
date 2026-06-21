@@ -1,0 +1,17 @@
+{
+  "pair_version": "v6",
+  "jailbreakbench": {
+    "full_recall": 0.9184,
+    "clean_recall": 0.9627,
+    "full_n": 282,
+    "clean_n": 134,
+    "inflation_pts": -4.42
+  },
+  "harmbench": {
+    "full_recall": 0.8225,
+    "clean_recall": 0.8191,
+    "full_n": 400,
+    "clean_n": 387,
+    "inflation_pts": 0.34
+  }
+}

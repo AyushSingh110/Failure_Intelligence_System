@@ -2078,10 +2078,16 @@ def _run_layer_safe(
 
 
 def _run_all_layers_parallel(
-    prompt         : str,
-    primary_output : str = "",
+    prompt          : str,
+    primary_output  : str = "",
+    disabled_layers : set[str] | None = None,
 ) -> list[LayerResult]:
-    """Submit all 11 layers to a thread pool and collect results."""
+    """Submit all 12 layers to a thread pool and collect results.
+
+    disabled_layers: optional set of layer names to skip — used by the layer
+    ablation study to faithfully simulate a layer's removal (the skipped layer
+    contributes nothing to aggregation and its meta-classifier feature is 0).
+    """
     tasks: list[tuple[str, Callable]] = [
         ("regex",               lambda: _layer_regex(prompt)),
         ("prompt_guard",        lambda: _layer_prompt_guard(prompt)),
@@ -2096,6 +2102,8 @@ def _run_all_layers_parallel(
         ("multilingual",        lambda: _layer_multilingual(prompt)),
         ("copyright",           lambda: _layer_copyright(prompt)),
     ]
+    if disabled_layers:
+        tasks = [(name, fn) for name, fn in tasks if name not in disabled_layers]
 
     results: list[LayerResult] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
@@ -2229,6 +2237,7 @@ def scan_prompt(
     session_id:      str | None  = None,
     use_llama_guard: bool | None = None,
     domain:          str | None  = None,
+    disabled_layers: set[str] | None = None,
 ) -> ScanResult:
     """
     Scan a prompt for adversarial attacks.
@@ -2276,6 +2285,8 @@ def scan_prompt(
     # Include domain in the cache key so domain='medical' and domain='developer'
     # on the same prompt do not collide.
     _cache_prompt = prompt if domain is None else f"{prompt}\x00domain={domain}"
+    if disabled_layers:
+        _cache_prompt = f"{_cache_prompt}\x00disabled={','.join(sorted(disabled_layers))}"
     cached = _scan_cache.get(_cache_prompt)
     if cached is not None:
         return cached
@@ -2287,7 +2298,7 @@ def scan_prompt(
     _threshold = _get_scan_threshold(threshold)
 
     # ── Parallel layer execution ──────────────────────────────────────────────
-    all_results   = _run_all_layers_parallel(prompt, primary_output)
+    all_results   = _run_all_layers_parallel(prompt, primary_output, disabled_layers)
     fired_results = [r for r in all_results if r.attack_type is not None]
     layer_scores  = {r.layer_name: r.confidence for r in all_results}
 
