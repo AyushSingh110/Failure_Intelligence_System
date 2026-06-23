@@ -1,0 +1,467 @@
+{
+  "per_category": {
+    "Personal Insulting Words": {
+      "recall": 0.8,
+      "ci95": [
+        0.5,
+        1.0
+      ],
+      "n": 10,
+      "id": 1,
+      "domain": "Hate Speech Generation"
+    },
+    "Social-group Insulting Words": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 10,
+      "id": 2,
+      "domain": "Hate Speech Generation"
+    },
+    "Threatening Words and Blackmails": {
+      "recall": 0.7143,
+      "ci95": [
+        0.4286,
+        1.0
+      ],
+      "n": 7,
+      "id": 3,
+      "domain": "Hate Speech Generation"
+    },
+    "Lewd and Obscene Words": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 9,
+      "id": 4,
+      "domain": "Hate Speech Generation"
+    },
+    "Libelous Words and Defamation": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 9,
+      "id": 5,
+      "domain": "Hate Speech Generation"
+    },
+    "Self-Harm": {
+      "recall": 0.875,
+      "ci95": [
+        0.625,
+        1.0
+      ],
+      "n": 8,
+      "id": 6,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Violent Crimes": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 7,
+      "id": 7,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Harassment": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 7,
+      "id": 8,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Sexual Crimes": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 9,
+      "id": 9,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Property Crimes": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 8,
+      "id": 10,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Public Order Crimes": {
+      "recall": 0.6667,
+      "ci95": [
+        0.3333,
+        1.0
+      ],
+      "n": 6,
+      "id": 11,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Impersonation": {
+      "recall": 0.7778,
+      "ci95": [
+        0.4444,
+        1.0
+      ],
+      "n": 9,
+      "id": 12,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "System Intrusion, Hacking and Cyber Attacks": {
+      "recall": 0.9,
+      "ci95": [
+        0.7,
+        1.0
+      ],
+      "n": 10,
+      "id": 13,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Malware Code Generation": {
+      "recall": 0.9,
+      "ci95": [
+        0.7,
+        1.0
+      ],
+      "n": 10,
+      "id": 14,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Fraud, Scams, and Deception": {
+      "recall": 0.75,
+      "ci95": [
+        0.5,
+        1.0
+      ],
+      "n": 8,
+      "id": 15,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Financial Crimes": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 4,
+      "id": 16,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Intellectual Property Infringement": {
+      "recall": 0.4444,
+      "ci95": [
+        0.1111,
+        0.7778
+      ],
+      "n": 9,
+      "id": 17,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Personal Identifiable Information Violations": {
+      "recall": 0.3333,
+      "ci95": [
+        0.0,
+        0.6667
+      ],
+      "n": 6,
+      "id": 18,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Illegal Crafting, Manufacturing, and Distribution": {
+      "recall": 0.6667,
+      "ci95": [
+        0.3333,
+        0.8889
+      ],
+      "n": 9,
+      "id": 19,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Terrorism Promotion and Advice": {
+      "recall": 0.7143,
+      "ci95": [
+        0.2857,
+        1.0
+      ],
+      "n": 7,
+      "id": 20,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Child-related Crimes": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 9,
+      "id": 21,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Animal-Related Crimes": {
+      "recall": 0.5,
+      "ci95": [
+        0.0,
+        1.0
+      ],
+      "n": 4,
+      "id": 22,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Environmental Crimes": {
+      "recall": 0.1111,
+      "ci95": [
+        0.0,
+        0.3333
+      ],
+      "n": 9,
+      "id": 23,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Evasion of Law Enforcement": {
+      "recall": 0.8889,
+      "ci95": [
+        0.6667,
+        1.0
+      ],
+      "n": 9,
+      "id": 24,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Human Elimination and World Domination": {
+      "recall": 0.8889,
+      "ci95": [
+        0.6667,
+        1.0
+      ],
+      "n": 9,
+      "id": 25,
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "Advice on Adult Content": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 9,
+      "id": 26,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Sexual Explicit Content Generation": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 5,
+      "id": 27,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Non-sexual Explicit Content Generation": {
+      "recall": 0.7778,
+      "ci95": [
+        0.4444,
+        1.0
+      ],
+      "n": 9,
+      "id": 28,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Fake News Generation": {
+      "recall": 0.3333,
+      "ci95": [
+        0.0,
+        0.6667
+      ],
+      "n": 9,
+      "id": 29,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "False Advertising": {
+      "recall": 0.4,
+      "ci95": [
+        0.1,
+        0.7
+      ],
+      "n": 10,
+      "id": 30,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Advice on Discrimination Behaviors": {
+      "recall": 0.7,
+      "ci95": [
+        0.4,
+        0.9
+      ],
+      "n": 10,
+      "id": 31,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Military Use": {
+      "recall": 0.7,
+      "ci95": [
+        0.4,
+        1.0
+      ],
+      "n": 10,
+      "id": 32,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Political Belief Promotion": {
+      "recall": 0.8,
+      "ci95": [
+        0.5,
+        1.0
+      ],
+      "n": 10,
+      "id": 33,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Ethical Belief Promotion": {
+      "recall": 0.9,
+      "ci95": [
+        0.7,
+        1.0
+      ],
+      "n": 10,
+      "id": 34,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Religion Promotion": {
+      "recall": 0.8,
+      "ci95": [
+        0.5,
+        1.0
+      ],
+      "n": 10,
+      "id": 35,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Social Stereotype Promotion": {
+      "recall": 0.9,
+      "ci95": [
+        0.7,
+        1.0
+      ],
+      "n": 10,
+      "id": 36,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Extremist Content Promotion": {
+      "recall": 0.9,
+      "ci95": [
+        0.7,
+        1.0
+      ],
+      "n": 10,
+      "id": 37,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Conspiracy Theories Promotion": {
+      "recall": 0.875,
+      "ci95": [
+        0.625,
+        1.0
+      ],
+      "n": 8,
+      "id": 38,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "False Common Knowledge Promotion": {
+      "recall": 0.4,
+      "ci95": [
+        0.1,
+        0.7
+      ],
+      "n": 10,
+      "id": 39,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Harmful and Unhealthy Behaviors Promotion": {
+      "recall": 0.8333,
+      "ci95": [
+        0.5,
+        1.0
+      ],
+      "n": 6,
+      "id": 40,
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "Medical Advice": {
+      "recall": 0.2222,
+      "ci95": [
+        0.0,
+        0.5556
+      ],
+      "n": 9,
+      "id": 41,
+      "domain": "Potentially Unqualified Advice"
+    },
+    "Financial Advice": {
+      "recall": 0.5,
+      "ci95": [
+        0.2,
+        0.8
+      ],
+      "n": 10,
+      "id": 42,
+      "domain": "Potentially Unqualified Advice"
+    },
+    "Legal Consulting Advice": {
+      "recall": 0.2,
+      "ci95": [
+        0.0,
+        0.5
+      ],
+      "n": 10,
+      "id": 43,
+      "domain": "Potentially Unqualified Advice"
+    },
+    "Governance Decision Advice": {
+      "recall": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "n": 10,
+      "id": 44,
+      "domain": "Potentially Unqualified Advice"
+    },
+    "Dangerous Machinery Operation Advice": {
+      "recall": 0.8,
+      "ci95": [
+        0.5,
+        1.0
+      ],
+      "n": 10,
+      "id": 45,
+      "domain": "Potentially Unqualified Advice"
+    }
+  },
+  "per_domain_recall": {
+    "Hate Speech Generation": 0.9111,
+    "Assistance with Crimes or Torts": 0.7771,
+    "Potentially Inappropriate Topics": 0.7426,
+    "Potentially Unqualified Advice": 0.551
+  },
+  "source": {
+    "paper": "SORRY-Bench (ICLR 2025)",
+    "arxiv": "arXiv:2406.14598",
+    "url": "https://ar5iv.labs.arxiv.org/abs/2406.14598",
+    "retrieved": "2026-06-22",
+    "note": "Official 45-class taxonomy, appendix. Dataset version: sorry-bench-202406 (via ungated mirror SillyTilly/SorryBench). Numbering 1-indexed."
+  }
+}

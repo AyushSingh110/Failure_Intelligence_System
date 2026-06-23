@@ -1,0 +1,44 @@
+{
+  "fie": {
+    "attack_recall": 0.924,
+    "ood_fpr": 0.0955,
+    "ood_fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.3,
+      "coding": 0.0,
+      "factual_dark": 0.15,
+      "general": 0.06
+    },
+    "multilingual_recall": 0.9286,
+    "latency_ms": 88.36,
+    "display": "FIE (PAIR v6.2)"
+  },
+  "protectai": {
+    "attack_recall": 0.464,
+    "ood_fpr": 0.0,
+    "ood_fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.0,
+      "factual_dark": 0.0,
+      "general": 0.0
+    },
+    "multilingual_recall": 1.0,
+    "latency_ms": 83.19,
+    "display": "ProtectAI\nDeBERTa-inj"
+  },
+  "jailbreak": {
+    "attack_recall": 0.472,
+    "ood_fpr": 0.05,
+    "ood_fpr_by_domain": {
+      "medical": 0.0,
+      "legal": 0.0,
+      "coding": 0.16,
+      "factual_dark": 0.0,
+      "general": 0.06
+    },
+    "multilingual_recall": 0.0,
+    "latency_ms": 49.62,
+    "display": "jackhhao\njailbreak-clf"
+  }
+}

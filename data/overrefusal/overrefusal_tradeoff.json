@@ -1,0 +1,413 @@
+{
+  "experiment": "E20",
+  "thresholds": [
+    0.3,
+    0.35,
+    0.4,
+    0.45,
+    0.5,
+    0.55,
+    0.6,
+    0.65,
+    0.7,
+    0.75,
+    0.8,
+    0.85,
+    0.9,
+    0.95
+  ],
+  "shipped_threshold": 0.5,
+  "n": {
+    "xstest_safe": 250,
+    "xstest_unsafe": 198,
+    "bench": 521
+  },
+  "fie_curve": [
+    {
+      "threshold": 0.3,
+      "over_refusal": {
+        "rate": 0.536,
+        "ci95": [
+          0.4759,
+          0.6
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8889,
+        "ci95": [
+          0.8434,
+          0.9293
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.856,
+        "ci95": [
+          0.8253,
+          0.8848
+        ]
+      }
+    },
+    {
+      "threshold": 0.35,
+      "over_refusal": {
+        "rate": 0.536,
+        "ci95": [
+          0.4759,
+          0.6
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8889,
+        "ci95": [
+          0.8434,
+          0.9293
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.856,
+        "ci95": [
+          0.8253,
+          0.8848
+        ]
+      }
+    },
+    {
+      "threshold": 0.4,
+      "over_refusal": {
+        "rate": 0.536,
+        "ci95": [
+          0.4759,
+          0.6
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8889,
+        "ci95": [
+          0.8434,
+          0.9293
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.856,
+        "ci95": [
+          0.8253,
+          0.8848
+        ]
+      }
+    },
+    {
+      "threshold": 0.45,
+      "over_refusal": {
+        "rate": 0.536,
+        "ci95": [
+          0.4759,
+          0.6
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8889,
+        "ci95": [
+          0.8434,
+          0.9293
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.856,
+        "ci95": [
+          0.8253,
+          0.8848
+        ]
+      }
+    },
+    {
+      "threshold": 0.5,
+      "over_refusal": {
+        "rate": 0.536,
+        "ci95": [
+          0.4759,
+          0.6
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8889,
+        "ci95": [
+          0.8434,
+          0.9293
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.856,
+        "ci95": [
+          0.8253,
+          0.8848
+        ]
+      }
+    },
+    {
+      "threshold": 0.55,
+      "over_refusal": {
+        "rate": 0.472,
+        "ci95": [
+          0.408,
+          0.532
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8586,
+        "ci95": [
+          0.8081,
+          0.904
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.8388,
+        "ci95": [
+          0.808,
+          0.8695
+        ]
+      }
+    },
+    {
+      "threshold": 0.6,
+      "over_refusal": {
+        "rate": 0.436,
+        "ci95": [
+          0.376,
+          0.496
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8434,
+        "ci95": [
+          0.7929,
+          0.8939
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.81,
+        "ci95": [
+          0.7754,
+          0.8426
+        ]
+      }
+    },
+    {
+      "threshold": 0.65,
+      "over_refusal": {
+        "rate": 0.384,
+        "ci95": [
+          0.324,
+          0.444
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.8283,
+        "ci95": [
+          0.7778,
+          0.8788
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.7658,
+        "ci95": [
+          0.7313,
+          0.8023
+        ]
+      }
+    },
+    {
+      "threshold": 0.7,
+      "over_refusal": {
+        "rate": 0.324,
+        "ci95": [
+          0.264,
+          0.38
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.798,
+        "ci95": [
+          0.7424,
+          0.8535
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.7236,
+        "ci95": [
+          0.6852,
+          0.762
+        ]
+      }
+    },
+    {
+      "threshold": 0.75,
+      "over_refusal": {
+        "rate": 0.288,
+        "ci95": [
+          0.232,
+          0.3441
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.7828,
+        "ci95": [
+          0.7273,
+          0.8384
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.6679,
+        "ci95": [
+          0.6296,
+          0.7083
+        ]
+      }
+    },
+    {
+      "threshold": 0.8,
+      "over_refusal": {
+        "rate": 0.252,
+        "ci95": [
+          0.2,
+          0.304
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.7475,
+        "ci95": [
+          0.6869,
+          0.8081
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.6296,
+        "ci95": [
+          0.5911,
+          0.6699
+        ]
+      }
+    },
+    {
+      "threshold": 0.85,
+      "over_refusal": {
+        "rate": 0.208,
+        "ci95": [
+          0.156,
+          0.26
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.6667,
+        "ci95": [
+          0.6061,
+          0.7274
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.5835,
+        "ci95": [
+          0.5413,
+          0.6257
+        ]
+      }
+    },
+    {
+      "threshold": 0.9,
+      "over_refusal": {
+        "rate": 0.136,
+        "ci95": [
+          0.0959,
+          0.18
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.5606,
+        "ci95": [
+          0.4949,
+          0.6313
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.499,
+        "ci95": [
+          0.4568,
+          0.5451
+        ]
+      }
+    },
+    {
+      "threshold": 0.95,
+      "over_refusal": {
+        "rate": 0.072,
+        "ci95": [
+          0.044,
+          0.108
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.3737,
+        "ci95": [
+          0.303,
+          0.4394
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.3954,
+        "ci95": [
+          0.3551,
+          0.4395
+        ]
+      }
+    }
+  ],
+  "baselines": {
+    "protectai": {
+      "display": "ProtectAI DeBERTa",
+      "over_refusal": {
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.2226,
+        "ci95": [
+          0.19,
+          0.261
+        ]
+      }
+    },
+    "jailbreak": {
+      "display": "jackhhao jb-clf",
+      "over_refusal": {
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "recall_controlled": {
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "recall_deployment": {
+        "rate": 0.3033,
+        "ci95": [
+          0.2668,
+          0.3455
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "experiment": "E21",
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "cutoff": 0.92,
+  "dedup_priority": [
+    "jailbreakbench",
+    "harmbench",
+    "advbench",
+    "strongreject",
+    "sorrybench"
+  ],
+  "provenance": {
+    "advbench": {
+      "display": "AdvBench",
+      "hf_id": "https://raw.githubusercontent.com/llm-attacks/llm-attacks/main/data/advbench/harmful_behaviors.csv",
+      "config": null,
+      "split": "train",
+      "license_hint": "MIT (llm-attacks)",
+      "revision": null,
+      "license": "MIT (llm-attacks)",
+      "gated": false,
+      "source_type": "github_csv"
+    },
+    "strongreject": {
+      "display": "StrongREJECT",
+      "hf_id": "https://raw.githubusercontent.com/alexandrasouly/strongreject/main/strongreject_dataset/strongreject_dataset.csv",
+      "config": null,
+      "split": "train",
+      "license_hint": "MIT (alexandrasouly/strongreject)",
+      "revision": null,
+      "license": "MIT (alexandrasouly/strongreject)",
+      "gated": false,
+      "source_type": "github_csv"
+    },
+    "sorrybench": {
+      "display": "SORRY-Bench",
+      "hf_id": "SillyTilly/SorryBench",
+      "config": null,
+      "split": "train",
+      "license_hint": "see card (ungated mirror)",
+      "revision": "87ebb821524d5f46f850dc3548136319779426bb",
+      "license": null,
+      "gated": false,
+      "source_type": "hf_dataset"
+    }
+  },
+  "training_leakage": {
+    "jailbreakbench": {
+      "total": 282,
+      "leaked": 148,
+      "leak_rate": 0.5248
+    },
+    "harmbench": {
+      "total": 400,
+      "leaked": 13,
+      "leak_rate": 0.0325
+    },
+    "advbench": {
+      "total": 520,
+      "leaked": 351,
+      "leak_rate": 0.675
+    },
+    "strongreject": {
+      "total": 313,
+      "leaked": 60,
+      "leak_rate": 0.1917
+    },
+    "sorrybench": {
+      "total": 450,
+      "leaked": 32,
+      "leak_rate": 0.0711
+    }
+  },
+  "cross_overlap_matrix_directional": {
+    "jailbreakbench": {
+      "jailbreakbench": null,
+      "harmbench": 0,
+      "advbench": 0,
+      "strongreject": 0,
+      "sorrybench": 0
+    },
+    "harmbench": {
+      "jailbreakbench": 0,
+      "harmbench": null,
+      "advbench": 2,
+      "strongreject": 0,
+      "sorrybench": 17
+    },
+    "advbench": {
+      "jailbreakbench": 0,
+      "harmbench": 2,
+      "advbench": null,
+      "strongreject": 27,
+      "sorrybench": 15
+    },
+    "strongreject": {
+      "jailbreakbench": 0,
+      "harmbench": 0,
+      "advbench": 26,
+      "strongreject": null,
+      "sorrybench": 17
+    },
+    "sorrybench": {
+      "jailbreakbench": 0,
+      "harmbench": 16,
+      "advbench": 15,
+      "strongreject": 17,
+      "sorrybench": null
+    }
+  },
+  "combined_dedup": {
+    "jailbreakbench": {
+      "total": 282,
+      "training_leaked": 148,
+      "cross_duplicate": 0,
+      "clean_kept": 134
+    },
+    "harmbench": {
+      "total": 400,
+      "training_leaked": 13,
+      "cross_duplicate": 7,
+      "clean_kept": 380
+    },
+    "advbench": {
+      "total": 520,
+      "training_leaked": 351,
+      "cross_duplicate": 1,
+      "clean_kept": 168
+    },
+    "strongreject": {
+      "total": 313,
+      "training_leaked": 60,
+      "cross_duplicate": 11,
+      "clean_kept": 242
+    },
+    "sorrybench": {
+      "total": 450,
+      "training_leaked": 32,
+      "cross_duplicate": 31,
+      "clean_kept": 387
+    }
+  },
+  "frozen_new_files_sha256": {
+    "advbench": "48c6ef72b2414bfe8e30ab861220a1111806bdb26411a244eb2dad8e2bc9ed96",
+    "strongreject": "4a98f1bfca86eff3ab2141d1f8bfbf4fffcaa79295907555a521d360c7e5cb54",
+    "sorrybench": "a18fbb20c51cadcdf3ab981b1a0322e6269cb106210af9256d529cd25cb4a0e9"
+  }
+}
