@@ -1,0 +1,8 @@
+{
+  "n": 80,
+  "model": "llama3.1:8b",
+  "original_recall": 0.8625,
+  "paraphrase_recall": 0.95,
+  "evasion_rate_of_caught": 0.0435,
+  "recall_drop_pts": -8.8
+}

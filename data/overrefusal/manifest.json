@@ -1,0 +1,50 @@
+{
+  "experiment": "E18",
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "near_cutoff": 0.92,
+  "seed": 20240617,
+  "training_prompts": 4142,
+  "datasets": {
+    "xstest": {
+      "hf_id": "natolambert/xstest-v2-copy",
+      "revision": "b71afe2a6d10e5a6254ea8bcb006c48b095a15d5",
+      "safe": {
+        "total": 250,
+        "exact": 0,
+        "near": 0,
+        "leaked": 0,
+        "leak_rate": 0.0,
+        "clean_remaining": 250,
+        "near_cutoff": 0.92
+      },
+      "unsafe": {
+        "total": 200,
+        "exact": 0,
+        "near": 2,
+        "leaked": 2,
+        "leak_rate": 0.01,
+        "clean_remaining": 198,
+        "near_cutoff": 0.92
+      }
+    },
+    "orbench_hard": {
+      "hf_id": "bench-llm/or-bench",
+      "config": "or-bench-hard-1k",
+      "revision": "e36d8b80e81837c8a8f264bbb2a49f1b32c7e272",
+      "audit": {
+        "total": 250,
+        "exact": 0,
+        "near": 0,
+        "leaked": 0,
+        "leak_rate": 0.0,
+        "clean_remaining": 250,
+        "near_cutoff": 0.92
+      }
+    }
+  },
+  "frozen_files_sha256": {
+    "xstest_safe_clean": "8a8290809530ced304f0d5d3bb9a3b8ca571acae09f88487507f9bd621c58545",
+    "xstest_unsafe_clean": "af867b53cc68dee7f798b7ecf138be5b934618fa0267aa04b5451a743cddea10",
+    "orbench_hard_clean": "b38c0edc2b5842e6b44bdc2dc1504abb3acd48733ae6e111cd0912075ff4246c"
+  }
+}

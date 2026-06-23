@@ -1,0 +1,26 @@
+{
+  "experiment": "E22-addendum-2",
+  "excluded_categories": {
+    "41": "Medical Advice",
+    "42": "Financial Advice",
+    "43": "Legal Consulting Advice"
+  },
+  "exclusion_rationale": "E2/E4: FIE treats liability-restricted health/finance/legal advice as benign, not adversarial; counting these as recall misses conflates threat models.",
+  "full_45class": {
+    "n": 387,
+    "recall": 0.7519,
+    "ci95": [
+      0.7106,
+      0.7933
+    ]
+  },
+  "adversarial_subset": {
+    "n": 358,
+    "excluded": 29,
+    "recall": 0.7877,
+    "ci95": [
+      0.7458,
+      0.8296
+    ]
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "source": {
+    "paper": "SORRY-Bench (ICLR 2025)",
+    "arxiv": "arXiv:2406.14598",
+    "url": "https://ar5iv.labs.arxiv.org/abs/2406.14598",
+    "retrieved": "2026-06-22",
+    "note": "Official 45-class taxonomy, appendix. Dataset version: sorry-bench-202406 (via ungated mirror SillyTilly/SorryBench). Numbering 1-indexed."
+  },
+  "indexing": "1-indexed",
+  "taxonomy": {
+    "1": {
+      "name": "Personal Insulting Words",
+      "domain": "Hate Speech Generation"
+    },
+    "2": {
+      "name": "Social-group Insulting Words",
+      "domain": "Hate Speech Generation"
+    },
+    "3": {
+      "name": "Threatening Words and Blackmails",
+      "domain": "Hate Speech Generation"
+    },
+    "4": {
+      "name": "Lewd and Obscene Words",
+      "domain": "Hate Speech Generation"
+    },
+    "5": {
+      "name": "Libelous Words and Defamation",
+      "domain": "Hate Speech Generation"
+    },
+    "6": {
+      "name": "Self-Harm",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "7": {
+      "name": "Violent Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "8": {
+      "name": "Harassment",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "9": {
+      "name": "Sexual Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "10": {
+      "name": "Property Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "11": {
+      "name": "Public Order Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "12": {
+      "name": "Impersonation",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "13": {
+      "name": "System Intrusion, Hacking and Cyber Attacks",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "14": {
+      "name": "Malware Code Generation",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "15": {
+      "name": "Fraud, Scams, and Deception",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "16": {
+      "name": "Financial Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "17": {
+      "name": "Intellectual Property Infringement",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "18": {
+      "name": "Personal Identifiable Information Violations",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "19": {
+      "name": "Illegal Crafting, Manufacturing, and Distribution",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "20": {
+      "name": "Terrorism Promotion and Advice",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "21": {
+      "name": "Child-related Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "22": {
+      "name": "Animal-Related Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "23": {
+      "name": "Environmental Crimes",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "24": {
+      "name": "Evasion of Law Enforcement",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "25": {
+      "name": "Human Elimination and World Domination",
+      "domain": "Assistance with Crimes or Torts"
+    },
+    "26": {
+      "name": "Advice on Adult Content",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "27": {
+      "name": "Sexual Explicit Content Generation",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "28": {
+      "name": "Non-sexual Explicit Content Generation",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "29": {
+      "name": "Fake News Generation",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "30": {
+      "name": "False Advertising",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "31": {
+      "name": "Advice on Discrimination Behaviors",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "32": {
+      "name": "Military Use",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "33": {
+      "name": "Political Belief Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "34": {
+      "name": "Ethical Belief Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "35": {
+      "name": "Religion Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "36": {
+      "name": "Social Stereotype Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "37": {
+      "name": "Extremist Content Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "38": {
+      "name": "Conspiracy Theories Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "39": {
+      "name": "False Common Knowledge Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "40": {
+      "name": "Harmful and Unhealthy Behaviors Promotion",
+      "domain": "Potentially Inappropriate Topics"
+    },
+    "41": {
+      "name": "Medical Advice",
+      "domain": "Potentially Unqualified Advice"
+    },
+    "42": {
+      "name": "Financial Advice",
+      "domain": "Potentially Unqualified Advice"
+    },
+    "43": {
+      "name": "Legal Consulting Advice",
+      "domain": "Potentially Unqualified Advice"
+    },
+    "44": {
+      "name": "Governance Decision Advice",
+      "domain": "Potentially Unqualified Advice"
+    },
+    "45": {
+      "name": "Dangerous Machinery Operation Advice",
+      "domain": "Potentially Unqualified Advice"
+    }
+  }
+}
