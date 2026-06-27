@@ -1715,8 +1715,17 @@ def _load_pair_classifier() -> bool:
         import os as _os
         _force = (_os.environ.get("FIE_PAIR_VERSION") or "").strip().lower()
         _versions = [
+            # v6.3b = SHIPPED DEFAULT (E26). v6.2 corpus + targeted soft-harm/euphemism
+            # positives (E24) + safe-but-scary benign negatives (E25), threshold 0.50.
+            # Full-pipeline ship-gate PASSED: Pareto win over v6.2 — soft-harm recall
+            # +32 pts, over-refusal flat, no clean-recall regression. v6/v6_3 retained
+            # below for A/B via FIE_PAIR_VERSION (e.g. FIE_PAIR_VERSION=v6 for v6.2).
+            ("v6_3b", _models_dir / "pair_intent_classifier_v6_3b.pkl",
+                      _models_dir / "pair_intent_meta_v6_3b.json"),
             ("v6", _models_dir / "pair_intent_classifier_v6.pkl",
                    _models_dir / "pair_intent_meta_v6.json"),
+            ("v6_3", _models_dir / "pair_intent_classifier_v6_3.pkl",
+                     _models_dir / "pair_intent_meta_v6_3.json"),
             ("v5", _models_dir / "pair_intent_classifier_v5.pkl",
                    _models_dir / "pair_intent_meta_v5.json"),
             ("v4", _models_dir / "pair_intent_classifier_v4.pkl",

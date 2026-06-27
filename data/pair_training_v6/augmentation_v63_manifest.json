@@ -1,0 +1,54 @@
+{
+  "experiment": "E24a",
+  "method": "hand-authored seeds + NLLB back-translation",
+  "nllb_model": "facebook/nllb-200-distilled-600M",
+  "pivots": [
+    "deu_Latn",
+    "zho_Hans",
+    "rus_Cyrl"
+  ],
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "near_cutoff": 0.92,
+  "test_frac": 0.2,
+  "seeds": 72,
+  "after_dedup": 285,
+  "leaked_removed": 0,
+  "clean": 285,
+  "train": 230,
+  "test": 55,
+  "by_category_train": {
+    "environmental_crimes": 28,
+    "fake_news": 36,
+    "false_advertising": 35,
+    "false_common_knowledge": 28,
+    "pii_violation": 28,
+    "ip_infringement": 36,
+    "euphemism_general": 39
+  },
+  "by_category_test": {
+    "environmental_crimes": 12,
+    "fake_news": 4,
+    "false_advertising": 4,
+    "false_common_knowledge": 12,
+    "pii_violation": 11,
+    "ip_infringement": 4,
+    "euphemism_general": 8
+  },
+  "eval_splits_audited": [
+    "data\\benchmark_audit\\jbb_clean.jsonl",
+    "data\\benchmark_audit\\harmbench_clean.jsonl",
+    "data\\benchmark_audit\\advbench_clean.jsonl",
+    "data\\benchmark_audit\\strongreject_clean.jsonl",
+    "data\\benchmark_audit\\sorrybench_clean.jsonl",
+    "data\\overrefusal\\xstest_safe_clean.jsonl",
+    "data\\overrefusal\\xstest_unsafe_clean.jsonl",
+    "data\\overrefusal\\orbench_hard_clean.jsonl",
+    "data\\pair_training\\val.jsonl",
+    "data\\pair_training\\test.jsonl"
+  ],
+  "sha256": {
+    "train": "18496767902043a812929ad15e8687100cf216c4db34c3b906f8f4c954a293cd",
+    "test": "d58f9a65c3e634ece687cae10490b73ccabbcbbd337e02ca6bcc5c1b261c9c9f"
+  },
+  "note": "Adversarial soft-harm + euphemism only; advice (medical/legal/financial) deliberately excluded (E2/E4). Request-phrasings only; defensive use."
+}

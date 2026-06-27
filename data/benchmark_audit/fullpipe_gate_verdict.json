@@ -1,0 +1,6 @@
+{
+  "soft_harm_delta": 32.08,
+  "recall_regress": [],
+  "fpr_rise": [],
+  "verdict": "SHIP v6.3b \u2014 full-pipeline Pareto win survives (soft-harm up, no regression)"
+}
