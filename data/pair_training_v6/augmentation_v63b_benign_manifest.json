@@ -1,0 +1,52 @@
+{
+  "experiment": "E25a",
+  "label": "benign",
+  "method": "hand-authored + NLLB back-translation",
+  "nllb_model": "facebook/nllb-200-distilled-600M",
+  "pivots": [],
+  "near_cutoff": 0.92,
+  "test_frac": 0.2,
+  "seeds": 72,
+  "after_dedup": 72,
+  "leaked_removed": 2,
+  "clean": 70,
+  "train": 46,
+  "test": 24,
+  "by_category_train": {
+    "figurative_violence": 5,
+    "safe_context": 5,
+    "medical_info": 8,
+    "security_education": 6,
+    "dark_history": 6,
+    "homonyms": 4,
+    "definitions_legal": 7,
+    "fiction_creative": 5
+  },
+  "by_category_test": {
+    "figurative_violence": 4,
+    "safe_context": 3,
+    "medical_info": 1,
+    "security_education": 3,
+    "dark_history": 3,
+    "homonyms": 5,
+    "definitions_legal": 1,
+    "fiction_creative": 4
+  },
+  "eval_splits_audited": [
+    "data\\benchmark_audit\\jbb_clean.jsonl",
+    "data\\benchmark_audit\\harmbench_clean.jsonl",
+    "data\\benchmark_audit\\advbench_clean.jsonl",
+    "data\\benchmark_audit\\strongreject_clean.jsonl",
+    "data\\benchmark_audit\\sorrybench_clean.jsonl",
+    "data\\overrefusal\\xstest_safe_clean.jsonl",
+    "data\\overrefusal\\xstest_unsafe_clean.jsonl",
+    "data\\overrefusal\\orbench_hard_clean.jsonl",
+    "data\\pair_training\\val.jsonl",
+    "data\\pair_training\\test.jsonl"
+  ],
+  "sha256": {
+    "train": "8164f548f006e0446fe9f651f26c5cc86f7bcb7dbb45fbedc73d6dc768d028c8",
+    "test": "65037e1af9403f70c52907cd61aafda3352d3a235802956d71821cb313e6cd10"
+  },
+  "note": "Safe-but-scary NEGATIVES targeting over-refusal. Register-overfit test (XSTest vs OR-Bench cross-benchmark) is in eval_v63b, NOT here."
+}

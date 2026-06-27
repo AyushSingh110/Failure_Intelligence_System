@@ -17,6 +17,56 @@ FIE wraps any LLM with a single decorator. It runs 12 detection layers in parall
 
 ---
 
+## What's new in v1.17.0
+
+Full method/number trail: [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md) (E18–E26).
+Self-contained write-up: [docs/OVERREFUSAL_FINDINGS.md](docs/OVERREFUSAL_FINDINGS.md).
+
+### The over-refusal blind spot standard benchmarks miss
+
+Our prior 9% out-of-distribution FPR was measured on _naturally-occurring_ benign
+prompts. On the field's **standardized over-refusal benchmarks** — XSTest and
+OR-Bench-hard (prompts engineered to _look_ harmful but be safe) — FIE flags
+**53.6% (XSTest) / 90.4% (OR-Bench) of safe prompts**. 47% of these false positives are
+high-confidence (mean 0.76), so a threshold tweak doesn't fix them; the threshold sweep
+has **no operating point with both low over-refusal and high recall**
+(`figA_overrefusal_tradeoff.png`). This is reported as an honest, open weakness — and
+our own 9% number understated it ~8×. The two ungated offline baselines (ProtectAI,
+jackhhao) show ~0% over-refusal only because they also catch **0%** of the paired unsafe
+prompts — register-inert, not discriminating.
+
+### Contamination-audited recall across five benchmarks
+
+We expanded recall evaluation to JailbreakBench, HarmBench, AdvBench, StrongREJECT, and
+SORRY-Bench, each leakage-audited and SHA-pinned. **AdvBench is 67.5% training-leaked**
+(its mirror is in PAIR training) — quarantined as a contamination case study. Headline
+**macro recall 85.8%** across the four clean benchmarks, vs ~22–26% for the offline
+injection/jailbreak baselines (which collapse to 0–11% on harmful _content_ — a register
+mismatch, not a ranking).
+
+### Where FIE sits vs a strong guard model
+
+Against **gpt-oss-safeguard-20b** (a 20B policy-following guard) on both axes
+(`figA2_frontier_overlay.png`): the big online guard out-detects FIE (94% macro) _and_
+reaches the XSTest good corner FIE cannot — so **FIE's value is deployability
+(offline, ~23M params, ~48 ms), not detection supremacy.** But **OR-Bench-hard defeats
+even the 20B guard (80% over-refusal)** — the over-blocking blind spot is universal.
+
+### PAIR v6.3b — soft-harm/euphemism recall closed (shipped)
+
+The soft-harm recall gap (environmental crimes, fake news, false advertising, PII, IP)
+is a **data problem, not a representation ceiling**: targeted augmentation transfers to
+the held-out benchmark (+20.8 pts at equal over-refusal). A recall-only fix raised
+over-refusal, so we added safe-but-scary benign negatives — **v6.3b** banks the recall
+gain at _flat_ over-refusal, and the win **survives the full-pipeline ship-gate**
+(SORRY soft-harm **+32 pts**, SORRY overall +6.5, HarmBench +2.6, over-refusal flat, no
+clean-recall regression). **v6.3b is now the shipped default** (threshold 0.50;
+`FIE_PAIR_VERSION=v6` for the previous model). The honest asymmetry: **recall gaps are
+data-fixable; the over-refusal blind spot resisted benign augmentation** (data-starved
+vs representation-limited is left to future work).
+
+---
+
 ## What's new in v1.16.0
 
 ### PAIR v6 — out-of-distribution false positives fixed
@@ -36,7 +86,7 @@ PAIR v6 retrains on a **domain-balanced corpus** (general / medical / legal / co
 | Legal | 67.5% | 27.5% |
 | **Overall** | **41.5%** | **9.1%** |
 
-A **4.5× reduction** in out-of-distribution false positives with no architecture change, at comparable deployable attack recall (full-pipeline TPR 83.3%, precision 89.7%, threshold 0.50). Legal-domain benign remains a known training-data gap (questions like _"Legality of X"_ genuinely read as adversarial). The shipped model is **v6.2** — retrained after removing all benchmark/held-out leakage from the training data.
+A **4.5× reduction** in out-of-distribution false positives with no architecture change, at comparable deployable attack recall (full-pipeline TPR 83.3%, precision 89.7%, threshold 0.50). Legal-domain benign remains a known training-data gap (questions like _"Legality of X"_ genuinely read as adversarial). The shipped model at this version was **v6.2** — retrained after removing all benchmark/held-out leakage from the training data. _(Superseded in v1.17.0 by **v6.3b**, which closes the soft-harm/euphemism recall gap at flat over-refusal — see above.)_
 
 Set `FIE_PAIR_VERSION=v5` to A/B against the previous model.
 
