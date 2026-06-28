@@ -2,10 +2,10 @@
 
 **Adversarial detection + hallucination monitoring for LLMs — blocks prompt injection, jailbreaks, and adversarial inputs before they reach your model. Monitors outputs for factual failures and hallucinations. Built for developers who want to understand _why_ an interaction is likely to fail, not just that it did.**
 
-FIE wraps any LLM with a single decorator. It runs 12 detection layers in parallel on every incoming prompt, blocks confirmed attacks before the model runs, monitors outputs for hallucinations using a shadow ensemble and XGBoost classifier, and logs everything to a real-time dashboard.
+FIE wraps any LLM with a single decorator. On every incoming prompt it runs a calibrated semantic classifier backed by targeted layers (multilingual, obfuscation, copyright), flags or blocks adversarial inputs before the model runs, monitors outputs for hallucinations using a shadow ensemble and XGBoost classifier, and logs everything to a real-time dashboard. An honest ablation (below) shows detection concentrates in the semantic classifier, not the layer count.
 
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
-[![Version](https://img.shields.io/badge/version-1.16.0-brightgreen)](https://pypi.org/project/fie-sdk)
+[![Version](https://img.shields.io/badge/version-1.17.0-brightgreen)](https://pypi.org/project/fie-sdk)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Deployed](https://img.shields.io/badge/Live-Google_Cloud_Run-4285F4?logo=googlecloud&logoColor=white)](https://failure-intelligence-system-800748790940.asia-south1.run.app)
