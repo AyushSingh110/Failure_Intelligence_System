@@ -1109,8 +1109,9 @@ def finalize(state: MonitorState) -> dict:
     except Exception as exc:
         logger.debug("Notification send failed (non-fatal): %s", exc)
 
+    xgb_prob_str = f"{xgb_prob:.4f}" if xgb_prob is not None else "N/A"
     trace_msg = (
-        f"finalize: xgb_prob={xgb_prob:.4f if xgb_prob else 'N/A'} "
+        f"finalize: xgb_prob={xgb_prob_str} "
         f"xgb_failure={xgb_failure} request_id={stored_request_id}"
     )
 
@@ -1127,21 +1128,42 @@ def finalize(state: MonitorState) -> dict:
 
 # Graph assembly
 
+def _timed(name: str, fn):
+    """Wrap a node so its wall-clock time is recorded when instrumentation is
+    active. Pure passthrough (no behavior/output change) when inactive — which
+    is always the case on the production /monitor path."""
+    def _wrapped(state: MonitorState) -> dict:
+        from engine import instrumentation as _instr
+        if not _instr.is_active():
+            return fn(state)
+        with _instr.node_timer(name):
+            result = fn(state)
+        # Reuse pipeline_trace (per Phase 0 spec) — only when measuring.
+        if isinstance(result, dict):
+            ms = _instr._collector.node_ms.get(name, 0.0) if _instr._collector else 0.0
+            result["pipeline_trace"] = _trace(
+                {**state, "pipeline_trace": result.get("pipeline_trace", state.get("pipeline_trace"))},
+                f"⏱ {name}: {ms:.1f} ms",
+            )
+        return result
+    return _wrapped
+
+
 def _build_graph() -> StateGraph:
     g = StateGraph(MonitorState)
 
-    g.add_node("load_session",     load_session)
-    g.add_node("shadow_inference", shadow_inference)
-    g.add_node("adversarial_guard", adversarial_guard)
-    g.add_node("signal_extract",   signal_extract)
-    g.add_node("provenance_gate",  provenance_gate)
-    g.add_node("reasoning_verify", reasoning_verify)
-    g.add_node("jury_deliberate",  jury_deliberate)
-    g.add_node("security_checks",  security_checks)
-    g.add_node("gt_verify",        gt_verify)
-    g.add_node("escalate",         escalate)
-    g.add_node("auto_correct",     auto_correct)
-    g.add_node("finalize",         finalize)
+    g.add_node("load_session",     _timed("load_session", load_session))
+    g.add_node("shadow_inference", _timed("shadow_inference", shadow_inference))
+    g.add_node("adversarial_guard", _timed("adversarial_guard", adversarial_guard))
+    g.add_node("signal_extract",   _timed("signal_extract", signal_extract))
+    g.add_node("provenance_gate",  _timed("provenance_gate", provenance_gate))
+    g.add_node("reasoning_verify", _timed("reasoning_verify", reasoning_verify))
+    g.add_node("jury_deliberate",  _timed("jury_deliberate", jury_deliberate))
+    g.add_node("security_checks",  _timed("security_checks", security_checks))
+    g.add_node("gt_verify",        _timed("gt_verify", gt_verify))
+    g.add_node("escalate",         _timed("escalate", escalate))
+    g.add_node("auto_correct",     _timed("auto_correct", auto_correct))
+    g.add_node("finalize",         _timed("finalize", finalize))
 
     g.set_entry_point("load_session")
 

@@ -64,6 +64,10 @@ class GroqModelResponse:
     # additions — confidence signal from the model
     model_confidence:  str   = "MEDIUM"   # "HIGH" | "MEDIUM" | "LOW"
     confidence_weight: float = 2.0        # HIGH=3, MEDIUM=2, LOW=1
+    # Phase 0 instrumentation — token usage reported by the Groq API.
+    # Carried on the response so cache replays can report the original cost.
+    input_tokens:      int   = 0
+    output_tokens:     int   = 0
 
 
 # Diverse model families to reduce correlated failure.
@@ -157,6 +161,14 @@ class GroqService:
         cached = _get_cached(model_name, prompt)
         if cached:
             logger.debug("Groq %s: cache hit", model_name)
+            try:
+                from engine import instrumentation as _instr
+                _instr.record_groq_call(
+                    model_name, cached.input_tokens, cached.output_tokens,
+                    latency_ms=0.0, cached=True,
+                )
+            except Exception:
+                pass
             return cached
 
         start = time.time()
@@ -185,18 +197,31 @@ class GroqService:
                 output_text = data["choices"][0]["message"]["content"].strip()
                 latency_ms  = round((time.time() - start) * 1000, 1)
 
+                usage       = data.get("usage") or {}
+                in_tok      = int(usage.get("prompt_tokens", 0) or 0)
+                out_tok     = int(usage.get("completion_tokens", 0) or 0)
+
                 logger.debug(
                     "Groq %s responded in %.0fms: %s...",
                     model_name, latency_ms, output_text[:60],
                 )
 
                 result = GroqModelResponse(
-                    model_name  = model_name,
-                    output_text = output_text,
-                    success     = True,
-                    latency_ms  = latency_ms,
+                    model_name    = model_name,
+                    output_text   = output_text,
+                    success       = True,
+                    latency_ms    = latency_ms,
+                    input_tokens  = in_tok,
+                    output_tokens = out_tok,
                 )
                 _set_cached(model_name, prompt, result)
+                try:
+                    from engine import instrumentation as _instr
+                    _instr.record_groq_call(
+                        model_name, in_tok, out_tok, latency_ms=latency_ms, cached=False,
+                    )
+                except Exception:
+                    pass
                 return result
 
             except requests.exceptions.Timeout:
@@ -223,6 +248,11 @@ class GroqService:
                 if exc.response.status_code == 429:
                     logger.warning("Groq rate limit hit for model %s (retries exhausted)", model_name)
                     error = "Rate limit exceeded — retries exhausted"
+                    try:
+                        from engine import instrumentation as _instr
+                        _instr.record_rate_limit()
+                    except Exception:
+                        pass
                 else:
                     response_text = ""
                     try:
@@ -363,6 +393,8 @@ class GroqService:
                     error             = r.error,
                     model_confidence  = level,
                     confidence_weight = weight,
+                    input_tokens      = r.input_tokens,
+                    output_tokens     = r.output_tokens,
                 ))
             else:
                 enriched.append(r)  # failed response — keep as-is

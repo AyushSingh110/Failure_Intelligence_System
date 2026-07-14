@@ -100,7 +100,14 @@ def _search_google(query: str, api_key: str, timeout: int) -> Optional[dict]:
     }
     payload = {"q": query, "num": 5}
 
+    import time as _t
+    _start = _t.time()
     resp = requests.post(_SERPER_API_URL, headers=headers, json=payload, timeout=timeout)
+    try:
+        from engine import instrumentation as _instr
+        _instr.record_http_call("serper.dev", (_t.time() - _start) * 1000.0)
+    except Exception:
+        pass
     resp.raise_for_status()
     return resp.json()
 

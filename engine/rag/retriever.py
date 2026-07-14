@@ -48,11 +48,18 @@ def _try_direct_lookup(query: str, timeout: int) -> str:
     """Direct Wikipedia page lookup."""
     try:
         encoded  = urllib.parse.quote(query.replace(" ", "_"))
+        import time as _t
+        _start = _t.time()
         response = requests.get(
             WIKI_API + encoded,
             timeout=timeout,
             headers={"User-Agent": "FIE-RAG/1.0"},
         )
+        try:
+            from engine import instrumentation as _instr
+            _instr.record_http_call("wikipedia.org", (_t.time() - _start) * 1000.0)
+        except Exception:
+            pass
         if response.status_code == 200:
             data    = response.json()
             extract = data.get("extract", "")
@@ -74,12 +81,19 @@ def _try_search_api(query: str, timeout: int) -> str:
             "srlimit":   1,
             "format":    "json",
         }
+        import time as _t
+        _start = _t.time()
         search_resp = requests.get(
             WIKI_SEARCH,
             params=params,
             timeout=timeout,
             headers={"User-Agent": "FIE-RAG/1.0"},
         )
+        try:
+            from engine import instrumentation as _instr
+            _instr.record_http_call("wikipedia.org", (_t.time() - _start) * 1000.0)
+        except Exception:
+            pass
         if search_resp.status_code != 200:
             return ""
 

@@ -175,7 +175,14 @@ def _fetch_search_results(
             "format":   "json",
             "limit":    limit,
         }
+        import time as _t
+        _start = _t.time()
         resp = requests.get(_WIKIDATA_API, params=params, headers=headers, timeout=timeout)
+        try:
+            from engine import instrumentation as _instr
+            _instr.record_http_call("wikidata.org", (_t.time() - _start) * 1000.0)
+        except Exception:
+            pass
         resp.raise_for_status()
         data = resp.json()
         return [

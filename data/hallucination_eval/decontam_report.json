@@ -1,0 +1,21 @@
+{
+  "seed": 20240617,
+  "near_cutoff": 0.92,
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "sources_used": [
+    "truthfulqa"
+  ],
+  "sources": {
+    "truthfulqa": {
+      "total_unique": 817,
+      "exact_leaked": 425,
+      "exact_clean": 392,
+      "near_leaked_in_sample": 1,
+      "sampled_questions": 200,
+      "emitted_pairs": 400
+    }
+  },
+  "frozen_total_pairs": 400,
+  "frozen_label1_hallucination": 200,
+  "frozen_label0_correct": 200
+}
