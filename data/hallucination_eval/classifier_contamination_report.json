@@ -1,0 +1,43 @@
+{
+  "n_rows": 2182,
+  "n_unique_questions": 1093,
+  "sources": {
+    "builtin": 20,
+    "truthfulqa": 849,
+    "mmlu": 490,
+    "halueval": 823
+  },
+  "label_balance": {
+    "failure": 1093,
+    "correct": 1089
+  },
+  "A_in_sample_auc_shipped_model": 0.5863,
+  "B_question_disjoint_cv_auc": {
+    "auc": 0.7428,
+    "ci95": [
+      0.7234,
+      0.7629
+    ]
+  },
+  "B2_per_source_auc": {
+    "truthfulqa": {
+      "n": 849,
+      "auc": 0.581,
+      "pos": 425,
+      "neg": 424
+    },
+    "halueval": {
+      "n": 823,
+      "auc": 0.956,
+      "pos": 412,
+      "neg": 411
+    },
+    "mmlu": {
+      "n": 490,
+      "auc": 0.5358,
+      "pos": 246,
+      "neg": 244
+    }
+  },
+  "C_novel_question_end_to_end_auc_phase0": 0.4967
+}

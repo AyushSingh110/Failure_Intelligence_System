@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-07-17 12:19:12",
+  "config": {
+    "run_full_jury": true,
+    "cold_cache": true,
+    "n_pairs_total": 200
+  },
+  "data_quality": {
+    "mean_shadows_per_request": 2.8,
+    "full_shadow_requests": 160,
+    "degraded_zero_shadow": 0,
+    "full_shadow_rate": 0.8
+  },
+  "performance": {
+    "n_requests": 200,
+    "n_errors": 0,
+    "e2e_ms": {
+      "p50": 10952.2,
+      "p95": 21172.6,
+      "mean": 11452.9,
+      "max": 30180.5
+    },
+    "per_request": {
+      "groq_api_calls": 6.59,
+      "groq_cache_hits": 0.1,
+      "http_calls": 3.52,
+      "input_tokens": 1417.57,
+      "output_tokens": 998.65,
+      "total_tokens": 2416.22
+    },
+    "per_node_ms": {
+      "load_session": {
+        "n": 200,
+        "mean_ms": 0.0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0
+      },
+      "shadow_inference": {
+        "n": 200,
+        "mean_ms": 2338.2,
+        "p50_ms": 2391.6,
+        "p95_ms": 3503.7
+      },
+      "adversarial_guard": {
+        "n": 200,
+        "mean_ms": 69.8,
+        "p50_ms": 56.6,
+        "p95_ms": 104.8
+      },
+      "signal_extract": {
+        "n": 173,
+        "mean_ms": 283.7,
+        "p50_ms": 292.0,
+        "p95_ms": 397.0
+      },
+      "provenance_gate": {
+        "n": 173,
+        "mean_ms": 0.1,
+        "p50_ms": 0.1,
+        "p95_ms": 0.2
+      },
+      "reasoning_verify": {
+        "n": 173,
+        "mean_ms": 2230.2,
+        "p50_ms": 0.0,
+        "p95_ms": 8846.6
+      },
+      "jury_deliberate": {
+        "n": 173,
+        "mean_ms": 5205.6,
+        "p50_ms": 4465.5,
+        "p95_ms": 8634.6
+      },
+      "security_checks": {
+        "n": 173,
+        "mean_ms": 3.7,
+        "p50_ms": 3.8,
+        "p95_ms": 7.6
+      },
+      "gt_verify": {
+        "n": 125,
+        "mean_ms": 3754.1,
+        "p50_ms": 3658.4,
+        "p95_ms": 6219.7
+      },
+      "escalate": {
+        "n": 68,
+        "mean_ms": 0.1,
+        "p50_ms": 0.1,
+        "p95_ms": 0.1
+      },
+      "finalize": {
+        "n": 200,
+        "mean_ms": 2.3,
+        "p50_ms": 1.9,
+        "p95_ms": 2.9
+      },
+      "auto_correct": {
+        "n": 57,
+        "mean_ms": 1.5,
+        "p50_ms": 0.3,
+        "p95_ms": 7.8
+      }
+    }
+  },
+  "detection": {
+    "n_scored": 173,
+    "n_excluded_total": 27,
+    "excluded_breakdown": {
+      "guard_blocked": 27,
+      "degraded_0_shadow": 0,
+      "no_probability": 0
+    },
+    "n_hallucination": 83,
+    "n_correct": 90,
+    "roc_auc": {
+      "point": 0.3795,
+      "ci95": [
+        0.2974,
+        0.4671
+      ]
+    },
+    "recall_at_fpr_0.10": {
+      "recall": 0.1325,
+      "threshold": 0.8288
+    },
+    "recall_at_fpr_0.05": {
+      "recall": 0.0482,
+      "threshold": 0.896
+    },
+    "ece_10bin": {
+      "point": 0.4029,
+      "ci95": [
+        0.3328,
+        0.4791
+      ]
+    },
+    "production_operating_point": {
+      "recall": 0.241,
+      "fpr": 0.3667,
+      "tp": 20,
+      "fp": 33,
+      "fn": 63,
+      "tn": 57
+    }
+  }
+}

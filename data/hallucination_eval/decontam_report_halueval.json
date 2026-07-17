@@ -1,0 +1,13 @@
+{
+  "seed": 20240617,
+  "benchmark": "halueval_qa_samples",
+  "near_cutoff": 0.92,
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "unique_questions": 10000,
+  "exact_leaked": 412,
+  "exact_clean": 9588,
+  "near_leaked_in_sample": 0,
+  "frozen_total": 200,
+  "frozen_label1_hallucination": 100,
+  "frozen_label0_correct": 100
+}
