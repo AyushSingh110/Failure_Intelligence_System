@@ -1,32 +1,32 @@
 {
-  "generated_at": "2026-07-17 12:19:12",
+  "generated_at": "2026-07-17 22:16:08",
   "config": {
     "run_full_jury": true,
     "cold_cache": true,
     "n_pairs_total": 200
   },
   "data_quality": {
-    "mean_shadows_per_request": 2.8,
-    "full_shadow_requests": 160,
-    "degraded_zero_shadow": 0,
-    "full_shadow_rate": 0.8
+    "mean_shadows_per_request": 2.44,
+    "full_shadow_requests": 146,
+    "degraded_zero_shadow": 29,
+    "full_shadow_rate": 0.73
   },
   "performance": {
     "n_requests": 200,
     "n_errors": 0,
     "e2e_ms": {
-      "p50": 10952.2,
-      "p95": 21172.6,
-      "mean": 11452.9,
-      "max": 30180.5
+      "p50": 8260.9,
+      "p95": 24637.9,
+      "mean": 9893.6,
+      "max": 58150.6
     },
     "per_request": {
-      "groq_api_calls": 6.59,
-      "groq_cache_hits": 0.1,
-      "http_calls": 3.52,
-      "input_tokens": 1417.57,
-      "output_tokens": 998.65,
-      "total_tokens": 2416.22
+      "groq_api_calls": 5.44,
+      "groq_cache_hits": 0.09,
+      "http_calls": 2.94,
+      "input_tokens": 1163.15,
+      "output_tokens": 802.86,
+      "total_tokens": 1966.01
     },
     "per_node_ms": {
       "load_session": {
@@ -37,110 +37,110 @@
       },
       "shadow_inference": {
         "n": 200,
-        "mean_ms": 2338.2,
-        "p50_ms": 2391.6,
-        "p95_ms": 3503.7
+        "mean_ms": 1846.5,
+        "p50_ms": 2274.1,
+        "p95_ms": 2941.0
       },
       "adversarial_guard": {
         "n": 200,
-        "mean_ms": 69.8,
-        "p50_ms": 56.6,
-        "p95_ms": 104.8
+        "mean_ms": 90.2,
+        "p50_ms": 77.7,
+        "p95_ms": 189.8
       },
       "signal_extract": {
         "n": 173,
-        "mean_ms": 283.7,
-        "p50_ms": 292.0,
-        "p95_ms": 397.0
+        "mean_ms": 253.3,
+        "p50_ms": 262.8,
+        "p95_ms": 472.0
       },
       "provenance_gate": {
         "n": 173,
-        "mean_ms": 0.1,
+        "mean_ms": 0.2,
         "p50_ms": 0.1,
-        "p95_ms": 0.2
+        "p95_ms": 0.4
       },
       "reasoning_verify": {
         "n": 173,
-        "mean_ms": 2230.2,
+        "mean_ms": 1943.5,
         "p50_ms": 0.0,
-        "p95_ms": 8846.6
+        "p95_ms": 11149.0
       },
       "jury_deliberate": {
         "n": 173,
-        "mean_ms": 5205.6,
-        "p50_ms": 4465.5,
-        "p95_ms": 8634.6
+        "mean_ms": 4622.4,
+        "p50_ms": 3383.5,
+        "p95_ms": 10216.3
       },
       "security_checks": {
         "n": 173,
-        "mean_ms": 3.7,
-        "p50_ms": 3.8,
-        "p95_ms": 7.6
+        "mean_ms": 4.5,
+        "p50_ms": 4.3,
+        "p95_ms": 10.1
       },
       "gt_verify": {
-        "n": 125,
-        "mean_ms": 3754.1,
-        "p50_ms": 3658.4,
-        "p95_ms": 6219.7
+        "n": 104,
+        "mean_ms": 3911.6,
+        "p50_ms": 3645.6,
+        "p95_ms": 6261.3
       },
       "escalate": {
-        "n": 68,
+        "n": 67,
         "mean_ms": 0.1,
         "p50_ms": 0.1,
         "p95_ms": 0.1
       },
       "finalize": {
         "n": 200,
-        "mean_ms": 2.3,
-        "p50_ms": 1.9,
-        "p95_ms": 2.9
+        "mean_ms": 2.7,
+        "p50_ms": 2.2,
+        "p95_ms": 3.2
       },
       "auto_correct": {
-        "n": 57,
+        "n": 37,
         "mean_ms": 1.5,
-        "p50_ms": 0.3,
-        "p95_ms": 7.8
+        "p50_ms": 0.1,
+        "p95_ms": 10.6
       }
     }
   },
   "detection": {
-    "n_scored": 173,
-    "n_excluded_total": 27,
+    "n_scored": 146,
+    "n_excluded_total": 54,
     "excluded_breakdown": {
       "guard_blocked": 27,
-      "degraded_0_shadow": 0,
+      "degraded_0_shadow": 27,
       "no_probability": 0
     },
-    "n_hallucination": 83,
-    "n_correct": 90,
+    "n_hallucination": 69,
+    "n_correct": 77,
     "roc_auc": {
-      "point": 0.3795,
+      "point": 0.3956,
       "ci95": [
-        0.2974,
-        0.4671
+        0.3013,
+        0.4937
       ]
     },
     "recall_at_fpr_0.10": {
-      "recall": 0.1325,
-      "threshold": 0.8288
+      "recall": 0.1159,
+      "threshold": 0.8633
     },
     "recall_at_fpr_0.05": {
-      "recall": 0.0482,
-      "threshold": 0.896
+      "recall": 0.029,
+      "threshold": 0.9045
     },
     "ece_10bin": {
-      "point": 0.4029,
+      "point": 0.3447,
       "ci95": [
-        0.3328,
-        0.4791
+        0.2882,
+        0.4441
       ]
     },
     "production_operating_point": {
-      "recall": 0.241,
-      "fpr": 0.3667,
-      "tp": 20,
-      "fp": 33,
-      "fn": 63,
+      "recall": 0.2029,
+      "fpr": 0.2597,
+      "tp": 14,
+      "fp": 20,
+      "fn": 55,
       "tn": 57
     }
   }

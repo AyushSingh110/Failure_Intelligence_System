@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-07-18 11:06:12",
+  "config": {
+    "run_full_jury": true,
+    "cold_cache": true,
+    "n_pairs_total": 250
+  },
+  "data_quality": {
+    "mean_shadows_per_request": 0.56,
+    "full_shadow_requests": 0,
+    "degraded_zero_shadow": 178,
+    "full_shadow_rate": 0.0
+  },
+  "performance": {
+    "n_requests": 250,
+    "n_errors": 0,
+    "e2e_ms": {
+      "p50": 130.0,
+      "p95": 16332.8,
+      "mean": 9378.5,
+      "max": 1005809.7
+    },
+    "per_request": {
+      "groq_api_calls": 1.32,
+      "groq_cache_hits": 0.0,
+      "http_calls": 0.57,
+      "input_tokens": 282.78,
+      "output_tokens": 163.93,
+      "total_tokens": 446.72
+    },
+    "per_node_ms": {
+      "load_session": {
+        "n": 250,
+        "mean_ms": 0.0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0
+      },
+      "shadow_inference": {
+        "n": 250,
+        "mean_ms": 627.5,
+        "p50_ms": 7.5,
+        "p95_ms": 2651.3
+      },
+      "adversarial_guard": {
+        "n": 250,
+        "mean_ms": 57.1,
+        "p50_ms": 37.6,
+        "p95_ms": 111.8
+      },
+      "finalize": {
+        "n": 250,
+        "mean_ms": 3.8,
+        "p50_ms": 1.2,
+        "p95_ms": 6.4
+      },
+      "signal_extract": {
+        "n": 172,
+        "mean_ms": 73.9,
+        "p50_ms": 18.8,
+        "p95_ms": 324.2
+      },
+      "provenance_gate": {
+        "n": 172,
+        "mean_ms": 0.2,
+        "p50_ms": 0.1,
+        "p95_ms": 0.2
+      },
+      "reasoning_verify": {
+        "n": 172,
+        "mean_ms": 5055.7,
+        "p50_ms": 8.0,
+        "p95_ms": 5358.9
+      },
+      "jury_deliberate": {
+        "n": 172,
+        "mean_ms": 7268.3,
+        "p50_ms": 49.4,
+        "p95_ms": 7997.2
+      },
+      "security_checks": {
+        "n": 172,
+        "mean_ms": 3.0,
+        "p50_ms": 2.7,
+        "p95_ms": 7.3
+      },
+      "gt_verify": {
+        "n": 12,
+        "mean_ms": 3047.6,
+        "p50_ms": 2646.4,
+        "p95_ms": 6093.8
+      },
+      "escalate": {
+        "n": 5,
+        "mean_ms": 0.1,
+        "p50_ms": 0.1,
+        "p95_ms": 0.1
+      },
+      "auto_correct": {
+        "n": 7,
+        "mean_ms": 3.1,
+        "p50_ms": 0.5,
+        "p95_ms": 13.3
+      }
+    }
+  },
+  "detection": {
+    "n_scored": 40,
+    "n_excluded_total": 210,
+    "excluded_breakdown": {
+      "guard_blocked": 78,
+      "degraded_0_shadow": 132,
+      "no_probability": 0
+    },
+    "n_hallucination": 14,
+    "n_correct": 26,
+    "roc_auc": {
+      "point": 0.5385,
+      "ci95": [
+        0.3417,
+        0.7337
+      ]
+    },
+    "recall_at_fpr_0.10": {
+      "recall": 0.2143,
+      "threshold": 0.7638
+    },
+    "recall_at_fpr_0.05": {
+      "recall": 0.2143,
+      "threshold": 0.7638
+    },
+    "ece_10bin": {
+      "point": 0.1707,
+      "ci95": [
+        0.1008,
+        0.3235
+      ]
+    },
+    "production_operating_point": {
+      "recall": 0.2857,
+      "fpr": 0.1154,
+      "tp": 4,
+      "fp": 3,
+      "fn": 10,
+      "tn": 23
+    }
+  }
+}
