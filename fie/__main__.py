@@ -187,7 +187,8 @@ def _cmd_explain(args: argparse.Namespace) -> int:
 
 def _cmd_benchmark(args: argparse.Namespace) -> int:
     if args.suite == "harmbench":
-        import importlib.util, os
+        import importlib.util
+        import os
         spec = importlib.util.spec_from_file_location(
             "eval_harmbench",
             os.path.join(os.path.dirname(__file__), "..", "data", "eval_harmbench.py"),
@@ -209,7 +210,8 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
         return 0
 
     elif args.suite == "jailbreakbench":
-        import importlib.util, os
+        import importlib.util
+        import os
         spec = importlib.util.spec_from_file_location(
             "eval_jailbreakbench",
             os.path.join(os.path.dirname(__file__), "..", "data", "eval_jailbreakbench.py"),
