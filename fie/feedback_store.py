@@ -1,39 +1,4 @@
-"""
-Feedback store (Flaw: No feedback loop).
-
-Every time scan_prompt blocks a prompt or scan_output flags a response, the event
-is recorded here. A human reviewer can then label each event as a true positive (TP)
-or false positive (FP). Labels feed back into detection:
-
-  TP confirmation  → add prompt hash to the "known attack" accelerator so future
-                     identical prompts skip the layer pipeline and block immediately.
-  FP confirmation  → add prompt hash to the per-prompt whitelist so the same prompt
-                     is never blocked again; adds the match text to an exclusion list
-                     that downstream pattern code can query.
-
-Storage backend (in priority order):
-  1. MongoDB  `flagged_events` collection — when server is connected
-  2. Local JSON file  `~/.fie/flagged_events.jsonl` — SDK-only / offline use
-
-Both backends are append-only. The file backend uses newline-delimited JSON.
-MongoDB stores standard documents with the same schema.
-
-Schema:
-  {
-    "id":          str (UUID4),
-    "kind":        "input_block" | "output_flag",
-    "flag_type":   str,          # attack_type or output flag_type
-    "confidence":  float,
-    "prompt_hash": str,          # SHA-256 of prompt (privacy-preserving)
-    "matched":     str,          # excerpt that triggered detection (≤ 140 chars)
-    "session_id":  str | null,
-    "timestamp":   str,          # ISO-8601 UTC
-    "label":       null | "true_positive" | "false_positive",
-    "labeled_at":  str | null,
-  }
-"""
 from __future__ import annotations
-
 import hashlib
 import json
 import logging
@@ -96,9 +61,9 @@ def _local_read_all() -> list[dict]:
                     try:
                         events.append(json.loads(line))
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in _local_read_all()", exc_info=True)
     except Exception:
-        pass
+        logger.warning("Suppressed exception in _local_read_all()", exc_info=True)
     return events
 
 
@@ -130,6 +95,7 @@ def _mongo_collection():
             return None
         return _db["flagged_events"]
     except Exception:
+        logger.warning("Suppressed exception in _mongo_collection()", exc_info=True)
         return None
 
 

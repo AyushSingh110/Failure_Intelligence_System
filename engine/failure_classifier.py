@@ -163,6 +163,7 @@ def _infer(
         temperature  = get_temperature()
         ambig_band   = get_ambiguous_band()
     except Exception:
+        logger.warning("Suppressed exception in _infer()", exc_info=True)
         threshold    = CLASSIFIER_THRESHOLD
         temperature  = 1.15
         ambig_band   = 0.06

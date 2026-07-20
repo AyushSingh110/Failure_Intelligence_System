@@ -28,11 +28,12 @@ def _resolve_sdk_version() -> str:
             if m:
                 return m.group(1)
     except Exception:
-        pass
+        logger.warning("Suppressed exception in _resolve_sdk_version()", exc_info=True)
     try:
         from importlib.metadata import version
         return version("fie-sdk")
     except Exception:
+        logger.warning("Suppressed exception in _resolve_sdk_version()", exc_info=True)
         return "1.13.0"
 
 
@@ -184,6 +185,7 @@ class FIEClient:
             )
             return r.status_code == 200
         except Exception:
+            logger.warning("Suppressed exception in health_check()", exc_info=True)
             return False
 
     # Analytics
@@ -261,6 +263,6 @@ class FIEClient:
                     timeout = 3,
                 )
             except Exception:
-                pass  # telemetry failure must never affect the user
+                logger.warning("Suppressed exception in _post()", exc_info=True)
 
         threading.Thread(target=_post, daemon=True).start()

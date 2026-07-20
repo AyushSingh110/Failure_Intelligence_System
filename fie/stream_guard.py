@@ -1,35 +1,4 @@
-"""
-Streaming output interception (Flaw: No streaming interception).
-
-The output scanner in output_scanner.py is post-hoc — it runs after the full response
-is delivered to the user. For streaming LLMs, a jailbroken response reaches the user
-chunk-by-chunk before any post-hoc scan can act.
-
-stream_guard() wraps any sync or async generator and intercepts mid-stream:
-
-  1. Buffer the first SCAN_WINDOW_CHARS characters (default 400).
-  2. Run scan_output on the buffer.
-  3. If CLEAN → yield buffered chunks and pass through all remaining chunks untouched.
-  4. If FLAGGED → discard the buffer, yield a refusal message, stop iteration.
-     The caller receives the refusal as if the model produced it — no exception raised.
-
-Usage (sync):
-    from fie.stream_guard import stream_guard
-
-    raw_stream = openai_client.chat.completions.create(stream=True, ...)
-    for chunk in stream_guard(raw_stream, prompt=user_prompt, text_extractor=lambda c: c.choices[0].delta.content or ""):
-        print(chunk, end="", flush=True)
-
-Usage (async):
-    async for chunk in astream_guard(raw_stream, prompt=user_prompt, text_extractor=...):
-        yield chunk
-
-For plain-string generators (text already extracted per chunk):
-    for text in stream_guard(my_gen, prompt=prompt):
-        print(text, end="")
-"""
 from __future__ import annotations
-
 import logging
 from typing import AsyncGenerator, Callable, Generator, Optional, TypeVar
 
@@ -107,7 +76,7 @@ def stream_guard(
                             session_id=session_id,
                         )
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in stream_guard()", exc_info=True)
                     yield refusal
                     return
                 else:
@@ -136,7 +105,7 @@ def stream_guard(
                     matched=result.evidence.get("matched", ""), session_id=session_id,
                 )
             except Exception:
-                pass
+                logger.warning("Suppressed exception in stream_guard()", exc_info=True)
             yield refusal
         else:
             for buffered in buffer_chunks:
@@ -190,7 +159,7 @@ async def astream_guard(
                             matched=result.evidence.get("matched", ""), session_id=session_id,
                         )
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in astream_guard()", exc_info=True)
                     yield refusal
                     return
                 else:
@@ -217,7 +186,7 @@ async def astream_guard(
                     matched=result.evidence.get("matched", ""), session_id=session_id,
                 )
             except Exception:
-                pass
+                logger.warning("Suppressed exception in astream_guard()", exc_info=True)
             yield refusal
         else:
             for buffered in buffer_chunks:

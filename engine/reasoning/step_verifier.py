@@ -84,6 +84,7 @@ def _safe_eval(expr: str) -> Optional[float]:
 
         return _eval(tree)
     except Exception:
+        logger.warning("Suppressed exception in _safe_eval()", exc_info=True)
         return None
 
 

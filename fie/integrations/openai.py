@@ -55,6 +55,7 @@ def _extract_response_text(response) -> str:
     try:
         return response.choices[0].message.content or ""
     except Exception:
+        logger.warning("Suppressed exception in _extract_response_text()", exc_info=True)
         return ""
 
 
@@ -148,7 +149,7 @@ class Client:
                             f"(confidence={attack.confidence:.2f})"
                         )
             except ImportError:
-                pass
+                logger.warning("Suppressed exception in _monitored_create()", exc_info=True)
             except ValueError:
                 raise
             except Exception as exc:
@@ -217,7 +218,7 @@ class Client:
                             fix.get("fix_strategy", ""), model,
                         )
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in _run_fie_correct()", exc_info=True)
         except Exception as exc:
             logger.debug("FIE correct mode error (non-fatal): %s", exc)
 

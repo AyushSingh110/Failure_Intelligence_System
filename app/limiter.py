@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
 
 try:
     from slowapi import Limiter
@@ -7,6 +9,7 @@ try:
     limiter: Limiter | None = Limiter(key_func=get_remote_address)
     available: bool = True
 except ImportError:
+    logger.warning("Suppressed exception in limiter", exc_info=True)
     limiter = None
     available = False
 

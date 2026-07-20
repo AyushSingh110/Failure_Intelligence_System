@@ -37,7 +37,7 @@ def _send_local_telemetry(payload: dict) -> None:
                 timeout=3,
             )
         except Exception:
-            pass  # telemetry must never affect user
+            logger.warning("Suppressed exception in _post()", exc_info=True)
 
     threading.Thread(target=_post, daemon=True).start()
 

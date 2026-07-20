@@ -29,6 +29,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
+import logging
+logger = logging.getLogger(__name__)
 
 
 class FIEMiddleware(BaseHTTPMiddleware):
@@ -102,6 +104,7 @@ class FIEMiddleware(BaseHTTPMiddleware):
                                     return block.get("text", "")
             return None
         except Exception:
+            logger.warning("Suppressed exception in _extract_prompt()", exc_info=True)
             return None
 
     def _scan(self, prompt: str) -> tuple[str | None, float, bool]:
@@ -113,6 +116,7 @@ class FIEMiddleware(BaseHTTPMiddleware):
             else:
                 return self._scan_server(prompt)
         except Exception:
+            logger.warning("Suppressed exception in _scan()", exc_info=True)
             return None, 0.0, False
 
     def _scan_server(self, prompt: str) -> tuple[str | None, float, bool]:
@@ -133,5 +137,5 @@ class FIEMiddleware(BaseHTTPMiddleware):
                 data = resp.json()
                 return data.get("attack_type"), data.get("confidence", 0.0), data.get("is_attack", False)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _scan_server()", exc_info=True)
         return None, 0.0, False

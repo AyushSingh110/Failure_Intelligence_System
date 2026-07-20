@@ -66,6 +66,7 @@ def get_buffer_count() -> int:
     try:
         return col.count_documents({})
     except Exception:
+        logger.warning("Suppressed exception in get_buffer_count()", exc_info=True)
         return 0
 
 
@@ -187,6 +188,7 @@ def _do_retrain() -> None:
             from engine.failure_classifier import _model as current_model
             _cur_auc = 0.840  # known v4 AUC — used as baseline
         except Exception:
+            logger.warning("Suppressed exception in _do_retrain()", exc_info=True)
             _cur_auc = 0.0
 
         logger.info(

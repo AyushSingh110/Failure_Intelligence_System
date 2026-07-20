@@ -1,26 +1,4 @@
-"""
-Multi-turn adversarial escalation tracker.
-
-Responsibilities:
-  1. Record each scan turn (hash-only — no raw prompts ever stored).
-  2. Fire 4 escalation rules that detect session-level attack patterns.
-  3. Compute a trajectory boost for the current turn based on session history
-     (the crescendo / foot-in-the-door detection mechanism).
-  4. Optional Redis backend for multi-instance deployments (Cloud Run).
-
-The trajectory boost is applied AFTER weighted aggregation and BEFORE three-zone
-routing in scan_prompt().  It can push a borderline prompt from UNCERTAIN into
-CLEAR ATTACK when the session history shows a classic crescendo pattern.
-
-Boost signals (cap: +0.20 total):
-  - Confidence escalation: last 3 turns show rising scores          → +0.07
-  - Prior UNCERTAIN hits: 2+ of last 5 turns were uncertain         → +0.05
-  - Crescendo signature: early avg < 0.20, current > 0.40           → +0.10
-  - Rapid probing: 4+ turns within 60 seconds                       → +0.06
-"""
-
 from __future__ import annotations
-
 import hashlib
 import os
 import threading
@@ -28,6 +6,8 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque
+import logging
+logger = logging.getLogger(__name__)
 
 
 _MAX_TURNS_PER_SESSION = 20
@@ -283,6 +263,7 @@ class RedisSessionTracker(SessionTracker):
             )
             self._redis.ping()
         except Exception:
+            logger.warning("Suppressed exception in _connect()", exc_info=True)
             self._redis = None  # fall back to in-memory
 
     def _key(self, session_id: str) -> str:
@@ -298,7 +279,7 @@ class RedisSessionTracker(SessionTracker):
             if raw:
                 return pickle.loads(raw)  # noqa: S301
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _load_session()", exc_info=True)
         return _Session(session_id=session_id)
 
     def _save_session(self, session: _Session) -> None:
@@ -313,7 +294,7 @@ class RedisSessionTracker(SessionTracker):
                 pickle.dumps(session),
             )
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _save_session()", exc_info=True)
 
     def get_trajectory_boost(self, session_id: str, current_confidence: float) -> float:
         session = self._load_session(session_id)

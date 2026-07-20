@@ -81,6 +81,7 @@ def _extract_json_payload(text: str) -> dict | None:
     try:
         return json.loads(text[start : end + 1])
     except Exception:
+        logger.warning("Suppressed exception in _extract_json_payload()", exc_info=True)
         return None
 
 

@@ -10,6 +10,8 @@ from engine.agents.adversarial.normalization import normalize_for_detection
 from engine.agents.adversarial.patterns import _AttackPattern, _ATTACK_PATTERNS
 from engine.archetypes.registry import adversarial_registry, FAISSSearchResult
 from engine.prompt_guard import score_prompt_attack
+import logging
+logger = logging.getLogger(__name__)
 
 # ── Layer 4 helpers: indirect prompt injection ────────────────────────────────
 
@@ -178,6 +180,7 @@ def run_faiss_detection(prompt: str) -> tuple[FAISSSearchResult | None, float]:
     try:
         results = adversarial_registry.search(prompt)
     except Exception:
+        logger.warning("Suppressed exception in run_faiss_detection()", exc_info=True)
         return None, 0.0
 
     if not results:

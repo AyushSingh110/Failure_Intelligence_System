@@ -52,7 +52,7 @@ def receive_telemetry(request: Request, body: TelemetryPing) -> dict:
         if not _fallback_mode and _db is not None:
             _db["sdk_telemetry"].insert_one(clean)
     except Exception:
-        pass  # telemetry failures must never surface to SDK users
+        logger.warning("Suppressed exception in receive_telemetry()", exc_info=True)
     return {"status": "ok"}
 
 
@@ -106,6 +106,7 @@ def analytics_usage(
             "question_type_breakdown": dict(qt_counts),
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in analytics_usage()", exc_info=True)
         return {"error": str(exc)}
 
 
@@ -171,6 +172,7 @@ def analytics_model_performance(
             ),
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in analytics_model_performance()", exc_info=True)
         return {"error": str(exc)}
 
 
@@ -244,6 +246,7 @@ def analytics_calibration(
             "config_version":     get_config_version(),
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in analytics_calibration()", exc_info=True)
         return {"error": str(exc)}
 
 
@@ -296,6 +299,7 @@ def analytics_question_breakdown(
 
         return {"breakdown": result, "total_logged": len(docs)}
     except Exception as exc:
+        logger.warning("Suppressed exception in analytics_question_breakdown()", exc_info=True)
         return {"error": str(exc)}
 
 
@@ -382,6 +386,7 @@ def analytics_paper_metrics(
             ),
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in analytics_paper_metrics()", exc_info=True)
         return {"error": str(exc)}
 
 
@@ -443,4 +448,5 @@ def analytics_sdk_telemetry(
             ),
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in analytics_sdk_telemetry()", exc_info=True)
         return {"error": str(exc)}

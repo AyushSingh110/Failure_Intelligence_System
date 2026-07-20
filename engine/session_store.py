@@ -39,7 +39,7 @@ def _summarize_turns(turns: list[dict], existing_summary: str = "") -> Optional[
                 from config import get_settings
                 api_key = get_settings().groq_api_key or ""
             except Exception:
-                pass
+                logger.warning("Suppressed exception in _summarize_turns()", exc_info=True)
         if not api_key:
             return None
 
@@ -225,7 +225,7 @@ def clear_session(session_id: str) -> None:
         try:
             col.delete_one({"session_id": session_id})
         except Exception:
-            pass
+            logger.warning("Suppressed exception in clear_session()", exc_info=True)
     else:
         with _fallback_lock:
             _fallback.pop(session_id, None)

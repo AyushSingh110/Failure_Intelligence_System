@@ -1,16 +1,4 @@
-"""
-Output-side adversarial scanner (Flaw 7).
-
-Scans LLM responses for three failure classes:
-  1. POLICY_ECHO        — model reports it was jailbroken ("As an AI without restrictions...")
-  2. SYSTEM_PROMPT_LEAK — model reveals its system prompt / initial instructions
-  3. HARMFUL_OUTPUT     — model produces genuinely harmful step-by-step content
-
-All three gates are O(n) regex scans — sub-millisecond on typical response lengths.
-`scan_output_async` runs in a daemon thread so callers pay zero added latency.
-"""
 from __future__ import annotations
-
 import logging
 import re
 import threading
@@ -221,12 +209,12 @@ def scan_output_async(
                         session_id=session_id,
                     )
                 except Exception:
-                    pass
+                    logger.warning("Suppressed exception in _run()", exc_info=True)
                 if on_flag is not None:
                     try:
                         on_flag(result)
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in _run()", exc_info=True)
         except Exception as exc:
             logger.debug("[FIE:output] scan_output failed: %s", exc)
 

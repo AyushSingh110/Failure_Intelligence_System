@@ -46,6 +46,7 @@ try:
     from slowapi.errors import RateLimitExceeded
     from slowapi import _rate_limit_exceeded_handler
 except ImportError:
+    logger.warning("Suppressed exception in main", exc_info=True)
     RateLimitExceeded = None  # type: ignore[assignment, misc]
     _rate_limit_exceeded_handler = None  # type: ignore[assignment]
 
@@ -220,6 +221,7 @@ def health_deep() -> dict:
         else:
             results["mongodb"] = {"status": "degraded", "error": "not connected"}
     except Exception as exc:
+        logger.warning("Suppressed exception in health_deep()", exc_info=True)
         results["mongodb"] = {"status": "down", "error": str(exc)[:120]}
 
     # Groq
@@ -236,6 +238,7 @@ def health_deep() -> dict:
         else:
             results["groq"] = {"status": "not_configured"}
     except Exception as exc:
+        logger.warning("Suppressed exception in health_deep()", exc_info=True)
         results["groq"] = {"status": "down", "error": str(exc)[:120]}
 
     # FAISS index
@@ -247,6 +250,7 @@ def health_deep() -> dict:
             "vectors": size,
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in health_deep()", exc_info=True)
         results["faiss"] = {"status": "down", "error": str(exc)[:120]}
 
     # Sentence encoder
@@ -258,6 +262,7 @@ def health_deep() -> dict:
             "backend": "transformer" if encoder.available else "ngram_fallback",
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in health_deep()", exc_info=True)
         results["encoder"] = {"status": "down", "error": str(exc)[:120]}
 
     # XGBoost classifier
@@ -268,6 +273,7 @@ def health_deep() -> dict:
             "mode":   "xgboost" if _model is not None else "rule_based_fallback",
         }
     except Exception as exc:
+        logger.warning("Suppressed exception in health_deep()", exc_info=True)
         results["xgboost"] = {"status": "down", "error": str(exc)[:120]}
 
     overall = (

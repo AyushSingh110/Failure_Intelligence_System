@@ -6,6 +6,8 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Literal
+import logging
+logger = logging.getLogger(__name__)
 
 _GROQ_API_KEY     = os.environ.get("GROQ_API_KEY", "")
 _GROQ_MODEL       = "meta-llama/llama-prompt-guard-2-86m"
@@ -135,6 +137,7 @@ def query_llama_guard(prompt: str) -> bool:
         is_unsafe = score >= 0.5
     except ValueError:
         # Fallback: handle legacy text labels if model changes again
+        logger.warning("Suppressed exception in query_llama_guard()", exc_info=True)
         is_unsafe = (
             content.startswith("injection")
             or content.startswith("jailbreak")

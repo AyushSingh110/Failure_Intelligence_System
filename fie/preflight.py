@@ -77,6 +77,7 @@ def _get_block_enabled() -> bool:
         from engine.fie_config import get_preflight_config
         return get_preflight_config()["block_enabled"]
     except Exception:
+        logger.warning("Suppressed exception in _get_block_enabled()", exc_info=True)
         return _ENV_BLOCK_ENABLED
 
 

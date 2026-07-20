@@ -2,6 +2,8 @@ from __future__ import annotations
 import os
 import platform
 import threading
+import logging
+logger = logging.getLogger(__name__)
 
 _TELEMETRY_URL = "https://failure-intelligence-system.onrender.com/ping"
 
@@ -27,6 +29,6 @@ def _ping_telemetry(version: str) -> None:
             )
             urllib.request.urlopen(req, timeout=2)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _send()", exc_info=True)
 
     threading.Thread(target=_send, daemon=True).start()

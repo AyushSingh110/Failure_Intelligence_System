@@ -229,4 +229,5 @@ def verify_session_token(token: str) -> Optional[dict]:
         logger.info("Session token expired — user must re-login")
         return None
     except jwt.InvalidTokenError:
+        logger.warning("Suppressed exception in verify_session_token()", exc_info=True)
         return None

@@ -71,7 +71,7 @@ def _get_db_collection():
             col.create_index("timestamp", expireAfterSeconds=7200, background=True)
             col.create_index("conversation_id", background=True)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _get_db_collection()", exc_info=True)
         return col
     except Exception as exc:
         logger.debug("multi_turn_tracker: could not get collection: %s", exc)

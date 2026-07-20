@@ -365,6 +365,7 @@ class AdversarialRegistry:
                 self._index    = faiss.IndexFlatIP(cfg.embedding_dimension)
                 self._faiss_ok = True
             except ImportError:
+                logger.warning("Suppressed exception in _ensure_ready()", exc_info=True)
                 self._faiss_ok = False
 
 

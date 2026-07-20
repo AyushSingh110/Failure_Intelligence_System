@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections
 import concurrent.futures
 import hashlib
+import logging
 import math
 import re
 import statistics
@@ -13,6 +14,8 @@ import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 
 # ── Legacy global threshold (kept for backward compat) ────────────────────────
@@ -159,6 +162,7 @@ def _get_attack_threshold(attack_type: str) -> float:
         from engine.fie_config import get_attack_thresholds
         return get_attack_thresholds().get(attack_type, _ATTACK_THRESHOLDS.get(attack_type, SCAN_THRESHOLD))
     except Exception:
+        logger.warning("Suppressed exception in _get_attack_threshold()", exc_info=True)
         return _ATTACK_THRESHOLDS.get(attack_type, SCAN_THRESHOLD)
 
 
@@ -170,6 +174,7 @@ def _get_scan_threshold(override: float | None) -> float:
         from engine.fie_config import get_scan_threshold
         return get_scan_threshold()
     except Exception:
+        logger.warning("Suppressed exception in _get_scan_threshold()", exc_info=True)
         return SCAN_THRESHOLD
 
 
@@ -1668,6 +1673,7 @@ def _load_meta_classifier() -> bool:
                 _meta_clf_features  = meta.get("layer_names", [])
             return True
         except Exception:
+            logger.warning("Suppressed exception in _load_meta_classifier()", exc_info=True)
             return False
 
 
@@ -1683,6 +1689,7 @@ def _run_meta_classifier(layer_scores: dict[str, float]) -> float:
         )
         return float(_meta_clf.predict_proba(vec)[0][1])
     except Exception:
+        logger.warning("Suppressed exception in _run_meta_classifier()", exc_info=True)
         return 0.0
 
 
@@ -1766,6 +1773,7 @@ def _load_pair_classifier() -> bool:
         _pair_embedder = SentenceTransformer(embed_model)
         return True
     except Exception:
+        logger.warning("Suppressed exception in _load_pair_classifier()", exc_info=True)
         return False
 
 
@@ -1783,6 +1791,7 @@ def _run_pair_classifier(prompt: str) -> tuple[str | None, float, dict]:
             }
         return None, 0.0, {}
     except Exception:
+        logger.warning("Suppressed exception in _run_pair_classifier()", exc_info=True)
         return None, 0.0, {}
 
 
@@ -2074,8 +2083,10 @@ def _run_layer_safe(
             try:
                 root, conf, evidence = fut.result(timeout=timeout)
             except concurrent.futures.TimeoutError:
+                logger.warning("Suppressed exception in _run_layer_safe()", exc_info=True)
                 root, conf, evidence = None, 0.0, {"error": "layer_timeout"}
     except Exception as exc:
+        logger.warning("Suppressed exception in _run_layer_safe()", exc_info=True)
         root, conf, evidence = None, 0.0, {"error": str(exc)[:120]}
     return LayerResult(
         layer_name  = layer_name,
@@ -2125,15 +2136,16 @@ def _run_all_layers_parallel(
                 try:
                     results.append(fut.result())
                 except Exception:
-                    pass   # individual layer failure never kills the scan
+                    logger.warning("Suppressed exception in _run_all_layers_parallel()", exc_info=True)
         except concurrent.futures.TimeoutError:
             # Collect whatever finished; timed-out layers are silently skipped
+            logger.warning("Suppressed exception in _run_all_layers_parallel()", exc_info=True)
             for fut, name in futures.items():
                 if fut.done():
                     try:
                         results.append(fut.result())
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in _run_all_layers_parallel()", exc_info=True)
 
     return results
 
@@ -2202,6 +2214,7 @@ def _get_trajectory_boost(prompt: str, session_id: str | None, current_confidenc
         from fie.session_tracker import get_tracker
         return get_tracker().get_trajectory_boost(session_id, current_confidence)
     except Exception:
+        logger.warning("Suppressed exception in _get_trajectory_boost()", exc_info=True)
         return 0.0
 
 
@@ -2234,7 +2247,7 @@ def _record_session(
                 session_id, escalation.rule, escalation.severity, escalation.context,
             )
     except Exception:
-        pass
+        logger.warning("Suppressed exception in _record_session()", exc_info=True)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -2288,7 +2301,7 @@ def scan_prompt(
             )
             return result
     except Exception:
-        pass
+        logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
 
     # ── Cache lookup ──────────────────────────────────────────────────────────
     # Include domain in the cache key so domain='medical' and domain='developer'
@@ -2324,7 +2337,7 @@ def scan_prompt(
         from fie.framing_filter import get_dampening_factor
         dampen = get_dampening_factor(prompt, fired_names)
     except Exception:
-        pass
+        logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
 
     if dampen < 1.0:
         fired_results = [
@@ -2454,9 +2467,9 @@ def scan_prompt(
                     zone="CLEAR_ATTACK",
                 )
             except Exception:
-                pass
+                logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
         _scan_cache.set(_cache_prompt, result)
         _record_session(prompt, result, session_id)
         return result
@@ -2472,7 +2485,7 @@ def scan_prompt(
             from fie.llama_guard import query_llama_guard
             lg_verdict = query_llama_guard(prompt)
         except Exception:
-            pass   # LlamaGuard unavailable — use local confidence alone
+            logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
 
     if lg_verdict is True:
         # LlamaGuard confirms attack → treat as CLEAR ATTACK
@@ -2556,9 +2569,9 @@ def scan_prompt(
                     zone="UNCERTAIN",
                 )
             except Exception:
-                pass
+                logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in scan_prompt()", exc_info=True)
 
     _scan_cache.set(_cache_prompt, result)
     # Pass is_uncertain=True so session tracker marks this turn for crescendo detection

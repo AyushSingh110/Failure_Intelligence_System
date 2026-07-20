@@ -57,6 +57,7 @@ def run_ground_truth_pipeline(
         from engine.question_classifier import classify_provenance_category
         result.provenance_category = classify_provenance_category(qt, prompt)
     except Exception:
+        logger.warning("Suppressed exception in run_ground_truth_pipeline()", exc_info=True)
         result.provenance_category = "GENERAL_KNOWLEDGE"
 
     # Default label — overridden at each verification outcome below

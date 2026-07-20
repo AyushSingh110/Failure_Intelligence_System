@@ -168,7 +168,7 @@ class GroqService:
                     latency_ms=0.0, cached=True,
                 )
             except Exception:
-                pass
+                logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
             return cached
 
         start = time.time()
@@ -221,7 +221,7 @@ class GroqService:
                         model_name, in_tok, out_tok, latency_ms=latency_ms, cached=False,
                     )
                 except Exception:
-                    pass
+                    logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
                 return result
 
             except requests.exceptions.Timeout:
@@ -252,12 +252,13 @@ class GroqService:
                         from engine import instrumentation as _instr
                         _instr.record_rate_limit()
                     except Exception:
-                        pass
+                        logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
                 else:
                     response_text = ""
                     try:
                         response_text = exc.response.text
                     except Exception:
+                        logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
                         response_text = ""
                     error = str(exc) if not response_text else f"{exc} | {response_text}"
                 return GroqModelResponse(
@@ -421,6 +422,7 @@ class GroqService:
             )
             return result.success
         except Exception:
+            logger.warning("Suppressed exception in is_available()", exc_info=True)
             return False
 
 

@@ -42,6 +42,7 @@ class OllamaService:
             r = requests.get(f"{self.base_url}/api/tags", timeout=3)
             return r.status_code == 200
         except Exception:
+            logger.warning("Suppressed exception in is_available()", exc_info=True)
             return False
 
     def get_available_models(self) -> list[str]:
@@ -51,6 +52,7 @@ class OllamaService:
             data = r.json()
             return [m["name"].split(":")[0] for m in data.get("models", [])]
         except Exception:
+            logger.warning("Suppressed exception in get_available_models()", exc_info=True)
             return []
 
     def fan_out(self, prompt: str) -> list[ModelResponse]:
@@ -141,6 +143,7 @@ class OllamaService:
             )
 
         except requests.exceptions.Timeout:
+            logger.warning("Suppressed exception in _call_model()", exc_info=True)
             return ModelResponse(
                 model_name=model_name,
                 output_text="",
@@ -149,6 +152,7 @@ class OllamaService:
                 error=f"Timeout after {self.timeout}s",
             )
         except Exception as exc:
+            logger.warning("Suppressed exception in _call_model()", exc_info=True)
             return ModelResponse(
                 model_name=model_name,
                 output_text="",

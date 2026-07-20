@@ -38,6 +38,8 @@ from __future__ import annotations
 import re
 import threading
 import unicodedata
+import logging
+logger = logging.getLogger(__name__)
 
 # Translation result cache — avoids duplicate API calls within a session.
 # Keyed by prompt text, bounded to avoid unbounded growth.
@@ -193,6 +195,20 @@ _TRANSLATED_PATTERNS: list[re.Pattern] = [re.compile(pat, re.IGNORECASE) for pat
 ]]
 
 
+def _first_translated_pattern_match(text: str) -> re.Match | None:
+    """Return the first Tier-2 injection phrase found in `text`, or None.
+
+    Shared by the native-script scan (run_multilingual_detection) and the
+    Romanised-then-translated scan (_tier25_romanised_detection) so both use
+    the exact same first-match semantics against _TRANSLATED_PATTERNS.
+    """
+    for pat in _TRANSLATED_PATTERNS:
+        m = pat.search(text)
+        if m:
+            return m
+    return None
+
+
 # ── Tier 2.5: Language detection for all-Latin text (Romanised gap) ──────────
 #
 # The original Tier 1 + Tier 2 design has a documented blind spot:
@@ -241,8 +257,11 @@ def _detect_language_of_latin_text(text: str) -> tuple[str | None, float]:
                 return top.lang, round(float(top.prob), 3)
         return None, 0.0
     except ImportError:
-        pass
+        # langdetect not installed — expected in minimal installs; fall through to lingua.
+        logger.debug("langdetect unavailable; trying lingua fallback", exc_info=True)
     except Exception:
+        # Unexpected langdetect failure — record it, but fail closed (no detection).
+        logger.warning("langdetect failed during language detection", exc_info=True)
         return None, 0.0
 
     # ── Try lingua-language-detector ──────────────────────────────────────────
@@ -254,8 +273,10 @@ def _detect_language_of_latin_text(text: str) -> tuple[str | None, float]:
             return result.iso_code_639_1.name.lower(), 0.80
         return None, 0.0
     except ImportError:
-        pass
+        # Neither detector installed — Tier 2.5 disables silently, Tier 1/2 still run.
+        logger.debug("lingua unavailable; Tier 2.5 language detection disabled", exc_info=True)
     except Exception:
+        logger.warning("lingua failed during language detection", exc_info=True)
         return None, 0.0
 
     return None, 0.0
@@ -299,12 +320,7 @@ def _tier25_romanised_detection(prompt: str) -> tuple[str | None, float, dict]:
         }
 
     # Run Tier 2 patterns on translated English text
-    tier2_match: re.Match | None = None
-    for pat in _TRANSLATED_PATTERNS:
-        m = pat.search(translated)
-        if m:
-            tier2_match = m
-            break
+    tier2_match = _first_translated_pattern_match(translated)
 
     eng_match = bool(_ENGLISH_INJECTION_RE.search(translated)) if translated else False
 
@@ -386,9 +402,11 @@ def translate_to_english(text: str, timeout: float = 3.0) -> str | None:
         if translated and translated.lower() != stripped[:len(translated)].lower():
             return translated
     except ImportError:
-        pass   # deep_translator not installed — try LibreTranslate
+        # deep-translator not installed — expected in minimal installs; try LibreTranslate.
+        logger.debug("deep-translator unavailable; trying LibreTranslate fallback", exc_info=True)
     except Exception:
-        pass   # network error, rate limit, etc. — try LibreTranslate
+        # Network/API error against the public endpoint — fall through to LibreTranslate.
+        logger.warning("deep-translator translation failed", exc_info=True)
 
     # ── Option 2: LibreTranslate (self-hosted, backward compat) ──────────────
     import os
@@ -406,7 +424,7 @@ def translate_to_english(text: str, timeout: float = 3.0) -> str | None:
                 if translated and translated.lower() != stripped[:len(translated)].lower():
                     return translated
         except Exception:
-            pass
+            logger.warning("Suppressed exception in translate_to_english()", exc_info=True)
 
     return None
 
@@ -449,12 +467,7 @@ def run_multilingual_detection(prompt: str) -> tuple[str | None, float, dict]:
         return None, 0.0, {}
 
     # ── Tier 2 (native-script phrase matching) ───────────────────────────────
-    tier2_match: re.Match | None = None
-    for pat in _TRANSLATED_PATTERNS:
-        m = pat.search(prompt)
-        if m:
-            tier2_match = m
-            break
+    tier2_match = _first_translated_pattern_match(prompt)
 
     # ── Tier 1: script anomaly ────────────────────────────────────────────────
     anomaly_score = _script_anomaly_score(prompt)

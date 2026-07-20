@@ -1,44 +1,46 @@
 # Core API server
-fastapi
-uvicorn[standard]==0.29.0
-slowapi
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+slowapi>=0.1.9          # NOT installed in the pin env — see requirements notes in change report
 
 # Validation and settings
-pydantic
-pydantic-settings
-python-dotenv
+pydantic==2.10.3
+pydantic-settings==2.6.1
+python-dotenv==1.0.1
 
 # HTTP and auth
-requests
-PyJWT
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
-bcrypt
+requests==2.32.3
+PyJWT==2.10.1
+google-auth==2.52.0
+google-auth-oauthlib>=1.2.0    # NOT installed in the pin env — see change report
+google-auth-httplib2==0.3.0
+bcrypt==4.3.0
 
 # Database
-pymongo
+pymongo==4.15.0
 
 # ML / retrieval / vector logic
-numpy
-faiss-cpu
-sentence-transformers
+numpy==2.1.3
+faiss-cpu>=1.8.0       # NOT installed in the pin env (optional vector backend) — see change report
+sentence-transformers==3.4.1
 # Failure classifier (engine/failure_classifier.py) — XGBoost model + columns
-xgboost>=2.0
-scikit-learn>=1.3
-joblib>=1.3
-pandas>=2.0
+xgboost==2.1.4
+# Pinned to match the version the shipped .pkl models were serialized with (1.7.2).
+# The classifier decision boundary is version-sensitive — a mismatch here is exactly
+# what caused the historical FPR regression. Do NOT change without re-fitting the models.
+scikit-learn==1.7.2
+joblib==1.4.2
+pandas==2.2.3
 
 # Multilingual detection tiers (fie/multilingual.py)
-deep-translator>=1.11.4
-langdetect>=1.0.9
+deep-translator==1.11.4
+langdetect==1.0.9
 
 # Agentic pipeline orchestration
-langgraph>=0.2.0
+langgraph==0.2.76
 
 # Email notifications
-sendgrid>=6.10
+sendgrid==6.12.5
 
 # Error tracking — optional; only active when SENTRY_DSN env var is set
-sentry-sdk[fastapi]>=2.0
-
+sentry-sdk[fastapi]==2.45.0

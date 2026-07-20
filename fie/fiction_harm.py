@@ -1,30 +1,4 @@
-"""
-Layer 10: Fiction & Roleplay harm detector.
-
-Catches single-turn fiction-wrapped attacks — prompts that frame a harmful
-request inside a hypothetical, creative, or academic context to bypass
-surface-level keyword filters.
-
-Two-gate design (both must fire):
-  Gate 1 — Fiction frame: hypothetical / roleplay / academic framing
-  Gate 2 — Harmful target: synthesis verbs, weapons, drugs, cybercrime, violence
-
-Confidence is graded by proximity (how close the frame and target appear):
-  ≤  60 chars apart → 0.80  (tight wrapping = high intent signal)
-  ≤ 150 chars apart → 0.72
-  ≤ 350 chars apart → 0.62
-  anywhere in prompt → 0.50  (loosely co-occurring)
-
-Game / creative writing context reduces confidence by 0.15.
-Academic framing alone is capped at 0.72 to route to UNCERTAIN (LlamaGuard
-handles the genuine researcher vs attacker judgment).
-
-This file owns the canonical _FICTION_FRAMING_RE definition.
-adversarial.py imports it for use as a Many-shot amplifier instead of
-duplicating the pattern.
-"""
 from __future__ import annotations
-
 import re
 
 

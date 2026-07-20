@@ -92,6 +92,7 @@ def _get_mongo_collection():
         col.create_index("timestamp", expireAfterSeconds=3600)
         return col
     except Exception:
+        logger.warning("Suppressed exception in _get_mongo_collection()", exc_info=True)
         return None
 
 
@@ -109,7 +110,7 @@ def _store_prompt_mongo(tenant_id: str, prompt: str, is_probe: bool) -> None:
             "prompt_head": prompt[:120],
         })
     except Exception:
-        pass
+        logger.warning("Suppressed exception in _store_prompt_mongo()", exc_info=True)
 
 
 def _fetch_recent_mongo(tenant_id: str) -> list[dict]:
@@ -123,6 +124,7 @@ def _fetch_recent_mongo(tenant_id: str) -> list[dict]:
             {"_id": 0, "timestamp": 1, "prompt_fp": 1, "is_probe": 1, "prompt_head": 1},
         ))
     except Exception:
+        logger.warning("Suppressed exception in _fetch_recent_mongo()", exc_info=True)
         return []
 
 

@@ -140,6 +140,7 @@ def _parse_groq_verification(groq_output: str) -> VerificationResult:
                 confidence = val
                 break
         except ValueError:
+            logger.warning("Suppressed exception in _parse_groq_verification()", exc_info=True)
             continue
 
     # Parse reason

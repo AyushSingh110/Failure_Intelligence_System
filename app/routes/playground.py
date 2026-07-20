@@ -148,6 +148,7 @@ def _run_signals(raw: str, shadow_texts: list[str]) -> tuple[float, float]:
         )
         return round(consistency.get("agreement_score", 0.0), 3), round(entropy, 3)
     except Exception:
+        logger.warning("Suppressed exception in _run_signals()", exc_info=True)
         return 0.0, 0.0
 
 

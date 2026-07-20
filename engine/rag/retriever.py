@@ -59,7 +59,7 @@ def _try_direct_lookup(query: str, timeout: int) -> str:
             from engine import instrumentation as _instr
             _instr.record_http_call("wikipedia.org", (_t.time() - _start) * 1000.0)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _try_direct_lookup()", exc_info=True)
         if response.status_code == 200:
             data    = response.json()
             extract = data.get("extract", "")
@@ -93,7 +93,7 @@ def _try_search_api(query: str, timeout: int) -> str:
             from engine import instrumentation as _instr
             _instr.record_http_call("wikipedia.org", (_t.time() - _start) * 1000.0)
         except Exception:
-            pass
+            logger.warning("Suppressed exception in _try_search_api()", exc_info=True)
         if search_resp.status_code != 200:
             return ""
 

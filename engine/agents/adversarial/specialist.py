@@ -22,6 +22,8 @@ from engine.agents.adversarial.perplexity               import run_perplexity_pr
 from engine.agents.adversarial.semantic                 import run_semantic_consistency, run_exfiltration_detection
 from engine.agents.adversarial.llm_intent               import run_llm_intent_check
 from engine.agents.adversarial.multilingual_romanisation import run_romanisation_detection
+import logging
+logger = logging.getLogger(__name__)
 
 
 _MITIGATION_MAP: dict[str, str] = {
@@ -148,6 +150,7 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "harmful_topic_matched": _rp.harmful_topic_matched,
             } if _rp.is_roleplay_jailbreak else {}
         except Exception:
+            logger.warning("Suppressed exception in analyze()", exc_info=True)
             roleplay_root, roleplay_confidence, roleplay_evidence = None, 0.0, {}
         # Layer 4: indirect prompt injection
         indirect_root, indirect_confidence, indirect_evidence = run_indirect_injection_detection(

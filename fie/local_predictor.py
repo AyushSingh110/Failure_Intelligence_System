@@ -106,8 +106,6 @@ def predict_local(prompt: str, response: str) -> LocalPrediction:
             signals={"reason": f"{question_type} questions have near-zero hallucination risk"},
         )
 
-    text = response.lower()
-
     # Count signals
     hedge_hits     = sum(1 for r in _HEDGE_RE       if r.search(response))
     temporal_hits  = sum(1 for r in _TEMPORAL_RE    if r.search(response))

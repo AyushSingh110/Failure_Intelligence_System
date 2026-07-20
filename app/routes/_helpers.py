@@ -54,4 +54,5 @@ def get_signal_logs_collection():
             return None
         return _db["signal_logs"]
     except Exception:
+        logger.warning("Suppressed exception in get_signal_logs_collection()", exc_info=True)
         return None

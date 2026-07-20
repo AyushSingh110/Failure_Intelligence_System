@@ -20,6 +20,8 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -61,7 +63,6 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
         ("multilingual", lambda: _layer_multilingual(prompt)),
     ]
 
-    fired_types: list[str]  = []
     fired_names: list[str]  = []
     combined_ev: dict       = {}
     best_conf   = 0.0
@@ -71,6 +72,7 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
         try:
             attack_type, confidence, evidence = fn()
         except Exception:
+            logger.warning("Suppressed exception in scan_prompt_lite()", exc_info=True)
             continue
 
         if attack_type is not None:

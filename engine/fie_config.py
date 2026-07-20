@@ -98,6 +98,7 @@ def _get_config_collection():
             return None
         return _db["fie_config"]
     except Exception:
+        logger.warning("Suppressed exception in _get_config_collection()", exc_info=True)
         return None
 
 
@@ -108,6 +109,7 @@ def _get_signal_collection():
             return None
         return _db["signal_logs"]
     except Exception:
+        logger.warning("Suppressed exception in _get_signal_collection()", exc_info=True)
         return None
 
 
@@ -341,6 +343,7 @@ def recalibrate() -> dict:
         from sklearn.metrics import precision_recall_curve
         import numpy as np
     except ImportError:
+        logger.warning("Suppressed exception in recalibrate()", exc_info=True)
         return {"status": "skipped", "reason": "scikit-learn not installed"}
 
     labeled = list(sig_col.find(
@@ -388,6 +391,7 @@ def recalibrate() -> dict:
                 "best_f1": round(best_f1, 4),
             }
         except Exception as exc:
+            logger.warning("Suppressed exception in recalibrate()", exc_info=True)
             per_type_stats[qt] = {"status": "error", "msg": str(exc)}
 
     # Global fallback from all data
@@ -400,7 +404,7 @@ def recalibrate() -> dict:
             best_t   = max(0.25, min(0.75, best_t))
             new_thresholds["UNKNOWN"] = best_t
         except Exception:
-            pass
+            logger.warning("Suppressed exception in recalibrate()", exc_info=True)
 
     version = f"calibrated-{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
 

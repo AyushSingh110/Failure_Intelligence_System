@@ -754,7 +754,7 @@ def monitor(
                         {"$set": {"request_id": stored_request_id}},
                     )
             except Exception:
-                pass
+                logger.warning("Suppressed exception in monitor()", exc_info=True)
 
         if response.explanation_external is not None:
             response.explanation_external.request_id = stored_request_id
@@ -980,7 +980,7 @@ def submit_feedback(
         from engine.fie_config import maybe_recalibrate
         maybe_recalibrate()
     except Exception:
-        pass
+        logger.warning("Suppressed exception in submit_feedback()", exc_info=True)
 
     try:
         from engine.retraining.buffer import add_to_buffer, maybe_trigger_retrain

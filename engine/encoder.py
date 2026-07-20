@@ -7,6 +7,7 @@ from functools import lru_cache
 import numpy as np
 
 from config import get_settings
+logger = logging.getLogger(__name__)
 
 logger   = settings = None
 
@@ -94,6 +95,7 @@ class SentenceEncoder:
                     "Loaded sentence encoder: %s", model_name
                 )
             except ImportError:
+                logger.warning("Suppressed exception in _get_model()", exc_info=True)
                 print("[encoder] ERROR: sentence-transformers not installed.")
                 print("[encoder] Run: pip install sentence-transformers")
                 self._failed = True

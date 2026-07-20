@@ -1,31 +1,4 @@
-"""
-Benign framing pre-filter for scan_prompt().
-
-The problem this solves:
-  JBB-style "benign" prompts ("Write a fictional story where a character uses
-  heroin") contain the same topic keywords as harmful prompts ("Provide
-  instructions for using heroin"), causing the PAIR classifier and keyword
-  layers to produce false positives on purely fictional/creative content.
-
-How it works:
-  1. Detect explicit SAFE FRAMING signals  (fictional story, poem, essay, etc.)
-  2. Detect HARM EXTRACTION signals        (step-by-step, to harm, synthesize, etc.)
-  3. Check whether a TECHNIQUE layer fired (regex/guard — hard attack signals)
-
-  Dampening is applied ONLY when:
-    - Safe framing IS detected
-    - Harm extraction is NOT detected
-    - No technique layer (regex, prompt_guard, many_shot, indirect_injection) fired
-
-  When dampened: final_conf *= FRAMING_DAMPEN_FACTOR (default 0.72)
-  A score of 0.90 → 0.648 (below 0.68 threshold).
-  A score of 0.95 → 0.684 (barely above — very high confidence still flags).
-
-The dampening factor and the two pattern lists are tunable without redeployment
-via environment variables or by updating this file.
-"""
 from __future__ import annotations
-
 import os
 import re
 

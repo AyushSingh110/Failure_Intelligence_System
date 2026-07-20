@@ -108,6 +108,7 @@ def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginRespo
             try:
                 response_text = exc.response.text
             except Exception:
+                logger.warning("Suppressed exception in google_callback()", exc_info=True)
                 response_text = ""
         detail = f"Token exchange failed: {exc}"
         if response_text:

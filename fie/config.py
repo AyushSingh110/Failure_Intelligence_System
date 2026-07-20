@@ -2,7 +2,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-
 @dataclass
 class FIEConfig:
     """Holds all configuration needed to connect to the FIE server."""

@@ -6,6 +6,8 @@ from __future__ import annotations
 import requests as _requests
 
 from config import get_settings
+import logging
+logger = logging.getLogger(__name__)
 
 
 _INTENT_SYSTEM = (
@@ -66,6 +68,7 @@ def run_llm_intent_check(prompt: str) -> tuple[str | None, float, dict]:
             timeout=_INTENT_TIMEOUT,
         )
     except Exception as exc:
+        logger.warning("Suppressed exception in run_llm_intent_check()", exc_info=True)
         return None, 0.0, {"error": str(exc)}
 
     if resp.status_code != 200:
@@ -74,6 +77,7 @@ def run_llm_intent_check(prompt: str) -> tuple[str | None, float, dict]:
     try:
         raw = resp.json()["choices"][0]["message"]["content"].strip()
     except Exception:
+        logger.warning("Suppressed exception in run_llm_intent_check()", exc_info=True)
         return None, 0.0, {"error": "response_parse_failed"}
 
     parts = raw.split("|", 2)
@@ -84,6 +88,7 @@ def run_llm_intent_check(prompt: str) -> tuple[str | None, float, dict]:
     try:
         confidence = min(max(float(parts[1].strip()), 0.0), 1.0)
     except ValueError:
+        logger.warning("Suppressed exception in run_llm_intent_check()", exc_info=True)
         confidence = 0.0
     reasoning = parts[2].strip() if len(parts) > 2 else ""
 

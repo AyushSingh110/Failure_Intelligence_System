@@ -162,7 +162,7 @@ def _check_contradiction(
             )
             return is_contradicted, round(confidence, 3), note
     except Exception:
-        pass
+        logger.warning("Suppressed exception in _check_contradiction()", exc_info=True)
 
     # Fallback: text overlap
     ratio = SequenceMatcher(None, original_answer[:400], shadow_answer[:400]).ratio()
@@ -253,6 +253,7 @@ def run_socratic_probe(
                 else:
                     best_shadow = shadow_outputs[-1]
             except Exception:
+                logger.warning("Suppressed exception in run_socratic_probe()", exc_info=True)
                 best_shadow = shadow_outputs[0] if shadow_outputs else ""
 
         # If no usable shadow output, ask Groq directly about the probe
