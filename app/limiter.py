@@ -1,4 +1,5 @@
 from __future__ import annotations
+import inspect
 import logging
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,16 @@ except ImportError:
 def rate_limit(rate: str):
     def decorator(func):
         if available and limiter is not None:
-            return limiter.limit(rate)(func)
+            wrapped = limiter.limit(rate)(func)
+            # slowapi's wrapper drops the original signature, so FastAPI misreads
+            # Pydantic body params as required query params (every request → 422).
+            # Restore the signature with annotations resolved (routes use
+            # `from __future__ import annotations`, so they'd otherwise be strings
+            # FastAPI can't evaluate in slowapi's module globals).
+            try:
+                wrapped.__signature__ = inspect.signature(func, eval_str=True)
+            except (TypeError, ValueError):
+                pass
+            return wrapped
         return func
     return decorator
