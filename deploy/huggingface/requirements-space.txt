@@ -1,0 +1,25 @@
+# Minimal deps for the Gradio demo Space.
+#
+# Deliberately NOT the full requirements.txt: the demo calls scan_prompt()
+# directly and needs none of the server stack (fastapi, uvicorn, pymongo,
+# langgraph, sendgrid). Smaller image, faster cold start, less to break.
+#
+# No torch. Embeddings run on ONNX Runtime — see docs/DEPLOYMENT.md.
+gradio>=4.44,<6
+
+numpy==2.1.3
+onnxruntime==1.23.2
+tokenizers>=0.20
+
+# Pinned to the version the shipped .pkl classifiers were serialized with.
+# The decision boundary is version-sensitive; a mismatch previously caused a
+# real FPR regression.
+scikit-learn==1.7.2
+xgboost==2.1.4
+joblib==1.4.2
+
+# Multilingual layer (Tier 1-3)
+deep-translator==1.11.4
+langdetect==1.0.9
+
+requests==2.32.3
