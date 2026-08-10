@@ -107,8 +107,11 @@ def _get_config_collection():
         if _fallback_mode or _db is None:
             return None
         return _db["fie_config"]
-    except Exception:
-        logger.warning("Suppressed exception in _get_config_collection()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=mongo_config impact='hot config unavailable; compiled defaults are used' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None
 
 
@@ -118,8 +121,11 @@ def _get_signal_collection():
         if _fallback_mode or _db is None:
             return None
         return _db["signal_logs"]
-    except Exception:
-        logger.warning("Suppressed exception in _get_signal_collection()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=mongo_signals impact='signal logging unavailable; auto-recalibration will not trigger' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None
 
 
@@ -462,8 +468,11 @@ def recalibrate() -> dict:
     try:
         from sklearn.metrics import precision_recall_curve
         import numpy as np
-    except ImportError:
-        logger.warning("Suppressed exception in recalibrate()", exc_info=True)
+    except ImportError as exc:
+        logger.warning(
+            "degraded capability=recalibration impact='thresholds keep their previous values' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return {"status": "skipped", "reason": "scikit-learn not installed"}
 
     labeled = list(sig_col.find(
@@ -511,7 +520,10 @@ def recalibrate() -> dict:
                 "best_f1": round(best_f1, 4),
             }
         except Exception as exc:
-            logger.warning("Suppressed exception in recalibrate()", exc_info=True)
+            logger.warning(
+                "degraded capability=recalibration impact='thresholds keep their previous values' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             per_type_stats[qt] = {"status": "error", "msg": str(exc)}
 
     # Global fallback from all data
@@ -523,8 +535,11 @@ def recalibrate() -> dict:
             best_t   = float(threshs[best_idx])
             best_t   = max(0.25, min(0.75, best_t))
             new_thresholds["UNKNOWN"] = best_t
-        except Exception:
-            logger.warning("Suppressed exception in recalibrate()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=recalibration impact='thresholds keep their previous values' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
 
     version = f"calibrated-{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
 

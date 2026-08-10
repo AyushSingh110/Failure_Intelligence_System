@@ -56,8 +56,11 @@ def run_ground_truth_pipeline(
     try:
         from engine.question_classifier import classify_provenance_category
         result.provenance_category = classify_provenance_category(qt, prompt)
-    except Exception:
-        logger.warning("Suppressed exception in run_ground_truth_pipeline()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=run_ground_truth_pipeline impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         result.provenance_category = "GENERAL_KNOWLEDGE"
 
     # Default label — overridden at each verification outcome below

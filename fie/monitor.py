@@ -36,8 +36,11 @@ def _send_local_telemetry(payload: dict) -> None:
                 json={"sdk_version": SDK_VERSION, **payload},
                 timeout=3,
             )
-        except Exception:
-            logger.warning("Suppressed exception in _post()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_post impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
 
     threading.Thread(target=_post, daemon=True).start()
 

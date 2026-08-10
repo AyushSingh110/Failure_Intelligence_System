@@ -60,10 +60,16 @@ def _local_read_all() -> list[dict]:
                 if line:
                     try:
                         events.append(json.loads(line))
-                    except Exception:
-                        logger.warning("Suppressed exception in _local_read_all()", exc_info=True)
-    except Exception:
-        logger.warning("Suppressed exception in _local_read_all()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=_local_read_all impact='this optional step was skipped' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_local_read_all impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
     return events
 
 
@@ -94,8 +100,11 @@ def _mongo_collection():
         if _fallback_mode or _db is None:
             return None
         return _db["flagged_events"]
-    except Exception:
-        logger.warning("Suppressed exception in _mongo_collection()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_mongo_collection impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None
 
 

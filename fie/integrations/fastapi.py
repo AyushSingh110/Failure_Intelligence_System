@@ -103,8 +103,11 @@ class FIEMiddleware(BaseHTTPMiddleware):
                                 if isinstance(block, dict) and block.get("type") == "text":
                                     return block.get("text", "")
             return None
-        except Exception:
-            logger.warning("Suppressed exception in _extract_prompt()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_extract_prompt impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return None
 
     def _scan(self, prompt: str) -> tuple[str | None, float, bool]:
@@ -115,8 +118,11 @@ class FIEMiddleware(BaseHTTPMiddleware):
                 return result.attack_type, result.confidence, result.is_attack
             else:
                 return self._scan_server(prompt)
-        except Exception:
-            logger.warning("Suppressed exception in _scan()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_scan impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return None, 0.0, False
 
     def _scan_server(self, prompt: str) -> tuple[str | None, float, bool]:
@@ -136,6 +142,9 @@ class FIEMiddleware(BaseHTTPMiddleware):
             if resp.status_code == 200:
                 data = resp.json()
                 return data.get("attack_type"), data.get("confidence", 0.0), data.get("is_attack", False)
-        except Exception:
-            logger.warning("Suppressed exception in _scan_server()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_scan_server impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
         return None, 0.0, False

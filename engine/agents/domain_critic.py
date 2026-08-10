@@ -135,7 +135,10 @@ def _run_self_contradiction(context: DiagnosticContext) -> _LayerResult:
         similarity = float(np.dot(vecs[0], vecs[1]))
         similarity = max(-1.0, min(1.0, similarity))
     except Exception as exc:
-        logger.warning("Suppressed exception in _run_self_contradiction()", exc_info=True)
+        logger.warning(
+            "degraded capability=self_contradiction impact='no contradiction signal in this critic's verdict' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return _LayerResult(False, 0.0, "self_contradiction", f"Encoding error: {exc}")
 
     CONSISTENCY_CEILING = 0.85
@@ -237,7 +240,10 @@ def _run_external_verification(context: DiagnosticContext) -> _LayerResult:
             detail=detail,
         )
     except Exception as exc:
-        logger.warning("Suppressed exception in _run_external_verification()", exc_info=True)
+        logger.warning(
+            "degraded capability=external_verification impact='no external fact-check; verdict rests on internal signals only' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return _LayerResult(
             False,
             0.0,

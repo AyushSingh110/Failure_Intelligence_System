@@ -139,8 +139,11 @@ def _parse_groq_verification(groq_output: str) -> VerificationResult:
             if 0.0 <= val <= 1.0:
                 confidence = val
                 break
-        except ValueError:
-            logger.warning("Suppressed exception in _parse_groq_verification()", exc_info=True)
+        except ValueError as exc:
+            logger.warning(
+                "degraded capability=grounding_parse impact='verification treated as inconclusive' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             continue
 
     # Parse reason

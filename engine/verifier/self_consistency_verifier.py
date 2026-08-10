@@ -70,8 +70,11 @@ def check_self_consistency(
         try:
             from engine.fie_config import get_consistency_threshold
             threshold = get_consistency_threshold()
-        except Exception:
-            logger.warning("Suppressed exception in check_self_consistency()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=check_self_consistency impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             threshold = 0.72
 
     # Truncate long outputs — 800 chars is enough to capture the core answer

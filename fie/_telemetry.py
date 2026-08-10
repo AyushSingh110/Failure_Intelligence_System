@@ -28,7 +28,10 @@ def _ping_telemetry(version: str) -> None:
                 method="POST",
             )
             urllib.request.urlopen(req, timeout=2)
-        except Exception:
-            logger.warning("Suppressed exception in _send()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_send impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
 
     threading.Thread(target=_send, daemon=True).start()

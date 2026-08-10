@@ -423,8 +423,11 @@ def translate_to_english(text: str, timeout: float = 3.0) -> str | None:
                 translated = resp.json().get("translatedText", "")
                 if translated and translated.lower() != stripped[:len(translated)].lower():
                     return translated
-        except Exception:
-            logger.warning("Suppressed exception in translate_to_english()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=translate_to_english impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
 
     return None
 

@@ -179,8 +179,11 @@ def run_faiss_detection(prompt: str) -> tuple[FAISSSearchResult | None, float]:
     cfg = get_settings()
     try:
         results = adversarial_registry.search(prompt)
-    except Exception:
-        logger.warning("Suppressed exception in run_faiss_detection()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=faiss_index impact='no nearest-neighbour attack matching; other adversarial layers still run' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None, 0.0
 
     if not results:

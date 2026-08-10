@@ -262,8 +262,11 @@ class RedisSessionTracker(SessionTracker):
                 socket_timeout=2,
             )
             self._redis.ping()
-        except Exception:
-            logger.warning("Suppressed exception in _connect()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_connect impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             self._redis = None  # fall back to in-memory
 
     def _key(self, session_id: str) -> str:
@@ -278,8 +281,11 @@ class RedisSessionTracker(SessionTracker):
             raw = self._redis.get(self._key(session_id))
             if raw:
                 return pickle.loads(raw)  # noqa: S301
-        except Exception:
-            logger.warning("Suppressed exception in _load_session()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_load_session impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
         return _Session(session_id=session_id)
 
     def _save_session(self, session: _Session) -> None:
@@ -293,8 +299,11 @@ class RedisSessionTracker(SessionTracker):
                 int(_SESSION_TTL_SECS),
                 pickle.dumps(session),
             )
-        except Exception:
-            logger.warning("Suppressed exception in _save_session()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_save_session impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
 
     def get_trajectory_boost(self, session_id: str, current_confidence: float) -> float:
         session = self._load_session(session_id)

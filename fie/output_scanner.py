@@ -208,13 +208,19 @@ def scan_output_async(
                         matched=result.evidence.get("matched", ""),
                         session_id=session_id,
                     )
-                except Exception:
-                    logger.warning("Suppressed exception in _run()", exc_info=True)
+                except Exception as exc:
+                    logger.warning(
+                        "degraded capability=_run impact='this optional step was skipped' "
+                        "reason=%s: %s", type(exc).__name__, exc,
+                    )
                 if on_flag is not None:
                     try:
                         on_flag(result)
-                    except Exception:
-                        logger.warning("Suppressed exception in _run()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=_run impact='this optional step was skipped' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
         except Exception as exc:
             logger.debug("[FIE:output] scan_output failed: %s", exc)
 

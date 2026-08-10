@@ -136,8 +136,13 @@ def query_llama_guard(prompt: str) -> bool:
         score = float(content)
         is_unsafe = score >= 0.5
     except ValueError:
-        # Fallback: handle legacy text labels if model changes again
-        logger.warning("Suppressed exception in query_llama_guard()", exc_info=True)
+        # Not a probability — Llama Guard returned a text label instead of a
+        # score, which happens when the upstream model version changes. Parse
+        # the legacy label form below rather than failing the tiebreaker.
+        logger.info(
+            "llama_guard returned a non-numeric verdict (%r); "
+            "falling back to legacy label parsing", content[:60],
+        )
         is_unsafe = (
             content.startswith("injection")
             or content.startswith("jailbreak")

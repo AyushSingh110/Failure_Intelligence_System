@@ -364,8 +364,11 @@ class AdversarialRegistry:
                 cfg = get_settings()
                 self._index    = faiss.IndexFlatIP(cfg.embedding_dimension)
                 self._faiss_ok = True
-            except ImportError:
-                logger.warning("Suppressed exception in _ensure_ready()", exc_info=True)
+            except ImportError as exc:
+                logger.warning(
+                    "degraded capability=archetype_registry impact='archetype clustering unavailable; failures are not grouped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
                 self._faiss_ok = False
 
 

@@ -53,6 +53,9 @@ def get_signal_logs_collection():
         if _fallback_mode or _db is None:
             return None
         return _db["signal_logs"]
-    except Exception:
-        logger.warning("Suppressed exception in get_signal_logs_collection()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=get_signal_logs_collection impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None

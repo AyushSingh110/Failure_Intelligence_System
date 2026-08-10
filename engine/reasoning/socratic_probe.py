@@ -161,8 +161,11 @@ def _check_contradiction(
                 f"Shadow response: '{shadow_answer[:120]}'"
             )
             return is_contradicted, round(confidence, 3), note
-    except Exception:
-        logger.warning("Suppressed exception in _check_contradiction()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=socratic_contradiction impact='no contradiction signal from this probe' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
 
     # Fallback: text overlap
     ratio = SequenceMatcher(None, original_answer[:400], shadow_answer[:400]).ratio()
@@ -252,8 +255,11 @@ def run_socratic_probe(
                     best_shadow = shadow_outputs[int(min(range(len(sims)), key=lambda k: sims[k]))]
                 else:
                     best_shadow = shadow_outputs[-1]
-            except Exception:
-                logger.warning("Suppressed exception in run_socratic_probe()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=socratic_probe impact='reasoning probe skipped for this answer' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
                 best_shadow = shadow_outputs[0] if shadow_outputs else ""
 
         # If no usable shadow output, ask Groq directly about the probe

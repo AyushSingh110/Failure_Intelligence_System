@@ -38,8 +38,11 @@ def _summarize_turns(turns: list[dict], existing_summary: str = "") -> Optional[
             try:
                 from config import get_settings
                 api_key = get_settings().groq_api_key or ""
-            except Exception:
-                logger.warning("Suppressed exception in _summarize_turns()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=_summarize_turns impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
         if not api_key:
             return None
 
@@ -224,8 +227,11 @@ def clear_session(session_id: str) -> None:
     if col is not None:
         try:
             col.delete_one({"session_id": session_id})
-        except Exception:
-            logger.warning("Suppressed exception in clear_session()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=clear_session impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
     else:
         with _fallback_lock:
             _fallback.pop(session_id, None)

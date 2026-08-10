@@ -58,8 +58,11 @@ def _try_direct_lookup(query: str, timeout: int) -> str:
         try:
             from engine import instrumentation as _instr
             _instr.record_http_call("wikipedia.org", (_t.time() - _start) * 1000.0)
-        except Exception:
-            logger.warning("Suppressed exception in _try_direct_lookup()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=wikidata_lookup impact='no direct entity hit; falls through to search' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
         if response.status_code == 200:
             data    = response.json()
             extract = data.get("extract", "")
@@ -92,8 +95,11 @@ def _try_search_api(query: str, timeout: int) -> str:
         try:
             from engine import instrumentation as _instr
             _instr.record_http_call("wikipedia.org", (_t.time() - _start) * 1000.0)
-        except Exception:
-            logger.warning("Suppressed exception in _try_search_api()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=search_api impact='no external search results; grounding relies on cache and shadows' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
         if search_resp.status_code != 200:
             return ""
 

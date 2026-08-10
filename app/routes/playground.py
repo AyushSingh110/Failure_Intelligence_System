@@ -147,8 +147,11 @@ def _run_signals(raw: str, shadow_texts: list[str]) -> tuple[float, float]:
             consistency["answer_counts"], len(all_outputs)
         )
         return round(consistency.get("agreement_score", 0.0), 3), round(entropy, 3)
-    except Exception:
-        logger.warning("Suppressed exception in _run_signals()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_run_signals impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return 0.0, 0.0
 
 

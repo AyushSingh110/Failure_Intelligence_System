@@ -107,8 +107,11 @@ def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginRespo
         if getattr(exc, "response", None) is not None:
             try:
                 response_text = exc.response.text
-            except Exception:
-                logger.warning("Suppressed exception in google_callback()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=google_callback impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
                 response_text = ""
         detail = f"Token exchange failed: {exc}"
         if response_text:

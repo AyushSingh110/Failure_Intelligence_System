@@ -70,8 +70,11 @@ def _get_db_collection():
         try:
             col.create_index("timestamp", expireAfterSeconds=7200, background=True)
             col.create_index("conversation_id", background=True)
-        except Exception:
-            logger.warning("Suppressed exception in _get_db_collection()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=multi_turn_store impact='multi-turn escalation state is per-process only' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
         return col
     except Exception as exc:
         logger.debug("multi_turn_tracker: could not get collection: %s", exc)

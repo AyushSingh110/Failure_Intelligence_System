@@ -10,7 +10,15 @@ try:
     limiter: Limiter | None = Limiter(key_func=get_remote_address)
     available: bool = True
 except ImportError:
-    logger.warning("Suppressed exception in limiter", exc_info=True)
+    # slowapi is optional, but its absence is a real exposure rather than a
+    # cosmetic degradation: every endpoint then serves UNLIMITED requests per
+    # IP. Logged at WARNING with the consequence spelled out, because a public
+    # deployment that silently lost rate limiting looks identical to a healthy
+    # one until it is being abused.
+    logger.warning(
+        "degraded capability=rate_limiting impact='NO per-IP request limits — "
+        "all endpoints are unthrottled' action='pip install slowapi'"
+    )
     limiter = None
     available = False
 

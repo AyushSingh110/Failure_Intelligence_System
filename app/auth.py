@@ -228,6 +228,9 @@ def verify_session_token(token: str) -> Optional[dict]:
     except jwt.ExpiredSignatureError:
         logger.info("Session token expired — user must re-login")
         return None
-    except jwt.InvalidTokenError:
-        logger.warning("Suppressed exception in verify_session_token()", exc_info=True)
+    except jwt.InvalidTokenError as exc:
+        logger.warning(
+            "degraded capability=verify_session_token impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None

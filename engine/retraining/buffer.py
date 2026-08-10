@@ -65,8 +65,11 @@ def get_buffer_count() -> int:
         return 0
     try:
         return col.count_documents({})
-    except Exception:
-        logger.warning("Suppressed exception in get_buffer_count()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=retrain_buffer impact='buffer size unknown; auto-retrain trigger may be delayed' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return 0
 
 
@@ -187,8 +190,11 @@ def _do_retrain() -> None:
         try:
             from engine.failure_classifier import _model as current_model
             _cur_auc = 0.840  # known v4 AUC — used as baseline
-        except Exception:
-            logger.warning("Suppressed exception in _do_retrain()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=retraining impact='model not retrained; previous model stays active' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             _cur_auc = 0.0
 
         logger.info(

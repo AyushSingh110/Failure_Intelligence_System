@@ -67,8 +67,11 @@ def _get_similarity_threshold() -> float:
     try:
         from config import get_settings
         return get_settings().ground_truth_similarity_threshold
-    except Exception:
-        logger.warning("Suppressed exception in _get_similarity_threshold()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=gt_cache_config impact='default similarity threshold used' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return 0.92
 
 
@@ -193,8 +196,11 @@ def _increment_use_count(col, doc_id: str) -> None:
             {"$inc": {"use_count": 1},
              "$set": {"last_used_at": datetime.now(timezone.utc).isoformat()}},
         )
-    except Exception:
-        logger.warning("Suppressed exception in _increment_use_count()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=gt_cache_stats impact='cache hit not counted; eviction ordering may be less accurate' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
 
 
 def _doc_to_hit(doc: dict) -> CacheHit:

@@ -149,8 +149,11 @@ class AdversarialSpecialist(BaseJuryAgent):
                 "framing_matched":       _rp.framing_matched,
                 "harmful_topic_matched": _rp.harmful_topic_matched,
             } if _rp.is_roleplay_jailbreak else {}
-        except Exception:
-            logger.warning("Suppressed exception in analyze()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=adversarial_specialist impact='specialist agent verdict missing from the jury' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             roleplay_root, roleplay_confidence, roleplay_evidence = None, 0.0, {}
         # Layer 4: indirect prompt injection
         indirect_root, indirect_confidence, indirect_evidence = run_indirect_injection_detection(

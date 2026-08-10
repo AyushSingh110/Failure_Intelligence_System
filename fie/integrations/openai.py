@@ -54,8 +54,11 @@ def _extract_response_text(response) -> str:
     """Pull text from an openai ChatCompletion response object."""
     try:
         return response.choices[0].message.content or ""
-    except Exception:
-        logger.warning("Suppressed exception in _extract_response_text()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_extract_response_text impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return ""
 
 
@@ -148,8 +151,11 @@ class Client:
                             f"FIE blocked adversarial prompt: {attack.attack_type} "
                             f"(confidence={attack.confidence:.2f})"
                         )
-            except ImportError:
-                logger.warning("Suppressed exception in _monitored_create()", exc_info=True)
+            except ImportError as exc:
+                logger.warning(
+                    "degraded capability=_monitored_create impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
             except ValueError:
                 raise
             except Exception as exc:
@@ -217,8 +223,11 @@ class Client:
                             "[FIE:openai] CORRECTED | strategy=%s | model=%s",
                             fix.get("fix_strategy", ""), model,
                         )
-                    except Exception:
-                        logger.warning("Suppressed exception in _run_fie_correct()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=_run_fie_correct impact='this optional step was skipped' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
         except Exception as exc:
             logger.debug("FIE correct mode error (non-fatal): %s", exc)
 

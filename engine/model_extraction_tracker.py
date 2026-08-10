@@ -116,8 +116,11 @@ def _store_prompt_mongo(tenant_id: str, prompt: str, is_probe: bool) -> None:
             "is_probe":   is_probe,
             "prompt_head": prompt[:120],
         })
-    except Exception:
-        logger.warning("Suppressed exception in _store_prompt_mongo()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=extraction_tracker impact='this prompt not recorded; cross-instance extraction detection degrades' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
 
 
 def _fetch_recent_mongo(tenant_id: str) -> list[dict]:
@@ -130,8 +133,11 @@ def _fetch_recent_mongo(tenant_id: str) -> list[dict]:
             {"tenant_id": tenant_id, "timestamp": {"$gte": cutoff}},
             {"_id": 0, "timestamp": 1, "prompt_fp": 1, "is_probe": 1, "prompt_head": 1},
         ))
-    except Exception:
-        logger.warning("Suppressed exception in _fetch_recent_mongo()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=extraction_tracker impact='recent history unavailable; falls back to in-memory window' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return []
 
 

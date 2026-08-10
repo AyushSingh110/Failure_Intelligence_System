@@ -141,8 +141,11 @@ def _load_meta_classifier() -> bool:
                 _meta_clf_threshold = float(meta.get("threshold", 0.30))
                 _meta_clf_features  = meta.get("layer_names", [])
             return True
-        except Exception:
-            logger.warning("Suppressed exception in _load_meta_classifier()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_load_meta_classifier impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return False
 
 
@@ -157,8 +160,11 @@ def _run_meta_classifier(layer_scores: dict[str, float]) -> float:
             dtype=_np.float32,
         )
         return float(_meta_clf.predict_proba(vec)[0][1])
-    except Exception:
-        logger.warning("Suppressed exception in _run_meta_classifier()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_run_meta_classifier impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return 0.0
 
 

@@ -162,8 +162,11 @@ def _infer(
         threshold    = get_threshold(qt)
         temperature  = get_temperature()
         ambig_band   = get_ambiguous_band()
-    except Exception:
-        logger.warning("Suppressed exception in _infer()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=xgboost_classifier impact='falls back to rule-based failure scoring; calibration is coarser' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         threshold    = CLASSIFIER_THRESHOLD
         temperature  = 1.15
         ambig_band   = 0.06

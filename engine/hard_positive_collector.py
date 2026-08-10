@@ -45,8 +45,11 @@ def _read_candidates() -> list[dict]:
                 if line:
                     try:
                         records.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        logger.warning("Suppressed exception in _read_candidates()", exc_info=True)
+                    except json.JSONDecodeError as exc:
+                        logger.warning(
+                            "degraded capability=hard_positive_store impact='staged retraining candidates unreadable' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
     except Exception as exc:
         logger.debug("hard_positive_collector: read_candidates error: %s", exc)
     return records
@@ -175,8 +178,11 @@ def export_for_retraining(output_path: str | None = None) -> list[dict]:
                 if line:
                     try:
                         confirmed.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        logger.warning("Suppressed exception in export_for_retraining()", exc_info=True)
+                    except json.JSONDecodeError as exc:
+                        logger.warning(
+                            "degraded capability=hard_positive_export impact='retraining export incomplete' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
     except Exception as exc:
         logger.warning("hard_positive_collector: export_for_retraining read error: %s", exc)
         return []
@@ -201,8 +207,11 @@ def get_stats() -> dict:
         try:
             with open(_CONFIRMED_PATH, encoding="utf-8") as f:
                 confirmed = sum(1 for line in f if line.strip())
-        except Exception:
-            logger.warning("Suppressed exception in get_stats()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=hard_positive_stats impact='collector stats unavailable to the dashboard' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
     return {
         "enabled":   _ENABLED,
         "staged":    staged,

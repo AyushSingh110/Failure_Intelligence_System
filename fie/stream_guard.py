@@ -75,8 +75,11 @@ def stream_guard(
                             matched=result.evidence.get("matched", ""),
                             session_id=session_id,
                         )
-                    except Exception:
-                        logger.warning("Suppressed exception in stream_guard()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=stream_guard impact='this optional step was skipped' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
                     yield refusal
                     return
                 else:
@@ -104,8 +107,11 @@ def stream_guard(
                     confidence=result.confidence, prompt=prompt,
                     matched=result.evidence.get("matched", ""), session_id=session_id,
                 )
-            except Exception:
-                logger.warning("Suppressed exception in stream_guard()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=stream_guard impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
             yield refusal
         else:
             for buffered in buffer_chunks:
@@ -158,8 +164,11 @@ async def astream_guard(
                             confidence=result.confidence, prompt=prompt,
                             matched=result.evidence.get("matched", ""), session_id=session_id,
                         )
-                    except Exception:
-                        logger.warning("Suppressed exception in astream_guard()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=astream_guard impact='this optional step was skipped' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
                     yield refusal
                     return
                 else:
@@ -185,8 +194,11 @@ async def astream_guard(
                     confidence=result.confidence, prompt=prompt,
                     matched=result.evidence.get("matched", ""), session_id=session_id,
                 )
-            except Exception:
-                logger.warning("Suppressed exception in astream_guard()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=astream_guard impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
             yield refusal
         else:
             for buffered in buffer_chunks:

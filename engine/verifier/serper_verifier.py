@@ -106,8 +106,11 @@ def _search_google(query: str, api_key: str, timeout: int) -> Optional[dict]:
     try:
         from engine import instrumentation as _instr
         _instr.record_http_call("serper.dev", (_t.time() - _start) * 1000.0)
-    except Exception:
-        logger.warning("Suppressed exception in _search_google()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_search_google impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
     resp.raise_for_status()
     return resp.json()
 
@@ -201,8 +204,11 @@ def _parse_groq_verdict(text: str) -> tuple[bool, float, str]:
             try:
                 confidence = float(line.split(":", 1)[1].strip())
                 confidence = max(0.0, min(1.0, confidence))
-            except ValueError:
-                logger.warning("Suppressed exception in _parse_groq_verdict()", exc_info=True)
+            except ValueError as exc:
+                logger.warning(
+                    "degraded capability=_parse_groq_verdict impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
                 confidence = 0.5
         elif line.upper().startswith("GROUNDED_ANSWER:"):
             grounded_answer = line.split(":", 1)[1].strip()
@@ -228,6 +234,9 @@ def _get_settings():
     try:
         from config import get_settings
         return get_settings()
-    except Exception:
-        logger.warning("Suppressed exception in _get_settings()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_get_settings impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None

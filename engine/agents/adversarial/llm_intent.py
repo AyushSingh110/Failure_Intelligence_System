@@ -68,7 +68,10 @@ def run_llm_intent_check(prompt: str) -> tuple[str | None, float, dict]:
             timeout=_INTENT_TIMEOUT,
         )
     except Exception as exc:
-        logger.warning("Suppressed exception in run_llm_intent_check()", exc_info=True)
+        logger.warning(
+            "degraded capability=llm_intent impact='no LLM-based intent check; falls back to static layers' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None, 0.0, {"error": str(exc)}
 
     if resp.status_code != 200:
@@ -76,8 +79,11 @@ def run_llm_intent_check(prompt: str) -> tuple[str | None, float, dict]:
 
     try:
         raw = resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception:
-        logger.warning("Suppressed exception in run_llm_intent_check()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=llm_intent impact='no LLM-based intent check; falls back to static layers' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None, 0.0, {"error": "response_parse_failed"}
 
     parts = raw.split("|", 2)
@@ -87,8 +93,11 @@ def run_llm_intent_check(prompt: str) -> tuple[str | None, float, dict]:
     verdict_str = parts[0].strip().upper()
     try:
         confidence = min(max(float(parts[1].strip()), 0.0), 1.0)
-    except ValueError:
-        logger.warning("Suppressed exception in run_llm_intent_check()", exc_info=True)
+    except ValueError as exc:
+        logger.warning(
+            "degraded capability=llm_intent impact='no LLM-based intent check; falls back to static layers' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         confidence = 0.0
     reasoning = parts[2].strip() if len(parts) > 2 else ""
 

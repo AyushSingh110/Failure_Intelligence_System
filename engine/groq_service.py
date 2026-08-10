@@ -167,8 +167,11 @@ class GroqService:
                     model_name, cached.input_tokens, cached.output_tokens,
                     latency_ms=0.0, cached=True,
                 )
-            except Exception:
-                logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=groq_shadow_model impact='one shadow model missing from the ensemble; consensus is weaker' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
             return cached
 
         start = time.time()
@@ -220,8 +223,11 @@ class GroqService:
                     _instr.record_groq_call(
                         model_name, in_tok, out_tok, latency_ms=latency_ms, cached=False,
                     )
-                except Exception:
-                    logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
+                except Exception as exc:
+                    logger.warning(
+                        "degraded capability=groq_shadow_model impact='one shadow model missing from the ensemble; consensus is weaker' "
+                        "reason=%s: %s", type(exc).__name__, exc,
+                    )
                 return result
 
             except requests.exceptions.Timeout:
@@ -251,14 +257,20 @@ class GroqService:
                     try:
                         from engine import instrumentation as _instr
                         _instr.record_rate_limit()
-                    except Exception:
-                        logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=groq_shadow_model impact='one shadow model missing from the ensemble; consensus is weaker' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
                 else:
                     response_text = ""
                     try:
                         response_text = exc.response.text
-                    except Exception:
-                        logger.warning("Suppressed exception in _call_single_model()", exc_info=True)
+                    except Exception as exc:
+                        logger.warning(
+                            "degraded capability=groq_shadow_model impact='one shadow model missing from the ensemble; consensus is weaker' "
+                            "reason=%s: %s", type(exc).__name__, exc,
+                        )
                         response_text = ""
                     error = str(exc) if not response_text else f"{exc} | {response_text}"
                 return GroqModelResponse(
@@ -421,8 +433,11 @@ class GroqService:
                 "Say 'ok' in one word.",
             )
             return result.success
-        except Exception:
-            logger.warning("Suppressed exception in is_available()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=groq_health impact='treated as unavailable; hallucination monitoring is skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return False
 
 

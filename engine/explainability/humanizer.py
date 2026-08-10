@@ -80,8 +80,11 @@ def _extract_json_payload(text: str) -> dict | None:
         return None
     try:
         return json.loads(text[start : end + 1])
-    except Exception:
-        logger.warning("Suppressed exception in _extract_json_payload()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=explanation_parse impact='raw model text used instead of a structured explanation' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None
 
 

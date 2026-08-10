@@ -181,8 +181,11 @@ def _fetch_search_results(
         try:
             from engine import instrumentation as _instr
             _instr.record_http_call("wikidata.org", (_t.time() - _start) * 1000.0)
-        except Exception:
-            logger.warning("Suppressed exception in _fetch_search_results()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=_fetch_search_results impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
         resp.raise_for_status()
         data = resp.json()
         return [
@@ -263,8 +266,11 @@ def _parse_groq_verdict(text: str) -> tuple[bool, float, str]:
             try:
                 confidence = float(line.split(":", 1)[1].strip())
                 confidence = max(0.0, min(1.0, confidence))
-            except ValueError:
-                logger.warning("Suppressed exception in _parse_groq_verdict()", exc_info=True)
+            except ValueError as exc:
+                logger.warning(
+                    "degraded capability=_parse_groq_verdict impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
                 confidence = 0.5
 
         elif line.upper().startswith("CORRECT_VALUE:"):
@@ -280,6 +286,9 @@ def _get_timeout() -> int:
     try:
         from config import get_settings
         return get_settings().wikidata_timeout_seconds
-    except Exception:
-        logger.warning("Suppressed exception in _get_timeout()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=_get_timeout impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return _DEFAULT_TIMEOUT

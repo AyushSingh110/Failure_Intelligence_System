@@ -773,8 +773,11 @@ def monitor(
                         {"log_id": _signal_log_id},
                         {"$set": {"request_id": stored_request_id}},
                     )
-            except Exception:
-                logger.warning("Suppressed exception in monitor()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=monitor impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
 
         if response.explanation_external is not None:
             response.explanation_external.request_id = stored_request_id
@@ -999,8 +1002,11 @@ def submit_feedback(
     try:
         from engine.fie_config import maybe_recalibrate
         maybe_recalibrate()
-    except Exception:
-        logger.warning("Suppressed exception in submit_feedback()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=submit_feedback impact='this optional step was skipped' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
 
     try:
         from engine.retraining.buffer import add_to_buffer, maybe_trigger_retrain

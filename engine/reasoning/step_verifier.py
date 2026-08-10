@@ -83,8 +83,11 @@ def _safe_eval(expr: str) -> Optional[float]:
             raise ValueError(f"Unsafe node: {type(node)}")
 
         return _eval(tree)
-    except Exception:
-        logger.warning("Suppressed exception in _safe_eval()", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "degraded capability=step_arithmetic impact='this reasoning step is not arithmetically verified' "
+            "reason=%s: %s", type(exc).__name__, exc,
+        )
         return None
 
 

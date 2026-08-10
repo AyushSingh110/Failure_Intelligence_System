@@ -41,8 +41,11 @@ class OllamaService:
         try:
             r = requests.get(f"{self.base_url}/api/tags", timeout=3)
             return r.status_code == 200
-        except Exception:
-            logger.warning("Suppressed exception in is_available()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=ollama_health impact='treated as unavailable; local shadow models are skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return False
 
     def get_available_models(self) -> list[str]:
@@ -51,8 +54,11 @@ class OllamaService:
             r    = requests.get(f"{self.base_url}/api/tags", timeout=5)
             data = r.json()
             return [m["name"].split(":")[0] for m in data.get("models", [])]
-        except Exception:
-            logger.warning("Suppressed exception in get_available_models()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=ollama_models impact='model list unknown; configured names are assumed' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return []
 
     def fan_out(self, prompt: str) -> list[ModelResponse]:
@@ -142,8 +148,11 @@ class OllamaService:
                 error="" if output else "Empty response",
             )
 
-        except requests.exceptions.Timeout:
-            logger.warning("Suppressed exception in _call_model()", exc_info=True)
+        except requests.exceptions.Timeout as exc:
+            logger.warning(
+                "degraded capability=ollama_shadow_model impact='one local shadow model missing from the ensemble' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return ModelResponse(
                 model_name=model_name,
                 output_text="",
@@ -152,7 +161,10 @@ class OllamaService:
                 error=f"Timeout after {self.timeout}s",
             )
         except Exception as exc:
-            logger.warning("Suppressed exception in _call_model()", exc_info=True)
+            logger.warning(
+                "degraded capability=ollama_shadow_model impact='one local shadow model missing from the ensemble' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return ModelResponse(
                 model_name=model_name,
                 output_text="",

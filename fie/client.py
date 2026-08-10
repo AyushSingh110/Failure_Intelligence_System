@@ -195,8 +195,11 @@ class FIEClient:
                 timeout = 5,
             )
             return r.status_code == 200
-        except Exception:
-            logger.warning("Suppressed exception in health_check()", exc_info=True)
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=health_check impact='this optional step was skipped' "
+                "reason=%s: %s", type(exc).__name__, exc,
+            )
             return False
 
     # Analytics
@@ -273,7 +276,10 @@ class FIEClient:
                     json    = {"event": event, "sdk_version": SDK_VERSION, **payload},
                     timeout = 3,
                 )
-            except Exception:
-                logger.warning("Suppressed exception in _post()", exc_info=True)
+            except Exception as exc:
+                logger.warning(
+                    "degraded capability=_post impact='this optional step was skipped' "
+                    "reason=%s: %s", type(exc).__name__, exc,
+                )
 
         threading.Thread(target=_post, daemon=True).start()
