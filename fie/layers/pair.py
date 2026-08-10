@@ -290,9 +290,15 @@ def _load_pair_classifier_locked() -> bool:
         _pair_embedder  = local_embedder
         _pair_threshold = local_threshold
         _pair_load_error = ""
+        # Report the backend actually in use, not the model NAME from meta.json.
+        # Logging `embed_model` here printed "embedder=sentence-transformers/..."
+        # even when ONNX was serving the embeddings, which reads as though torch
+        # were loaded — exactly the thing an operator checks this line to rule out.
+        backend = type(local_embedder).__name__
         logger.info(
-            "layer=pair_classifier status=ready model=%s threshold=%.2f embedder=%s",
-            clf_path.name, local_threshold, embed_model,
+            "layer=pair_classifier status=ready model=%s threshold=%.2f "
+            "backend=%s embed_model=%s",
+            clf_path.name, local_threshold, backend, embed_model,
         )
         return True
     except ImportError as exc:
