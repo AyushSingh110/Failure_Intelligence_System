@@ -236,11 +236,31 @@ jobs:
           print('Health check passed')
           "
 
-  # ── CD: Deploy to Google Cloud Run (main branch only) ─────────────────
+  # ── CD: Deploy to Google Cloud Run (opt-in) ───────────────────────────
+  #
+  # Gated on the repository variable DEPLOY_ENABLED. When it is unset the job
+  # is SKIPPED, not failed, so CI reports green.
+  #
+  # Why: this job hard-fails with "This API method requires billing to be
+  # enabled" once GCP billing lapses, and it runs on every push to main. The
+  # result is a permanently red CI badge that says nothing about code quality —
+  # the single most discouraging thing a first-time visitor can see on a repo.
+  # A deployment target that no longer exists is a configuration fact, not a
+  # test failure, and it should not be reported as one.
+  #
+  # To re-enable once you have a live host:
+  #   gh variable set DEPLOY_ENABLED --body true
+  # To disable again:
+  #   gh variable delete DEPLOY_ENABLED
+  #
+  # See docs/DEPLOYMENT.md for free-tier targets that do not require billing.
   deploy:
     runs-on: ubuntu-latest
     needs: [test, package, health-check]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.DEPLOY_ENABLED == 'true'
 
     permissions:
       contents: read
