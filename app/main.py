@@ -333,13 +333,17 @@ def health_deep() -> dict:
         logger.warning("health_deep: groq probe failed: %s", exc)
         results["groq"] = {"status": "down", "error": str(exc)[:120]}
 
-    # FAISS index
+    # FAISS adversarial-pattern index.
+    # An empty index is NOT a failure: it is the correct state for a fresh
+    # deployment that has not yet recorded any confirmed attacks. Report it as
+    # "empty" rather than "degraded" so a normal cold start does not look broken.
     try:
         from engine.archetypes.registry import adversarial_registry
         size = adversarial_registry.size
         results["faiss"] = {
-            "status":  "ok" if size > 0 else "degraded",
+            "status":  "ok" if size > 0 else "empty",
             "vectors": size,
+            "note":    None if size > 0 else "no confirmed attack patterns recorded yet",
         }
     except Exception as exc:
         logger.warning("health_deep: faiss probe failed: %s", exc)
@@ -357,13 +361,13 @@ def health_deep() -> dict:
         logger.warning("health_deep: encoder probe failed: %s", exc)
         results["encoder"] = {"status": "down", "error": str(exc)[:120]}
 
-    # XGBoost classifier
+    # XGBoost failure classifier.
+    # Uses status(), which triggers the lazy load first. Reading the module
+    # global directly reported "degraded" on a healthy server until something
+    # happened to warm it — a false alarm on every fresh deploy.
     try:
-        from engine.failure_classifier import _model
-        results["xgboost"] = {
-            "status": "ok" if _model is not None else "degraded",
-            "mode":   "xgboost" if _model is not None else "rule_based_fallback",
-        }
+        from engine.failure_classifier import status as _clf_status
+        results["xgboost"] = _clf_status()
     except Exception as exc:
         logger.warning("health_deep: xgboost probe failed: %s", exc)
         results["xgboost"] = {"status": "down", "error": str(exc)[:120]}

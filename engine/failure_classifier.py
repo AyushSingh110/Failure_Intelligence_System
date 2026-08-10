@@ -346,3 +346,34 @@ def predict_full(
         gt_override, archetype, jury_verdict_str, fix_strategy, gt_source, question_type,
         provenance_category, provenance_label, reasoning_failure_type, reasoning_confidence,
     )
+
+
+def status() -> dict:
+    """
+    Honest readiness snapshot for /health/deep.
+
+    Triggers the lazy load, then reports what is actually true.
+
+    The health endpoint used to do `from engine.failure_classifier import _model`
+    and test it for None. That reads the value BEFORE anything has called
+    `_load()`, so a perfectly healthy deployment reported
+    "xgboost: rule_based_fallback" forever — until the first inference happened
+    to warm it. A health check that cries wolf is worse than no health check:
+    it trains the operator to ignore the one signal that matters.
+
+    Loading here is cheap (a ~220 KB joblib file) and idempotent, so unlike the
+    detector's model this one is safe to touch from a probe.
+    """
+    _load()
+    if _model is not None:
+        return {
+            "status":   "ok",
+            "mode":     "xgboost",
+            "version":  _VERSION,
+            "features": len(_feat_cols) if _feat_cols else 0,
+        }
+    return {
+        "status": "degraded",
+        "mode":   "rule_based_fallback",
+        "reason": f"model not loadable at {_MODEL_PATH}",
+    }
