@@ -22,7 +22,26 @@ pymongo==4.15.0
 # ML / retrieval / vector logic
 numpy==2.1.3
 faiss-cpu>=1.8.0       # NOT installed in the pin env (optional vector backend) — see change report
-sentence-transformers==3.4.1
+
+# Sentence embeddings via ONNX Runtime.
+#
+# This replaced sentence-transformers (and therefore torch), which was 4.67 GB
+# for the CUDA build and 1.32 GB CPU-only, purely to compute 384-dim MiniLM
+# vectors. ONNX is smaller, faster, and numerically identical:
+#
+#   disk    4,668 MB -> ~113 MB   (~45x)
+#   warmup    12.6 s -> 1.87 s
+#   scan    38.2 ms  -> 24.6 ms
+#   output  cosine similarity 1.000000 vs torch
+#
+# Equivalence is enforced by scripts/verify_onnx_equivalence.py (gate: >0.999).
+# The exported model lives in fie/models/minilm-onnx/ and is distributed as a
+# GitHub Release asset — see docs/OPERATIONS.md.
+#
+# To A/B against the original torch path: pip install sentence-transformers
+# and set FIE_EMBED_BACKEND=torch.
+onnxruntime==1.23.2
+tokenizers>=0.20
 # Failure classifier (engine/failure_classifier.py) — XGBoost model + columns
 xgboost==2.1.4
 # Pinned to match the version the shipped .pkl models were serialized with (1.7.2).

@@ -136,3 +136,5 @@ node_modules/
 
 # OS noise
 .DS_Store
+# ONNX sentence embedder (90 MB) - GitHub Release asset, see scripts/model_manifest.json
+fie/models/minilm-onnx/

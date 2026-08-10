@@ -4,6 +4,18 @@
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
     {
+      "path": "fie/models/minilm-onnx/model.onnx",
+      "sha256": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+      "size": 90293328,
+      "used_by": "Sentence embedder - MiniLM-L6-v2 exported to ONNX (fp32). Replaces torch/sentence-transformers: ~45x smaller on disk, ~2.4x faster, cosine 1.000000 vs torch. int8 was rejected (cosine 0.879, fails the >0.999 gate)."
+    },
+    {
+      "path": "fie/models/minilm-onnx/tokenizer.json",
+      "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+      "size": 711661,
+      "used_by": "Sentence embedder - WordPiece tokenizer for the ONNX MiniLM export."
+    },
+    {
       "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
       "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
       "size": 11349,

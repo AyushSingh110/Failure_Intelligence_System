@@ -22,6 +22,39 @@ def _lazy_settings():
     return _settings
 
 
+def _build_backend(model_name: str):
+    """
+    Return (embedder, backend_name), preferring ONNX Runtime over torch.
+
+    Same rationale as fie/layers/pair.py::_build_embedder — ONNX is ~45x smaller
+    on disk, ~2.4x faster, and produces embeddings identical to torch (verified
+    cosine 1.000000 by scripts/verify_onnx_equivalence.py). Falls back to
+    sentence-transformers so existing installs keep working unchanged.
+
+    Set FIE_EMBED_BACKEND=torch to force the reference implementation.
+    """
+    import os
+
+    if (os.environ.get("FIE_EMBED_BACKEND") or "").strip().lower() != "torch":
+        try:
+            from fie.onnx_encoder import OnnxEncoder
+            enc = OnnxEncoder()
+            if enc.available:
+                return enc, "onnx"
+            logger.info(
+                "encoder=onnx status=unavailable reason=%s falling_back=torch",
+                enc.status().get("reason"),
+            )
+        except Exception as exc:
+            logger.info(
+                "encoder=onnx status=unavailable reason=%s: %s falling_back=torch",
+                type(exc).__name__, exc,
+            )
+
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer(model_name), "sentence-transformers"
+
+
 class SentenceEncoder:
     """
     Thread-safe lazy-loading sentence encoder.
@@ -124,25 +157,24 @@ class SentenceEncoder:
             # call — a retry storm here would stall every request thread.
             self._loaded = True
             try:
-                from sentence_transformers import SentenceTransformer
                 cfg = _lazy_settings()
                 model_name = cfg.embedding_transformer_model
                 logger.info("encoder=load status=started model=%s", model_name)
-                self._model = SentenceTransformer(model_name)
+                self._model, backend = _build_backend(model_name)
                 probe = self._model.encode(["smoke test"], normalize_embeddings=True)
                 logger.info(
-                    "encoder=load status=ready model=%s dim=%d",
-                    model_name, probe.shape[-1],
+                    "encoder=load status=ready backend=%s model=%s dim=%d",
+                    backend, model_name, probe.shape[-1],
                 )
             except ImportError as exc:
                 # Expected in lite/minimal installs — this is a supported
                 # configuration, so it is a warning, not an error.
                 self._failed = True
-                self._reason = "sentence-transformers not installed"
+                self._reason = "no embedding backend available"
                 logger.warning(
                     "encoder=load status=unavailable reason=%s "
-                    "action='pip install fie-sdk[ml]' detail=%s",
-                    self._reason, exc,
+                    "action='pip install onnxruntime tokenizers' (or fie-sdk[torch]) "
+                    "detail=%s", self._reason, exc,
                 )
             except Exception as exc:
                 # Unexpected: bad weights, no disk, corrupt cache, OOM.

@@ -60,11 +60,21 @@ lite = [
     "deep-translator>=1.11.4",
     "langdetect>=1.0.9",
 ]
+# Default ML stack. Uses ONNX Runtime for embeddings rather than torch:
+# ~45x smaller on disk, ~2.4x faster, and numerically identical output
+# (cosine 1.000000 — see scripts/verify_onnx_equivalence.py).
 ml = [
     "scikit-learn>=1.3",
     "xgboost>=2.0",
     "joblib>=1.3",
     "pandas>=2.0",
+    "onnxruntime>=1.17",
+    "tokenizers>=0.20",
+]
+# Reference implementation. Pulls torch (1.3-4.7 GB). Only needed to reproduce
+# the original embeddings or to run the ONNX equivalence check.
+# Activate at runtime with FIE_EMBED_BACKEND=torch.
+torch = [
     "sentence-transformers>=2.7",
 ]
 openai = [
@@ -78,7 +88,8 @@ all = [
     "xgboost>=2.0",
     "joblib>=1.3",
     "pandas>=2.0",
-    "sentence-transformers>=2.7",
+    "onnxruntime>=1.17",
+    "tokenizers>=0.20",
     "openai>=1.0",
     "anthropic>=0.25",
 ]
