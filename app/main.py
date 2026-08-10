@@ -390,9 +390,14 @@ def health_deep() -> dict:
         logger.warning("health_deep: detector probe failed: %s", exc)
         results["detector"] = {"status": "down", "error": str(exc)[:120]}
 
+    # "empty" and "not_configured" are HEALTHY states, not faults: an empty
+    # attack-pattern index and an unconfigured optional provider are both
+    # correct for a fresh deployment. Counting them as degraded made a
+    # perfectly healthy server advertise "degraded" on a public endpoint.
+    _OK_STATES = {"ok", "empty", "not_configured"}
     overall = (
-        "healthy"  if all(v.get("status") == "ok"   for v in results.values()) else
-        "degraded" if any(v.get("status") in ("ok", "degraded") for v in results.values()) else
+        "healthy"  if all(v.get("status") in _OK_STATES for v in results.values()) else
+        "degraded" if any(v.get("status") in _OK_STATES | {"degraded"} for v in results.values()) else
         "down"
     )
     return {
