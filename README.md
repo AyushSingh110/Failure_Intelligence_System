@@ -2,12 +2,42 @@
 
 **A 23M-parameter offline LLM guardrail — and an honest measurement of why guardrails fail.**
 
+[![Live demo](https://img.shields.io/badge/%F0%9F%A4%97_Live_demo-try_it_now-yellow)](https://aimrs-fie.hf.space)
+[![API](https://img.shields.io/badge/API-live-brightgreen)](https://aimrs-fie.hf.space/health)
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
 [![Version](https://img.shields.io/badge/version-1.18.0-brightgreen)](https://pypi.org/project/fie-sdk)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20536639-blue)](https://doi.org/10.5281/zenodo.20536639)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20623360-blue)](https://doi.org/10.5281/zenodo.20623360)
+
+---
+
+## ▶ Try it right now — no install, no signup
+
+### **[aimrs-fie.hf.space](https://aimrs-fie.hf.space)**
+
+Paste a prompt and watch all twelve detection layers score it in ~25 ms.
+Attack examples and benign ones are preloaded — including the "safe but scary"
+prompts FIE gets wrong, because the over-refusal problem below is real and worth
+seeing for yourself.
+
+The same URL serves the API:
+
+```bash
+curl https://aimrs-fie.hf.space/health        # liveness
+curl https://aimrs-fie.hf.space/ready         # readiness (503 until models warm)
+curl https://aimrs-fie.hf.space/health/deep   # every dependency, per component
+```
+
+| Endpoint | What |
+| --- | --- |
+| `/` | Interactive demo |
+| `/api/v1/*` | Full API — dashboard + SDK |
+| `/health` · `/ready` · `/health/deep` | Liveness · readiness · diagnosis |
+
+Runs on free CPU hardware, so the first request after a quiet period takes a few
+seconds to wake. Everything after that is warm.
 
 ---
 
@@ -277,6 +307,23 @@ result = await scan_prompt_async("Ignore all previous instructions")
 | `local` | Fully offline. Blocks attacks, heuristic answer checks. |
 | `monitor` | Reports to a dashboard in the background; returns immediately. |
 | `correct` | Waits for the verdict and replaces wrong answers. Adds latency. |
+
+### Pointing the SDK at the hosted API
+
+```python
+from fie import monitor
+
+@monitor(
+    fie_url = "https://aimrs-fie.hf.space",
+    api_key = "your-api-key",       # sign in at the dashboard to generate one
+    mode    = "monitor",
+)
+def ask_ai(prompt: str) -> str:
+    return your_llm(prompt)
+```
+
+`mode="local"` needs none of this — it is fully offline and is the default for
+`pip install fie-sdk`.
 
 ---
 
