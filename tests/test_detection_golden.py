@@ -84,6 +84,31 @@ def _snapshot_one(prompt: str) -> dict:
     }
 
 
+def _require_models() -> None:
+    """
+    Skip unless the trained artifacts are actually loaded.
+
+    The golden values encode a FULL-pipeline run. Without the models, PAIR and
+    the meta-classifier score 0.0 for every prompt and this test reports
+    "Detection behaviour changed for 10/22 prompts" — which is false and sends
+    the reader hunting for a regression that does not exist. That is exactly
+    what happened in CI when the models release had not been published yet.
+
+    Skipping with an accurate reason is strictly more useful than failing with
+    an inaccurate one. Missing models are caught where they actually belong: the
+    `download_models.py --strict` step, which fails loudly and says so.
+    """
+    from fie.adversarial import health
+
+    state = health()["pair_classifier"]
+    if not state["loaded"]:
+        pytest.skip(
+            "PAIR classifier not loaded — golden values assume the full "
+            f"pipeline. Reason: {state.get('error') or 'models not downloaded'}. "
+            "Run: python scripts/download_models.py --strict"
+        )
+
+
 def build_snapshot() -> dict:
     """Run the whole corpus and return the golden structure."""
     from fie.adversarial import warmup
@@ -91,6 +116,7 @@ def build_snapshot() -> dict:
     # Warm up first. Without this the first prompts race the model load and
     # come back degraded, which would bake a cold-start artefact into the file.
     warmup()
+    _require_models()
 
     return {name: _snapshot_one(prompt) for name, prompt in CORPUS}
 
@@ -145,6 +171,7 @@ def test_no_layer_silently_missing():
     from fie.adversarial import warmup
 
     warmup()
+    _require_models()
     expected_layers = {
         "regex", "prompt_guard", "many_shot", "indirect_injection",
         "gcg_suffix", "perplexity_proxy", "pair_classifier", "direct_harm",

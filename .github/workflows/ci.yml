@@ -65,11 +65,21 @@ jobs:
           cache: pip
 
       # Model artifacts are not in git — fetch them from the GitHub Release
-      # (scripts/model_manifest.json pins SHA-256 for every file). Best-effort:
-      # tests are written to pass with rule-based fallbacks if the release is
-      # not reachable, and the script only fails hard on checksum mismatch.
-      - name: Download model artifacts
-        run: python scripts/download_models.py
+      # pinned in scripts/model_manifest.json (SHA-256 verified per file).
+      #
+      # STRICT on purpose. Best-effort mode looked safer but produced a much
+      # worse failure: with the release missing, PAIR and the meta-classifier
+      # score 0.0 for every prompt, and the golden test then reported
+      # "Detection behaviour changed for 10/22 prompts" — a false regression
+      # that sends the reader hunting for a bug that does not exist.
+      #
+      # Failing here instead makes the real problem legible in one line:
+      # the release named in the manifest has not been published yet.
+      # See docs/OPERATIONS.md — models are always released BEFORE the package.
+      - name: Download model artifacts (strict)
+        run: python scripts/download_models.py --strict
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: |
