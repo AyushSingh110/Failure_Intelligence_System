@@ -5,7 +5,10 @@ from types import SimpleNamespace
 def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
     monkeypatch.setenv("DEBUG", "false")
 
-    from app.routes import monitor
+    # `from app.routes import monitor` now resolves to the SUBMODULE, not the
+    # endpoint function — the package split made that name ambiguous. Import the
+    # handler explicitly so this test cannot silently bind to the wrong object.
+    from app.routes.monitor import monitor
     from app.schemas import (
         AgentVerdict,
         FailureSignalVector,
@@ -14,27 +17,72 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
     )
     from engine.rag_grounder import GroundingResult
 
-    import app.routes as routes
+    # NOTE ON PATCH TARGETS
+    # `app/routes.py` was split into the `app/routes/` package, and the package
+    # imports several of these helpers *inside* the request function rather than
+    # at module scope. Patching `app.routes.<name>` therefore does nothing — the
+    # function-local import re-fetches the real object from its source module at
+    # call time. Each symbol below is patched where it is DEFINED, which is
+    # correct regardless of how the caller imports it.
+    import app.routes.monitor as routes
+    import engine.archetypes.clustering as clustering
+    import engine.evolution.tracker as evolution
     import engine.groq_service as groq_service
+    import storage.database as database
 
     class FakeGroqService:
-        def fan_out(self, prompt: str):
+        """
+        Stand-in for the shadow-model fan-out.
+
+        Mirrors the real GroqService surface: the monitor path calls
+        `fan_out_with_confidence`, which in production wraps `fan_out` with a
+        self-rating suffix. Both are implemented here so the fake stays valid
+        whichever entry point the handler uses.
+        """
+
+        def _responses(self):
+            # Use the real dataclass rather than SimpleNamespace: the handler
+            # reads fields the stub kept forgetting (model_confidence,
+            # confidence_weight, token counts). Constructing the genuine type
+            # means adding a field to GroqModelResponse can never leave this
+            # fake silently incomplete again.
+            #
+            # success=False is the POINT of this test. The fix engine tries
+            # shadow consensus first and only falls back to Wikipedia RAG when
+            # consensus is unavailable — which is exactly the branch named in
+            # the test. A successful shadow makes the handler correct via
+            # SHADOW_CONSENSUS and the RAG path is never reached.
+            from engine.groq_service import GroqModelResponse
+
             return [
-                SimpleNamespace(
-                    model_name="shadow-1",
-                    output_text="Water boils at 150 degrees Celsius.",
-                    latency_ms=12.0,
-                    success=True,
-                    error="",
+                GroqModelResponse(
+                    model_name  = "shadow-1",
+                    output_text = "",
+                    success     = False,
+                    latency_ms  = 12.0,
+                    error       = "simulated shadow-model outage",
                 )
             ]
+
+        def fan_out(self, prompt: str, system_message: str | None = None):
+            return self._responses()
+
+        def fan_out_with_confidence(self, prompt: str, system_message: str | None = None):
+            return self._responses()
 
     monkeypatch.setattr(routes.settings, "groq_enabled", True)
     monkeypatch.setattr(routes.settings, "groq_api_key", "test-key")
     monkeypatch.setattr(groq_service, "get_groq_service", lambda: FakeGroqService())
+    # Imported at module scope by app/routes/monitor.py, so patch it there.
     monkeypatch.setattr(
         routes,
-        "_build_failure_signal",
+        "build_failure_signal",
+        # high_failure_risk MUST be True: app/routes/monitor.py gates the whole
+        # auto-fix block on it ("Auto-fix skipped: primary output matches shadow
+        # consensus"). That gate was added after this test was written, which is
+        # why the fixture used to describe a state the fix path now refuses to
+        # act on. The scenario under test is a REAL factual mismatch, so
+        # high_failure_risk=True is also the semantically correct fixture.
         lambda outputs: FailureSignalVector(
             agreement_score=1.0,
             fsd_score=0.0,
@@ -42,18 +90,17 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
             entropy_score=0.0,
             ensemble_disagreement=False,
             ensemble_similarity=1.0,
-            high_failure_risk=False,
+            high_failure_risk=True,
         ),
     )
-    monkeypatch.setattr(routes, "label_failure_archetype", lambda signal: "STABLE")
+    # Function-local imports — patch at the definition site.
     monkeypatch.setattr(
-        routes,
-        "compute_embedding_distance",
+        "engine.detector.embedding.compute_embedding_distance",
         lambda primary, secondary: {"embedding_distance": 0.0},
     )
-    monkeypatch.setattr(routes.archetype_registry, "assign", lambda signal: {})
-    monkeypatch.setattr(routes.evolution_tracker, "record", lambda signal: None)
-    monkeypatch.setattr(routes, "save_inference", lambda inference: True)
+    monkeypatch.setattr(clustering.archetype_registry, "assign", lambda signal: {})
+    monkeypatch.setattr(evolution.evolution_tracker, "record", lambda signal: None)
+    monkeypatch.setattr(database, "save_inference", lambda inference: True)
     monkeypatch.setattr(
         routes.failure_agent,
         "run_diagnostic",
@@ -63,7 +110,7 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
                     AgentVerdict(
                         agent_name="DomainCritic",
                         root_cause="FACTUAL_HALLUCINATION",
-                        confidence_score=0.34,
+                        confidence_score=0.55,
                         mitigation_strategy="Use grounding.",
                         evidence={"layers_fired": ["external_verification"]},
                     )
@@ -71,11 +118,11 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
                 primary_verdict=AgentVerdict(
                     agent_name="DomainCritic",
                     root_cause="FACTUAL_HALLUCINATION",
-                    confidence_score=0.34,
+                    confidence_score=0.55,
                     mitigation_strategy="Use grounding.",
                     evidence={"layers_fired": ["external_verification"]},
                 ),
-                jury_confidence=0.34,
+                jury_confidence=0.55,
                 failure_summary="Diagnosis: FACTUAL_HALLUCINATION",
             )
         ),
@@ -90,13 +137,28 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
         ),
     )
 
+    # The handler is decorated by slowapi's rate limiter, which reaches into the
+    # ASGI scope for the client address — so it needs a real starlette Request,
+    # not a stub. Build the minimum viable scope rather than mocking the
+    # decorator, so the test exercises the same code path as production.
+    from starlette.requests import Request as StarletteRequest
+
+    http_request = StarletteRequest({
+        "type":    "http",
+        "method":  "POST",
+        "path":    "/api/v1/monitor",
+        "headers": [],
+        "client":  ("127.0.0.1", 1234),
+    })
+
     response = monitor(
+        http_request,
         MonitorRequest(
             prompt="What is the boiling point of water at sea level?",
             primary_output="Water boils at 150 degrees Celsius.",
             primary_model_name="user-gpt4",
             run_full_jury=True,
-        )
+        ),
     )
 
     assert response.fix_result is not None

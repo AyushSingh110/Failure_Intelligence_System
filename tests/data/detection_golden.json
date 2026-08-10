@@ -1,0 +1,488 @@
+{
+  "base64_payload": {
+    "attack_type": "GCG_ADVERSARIAL_SUFFIX",
+    "confidence": 0.8279,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.72,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.7628,
+      "perplexity_proxy": 0.76,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "gcg_suffix"
+    ]
+  },
+  "benign_code": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_cooking": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_empty_ish": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_general": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_history": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_legal": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_medical": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_scary_words": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "benign_security": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  },
+  "copyright": {
+    "attack_type": "COPYRIGHT_REPRODUCTION",
+    "confidence": 0.72,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.72,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.7105,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "copyright"
+    ]
+  },
+  "direct_harm": {
+    "attack_type": "JAILBREAK_ATTEMPT",
+    "confidence": 0.96,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.85,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.9863,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "pair_classifier"
+    ]
+  },
+  "fiction_harm": {
+    "attack_type": "DIRECT_HARMFUL_REQUEST",
+    "confidence": 0.85,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.85,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "direct_harm"
+    ]
+  },
+  "gcg_suffix": {
+    "attack_type": "JAILBREAK_ATTEMPT",
+    "confidence": 0.8878,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.8878,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "pair_classifier"
+    ]
+  },
+  "indirect_injection": {
+    "attack_type": "GCG_ADVERSARIAL_SUFFIX",
+    "confidence": 0.8279,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.72,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.9586,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "gcg_suffix"
+    ]
+  },
+  "many_shot": {
+    "attack_type": "MANY_SHOT_JAILBREAK",
+    "confidence": 0.9,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.85,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.9,
+      "multilingual": 0.0,
+      "pair_classifier": 0.6334,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "many_shot"
+    ]
+  },
+  "multilingual": {
+    "attack_type": "MULTILINGUAL_INJECTION",
+    "confidence": 0.8141,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.7,
+      "pair_classifier": 0.5179,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "multilingual"
+    ]
+  },
+  "prompt_extraction": {
+    "attack_type": "PROMPT_EXTRACTION",
+    "confidence": 0.7576,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.6302,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.82,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "regex"
+    ]
+  },
+  "regex_dan": {
+    "attack_type": "JAILBREAK_ATTEMPT",
+    "confidence": 0.7576,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.8824,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.82,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "regex"
+    ]
+  },
+  "regex_injection": {
+    "attack_type": "PROMPT_EXTRACTION",
+    "confidence": 0.7576,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.86,
+      "regex": 0.82,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "regex"
+    ]
+  },
+  "system_override": {
+    "attack_type": "PROMPT_INJECTION",
+    "confidence": 0.82,
+    "degraded_layers": [],
+    "is_attack": true,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.45,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.82,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": [
+      "prompt_guard"
+    ]
+  },
+  "virtualization": {
+    "attack_type": null,
+    "confidence": 0.0,
+    "degraded_layers": [],
+    "is_attack": false,
+    "layer_scores": {
+      "copyright": 0.0,
+      "direct_harm": 0.0,
+      "fiction_harm": 0.0,
+      "gcg_suffix": 0.0,
+      "indirect_injection": 0.0,
+      "many_shot": 0.0,
+      "multilingual": 0.0,
+      "pair_classifier": 0.0,
+      "perplexity_proxy": 0.0,
+      "prompt_guard": 0.0,
+      "regex": 0.0,
+      "virtualization": 0.0
+    },
+    "layers_fired": []
+  }
+}

@@ -4,6 +4,97 @@ All notable changes to FIE (Failure Intelligence Engine) are documented here.
 
 ---
 
+## [1.18.0] — production hardening (2026-08-09)
+
+Behaviour-preserving except where explicitly noted. Detection output is pinned by
+`tests/test_detection_golden.py` and verified byte-identical across the refactor.
+
+### Fixed — silent failures
+
+- **PAIR classifier partial initialisation.** `_load_pair_classifier()` assigned
+  the sklearn classifier and the sentence embedder in sequence but the readiness
+  check tested only the classifier. If the embedder failed, every later call
+  passed the check and then raised `AttributeError` on the embedder — for the
+  life of the process. Because the exception was swallowed and returned
+  `(None, 0.0, {})`, this was indistinguishable from "PAIR saw nothing", silently
+  disabling the layer the ablation identifies as carrying most detection.
+  Load is now atomic and lock-protected.
+- **`get_attack_thresholds` did not exist.** `fie/adversarial.py` imported it
+  from `engine.fie_config` on *every scan*; the `ImportError` was caught and
+  logged each time. The per-attack-type hot-config path had never worked. The
+  function now exists, and import resolution is memoised off the hot path.
+- **`get_db` did not exist.** `engine/model_extraction_tracker.py` imported it
+  from `storage.database`; the ImportError was swallowed, so the extraction
+  tracker was a permanent no-op. Added as a pure accessor.
+- **`engine/encoder.py` logger was `None`.** Line 12 overwrote the logger set on
+  line 10, so the `except ImportError` handler raised `AttributeError` instead of
+  degrading — breaking the graceful-degradation path a lite install depends on.
+- **Wikipedia RAG fallback was unreachable from the escalation path.**
+  *(Behaviour change.)* The block was indented inside the `else:` arm, so it
+  could never run when the ground-truth pipeline escalated — despite its own
+  explanation string ("Shadow-model consensus unavailable...") describing exactly
+  that case. Some inferences that previously returned `HUMAN_ESCALATION` now
+  return a Wikipedia-grounded correction.
+
+### Fixed — concurrency and performance
+
+- **Removed 13 thread-pool creations per scan.** Each `scan_prompt()` built one
+  outer pool plus a nested single-worker pool *per layer* (~24 threads created
+  and destroyed per scan). Replaced with one bounded process-wide pool
+  (`FIE_LAYER_POOL_SIZE`, default 16). Warm median latency **28.9 ms → 22.3 ms**.
+- **The per-layer timeout never fired.** `with ThreadPoolExecutor(...)` calls
+  `shutdown(wait=True)` on exit, so the block waited for the hung layer even
+  after `fut.result(timeout=...)` gave up. Replaced with a single deadline across
+  the layer set (`FIE_LAYER_DEADLINE_S`, default 10s).
+- **Timed-out layers no longer vanish.** They are materialised as explicit
+  results with `status=timeout`. Previously a dropped layer meant the
+  meta-classifier silently received a short feature vector.
+
+### Added — fail-secure and observability
+
+- `ScanResult.degraded_layers` / `.is_degraded` — layers that produced no verdict
+  this scan. Empty means the full pipeline ran.
+- `GuardResult.scan_failed` — distinguishes "scanned, looked safe" from "never
+  scanned". Both previously returned `(False, "", 0.0, [])`.
+- `FIE_SCAN_FAILURE_MODE=closed` — block when the scanner itself fails. Default
+  remains `open` for compatibility, but the failure now logs at ERROR (was
+  `debug`) and is visible via `scan_failed`. **Recommended in production.**
+- `fie.adversarial.warmup()` and `.health()` — explicit preload and a
+  non-blocking readiness snapshot.
+- `GET /ready` — returns 503 until warm-up completes, so traffic never reaches an
+  instance whose classifier has not loaded. `/health` stays cheap (liveness);
+  `/health/deep` now reports detector status.
+- `fie/_degrade.py` — `degraded()` / `attempt()` helpers that require the author
+  to state what capability was lost and why continuing is safe.
+- Graceful shutdown releases the layer pool in the FastAPI lifespan.
+
+### Changed — structure
+
+- **`fie/adversarial.py` split 3,016 → 1,386 lines.** Nine detection layers moved
+  to `fie/layers/`, one module each (largest: 494 lines). All names re-exported,
+  so existing imports keep working.
+- **Deleted `app/routes.py` (1,871 lines)** — tracked in git but permanently
+  shadowed by the `app/routes/` package, therefore unreachable. Verified the
+  package is a strict superset first.
+- **Moved 9 script-style files out of `tests/`** into `scripts/manual_checks/`.
+  They were not pytest modules and several called `sys.exit()` at module scope,
+  aborting the whole session — which is why CI could only run a hand-picked
+  subset, and why a broken test went unnoticed for weeks.
+- **CI now runs the full offline suite** (`pytest tests/ -m "not network"`)
+  instead of two named files.
+
+### Added — tests and docs
+
+- `tests/test_detection_golden.py` — pins attack type, confidence to 4 dp,
+  layers fired and every layer score across a 22-prompt corpus. Caught two
+  regressions during the refactor that no other test detected.
+- `docs/PRODUCTION_ENGINEERING.md` — every production decision and its rationale,
+  including a list of known open issues.
+- `docs/DEPLOYMENT.md` — the ONNX migration that removes `torch` (~1.42 GB →
+  ~105 MB) and makes free-tier hosting viable, with a verification protocol.
+
+---
+
 ## [Unreleased] — production-hardening pass (2026-06-11)
 
 ### Security

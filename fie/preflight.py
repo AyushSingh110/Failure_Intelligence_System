@@ -5,6 +5,8 @@ import dataclasses
 import logging
 import os
 
+from fie._degrade import attempt
+
 logger = logging.getLogger("fie.preflight")
 
 # ── Env-var defaults (read once at import time) ────────────────────────────────
@@ -31,6 +33,12 @@ class GuardResult:
     confidence:      float
     layers_fired:    list[str]
     refusal_message: str
+    # True when the scanner itself failed and the prompt was never actually
+    # examined. Distinct from blocked=False, which means "scanned, looked safe".
+    # Callers enforcing their own policy must branch on this: an unscanned
+    # prompt is not a safe prompt. Defaults False so existing constructors and
+    # any code unpacking this dataclass keep working unchanged.
+    scan_failed:     bool = False
 
 
 # ── GuardedResponse ───────────────────────────────────────────────────────────
@@ -66,6 +74,12 @@ class GuardedResponse(str):
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
+def _server_preflight_block_enabled() -> bool:
+    """Read block_enabled from the server hot-config. Raises if unavailable."""
+    from engine.fie_config import get_preflight_config
+    return get_preflight_config()["block_enabled"]
+
+
 def _get_block_enabled() -> bool:
     """
     Returns whether block mode is currently active.
@@ -73,30 +87,74 @@ def _get_block_enabled() -> bool:
     Reads from engine.fie_config (MongoDB-backed, hot-configurable) first.
     Falls back to PREFLIGHT_BLOCK_ENABLED env var, then True.
     """
-    try:
-        from engine.fie_config import get_preflight_config
-        return get_preflight_config()["block_enabled"]
-    except Exception:
-        logger.warning("Suppressed exception in _get_block_enabled()", exc_info=True)
-        return _ENV_BLOCK_ENABLED
+    # SDK-only installs have no engine package; that is the common case, not an
+    # error. Falls back to the env var, which itself defaults to True (blocking)
+    # — losing hot-config must never silently turn the guard off.
+    return attempt(
+        lambda: _server_preflight_block_enabled(),
+        default    = _ENV_BLOCK_ENABLED,
+        capability = "fie_config",
+        impact     = f"using env/default block_enabled={_ENV_BLOCK_ENABLED} "
+                     "instead of hot config",
+        logger_    = logger,
+    )
+
+
+# What to do when the scanner itself fails (not when it returns "safe").
+#
+#   "open"   — allow the prompt through. Availability over security.
+#   "closed" — block it. Security over availability. RECOMMENDED for anything
+#              exposed to untrusted input.
+#
+# The default is "open" to preserve historical behaviour, but note what that
+# means: if scan_prompt() raises, every prompt is forwarded to your model
+# unscanned, and the caller sees blocked=False — indistinguishable from a clean
+# scan unless it checks `scan_failed`. An attacker who can reliably crash the
+# scanner has disabled the guard. Set FIE_SCAN_FAILURE_MODE=closed in production.
+_SCAN_FAILURE_MODE: str = os.environ.get("FIE_SCAN_FAILURE_MODE", "open").strip().lower()
+_FAIL_SECURE: bool = _SCAN_FAILURE_MODE == "closed"
 
 
 def _safe_scan(
     prompt: str,
     session_id: str | None = None,
     domain: str | None = None,
-) -> tuple[bool, str, float, list[str]]:
+) -> tuple[bool, str, float, list[str], bool]:
     """
-    Run scan_prompt() and return (is_attack, attack_type, confidence, layers_fired).
-    Never raises — returns (False, "", 0.0, []) on any failure.
+    Run scan_prompt(). Never raises.
+
+    Returns (is_attack, attack_type, confidence, layers_fired, scan_failed).
+
+    `scan_failed` is the important addition: without it, a crashed scanner and a
+    genuinely clean prompt both returned (False, "", 0.0, []) and no caller could
+    tell them apart. Callers must treat scan_failed=True as "not scanned", never
+    as "safe".
     """
     try:
         from fie.adversarial import scan_prompt
         result = scan_prompt(prompt, session_id=session_id, domain=domain)
-        return result.is_attack, result.attack_type, result.confidence, result.layers_fired
+        return (
+            result.is_attack,
+            result.attack_type or "",
+            result.confidence,
+            result.layers_fired,
+            False,
+        )
     except Exception as exc:
-        logger.debug("preflight scan failed (allowing request through): %s", exc)
-        return False, "", 0.0, []
+        # ERROR, not debug: the guard just stopped guarding. This is precisely
+        # the event an operator needs paged on, and it was previously invisible
+        # at default log levels.
+        logger.error(
+            "preflight scan FAILED — prompt was not scanned "
+            "(failure_mode=%s, action=%s) reason=%s: %s",
+            _SCAN_FAILURE_MODE,
+            "block" if _FAIL_SECURE else "allow through",
+            type(exc).__name__, exc,
+            exc_info=True,
+        )
+        if _FAIL_SECURE:
+            return True, "SCAN_FAILED", 1.0, ["preflight_fail_secure"], True
+        return False, "", 0.0, [], True
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -113,7 +171,7 @@ def preflight_check(
             layers_fired=[], refusal_message="",
         )
 
-    is_attack, attack_type, confidence, layers_fired = _safe_scan(
+    is_attack, attack_type, confidence, layers_fired, scan_failed = _safe_scan(
         prompt, session_id=session_id, domain=domain,
     )
 
@@ -121,6 +179,20 @@ def preflight_check(
         return GuardResult(
             blocked=False, attack_type="", confidence=confidence,
             layers_fired=layers_fired, refusal_message="",
+            scan_failed=scan_failed,
+        )
+
+    # A fail-secure block is not a detection — warn-only mode must not be able
+    # to wave it through, because there is no verdict to warn about. Blocking
+    # here is the whole point of FIE_SCAN_FAILURE_MODE=closed.
+    if scan_failed:
+        return GuardResult(
+            blocked         = True,
+            attack_type     = attack_type,
+            confidence      = confidence,
+            layers_fired    = layers_fired,
+            refusal_message = _DEFAULT_REFUSAL,
+            scan_failed     = True,
         )
 
     block_enabled = _get_block_enabled()

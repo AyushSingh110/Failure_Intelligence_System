@@ -32,6 +32,9 @@ class LiteScanResult:
     confidence:   float
     layers_fired: list[str]
     evidence:     dict = field(default_factory=dict)
+    # Layers that raised during this scan. Non-empty means reduced coverage:
+    # is_attack=False is weaker evidence of safety than usual.
+    degraded_layers: list[str] = field(default_factory=list)
 
 
 def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
@@ -64,6 +67,7 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
     ]
 
     fired_names: list[str]  = []
+    degraded_names: list[str] = []
     combined_ev: dict       = {}
     best_conf   = 0.0
     best_type   = None
@@ -71,8 +75,16 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
     for name, fn in lite_layers:
         try:
             attack_type, confidence, evidence = fn()
-        except Exception:
-            logger.warning("Suppressed exception in scan_prompt_lite()", exc_info=True)
+        except Exception as exc:
+            # Lite mode already runs a reduced layer set, so a further layer
+            # loss matters more here than in the full pipeline. Record it on the
+            # result so the caller can see the scan was incomplete.
+            logger.warning(
+                "degraded capability=layer:%s impact='lite scan ran with "
+                "reduced coverage' reason=%s: %s",
+                name, type(exc).__name__, exc,
+            )
+            degraded_names.append(name)
             continue
 
         if attack_type is not None:
@@ -90,4 +102,5 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
         confidence   = round(best_conf, 4) if is_attack else 0.0,
         layers_fired = fired_names,
         evidence     = combined_ev,
+        degraded_layers = degraded_names,
     )

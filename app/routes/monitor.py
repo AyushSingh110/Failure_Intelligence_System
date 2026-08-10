@@ -518,30 +518,50 @@ def monitor(
                             fix.fix_strategy, fix.fix_confidence,
                         )
 
-                # Wikipedia RAG fallback
-                if (
-                    (fix_result_schema is None or not fix_result_schema.fix_applied)
-                    and root_cause in {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"}
-                    and not prompt_requires_live_data(body.prompt)
-                ):
-                    from engine.rag_grounder import ground_with_wikipedia
-                    rag = ground_with_wikipedia(body.prompt, body.primary_output)
-                    if rag.success:
-                        fix_result_schema = FixResultSchema(
-                            fixed_output      = rag.grounded_answer,
-                            fix_applied       = True,
-                            fix_strategy      = "RAG_GROQ_GROUNDING",
-                            fix_explanation   = (
-                                "Shadow-model consensus unavailable. FIE used "
-                                "Wikipedia-grounded retrieval and Groq-based correction."
-                            ),
-                            original_output   = body.primary_output,
-                            root_cause        = root_cause,
-                            fix_confidence    = rag.confidence,
-                            improvement_score = rag.confidence,
-                            warning           = f"Grounded source: {rag.source}",
-                        )
-                        failure_summary = "AUTO-FIXED: RAG_GROQ_GROUNDING applied via Wikipedia."
+            # ── Wikipedia RAG fallback ───────────────────────────────────────
+            # BEHAVIOUR CHANGE (deliberate). This block used to be indented one
+            # level deeper, inside the `else:` arm above, so it could only run
+            # when the ground-truth pipeline neither escalated nor produced a
+            # verified answer. That made it unreachable from the escalation
+            # path — even though its own fix_explanation ("Shadow-model
+            # consensus unavailable...") describes precisely that case, and its
+            # guard tests `not fix_result_schema.fix_applied`, which is the flag
+            # the escalation branch sets. The fallback was written as a safety
+            # net for escalation and was silently excluded from it.
+            #
+            # Dedented to the level of the if/elif/else so it now runs whenever
+            # no fix has been applied yet, regardless of which arm ran. Net
+            # effect: some inferences that previously returned HUMAN_ESCALATION
+            # now return a Wikipedia-grounded correction. That is a real change
+            # in output, not a refactor — revert this hunk to restore the old
+            # (escalate-only) behaviour.
+            if (
+                (fix_result_schema is None or not fix_result_schema.fix_applied)
+                and root_cause in {"KNOWLEDGE_BOUNDARY_FAILURE", "FACTUAL_HALLUCINATION"}
+                and not prompt_requires_live_data(body.prompt)
+            ):
+                from engine.rag_grounder import ground_with_wikipedia
+                rag = ground_with_wikipedia(body.prompt, body.primary_output)
+                if rag.success:
+                    fix_result_schema = FixResultSchema(
+                        fixed_output      = rag.grounded_answer,
+                        fix_applied       = True,
+                        fix_strategy      = "RAG_GROQ_GROUNDING",
+                        fix_explanation   = (
+                            "Shadow-model consensus unavailable. FIE used "
+                            "Wikipedia-grounded retrieval and Groq-based correction."
+                        ),
+                        original_output   = body.primary_output,
+                        root_cause        = root_cause,
+                        fix_confidence    = rag.confidence,
+                        improvement_score = rag.confidence,
+                        warning           = f"Grounded source: {rag.source}",
+                    )
+                    failure_summary = "AUTO-FIXED: RAG_GROQ_GROUNDING applied via Wikipedia."
+                    # The RAG correction supersedes the escalation decision made
+                    # above; clear it so the response is internally consistent.
+                    requires_human_review = False
+                    escalation_reason_str = ""
 
         except Exception as exc:
             if "Auto-fix skipped" in str(exc):

@@ -116,6 +116,30 @@ def initialize_vault() -> None:
         print("[database] Falling back to in-memory storage because MongoDB is unavailable.")
 
 
+def get_db():
+    """
+    Public accessor for the MongoDB database handle. Returns None if unavailable.
+
+    Deliberately a PURE accessor — it never connects. Connection is the
+    application's startup job (`initialize_vault()` from the FastAPI lifespan).
+
+    An earlier version of this function lazily called `initialize_vault()` when
+    `_db` was None. That looked convenient and was a trap: any incidental caller
+    on a request path — here, the model-extraction tracker — would trigger a
+    blocking MongoDB SRV lookup with a multi-second DNS timeout, inside a
+    request, from a code path whose failure is supposed to be non-fatal. In a
+    test run with no reachable cluster it hung the whole process.
+
+    Prefer this over importing the module-level `_db` global: several modules
+    reach for the private name directly, which couples them to this module's
+    internals and breaks silently if it is renamed. That is exactly what
+    happened to engine/model_extraction_tracker.py, which imported a `get_db`
+    that did not exist — the ImportError was swallowed by a broad handler and
+    the extraction tracker degraded to a permanent no-op in production.
+    """
+    return _db
+
+
 def flush_vault() -> None:
     """
     No-op for MongoDB — writes are immediate and persistent.

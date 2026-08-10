@@ -77,18 +77,23 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov httpx
 
+      # Runs the WHOLE offline suite, not a hand-picked subset.
+      #
+      # CI previously named only test_core.py and test_integration.py. The other
+      # twelve test files were never executed, so test_monitor_rag_fix.py sat
+      # broken from the app/routes.py -> app/routes/ package split until it was
+      # run by hand. Deselect network-dependent tests by marker instead of by
+      # filename, so a new test file is covered the day it is added rather than
+      # whenever someone remembers to edit this workflow.
       - name: Run offline unit tests
-        run: |
-          pytest tests/test_core.py -v --tb=short --cov=fie --cov=engine --cov=app --cov-report=xml
-
-      - name: Run integration tests
         env:
           MONGODB_URI: "mongodb://localhost:27017"
           GROQ_API_KEY: "fake-key-for-ci"
           JWT_SECRET_KEY: "ci-secret-key-minimum-32-chars-long"
           ADMIN_EMAIL: "ci@example.com"
         run: |
-          pytest tests/test_integration.py -v --tb=short --cov=fie --cov=engine --cov=app --cov-append --cov-report=xml
+          pytest tests/ -v --tb=short -m "not network" \
+            --cov=fie --cov=engine --cov=app --cov-report=xml
 
       # Free for public repos. Add the CODECOV_TOKEN repo secret (from
       # codecov.io) to enable; the step never fails the build either way.

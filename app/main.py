@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 # Load .env before any module-level
 from dotenv import load_dotenv
 load_dotenv()
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from config import get_settings
 from engine.logging_config import configure_logging, bind_request_id
@@ -46,7 +46,12 @@ try:
     from slowapi.errors import RateLimitExceeded
     from slowapi import _rate_limit_exceeded_handler
 except ImportError:
-    logger.warning("Suppressed exception in main", exc_info=True)
+    # slowapi is optional. Without it the app runs UNRATE-LIMITED, which is a
+    # real exposure for a public endpoint — hence warning, not debug.
+    logger.warning(
+        "startup=rate_limiting status=disabled reason='slowapi not installed' "
+        "impact='no per-IP request limits'"
+    )
     RateLimitExceeded = None  # type: ignore[assignment, misc]
     _rate_limit_exceeded_handler = None  # type: ignore[assignment]
 
@@ -62,23 +67,60 @@ _ALLOWED_ORIGINS = [
 ]
 
 
-# Background encoder warm-up
+# ── Background warm-up ────────────────────────────────────────────────────────
+#
+# Model loading is lazy, so without an explicit warm-up the FIRST request pays
+# it — roughly 10 s, against a 10 s layer deadline. That means a cold container's
+# first real request is served with the PAIR layer marked degraded, i.e. with
+# materially reduced recall, while still returning a confident-looking verdict.
+#
+# Warm-up runs in a background thread so the port starts accepting connections
+# immediately (platform health checks do not wait for a transformer to load),
+# and readiness is reported separately from liveness — see /health vs /ready.
 
-def _warm_encoder_in_background() -> None:
-    """Warm the sentence encoder after startup without blocking the web server."""
-    logger.info("background_task=encoder_warmup status=started")
+# Set once warm-up finishes. Read by /ready.
+_WARMUP_STATE: dict[str, object] = {"done": False, "detector": {}, "encoder": "pending"}
+
+
+def _warm_models_in_background() -> None:
+    """Preload the sentence encoder and every detector artifact. Never raises."""
+    logger.info("background_task=warmup status=started")
+
+    # Sentence encoder (shadow-ensemble / consistency scoring).
     try:
         from engine.encoder import get_encoder
         encoder = get_encoder()
         _ = encoder.encode("warmup")
+        _WARMUP_STATE["encoder"] = "ready" if encoder.available else "degraded"
         if encoder.available:
-            logger.info("background_task=encoder_warmup status=ready backend=transformer")
+            logger.info("background_task=warmup component=encoder status=ready backend=transformer")
         else:
             logger.warning(
-                "background_task=encoder_warmup status=unavailable backend=ngram_fallback"
+                "background_task=warmup component=encoder status=unavailable "
+                "backend=zero_vector_fallback"
             )
     except Exception as exc:
-        logger.error("background_task=encoder_warmup status=failed error=%s", exc)
+        _WARMUP_STATE["encoder"] = "failed"
+        logger.error("background_task=warmup component=encoder status=failed error=%s", exc)
+
+    # Adversarial detector (PAIR classifier, meta-classifier, layer pool).
+    try:
+        from fie.adversarial import warmup as _detector_warmup
+        status = _detector_warmup()
+        _WARMUP_STATE["detector"] = status
+        if status.get("pair_classifier") != "ready":
+            logger.warning(
+                "background_task=warmup component=detector status=degraded detail=%s "
+                "impact='reduced detection recall'", status,
+            )
+        else:
+            logger.info("background_task=warmup component=detector status=ready detail=%s", status)
+    except Exception as exc:
+        _WARMUP_STATE["detector"] = {"error": str(exc)}
+        logger.error("background_task=warmup component=detector status=failed error=%s", exc)
+
+    _WARMUP_STATE["done"] = True
+    logger.info("background_task=warmup status=complete")
 
 
 # Lifespan
@@ -96,7 +138,9 @@ async def lifespan(app: FastAPI):
     except Exception as _cfg_exc:
         logger.warning("startup=fie_config status=skipped reason=%s", _cfg_exc)
 
-    threading.Thread(target=_warm_encoder_in_background, daemon=True).start()
+    threading.Thread(
+        target=_warm_models_in_background, name="fie-warmup", daemon=True,
+    ).start()
 
     try:
         from fie.feedback_store import _load_confirmed_from_db
@@ -107,7 +151,18 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    #Shutdown
+    # ── Shutdown ──────────────────────────────────────────────────────────────
+    # Release the detector's shared thread pool before the process exits.
+    # Without this, the 16 worker threads are only reclaimed by the atexit hook,
+    # which does not run on SIGKILL and can leave a container lingering past its
+    # grace period during a rolling deploy.
+    try:
+        from fie.adversarial import shutdown_layer_pool
+        shutdown_layer_pool(wait=False)
+        logger.info("shutdown=layer_pool status=released")
+    except Exception as _pool_exc:
+        logger.warning("shutdown=layer_pool status=failed reason=%s", _pool_exc)
+
     from storage.database import flush_vault
     flush_vault()
     logger.info("shutdown=vault status=flushed")
@@ -187,7 +242,15 @@ def root() -> dict[str, str]:
 
 @app.get("/health")
 def health() -> dict:
-    """Liveness probe — returns component status for uptime monitors."""
+    """
+    LIVENESS probe. "Is this process alive and able to serve?"
+
+    Deliberately cheap and dependency-light: it makes no network calls and never
+    triggers a model load. A liveness probe that touches slow dependencies will
+    eventually time out under load and get the container killed — turning a
+    partial outage into a restart loop. Use /ready for "should traffic come
+    here?" and /health/deep for on-call diagnosis.
+    """
     from storage import database as _db_module
     db_ok = not _db_module._fallback_mode and _db_module._db is not None
     components = {
@@ -199,6 +262,35 @@ def health() -> dict:
         "status":     overall,
         "version":    settings.app_version,
         "components": components,
+    }
+
+
+@app.get("/ready")
+def ready(response: Response) -> dict:
+    """
+    READINESS probe. "Should this instance receive traffic yet?"
+
+    Returns 503 until background warm-up finishes. This is the endpoint a load
+    balancer or `gcloud run deploy` health check should watch: routing traffic
+    to a cold instance means the first users get scanned by a pipeline whose
+    main classifier has not loaded, and the guard reports a confident verdict
+    produced with reduced coverage.
+
+    Separating this from /health is what makes a zero-downtime rolling deploy
+    possible — the old instance keeps serving until the new one is genuinely
+    warm, not merely running.
+    """
+    detector = _WARMUP_STATE.get("detector") or {}
+    is_ready = bool(_WARMUP_STATE.get("done"))
+
+    if not is_ready:
+        response.status_code = 503
+
+    return {
+        "ready":    is_ready,
+        "encoder":  _WARMUP_STATE.get("encoder"),
+        "detector": detector,
+        "version":  settings.app_version,
     }
 
 
@@ -221,7 +313,7 @@ def health_deep() -> dict:
         else:
             results["mongodb"] = {"status": "degraded", "error": "not connected"}
     except Exception as exc:
-        logger.warning("Suppressed exception in health_deep()", exc_info=True)
+        logger.warning("health_deep: mongodb ping failed: %s", exc)
         results["mongodb"] = {"status": "down", "error": str(exc)[:120]}
 
     # Groq
@@ -238,7 +330,7 @@ def health_deep() -> dict:
         else:
             results["groq"] = {"status": "not_configured"}
     except Exception as exc:
-        logger.warning("Suppressed exception in health_deep()", exc_info=True)
+        logger.warning("health_deep: groq probe failed: %s", exc)
         results["groq"] = {"status": "down", "error": str(exc)[:120]}
 
     # FAISS index
@@ -250,7 +342,7 @@ def health_deep() -> dict:
             "vectors": size,
         }
     except Exception as exc:
-        logger.warning("Suppressed exception in health_deep()", exc_info=True)
+        logger.warning("health_deep: faiss probe failed: %s", exc)
         results["faiss"] = {"status": "down", "error": str(exc)[:120]}
 
     # Sentence encoder
@@ -262,7 +354,7 @@ def health_deep() -> dict:
             "backend": "transformer" if encoder.available else "ngram_fallback",
         }
     except Exception as exc:
-        logger.warning("Suppressed exception in health_deep()", exc_info=True)
+        logger.warning("health_deep: encoder probe failed: %s", exc)
         results["encoder"] = {"status": "down", "error": str(exc)[:120]}
 
     # XGBoost classifier
@@ -273,8 +365,26 @@ def health_deep() -> dict:
             "mode":   "xgboost" if _model is not None else "rule_based_fallback",
         }
     except Exception as exc:
-        logger.warning("Suppressed exception in health_deep()", exc_info=True)
+        logger.warning("health_deep: xgboost probe failed: %s", exc)
         results["xgboost"] = {"status": "down", "error": str(exc)[:120]}
+
+    # Adversarial detector — the guard itself. Reported last because it is the
+    # component whose degradation is least visible from the outside: a scan with
+    # PAIR unloaded still returns 200 with a confident-looking verdict, so this
+    # is the only place an operator can see recall has silently dropped.
+    try:
+        from fie.adversarial import health as _detector_health
+        det = _detector_health()   # non-blocking; never triggers a model load
+        pair_ok = det["pair_classifier"]["loaded"]
+        results["detector"] = {
+            "status":  "ok" if pair_ok else "degraded",
+            "mode":    "full_pipeline" if pair_ok else "reduced_recall",
+            "detail":  det,
+            "warmup":  _WARMUP_STATE.get("detector"),
+        }
+    except Exception as exc:
+        logger.warning("health_deep: detector probe failed: %s", exc)
+        results["detector"] = {"status": "down", "error": str(exc)[:120]}
 
     overall = (
         "healthy"  if all(v.get("status") == "ok"   for v in results.values()) else

@@ -18,6 +18,14 @@ logger = logging.getLogger("fie")
 #   2. installed package metadata — normal `pip install fie-sdk` case
 #   3. pinned literal fallback
 def _resolve_sdk_version() -> str:
+    """
+    Resolve the SDK version. pyproject.toml is the single source of truth.
+
+    The literal fallback is deliberately a sentinel, not a plausible-looking
+    version: a hardcoded real number here drifts silently every release and then
+    lies in telemetry and bug reports. "0.0.0+unknown" is obviously wrong, which
+    is what you want from a fallback.
+    """
     import re
     from pathlib import Path
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
@@ -27,14 +35,17 @@ def _resolve_sdk_version() -> str:
                           pyproject.read_text(encoding="utf-8"), re.MULTILINE)
             if m:
                 return m.group(1)
-    except Exception:
-        logger.warning("Suppressed exception in _resolve_sdk_version()", exc_info=True)
+    except OSError as exc:
+        # Source checkout present but unreadable — fall through to metadata.
+        logger.debug("version: pyproject unreadable (%s), trying package metadata", exc)
     try:
         from importlib.metadata import version
         return version("fie-sdk")
-    except Exception:
-        logger.warning("Suppressed exception in _resolve_sdk_version()", exc_info=True)
-        return "1.13.0"
+    except Exception as exc:
+        # Neither a source checkout nor an installed distribution: vendored
+        # copy, zipapp, or frozen bundle. Report honestly rather than guessing.
+        logger.debug("version: package metadata unavailable (%s)", exc)
+        return "0.0.0+unknown"
 
 
 SDK_VERSION = _resolve_sdk_version()

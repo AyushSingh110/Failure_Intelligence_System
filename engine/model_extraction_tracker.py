@@ -91,8 +91,15 @@ def _get_mongo_collection():
         col.create_index("tenant_id")
         col.create_index("timestamp", expireAfterSeconds=3600)
         return col
-    except Exception:
-        logger.warning("Suppressed exception in _get_mongo_collection()", exc_info=True)
+    except Exception as exc:
+        # Degrades to the in-memory tracker. That is acceptable for a single
+        # process but loses cross-instance correlation, so it is worth a
+        # warning rather than a silent None.
+        logger.warning(
+            "model_extraction_tracker: MongoDB collection unavailable, "
+            "falling back to in-memory tracking (%s: %s)",
+            type(exc).__name__, exc,
+        )
         return None
 
 

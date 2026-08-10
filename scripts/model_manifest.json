@@ -1,18 +1,42 @@
 {
   "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the plain filename (os.path.basename of path). See docs/OPERATIONS.md for the upload procedure.",
-  "release_tag": "models-v1.15.0",
+  "release_tag": "models-v1.18.0",
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
     {
+      "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
+      "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+      "size": 11349,
+      "used_by": "SDK Layer 8 - PAIR v6.3b SHIPPED DEFAULT. v6.2 corpus + targeted soft-harm/euphemism positives + safe-but-scary benign negatives. Threshold 0.50. Full-pipeline ship-gate PASSED: SORRY soft-harm +32pts, over-refusal flat, no clean-recall regression. sklearn 1.7.2."
+    },
+    {
+      "path": "fie/models/pair_intent_meta_v6_3b.json",
+      "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
+      "size": 888,
+      "used_by": "SDK Layer 8 - PAIR v6.3b metadata (threshold, embed_model)."
+    },
+    {
+      "path": "fie/models/pair_intent_classifier_v6_3.pkl",
+      "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+      "size": 11349,
+      "used_by": "SDK Layer 8 - PAIR v6.3 (A/B via FIE_PAIR_VERSION=v6_3)."
+    },
+    {
+      "path": "fie/models/pair_intent_meta_v6_3.json",
+      "sha256": "bb35fc9c6edff795e2aa70acae43104f02011a7e8f40cfee4b6c95c9034c0220",
+      "size": 742,
+      "used_by": "SDK Layer 8 - PAIR v6.3 metadata."
+    },
+    {
       "path": "fie/models/pair_intent_classifier_v6.pkl",
-      "sha256": "9d7f3a1959785f2b7b7044fdefcd1f1e5591b6e5d3752a424e6902cbc2002e45",
+      "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
       "size": 11349,
       "used_by": "SDK Layer 8 — PAIR v6 domain-balanced classifier (full-pipeline recall 85.7%, OOD benign FPR 9.7% vs v5 41.5%, threshold 0.50, sklearn 1.7.2)"
     },
     {
       "path": "fie/models/pair_intent_meta_v6.json",
-      "sha256": "81fd1fb064263f5c0a56c2b6e0e1332ccb3e305e2ba47262133898d2a7bd9733",
-      "size": 1095,
+      "sha256": "b83c0e7c56772146eae539714e0288d965f5182f17574e0e13f9c47e8e9e2d9d",
+      "size": 776,
       "used_by": "SDK Layer 8 — PAIR v6 threshold + embed model metadata"
     },
     {
@@ -35,7 +59,7 @@
     },
     {
       "path": "fie/models/meta_clf.json",
-      "sha256": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
+      "sha256": "a7389bb4d198eaec29222cb35cf5f786d865b3e9f0a457a2c6b63159189ef620",
       "size": 602,
       "used_by": "SDK meta-layer — meta-classifier threshold + feature names metadata"
     },
@@ -107,14 +131,14 @@
     },
     {
       "path": "storage/faiss_adversarial.index",
-      "sha256": "6cfd907daf81dec72f97837724cb225136364c6d457531fbac491a945387a59d",
-      "size": 122925,
+      "sha256": "5c72d8350e68218e5a68070f1f4d7885dbcfe18fdc982d2c786fc17341c02a73",
+      "size": 208941,
       "used_by": "Server — FAISS adversarial archetype index"
     },
     {
       "path": "storage/faiss_adversarial_meta.json",
-      "sha256": "ebb61d690211d83c1857ebeae784cacba527c19481fee1509c9ad545f2b3caf1",
-      "size": 13344,
+      "sha256": "cb2717210d1a4c4440e6c19f1ebbc8e7e059c1a02d18190618cd2e2ef05d38c5",
+      "size": 25129,
       "used_by": "Server — FAISS index metadata"
     }
   ]

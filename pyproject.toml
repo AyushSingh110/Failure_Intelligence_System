@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name            = "fie-sdk"
-version         = "1.16.0"
+version         = "1.18.0"
 description     = "Failure Intelligence Engine — adversarial detection + hallucination monitoring for LLMs. PAIR v6 domain-balanced classifier (4.3x lower out-of-distribution benign FPR vs v5: medical 71%->0%), 12-layer parallel pipeline, XGBoost meta-classifier, scan_prompt_async(), LayerEvidence schema, copyright detection, multilingual 14/14 recall. Works fully offline or with a server."
 readme          = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
@@ -104,6 +104,23 @@ Repository    = "https://github.com/AyushSingh110/Failure_Intelligence_System"
 Issues        = "https://github.com/AyushSingh110/Failure_Intelligence_System/issues"
 Documentation = "https://github.com/AyushSingh110/Failure_Intelligence_System#readme"
 Changelog     = "https://github.com/AyushSingh110/Failure_Intelligence_System/releases"
+
+[tool.pytest.ini_options]
+testpaths       = ["tests"]
+# `-q` keeps CI logs readable; `--strict-markers` turns a typo'd marker into an
+# error instead of silently running the test in the wrong lane.
+addopts         = "-q --strict-markers"
+markers = [
+    "network: needs outbound network or a live API key (Groq, Serper, Wikipedia). Deselect with -m 'not network'.",
+    "slow: takes more than ~5s, typically because it loads a transformer model.",
+]
+filterwarnings = [
+    "default",
+    # sklearn/xgboost emit an unpickle-version warning per model load. It is
+    # real and tracked (see docs/PRODUCTION_ENGINEERING.md, dependency pinning),
+    # but repeating it on every test makes genuine warnings unreadable.
+    "ignore::UserWarning:xgboost.core",
+]
 
 [tool.hatch.build]
 artifacts = [

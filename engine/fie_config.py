@@ -86,6 +86,16 @@ _scan_threshold:          float            = _SCAN_THRESHOLD_DEFAULT
 _preflight_block_enabled: bool             = _PREFLIGHT_BLOCK_ENABLED_DEFAULT
 _config_version:          str              = "default"
 _feedback_count_at_last_calib: int         = 0
+
+# ── Per-attack-type scan threshold overrides ──────────────────────────────────
+# Deliberately starts EMPTY. The compiled per-type defaults live next to the
+# detection logic in fie/adversarial.py (_ATTACK_THRESHOLDS) so the SDK stays
+# usable with no server; this dict only ever holds *operator overrides* pushed
+# from MongoDB. An empty dict therefore means "use the shipped calibration",
+# which keeps every published benchmark number reproducible from a bare
+# `pip install` with no database attached.
+_attack_thresholds:       dict[str, float] = {}
+
 _lock = threading.Lock()
 
 
@@ -113,6 +123,44 @@ def _get_signal_collection():
         return None
 
 
+# ── Validation helpers ─────────────────────────────────────────────────────────
+
+# A threshold outside this range is almost certainly an operator typo (e.g. "72"
+# meaning 0.72) and would silently disable a detection layer or block all
+# traffic. We clamp rather than reject so one bad key cannot break a reload.
+_THRESHOLD_MIN: float = 0.05
+_THRESHOLD_MAX: float = 0.99
+
+
+def _sanitize_attack_thresholds(raw: dict) -> dict[str, float]:
+    """
+    Coerce an operator-supplied {attack_type: threshold} mapping into a safe dict.
+
+    Drops non-numeric values, uppercases keys to match the detector's attack-type
+    constants, and clamps into [0.05, 0.99]. Every rejection is logged loudly —
+    a silently ignored override is worse than a rejected one, because the
+    operator will believe a threshold change took effect when it did not.
+    """
+    clean: dict[str, float] = {}
+    for key, value in raw.items():
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            logger.warning(
+                "fie_config: dropping non-numeric attack threshold %r=%r", key, value
+            )
+            continue
+        clamped = max(_THRESHOLD_MIN, min(_THRESHOLD_MAX, numeric))
+        if clamped != numeric:
+            logger.warning(
+                "fie_config: attack threshold %s=%.4f clamped to %.4f "
+                "(valid range %.2f-%.2f)",
+                key, numeric, clamped, _THRESHOLD_MIN, _THRESHOLD_MAX,
+            )
+        clean[str(key).upper()] = clamped
+    return clean
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def load_from_db() -> None:
@@ -122,6 +170,7 @@ def load_from_db() -> None:
     Loads: per-type thresholds, temperature, ambiguous_band, preflight_block_enabled.
     """
     global _thresholds, _temperature, _ambiguous_band, _config_version, _preflight_block_enabled
+    global _attack_thresholds
     col = _get_config_collection()
     if col is None:
         logger.debug("fie_config: MongoDB unavailable, using defaults.")
@@ -134,6 +183,12 @@ def load_from_db() -> None:
                     key = f"threshold_{qt}"
                     if key in doc:
                         _thresholds[qt] = float(doc[key])
+                # Per-attack-type overrides, stored as {"ATTACK_TYPE": 0.72}.
+                # Values are clamped and non-numeric entries dropped: this doc
+                # is operator-writable, so it is untrusted input.
+                raw_attack = doc.get("attack_thresholds") or {}
+                if isinstance(raw_attack, dict):
+                    _attack_thresholds = _sanitize_attack_thresholds(raw_attack)
                 if "temperature" in doc:
                     _temperature = float(doc["temperature"])
                 if "ambiguous_band" in doc:
@@ -193,6 +248,71 @@ def get_scan_threshold() -> float:
     """
     with _lock:
         return _scan_threshold
+
+
+def get_attack_thresholds() -> dict[str, float]:
+    """
+    Operator overrides for per-attack-type scan thresholds.
+
+    Returns a COPY so callers cannot mutate live config, and an EMPTY dict when
+    nothing has been configured. Callers are expected to layer this over their
+    own compiled defaults:
+
+        get_attack_thresholds().get(attack_type, COMPILED_DEFAULT)
+
+    so that an empty result reproduces the shipped calibration exactly.
+    """
+    with _lock:
+        return dict(_attack_thresholds)
+
+
+def update_attack_threshold(attack_type: str, value: float) -> dict[str, float]:
+    """
+    Hot-update one per-attack-type threshold and persist it to MongoDB.
+
+    Raises
+    ------
+    ValueError
+        If `value` is not a finite number in [0.05, 0.99]. Unlike the DB
+        loader (which clamps so one bad key cannot break a reload), the
+        interactive path rejects: an operator typing a threshold at an admin
+        endpoint must get told they were wrong, not silently corrected.
+    """
+    global _attack_thresholds
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"attack threshold must be numeric, got {value!r}") from exc
+    if not _THRESHOLD_MIN <= numeric <= _THRESHOLD_MAX:
+        raise ValueError(
+            f"attack threshold {numeric} outside valid range "
+            f"[{_THRESHOLD_MIN}, {_THRESHOLD_MAX}]"
+        )
+
+    key = str(attack_type).upper()
+    with _lock:
+        _attack_thresholds[key] = numeric
+        snapshot = dict(_attack_thresholds)
+
+    cfg_col = _get_config_collection()
+    if cfg_col is not None:
+        try:
+            cfg_col.update_one(
+                {"_id": "thresholds"},
+                {"$set": {f"attack_thresholds.{key}": numeric}},
+                upsert=True,
+            )
+        except Exception as exc:
+            # In-memory update already succeeded and is authoritative for this
+            # process; losing persistence means the change is lost on restart,
+            # which is worth a warning but not a failed request.
+            logger.warning(
+                "fie_config.update_attack_threshold persist failed "
+                "(change is in-memory only, will not survive restart): %s", exc
+            )
+
+    logger.info("fie_config attack_threshold updated | %s=%.4f", key, numeric)
+    return snapshot
 
 
 def update_scan_threshold(value: float) -> float:
