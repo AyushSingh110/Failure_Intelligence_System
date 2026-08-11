@@ -12,6 +12,8 @@ import AlertsPage      from './pages/AlertsPage'
 import VaultPage     from './pages/Vaultpage'
 import SettingsPage   from './pages/Settingspage'
 import AnalyticsPage  from './pages/AnalyticsPage'
+import PrivacyPage    from './pages/PrivacyPage'
+import TermsPage      from './pages/TermsPage'
 import Layout         from './components/Layout'
 
 function Protected({ children }) {
@@ -31,6 +33,13 @@ export default function App() {
         {/* Public */}
         <Route path="/"      element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Public legal pages. Google requires a published OAuth app to link a
+            privacy policy and terms of service from its consent screen, and its
+            crawler must reach them without signing in — so these must stay
+            OUTSIDE <Protected>. */}
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms"   element={<TermsPage />} />
 
         {/* Protected dashboard routes */}
         <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
