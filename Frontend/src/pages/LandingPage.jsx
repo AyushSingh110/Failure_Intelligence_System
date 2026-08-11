@@ -97,7 +97,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: '01', title: 'Install the SDK',        desc: 'pip install fie-sdk — one command, zero extra dependencies, works in any Python environment.' },
-  { n: '02', title: 'Add one decorator',      desc: '@monitor(mode="local") wraps your LLM call. 11 detection layers activate immediately — no API key, no server.' },
+  { n: '02', title: 'Add one decorator',      desc: '@monitor(mode="local") wraps your LLM call. 12 detection layers activate immediately — no API key, no server.' },
   { n: '03', title: 'Unlock full power',      desc: 'Sign in to activate the shadow jury, XGBoost classifier, auto-correction engine, and live analytics dashboard.' },
 ]
 
@@ -1199,7 +1199,7 @@ function RadarRings() {
 
 // ── Floating metric chips ──────────────────────────────────────────────────────
 const CHIPS = [
-  { label: '11 layers',  color: '#00d4ff', top: '8%',     right: '-5%',  delay: 0    },
+  { label: '12 layers',  color: '#00d4ff', top: '8%',     right: '-5%',  delay: 0    },
   { label: '<15ms',      color: '#00ff88', top: '42%',    right: '-6%',  delay: 0.7  },
   { label: '96% recall', color: '#a78bfa', bottom: '22%', right: '-5%',  delay: 1.3  },
   { label: '0% FPR',     color: '#ffaa00', bottom: '8%',  left: '-3%',   delay: 0.35 },
@@ -1540,7 +1540,7 @@ function HeroSection({ loggedIn, copy, copied }) {
         >
           <div className="guard-chip gc-a"><span className="gc-dot" style={{ background: '#ff4466', color: '#ff4466' }}/>PROMPT INJECTION — BLOCKED</div>
           <div className="guard-chip gc-b"><span className="gc-dot" style={{ background: '#00ff88', color: '#00ff88' }}/>OUTPUT VERIFIED</div>
-          <div className="guard-chip gc-c"><span className="gc-dot" style={{ background: '#00d4ff', color: '#00d4ff' }}/>11 LAYERS ACTIVE</div>
+          <div className="guard-chip gc-c"><span className="gc-dot" style={{ background: '#00d4ff', color: '#00d4ff' }}/>12 LAYERS ACTIVE</div>
         </motion.div>
 
       </div>
@@ -1626,7 +1626,7 @@ function ConnectivityFlowViz() {
           <path d={`M ${nodes.input.x} ${nodes.input.y} C 150 150, 200 150, ${nodes.fastPath.x} ${nodes.fastPath.y}`} stroke="#00ff88" strokeDasharray="6 6" />
           <path d={`M ${nodes.fastPath.x} ${nodes.fastPath.y} C 500 150, 900 150, ${nodes.output.x} ${nodes.output.y}`} stroke="#00ff88" strokeDasharray="6 6" />
 
-          {/* Input to 11 Layers */}
+          {/* Input to 12 Layers */}
           {nodes.layers.map((layer, i) => (
             <path key={`p-in-lay-${i}`} d={`M ${nodes.input.x} ${nodes.input.y} C 200 ${nodes.input.y}, 250 ${layer.y}, ${layer.x} ${layer.y}`} stroke="#ff4466" />
           ))}
@@ -2021,7 +2021,7 @@ const AF_PATHS = {
 
 const AF_NODES = [
   { key: 'prompt', x: 9.4,  y: 50, label: 'Prompt',         sub: 'user input',        icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
-  { key: 'guard',  x: 30,   y: 50, label: '11-Layer Guard', sub: '<15ms pre-flight',  icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  { key: 'guard',  x: 30,   y: 50, label: '12-Layer Guard', sub: '<15ms pre-flight',  icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
   { key: 'llm',    x: 58.6, y: 26, label: 'Primary LLM',    sub: 'your model',        icon: 'M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z' },
   { key: 'jury',   x: 58.6, y: 74, label: 'Shadow Jury',    sub: '3-model consensus', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
   { key: 'out',    x: 89,   y: 50, label: 'Secure Output',  sub: 'delivered',         icon: 'M20 6L9 17l-5-5' },
@@ -2229,7 +2229,7 @@ function ArchFlowDemo() {
           ↳ {scenario.outcome} — {scenario.outcomeDesc}
         </div>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#44607c', letterSpacing: '0.06em' }}>
-          2,006 PROMPTS · 11 LAYERS · &lt;15MS
+          2,006 PROMPTS · 12 LAYERS · &lt;15MS
         </div>
       </div>
     </div>
@@ -2365,12 +2365,12 @@ function _UnusedArchPipeline() {
                   </div>
                 </motion.div>
 
-                {/* Node 2: 11-Layer Guard */}
+                {/* Node 2: 12-Layer Guard */}
                 <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={visible ? { opacity: 1, scale: 1 } : {}} transition={{ delay: 0.4 }} style={{ position: 'absolute', top: '50%', left: '36%', transform: 'translate(-50%, -50%)', zIndex: 3 }}>
                   <div style={{ position: 'absolute', inset: '-15px', background: '#a78bfa', filter: 'blur(25px)', opacity: 0.2, borderRadius: '50%', animation: 'pulse-slow 3s infinite' }} />
                   <div style={{ background: 'rgba(167,139,250,0.1)', color: '#e8f0fa', padding: '12px 24px', borderRadius: '30px', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', border: '1px solid rgba(167,139,250,0.4)', backdropFilter: 'blur(10px)', whiteSpace: 'nowrap' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    11-Layer Guard
+                    12-Layer Guard
                   </div>
                 </motion.div>
 
@@ -2443,7 +2443,7 @@ function FeatSection1({ loggedIn }) {
             Stop attacks before<br/>they reach your model.
           </h2>
           <p style={{ fontSize: '15.5px', lineHeight: 1.72, color: '#8da8c4', marginBottom: '32px', maxWidth: '440px' }}>
-            11 detection layers run in parallel — regex, PAIR/SVM, many-shot, virtualization, indirect injection, and more. Total overhead under 15ms.
+            12 detection layers run in parallel — regex, PAIR/SVM, many-shot, virtualization, indirect injection, and more. Total overhead under 15ms.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
             {[
@@ -3333,7 +3333,7 @@ const RESEARCH_CARDS = [
     href: BLOG_URL,
     label: 'ENGINEERING BLOG',
     title: 'Building the runtime guardrail',
-    desc: 'Behind-the-scenes write-ups — designing the 11-layer guard, the shadow jury, and shipping the SDK to production.',
+    desc: 'Behind-the-scenes write-ups — designing the 12-layer guard, the shadow jury, and shipping the SDK to production.',
     cta: 'Read the blog',
     color: '#00d4ff',
     icon: 'M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.586 7.586M11 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',

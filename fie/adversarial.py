@@ -328,7 +328,7 @@ class ScanResult:
     matched_text:   str | None          # excerpt that triggered detection
     mitigation:     str                 # human-readable mitigation advice
     evidence:       dict = field(default_factory=dict)  # per-layer detail (raw dicts, backward compat)
-    layer_scores:   dict = field(default_factory=dict)  # {layer_name: confidence} for all 11 layers
+    layer_scores:   dict = field(default_factory=dict)  # {layer_name: confidence} for all 12 layers
 
     # Layers that did not produce a verdict this scan (timeout or error).
     # Empty list = full pipeline ran. A non-empty list means this result was
@@ -1014,7 +1014,7 @@ def scan_prompt(
     """
     Scan a prompt for adversarial attacks.
 
-    All 11 layers run in parallel via ThreadPoolExecutor.
+    All 12 layers run in parallel via ThreadPoolExecutor.
     Results are aggregated with per-layer precision weights and corroboration
     boosts, then routed through three confidence zones:
 

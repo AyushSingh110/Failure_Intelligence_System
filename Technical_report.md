@@ -1,5 +1,13 @@
 # Hard-Positive Training and Threshold Calibration for Out-of-Distribution Adversarial Prompt Detection
 
+> **Note (2026-08-11):** this report documents the system as evaluated at the
+> time of writing, when the pipeline had **11 detection layers**. A twelfth
+> layer (`copyright`) has since been added. Layer counts in the experiment
+> tables below are left as-run — rewriting them would misstate the conditions
+> the results were produced under. See `docs/ARCHITECTURE.md` for the current
+> architecture.
+
+
 **Ayush Singh** — Failure Intelligence Engine (FIE)
 **Date:** June 2026 | **Version:** Research Cycle 1 Final
 

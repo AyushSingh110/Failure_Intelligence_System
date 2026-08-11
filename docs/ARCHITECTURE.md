@@ -10,7 +10,7 @@ FIE is a safety and reliability layer that wraps any LLM. Given a prompt (and op
 - Is this a hallucination, a factual error, or a model failure?
 - What should happen next — block it, correct it, or pass it through?
 
-It does this through an **11-layer parallel adversarial detection pipeline**, a **three-zone confidence router**, a **crescendo trajectory boost**, a **domain-aware threshold system**, a **feedback loop with O(1) fast-path**, an **output-side adversarial scanner**, a **streaming output interceptor**, a **shadow ensemble** of 3 LLMs, an **XGBoost classifier**, a **3-agent DiagnosticJury**, an **explainability layer**, and **email alert notifications**.
+It does this through an **12-layer parallel adversarial detection pipeline**, a **three-zone confidence router**, a **crescendo trajectory boost**, a **domain-aware threshold system**, a **feedback loop with O(1) fast-path**, an **output-side adversarial scanner**, a **streaming output interceptor**, a **shadow ensemble** of 3 LLMs, an **XGBoost classifier**, a **3-agent DiagnosticJury**, an **explainability layer**, and **email alert notifications**.
 
 ---
 
@@ -31,7 +31,7 @@ It does this through an **11-layer parallel adversarial detection pipeline**, a 
 │     is_whitelisted(prompt)?   → allow immediately  (O(1) hash check)   │
 │     is_known_attack(prompt)?  → block immediately  (O(1) hash check)   │
 │                                                                         │
-│   11 detection layers run in parallel (ThreadPoolExecutor)              │
+│   12 detection layers run in parallel (ThreadPoolExecutor)              │
 │   Framing filter dampening                                              │
 │   Weighted vote aggregation + corroboration boost                       │
 │   Crescendo trajectory boost (session-aware)                            │
@@ -101,7 +101,7 @@ It does this through an **11-layer parallel adversarial detection pipeline**, a 
 
 ### Architecture
 
-All 11 layers run in **parallel** using a `ThreadPoolExecutor` with a 10-second timeout. No layer waits for another. Total scan latency is bounded by the slowest parallel layer, not the sum of all layers.
+All 12 layers run in **parallel** using a `ThreadPoolExecutor` with a 10-second timeout. No layer waits for another. Total scan latency is bounded by the slowest parallel layer, not the sum of all layers.
 
 ```text
 Prompt
@@ -138,7 +138,7 @@ Prompt
 
 ---
 
-### The 11 Layers
+### The 12 Layers
 
 | Layer | Name | File | What it catches |
 |-------|------|------|-----------------|
@@ -360,17 +360,17 @@ Reviewer calls POST /flags/{event_id}/label  {"label": "true_positive"}
          ├── Updates label + labeled_at in MongoDB and JSONL
          │
          ├── TRUE_POSITIVE  → adds SHA-256(prompt) to _KNOWN_ATTACK_HASHES  (in-memory set)
-         │                    Next identical prompt → instant block, skips all 11 layers
+         │                    Next identical prompt → instant block, skips all 12 layers
          │
          └── FALSE_POSITIVE → adds SHA-256(prompt) to _WHITELIST_HASHES     (in-memory set)
-                              Next identical prompt → instant allow, skips all 11 layers
+                              Next identical prompt → instant allow, skips all 12 layers
 ```
 
 ### Fast-Path O(1) Check
 
 Both hash sets (`_KNOWN_ATTACK_HASHES` and `_WHITELIST_HASHES`) are Python `set[str]` objects held in process memory. Membership check is O(1) regardless of set size.
 
-**This fast-path runs BEFORE the cache check and BEFORE all 11 detection layers.** A confirmed true-positive is never re-evaluated by the 11-layer engine — it is blocked in microseconds.
+**This fast-path runs BEFORE the cache check and BEFORE all 12 detection layers.** A confirmed true-positive is never re-evaluated by the 12-layer engine — it is blocked in microseconds.
 
 ### Startup Rebuild
 
@@ -566,7 +566,7 @@ Minimum length gate: 50 chars (langdetect unreliable on shorter text)
 Timeout: 3 seconds per translation attempt
 ```
 
-After translation, the translated text runs through the full 11-layer pipeline. Tier 3 fires only when the translated result crosses a detection threshold that the original text missed.
+After translation, the translated text runs through the full 12-layer pipeline. Tier 3 fires only when the translated result crosses a detection threshold that the original text missed.
 
 ---
 
@@ -804,7 +804,7 @@ Email delivery typically takes 200–800ms. Blocking the main request thread for
 
 4. Pre-flight scan (fie/preflight.py):
    a. Resolve domain: explicit arg → inferred from prompt text → "default"
-   b. Run all 11 layers in parallel (ThreadPoolExecutor, 10s pool timeout)
+   b. Run all 12 layers in parallel (ThreadPoolExecutor, 10s pool timeout)
    c. Apply framing filter dampening (skipped for direct_harm, fiction_harm,
       virtualization, regex, prompt_guard, many_shot, indirect_injection)
    d. Weighted aggregation → best_type, best_confidence
@@ -988,7 +988,7 @@ Failure_Intelligence_System/
 │   ├── __init__.py              Public API: scan_prompt, monitor, GuardedResponse,
 │   │                            scan_output, scan_output_async, OutputScanResult,
 │   │                            stream_guard, astream_guard, integrations
-│   ├── adversarial.py           11-layer parallel detection engine
+│   ├── adversarial.py           12-layer parallel detection engine
 │   │                            Regex patterns, attack thresholds, layer weights,
 │   │                            domain multipliers, weighted aggregator,
 │   │                            three-zone router, scan_prompt(domain=)
