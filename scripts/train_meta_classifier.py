@@ -1,7 +1,7 @@
 r"""Train a meta-classifier on layer_scores from scan_prompt() outputs.
 
-The meta-classifier takes the 11 layer confidence scores as features and
-predicts is_attack. This replaces fixed-weight aggregation with a learned
+The meta-classifier takes every layer confidence score from the LIVE pipeline
+as features and predicts is_attack. This replaces fixed-weight aggregation with a learned
 mapping that weights layers by their actual precision on your dataset.
 
 Usage (Windows CMD — Groq-rate-limit safe with checkpoint/resume):
@@ -105,8 +105,24 @@ def _load_checkpoint_rows() -> list[dict]:
 
 
 def _score_prompt(prompt: str) -> dict:
+    """
+    Layer scores for one prompt, deterministically and offline.
+
+    use_llama_guard=False is deliberate and load-bearing:
+
+      * LlamaGuard is a network tiebreaker, not one of the 12 layers, so it
+        contributes nothing to the feature vector being learned.
+      * Leaving it enabled makes training NON-REPRODUCIBLE — the same dataset
+        would produce different features depending on API availability, rate
+        limits and model version on the day.
+      * Without a key it raises on every UNCERTAIN prompt, which is harmless
+        but floods the console with fail-secure warnings that look like errors.
+
+    Disabling it explicitly states the intent instead of relying on a missing
+    environment variable to produce the right behaviour by accident.
+    """
     from fie.adversarial import scan_prompt
-    result = scan_prompt(prompt)
+    result = scan_prompt(prompt, use_llama_guard=False)
     return result.layer_scores
 
 
@@ -120,6 +136,13 @@ def main() -> None:
     parser.add_argument("--checkpoint-every", type=int, default=50,
                         help="flush checkpoint every N prompts (default: 50)")
     args = parser.parse_args()
+
+    # Bulk scoring emits one degradation notice per UNCERTAIN prompt. They are
+    # expected and harmless here, and they drown the progress lines, so raise
+    # the floor to ERROR for this run only.
+    import logging as _logging
+    _logging.getLogger("fie").setLevel(_logging.ERROR)
+    _logging.getLogger("fie.preflight").setLevel(_logging.ERROR)
 
     global LAYER_NAMES
     LAYER_NAMES = _live_layer_names()
