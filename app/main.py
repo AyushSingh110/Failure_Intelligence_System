@@ -193,6 +193,27 @@ app.add_middleware(
 app.include_router(router,      prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 
+# ── CSP route classification ──────────────────────────────────────────────────
+# Paths that return JSON and are never rendered as a page. These keep the strict
+# lockdown policy; everything else is treated as UI and gets a policy that
+# actually permits a browser to render it.
+_API_PREFIXES = ("/api/", "/health", "/ready", "/docs", "/redoc", "/openapi.json")
+
+
+def _is_api_path(path: str) -> bool:
+    return path.startswith(_API_PREFIXES)
+
+
+# Who may embed the UI in an iframe. Hugging Face Spaces serves the app inside
+# an iframe on huggingface.co, so it must be allowed or the Space shows
+# "refused to connect" while reporting Running.
+# Override with FRAME_ANCESTORS to host the UI elsewhere.
+_FRAME_ANCESTORS = os.getenv(
+    "FRAME_ANCESTORS",
+    "'self' https://huggingface.co https://*.hf.space",
+)
+
+
 # Middleware: security headers + structured request logging
 @app.middleware("http")
 async def security_and_logging(request: Request, call_next):
@@ -213,14 +234,48 @@ async def security_and_logging(request: Request, call_next):
 
     elapsed = round((time.perf_counter() - start) * 1000, 1)
 
-    # Security headers
+    # ── Security headers ──────────────────────────────────────────────────────
+    # Applied to every response.
     response.headers["X-Request-ID"]              = rid
     response.headers["X-Content-Type-Options"]    = "nosniff"
-    response.headers["X-Frame-Options"]           = "DENY"
     response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"]        = "geolocation=(), microphone=(), camera=()"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"]   = "default-src 'none'; frame-ancestors 'none'"
+
+    # CSP is split by route, because one policy cannot serve both surfaces.
+    #
+    # The API returns JSON: it loads no resources and must never be framed, so
+    # `default-src 'none'; frame-ancestors 'none'` is exactly right.
+    #
+    # Applying that same policy to the HTML UI broke it twice over:
+    #   - `default-src 'none'` blocked every script, stylesheet and font, so the
+    #     page returned HTTP 200 and rendered blank. Status-code checks passed
+    #     while the app was unusable — worth remembering when verifying a deploy.
+    #   - `frame-ancestors 'none'` (and X-Frame-Options: DENY) blocked embedding,
+    #     which is how Hugging Face Spaces serves the app. The Space reported
+    #     "Running" while showing "refused to connect".
+    if _is_api_path(request.url.path):
+        response.headers["X-Frame-Options"]         = "DENY"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; frame-ancestors 'none'"
+        )
+    else:
+        # UI surface. Gradio needs inline scripts/styles and eval (it ships a
+        # bundled SPA), plus blob:/data: for generated assets.
+        #
+        # X-Frame-Options is deliberately NOT set here: it has no working
+        # allow-list form in modern browsers, and CSP frame-ancestors supersedes
+        # it. Setting both would re-break the embed.
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob: https:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' https://api.gradio.app https://huggingface.co; "
+            "worker-src 'self' blob:; "
+            f"frame-ancestors {_FRAME_ANCESTORS}"
+        )
 
     if request.url.path not in ("/health", "/"):
         logger.info(

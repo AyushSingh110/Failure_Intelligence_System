@@ -178,8 +178,43 @@ if _status.get("pair_classifier") != "ready":
         health()["pair_classifier"].get("error"),
     )
 
-# Mount Gradio at "/" on the real FastAPI app, so /api/v1, /health, /ready and
-# /health/deep all keep working alongside the demo.
+# ── Free "/" for the Gradio UI ────────────────────────────────────────────────
+# app/main.py registers `GET /` returning a small JSON banner. FastAPI matches
+# routes in registration order, so that route SHADOWS anything mounted at "/" —
+# the demo was unreachable and "/" served
+# {"system": "...", "status": "operational"} instead of the UI.
+#
+# Nothing is lost: the banner moves to /api, which is where a machine-readable
+# service descriptor belongs anyway.
+_ROOT_INFO = {
+    "system":  "Failure Intelligence Engine",
+    "version": fastapi_app.version,
+    "status":  "operational",
+    "demo":    "/",
+    "api":     "/api/v1",
+    "health":  "/health",
+}
+
+def _is_root_get(route) -> bool:
+    return (
+        getattr(route, "path", None) == "/"
+        and "GET" in (getattr(route, "methods", None) or set())
+    )
+
+
+fastapi_app.router.routes = [
+    r for r in fastapi_app.router.routes if not _is_root_get(r)
+]
+
+
+@fastapi_app.get("/api")
+def service_info() -> dict:
+    """Machine-readable service descriptor (was served at `/`)."""
+    return _ROOT_INFO
+
+
+# Mount Gradio at "/" now that the path is free. /api/v1, /health, /ready and
+# /health/deep continue to work alongside it.
 app = gr.mount_gradio_app(fastapi_app, build_ui(), path="/")
 
 if __name__ == "__main__":
