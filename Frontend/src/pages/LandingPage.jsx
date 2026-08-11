@@ -9,9 +9,21 @@ import ErrorBoundary from '../components/ErrorBoundary'
 // Full-page scroll-scrubbed WebGL scene — lazy so three.js never blocks first paint
 const CrystalScene = lazy(() => import('../components/CrystalScene'))
 
-// ── External links — swap these for the real URLs ─────────────────────────────
-const PAPER_URL = 'https://zenodo.org/me/uploads?q=&f=shared_with_me%3Afalse&l=list&p=1&s=10&sort=newest'
-const BLOG_URL  = 'https://medium.com/@ayushsingh355vns' // TODO: replace with the blog link
+// ── External links ────────────────────────────────────────────────────────────
+
+// The live demo. No login, no signup, no API key — this is the only link on the
+// page that lets a first-time visitor actually use FIE, so it is the primary
+// call to action for anyone not signed in.
+const DEMO_URL = 'https://aimrs-fie.hf.space'
+
+// Canonical DOI for the paper.
+//
+// This previously pointed at https://zenodo.org/me/uploads — the AUTHOR'S OWN
+// private uploads dashboard. Every visitor who clicked "Paper" was redirected
+// to a Zenodo login, or to their own unrelated uploads. A DOI is permanent,
+// citable, and public.
+const PAPER_URL = 'https://doi.org/10.5281/zenodo.20536639'
+const BLOG_URL  = 'https://dev.to/ayush_singh_9b0d83152be5b'
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS = [
@@ -1469,9 +1481,14 @@ function HeroSection({ loggedIn, copy, copied }) {
 
           {/* CTAs with magnetic effect */}
           <motion.div variants={heroItem} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '22px', alignItems: 'center' }}>
+            {/* For a signed-out visitor the primary action is the LIVE DEMO,
+                not the login page. Every CTA used to lead to /login, so a
+                first-time visitor's first click was an account wall — for a
+                tool whose whole pitch is "runs offline, no API key". The demo
+                needs no account and works immediately. */}
             {loggedIn
               ? <MagneticButton to="/dashboard" className="cta-primary" style={{ padding: '13px 24px', fontSize: '15px' }}>Go to Dashboard</MagneticButton>
-              : <MagneticButton to="/login"     className="cta-primary" style={{ padding: '13px 24px', fontSize: '15px' }}>Start building</MagneticButton>
+              : <MagneticButton href={DEMO_URL} className="cta-primary" style={{ padding: '13px 24px', fontSize: '15px' }} target="_blank" rel="noopener noreferrer">Try the live demo →</MagneticButton>
             }
             <MagneticButton href="https://github.com/AyushSingh110/Failure_Intelligence_System" className="cta-secondary" style={{ padding: '13px 20px', fontSize: '14px' }} target="_blank" rel="noopener noreferrer">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -2588,9 +2605,9 @@ function PipelineText({ loggedIn }) {
           </div>
         ))}
       </div>
-      <Link to={loggedIn ? '/playground' : '/login'} className="cta-primary">
-        {loggedIn ? 'Open Playground →' : 'Try the Playground →'}
-      </Link>
+      {loggedIn
+        ? <Link to="/playground" className="cta-primary">Open Playground →</Link>
+        : <a href={DEMO_URL} className="cta-primary" target="_blank" rel="noopener noreferrer">Try it live — no signup →</a>}
     </div>
   )
 }
@@ -2769,9 +2786,9 @@ function PlaygroundDuelSection({ loggedIn }) {
 
         {/* CTA */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '42px' }}>
-          <Link to={loggedIn ? '/playground' : '/login'} className="cta-primary" style={{ padding: '12px 26px', fontSize: '13.5px' }}>
-            {loggedIn ? 'Open the Playground →' : 'Try it yourself — free →'}
-          </Link>
+          {loggedIn
+            ? <Link to="/playground" className="cta-primary" style={{ padding: '12px 26px', fontSize: '13.5px' }}>Open the Playground →</Link>
+            : <a href={DEMO_URL} className="cta-primary" style={{ padding: '12px 26px', fontSize: '13.5px' }} target="_blank" rel="noopener noreferrer">Try it yourself — no signup →</a>}
         </div>
       </div>
     </section>
@@ -4354,8 +4371,13 @@ export default function LandingPage() {
                 © 2026 Ayush Singh · Apache 2.0
               </span>
             </div>
-            <div style={{ display: 'flex', gap: '24px' }}>
+            {/* Privacy and Terms are INTERNAL routes, so they use <Link>, not
+                <a target="_blank">. They also must be reachable from the home
+                page: Google requires a published OAuth app to surface both from
+                its consent screen, and its reviewer looks for them here. */}
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
               {[
+                { label: 'Demo',   href: DEMO_URL },
                 { label: 'GitHub', href: 'https://github.com/AyushSingh110/Failure_Intelligence_System' },
                 { label: 'PyPI',   href: 'https://pypi.org/project/fie-sdk/' },
                 { label: 'Paper',  href: PAPER_URL },
@@ -4364,6 +4386,8 @@ export default function LandingPage() {
               ].map(l => (
                 <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="nav-link" style={{ fontSize: '12px' }}>{l.label}</a>
               ))}
+              <Link to="/privacy" className="nav-link" style={{ fontSize: '12px' }}>Privacy</Link>
+              <Link to="/terms"   className="nav-link" style={{ fontSize: '12px' }}>Terms</Link>
             </div>
           </div>
         </footer>
