@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: apache-2.0
-short_description: Offline LLM guardrail - 12 detection layers in 25ms, and an honest measurement of why guardrails fail
+short_description: "Offline LLM guardrail - 12 layers, 25ms, offline"
 ---
 
 # Failure Intelligence Engine (FIE)

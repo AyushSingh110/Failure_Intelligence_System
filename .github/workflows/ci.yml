@@ -236,83 +236,97 @@ jobs:
           print('Health check passed')
           "
 
-  # ── CD: Deploy to Google Cloud Run (opt-in) ───────────────────────────
+  # ── CD: Deploy the backend to the Hugging Face Space ──────────────────
   #
-  # Gated on the repository variable DEPLOY_ENABLED. When it is unset the job
-  # is SKIPPED, not failed, so CI reports green.
+  # Replaces the old Cloud Run job. GCP billing lapsed, and that job then
+  # hard-failed on every push with "This API method requires billing to be
+  # enabled" — a permanently red badge that said nothing about code quality.
   #
-  # Why: this job hard-fails with "This API method requires billing to be
-  # enabled" once GCP billing lapses, and it runs on every push to main. The
-  # result is a permanently red CI badge that says nothing about code quality —
-  # the single most discouraging thing a first-time visitor can see on a repo.
-  # A deployment target that no longer exists is a configuration fact, not a
-  # test failure, and it should not be reported as one.
+  # The Space is free, always reachable, and serves both the public demo and
+  # the API the dashboard talks to. See docs/DEPLOYMENT.md.
   #
-  # To re-enable once you have a live host:
-  #   gh variable set DEPLOY_ENABLED --body true
-  # To disable again:
-  #   gh variable delete DEPLOY_ENABLED
+  # Runs only after the full test matrix, the package build and the health
+  # check pass, so a broken commit cannot reach the live backend.
   #
-  # See docs/DEPLOYMENT.md for free-tier targets that do not require billing.
-  deploy:
+  # Setup (once):
+  #   gh secret set HF_TOKEN --body "hf_..."      # a WRITE token
+  #   gh variable set DEPLOY_SPACE_ENABLED --body true
+  # Disable:
+  #   gh variable delete DEPLOY_SPACE_ENABLED
+  #
+  # Unset => the job is SKIPPED, not failed, so CI still reports green on a
+  # fork or for a contributor who cannot hold deploy credentials.
+  deploy-space:
     runs-on: ubuntu-latest
     needs: [test, package, health-check]
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      vars.DEPLOY_ENABLED == 'true'
+      vars.DEPLOY_SPACE_ENABLED == 'true'
 
     permissions:
       contents: read
-      id-token: write
-
-    env:
-      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      REGION: asia-south1
-      SERVICE: failure-intelligence-system
-      IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/backend
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - uses: actions/setup-python@v5
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          python-version: "3.11"
+          cache: pip
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - name: Install deploy tooling
+        run: pip install --quiet "huggingface_hub>=0.25"
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+      # The Space serves models from the uploaded tree rather than fetching
+      # them at container build time, so they must be present here. Strict:
+      # a Space that boots without its classifier does not crash — it silently
+      # serves reduced-recall verdicts, which is worse than failing.
+      - name: Download model artifacts (strict)
+        run: python scripts/download_models.py --strict
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO || 'AImRs/fie' }}
+        run: python deploy/huggingface/push_space.py
+
+      # The Space rebuilds its container after the upload, so give it time
+      # before asserting health. Failing here means the new commit broke the
+      # live backend and needs reverting.
+      - name: Wait for the Space to come back up
+        env:
+          SPACE_URL: ${{ vars.SPACE_URL || 'https://aimrs-fie.hf.space' }}
         run: |
-          docker build -t ${{ env.IMAGE }}:${{ github.sha }} -t ${{ env.IMAGE }}:latest .
-          docker push ${{ env.IMAGE }}:${{ github.sha }}
-          docker push ${{ env.IMAGE }}:latest
+          echo "waiting for $SPACE_URL/ready ..."
+          for i in $(seq 1 60); do
+            body=$(curl -sf --max-time 20 "$SPACE_URL/ready" || true)
+            if echo "$body" | grep -q '"ready":true'; then
+              echo "ready after ~$((i*15))s"
+              echo "$body"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Space did not report ready within 15 minutes"
+          curl -s --max-time 20 "$SPACE_URL/health/deep" || true
+          exit 1
 
-      - name: Deploy to Cloud Run
+      - name: Verify the detector is not degraded
+        env:
+          SPACE_URL: ${{ vars.SPACE_URL || 'https://aimrs-fie.hf.space' }}
         run: |
-          gcloud run deploy ${{ env.SERVICE }} \
-            --image ${{ env.IMAGE }}:${{ github.sha }} \
-            --region ${{ env.REGION }} \
-            --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars "MONGODB_URI=${{ secrets.MONGODB_URI }},GROQ_API_KEY=${{ secrets.GROQ_API_KEY }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }},CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }},GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }},GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }},SERPER_API_KEY=${{ secrets.SERPER_API_KEY }},SERPER_ENABLED=true,SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }},NOTIFICATION_EMAIL=${{ secrets.NOTIFICATION_EMAIL }},GROQ_ENABLED=true,MONGODB_DB_NAME=fie_database,DEBUG=false" \
-            --quiet
-
-      - name: Verify deployment health
-        run: |
-          URL=$(gcloud run services describe ${{ env.SERVICE }} \
-            --region ${{ env.REGION }} \
-            --format 'value(status.url)')
-          echo "Deployed to: $URL"
-          curl -sf "$URL/health" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          print('Post-deploy health:', data)
-          assert data['status'] in ('healthy', 'degraded'), f'Bad status: {data}'
-          print('Deployment verified OK')
+          curl -sf --max-time 30 "$SPACE_URL/health/deep" -o deep.json
+          python -c "
+          import json
+          d = json.load(open('deep.json'))
+          det = d['components']['detector']
+          print('overall :', d['status'])
+          print('detector:', det['status'], det.get('mode'))
+          assert det['status'] == 'ok', f'detector unhealthy: {det}'
+          assert det.get('mode') == 'full_pipeline', (
+              f\"deployed with reduced recall: {det.get('mode')}\")
+          print('deployment verified')
           "
