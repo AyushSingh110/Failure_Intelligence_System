@@ -1,4 +1,4 @@
-"""Augment PAIR training data with translations via local NLLB-200.
+r"""Augment PAIR training data with translations via local NLLB-200.
 
 Uses Meta's NLLB-200 (No Language Left Behind) — a 200-language translation
 model that runs fully locally with no API key and no ToS violations.

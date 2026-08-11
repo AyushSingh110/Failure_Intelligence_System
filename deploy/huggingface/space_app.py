@@ -30,6 +30,7 @@ import gradio as gr
 # Import the real application — the Space serves the same code as production,
 # not a reimplementation that could drift from it.
 from app.main import app as fastapi_app
+from engine.demo_feedback import FALSE_POSITIVE, MISSED_ATTACK, record_feedback, stats
 from fie.adversarial import health, scan_prompt, warmup
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -59,7 +60,7 @@ EXAMPLES = [
 def analyse(prompt: str):
     """Run one scan and format it for the UI."""
     if not prompt or not prompt.strip():
-        return "### Enter a prompt to scan", [], {}
+        return "### Enter a prompt to scan", [], {}, {}
 
     result = scan_prompt(prompt)
 
@@ -98,7 +99,26 @@ def analyse(prompt: str):
             "🔥 fired" if name in (result.layers_fired or []) else ("· signal" if score > 0 else ""),
         ])
 
-    return verdict, rows, (result.evidence or {})
+    # The 4th output is hidden state: the feedback buttons need the verdict
+    # they are correcting, and re-scanning on click would be wasteful and could
+    # disagree with what the user actually saw.
+    captured = {
+        "prompt":       prompt,
+        "is_attack":    result.is_attack,
+        "attack_type":  result.attack_type,
+        "confidence":   float(result.confidence),
+        "layers_fired": list(result.layers_fired or []),
+        "layer_scores": dict(result.layer_scores or {}),
+    }
+    return verdict, rows, (result.evidence or {}), captured
+
+
+def submit_feedback(kind: str, captured: dict) -> str:
+    """Record an opt-in correction and return a user-facing message."""
+    if not captured or not captured.get("prompt"):
+        return "Scan a prompt first, then tell me if the verdict was wrong."
+    result = record_feedback(captured["prompt"], kind, captured)
+    return ("✅ " if result["ok"] else "⚠️ ") + result["message"]
 
 
 def build_ui() -> gr.Blocks:
@@ -139,6 +159,24 @@ def build_ui() -> gr.Blocks:
                 )
                 evidence = gr.JSON(label="Evidence")
 
+            # Holds the verdict the user is looking at, so a correction refers
+            # to exactly that scan rather than a re-run.
+            captured_state = gr.State({})
+
+            gr.Markdown(
+                "#### Did FIE get this wrong?\n\n"
+                "Over-refusal — blocking safe prompts — is this project's biggest "
+                "open problem, and reports are the most useful contribution anyone "
+                "can make. Submissions are **opt-in** and may be published as an "
+                "open research dataset, so please don't submit anything private. "
+                "See the [privacy policy]"
+                "(https://failure-intelligence-system.pages.dev/privacy)."
+            )
+            with gr.Row():
+                fp_btn = gr.Button("🟢 This was a SAFE prompt", size="sm")
+                fn_btn = gr.Button("🔴 This attack got THROUGH", size="sm")
+            feedback_msg = gr.Markdown("")
+
         gr.Markdown(
             """
             ---
@@ -160,8 +198,15 @@ def build_ui() -> gr.Blocks:
             """
         )
 
-        scan_btn.click(analyse, inputs=prompt, outputs=[verdict, layers, evidence])
-        prompt.submit(analyse, inputs=prompt, outputs=[verdict, layers, evidence])
+        scan_btn.click(analyse, inputs=prompt,
+                       outputs=[verdict, layers, evidence, captured_state])
+        prompt.submit(analyse, inputs=prompt,
+                      outputs=[verdict, layers, evidence, captured_state])
+
+        fp_btn.click(lambda c: submit_feedback(FALSE_POSITIVE, c),
+                     inputs=captured_state, outputs=feedback_msg)
+        fn_btn.click(lambda c: submit_feedback(MISSED_ATTACK, c),
+                     inputs=captured_state, outputs=feedback_msg)
 
     return demo
 

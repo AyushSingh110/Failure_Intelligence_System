@@ -81,9 +81,40 @@ export default function PrivacyPage() {
 
       <h2>The public demo</h2>
       <p>
-        Prompts entered in the demo are scanned in memory and are not written to the database.
-        The Space host (Hugging Face) may keep standard server logs, which are outside FIE's
-        control.
+        Prompts you type into the demo are scanned in memory and are{' '}
+        <strong>not stored</strong>. Nothing is written anywhere unless you explicitly choose
+        to submit it — see below. The Space host (Hugging Face) may keep standard server logs,
+        which are outside FIE's control.
+      </p>
+
+      <h2>Feedback you choose to submit</h2>
+      <p>
+        Under each demo result there are buttons to report that FIE got it wrong — that a safe
+        prompt was blocked, or that an attack slipped through. <strong>These are entirely
+        opt-in.</strong> Nothing is submitted unless you click one.
+      </p>
+      <p>When you do click, the following is stored:</p>
+      <ul>
+        <li>the prompt text you entered</li>
+        <li>FIE's verdict, confidence score, and per-layer scores</li>
+        <li>which correction you reported (false positive or missed attack)</li>
+        <li>a UTC timestamp</li>
+      </ul>
+      <p>
+        <strong>No IP address, cookie, browser fingerprint, account or any other identifier is
+        recorded.</strong> Submissions are not linked to each other or to you.
+      </p>
+      <p>
+        <strong>Submitted prompts are intended for public release.</strong> Over-refusal —
+        wrongly blocking safe prompts — is this project's largest documented weakness, and
+        community-reported examples are the most useful data for fixing it. Reports may be
+        published as an open research dataset and used to retrain and evaluate the classifier.
+      </p>
+      <p>
+        Because of that: <strong>do not submit anything you would not want published.</strong>{' '}
+        No personal information, credentials, customer data or confidential text. If you
+        submitted something by mistake, email the address below with the approximate time and
+        it will be removed.
       </p>
 
       <h2>Third parties</h2>

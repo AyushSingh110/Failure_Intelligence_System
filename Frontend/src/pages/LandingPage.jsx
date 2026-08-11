@@ -1496,6 +1496,26 @@ function HeroSection({ loggedIn, copy, copied }) {
             </MagneticButton>
           </motion.div>
 
+          {/* Live-demo strip. Sits directly under the CTAs and above the pip
+              command, because "try it with no account" converts a curious
+              visitor far better than "install this library" does — and unlike
+              the dashboard, it needs no login. */}
+          <motion.div variants={heroItem}>
+            <a
+              href={DEMO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="live-demo-strip"
+            >
+              <span className="live-dot" />
+              <span className="live-demo-text">
+                <strong>Live demo</strong> — paste a prompt, watch all 12 detection
+                layers score it in ~25&nbsp;ms. No signup.
+              </span>
+              <span className="live-demo-arrow">→</span>
+            </a>
+          </motion.div>
+
           <motion.div variants={heroItem} className="hero-command-strip">
             <code>pip install fie-sdk</code>
             <button type="button" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
@@ -3650,6 +3670,52 @@ export default function LandingPage() {
           background: #00ff88;
           box-shadow: 0 0 16px rgba(0,255,136,0.75);
         }
+        .live-demo-strip {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          padding: 11px 16px;
+          margin-bottom: 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(0,212,255,0.25);
+          background: linear-gradient(90deg, rgba(0,212,255,0.10), rgba(0,212,255,0.02));
+          text-decoration: none;
+          transition: border-color .18s ease, background .18s ease, transform .18s ease;
+          max-width: 560px;
+        }
+        .live-demo-strip:hover {
+          border-color: rgba(0,212,255,0.55);
+          background: linear-gradient(90deg, rgba(0,212,255,0.16), rgba(0,212,255,0.04));
+          transform: translateX(2px);
+        }
+        .live-demo-text {
+          font-size: 13px;
+          color: #c5d5e4;
+          line-height: 1.5;
+        }
+        .live-demo-text strong { color: var(--accent-cyan); }
+        .live-demo-arrow {
+          margin-left: auto;
+          color: var(--accent-cyan);
+          font-size: 15px;
+        }
+        .live-dot {
+          width: 8px; height: 8px; border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+          animation: livePulse 2s infinite;
+          flex-shrink: 0;
+        }
+        @keyframes livePulse {
+          0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
+          70%  { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+          100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+        @media (max-width: 560px) {
+          .live-demo-strip { padding: 10px 13px; }
+          .live-demo-text  { font-size: 12px; }
+        }
+
         .hero-command-strip {
           width: fit-content;
           display: inline-flex;

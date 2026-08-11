@@ -1,4 +1,4 @@
-"""Train a meta-classifier on layer_scores from scan_prompt() outputs.
+r"""Train a meta-classifier on layer_scores from scan_prompt() outputs.
 
 The meta-classifier takes the 11 layer confidence scores as features and
 predicts is_attack. This replaces fixed-weight aggregation with a learned

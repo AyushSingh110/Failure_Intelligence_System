@@ -81,9 +81,12 @@ def label_flag(
 
 
 @router.get("/flags/export")
-def export_tps(authorization: str = Header(default="")):
+def export_tps(
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+):
     """Export all confirmed true positives as a list (admin only). Used for PAIR retraining."""
-    require_admin(authorization)
+    require_admin(authorization, x_api_key)
     try:
         from fie.feedback_store import export_confirmed_tps
         tps = export_confirmed_tps()
@@ -93,9 +96,12 @@ def export_tps(authorization: str = Header(default="")):
 
 
 @router.get("/flags/hard-positives/stats")
-def hard_positive_stats(authorization: str = Header(default="")):
+def hard_positive_stats(
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+):
     """Return hard-positive collection stats (admin only)."""
-    require_admin(authorization)
+    require_admin(authorization, x_api_key)
     try:
         from engine.hard_positive_collector import get_stats
         return get_stats()
@@ -104,13 +110,16 @@ def hard_positive_stats(authorization: str = Header(default="")):
 
 
 @router.get("/flags/hard-positives/export")
-def export_hard_positives(authorization: str = Header(default="")):
+def export_hard_positives(
+    authorization: str | None = Header(None),
+    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+):
     """
     Export confirmed hard positives for PAIR retraining (admin only).
     Returns list of {event_id, prompt, flag_type, zone, confidence, confirmed_at}.
     Pass to scripts/retrain_pair_v4.py --hard-positives-path <file>.
     """
-    require_admin(authorization)
+    require_admin(authorization, x_api_key)
     try:
         from engine.hard_positive_collector import export_for_retraining
         records = export_for_retraining()
