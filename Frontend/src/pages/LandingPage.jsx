@@ -135,9 +135,9 @@ const PIPELINE_NODES = [
 ]
 
 const OUTCOME_DEMOS = [
-  { status: 'VALIDATED', color: '#00ff88', bg: 'rgba(0,255,136,0.08)', border: 'rgba(0,255,136,0.2)', label: 'Primary model confirmed correct by shadow jury' },
-  { status: 'CORRECTED', color: '#ffaa00', bg: 'rgba(255,170,0,0.08)', border: 'rgba(255,170,0,0.2)',  label: 'Hallucination detected — shadow consensus applied' },
-  { status: 'BLOCKED',   color: '#ff4466', bg: 'rgba(255,68,102,0.08)', border: 'rgba(255,68,102,0.2)', label: 'Adversarial attack intercepted before LLM call' },
+  { status: 'VALIDATED', color: '#88fac4', bg: 'rgba(0,255,136,0.08)', border: 'rgba(0,255,136,0.2)', label: 'Primary model confirmed correct by shadow jury' },
+  { status: 'CORRECTED', color: '#ccab68', bg: 'rgba(255,170,0,0.08)', border: 'rgba(255,170,0,0.2)',  label: 'Hallucination detected — shadow consensus applied' },
+  { status: 'BLOCKED',   color: '#f6738b', bg: 'rgba(255,68,102,0.08)', border: 'rgba(255,68,102,0.2)', label: 'Adversarial attack intercepted before LLM call' },
 ]
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -344,9 +344,9 @@ function hexToRgb(hex) {
 }
 
 const STATUS_META = {
-  BLOCKED:   { color: '#ff4466', bg: 'rgba(255,68,102,0.09)',  border: 'rgba(255,68,102,0.28)' },
-  CORRECTED: { color: '#ffaa00', bg: 'rgba(255,170,0,0.09)',   border: 'rgba(255,170,0,0.28)'  },
-  VALIDATED: { color: '#00ff88', bg: 'rgba(0,255,136,0.09)',   border: 'rgba(0,255,136,0.28)'  },
+  BLOCKED:   { color: '#f18397', bg: 'rgba(255,68,102,0.09)',  border: 'rgba(255,68,102,0.28)' },
+  CORRECTED: { color: '#d5b36e', bg: 'rgba(255,170,0,0.09)',   border: 'rgba(255,170,0,0.28)'  },
+  VALIDATED: { color: '#63e2a7', bg: 'rgba(0,255,136,0.09)',   border: 'rgba(0,255,136,0.28)'  },
 }
 
 function PlaygroundCard() {
@@ -386,7 +386,7 @@ function PlaygroundCard() {
       {/* Card header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'flex', gap: '7px' }}>
-          {['#ff5f57','#febc2e','#28c840'].map(c => (
+          {['#f4928d','#f8da9a','#7cf18e'].map(c => (
             <div key={c} style={{ width: '10px', height: '10px', borderRadius: '50%', background: c, opacity: 0.7 }}/>
           ))}
         </div>
