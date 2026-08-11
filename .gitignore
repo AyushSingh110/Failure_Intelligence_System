@@ -155,3 +155,7 @@ node_modules/
 .DS_Store
 # ONNX sentence embedder (90 MB) - GitHub Release asset, see scripts/model_manifest.json
 fie/models/minilm-onnx/
+
+# Generated red-team corpus — large, regenerable, and published as a dataset
+# rather than tracked in git.
+data/harmaug/
