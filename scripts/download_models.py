@@ -33,6 +33,8 @@ import json
 import os
 import sys
 import tempfile
+import ssl
+import time
 import urllib.error
 import urllib.request
 
@@ -59,7 +61,30 @@ def _asset_name(rel_path: str) -> str:
     return os.path.basename(rel_path)
 
 
-def _download(url: str, dest: str, token: str = "") -> None:
+# Transient failures get retried; permanent ones do not.
+#
+# A single SSL handshake blip on 1 of 25 assets failed an entire CI run with
+# --strict. That is the classic flake that teaches a team to reflexively
+# re-run CI, which is how genuine failures start getting ignored. Retrying
+# transient network errors — and ONLY those — keeps a red build meaningful.
+_MAX_ATTEMPTS = 3
+_BACKOFF_BASE_S = 2.0
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """
+    True for errors worth retrying.
+
+    A 404 means the asset is not published — retrying cannot fix that and
+    would just slow the failure down. SSL handshakes, resets, timeouts and
+    5xx are network weather.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code >= 500 or exc.code == 429
+    return isinstance(exc, (ssl.SSLError, urllib.error.URLError, TimeoutError, ConnectionError, OSError))
+
+
+def _download_once(url: str, dest: str, token: str = "") -> None:
     req = urllib.request.Request(url, headers={"User-Agent": "fie-model-downloader"})
     if token:
         req.add_header("Authorization", f"Bearer {token}")
@@ -81,6 +106,25 @@ def _download(url: str, dest: str, token: str = "") -> None:
         except OSError:
             pass
         raise
+
+
+def _download(url: str, dest: str, token: str = "") -> None:
+    """Download with bounded retries on transient network errors."""
+    last: BaseException | None = None
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            _download_once(url, dest, token)
+            return
+        except BaseException as exc:  # noqa: BLE001 - re-raised below
+            last = exc
+            if attempt == _MAX_ATTEMPTS or not _is_transient(exc):
+                raise
+            delay = _BACKOFF_BASE_S * (2 ** (attempt - 1))
+            print(f"          attempt {attempt}/{_MAX_ATTEMPTS} failed "
+                  f"({type(exc).__name__}); retrying in {delay:.0f}s")
+            time.sleep(delay)
+    if last is not None:
+        raise last
 
 
 def main() -> int:
