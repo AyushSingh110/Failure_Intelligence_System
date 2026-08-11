@@ -1,1 +1,10 @@
+# Google Search Console verification.
+# Cloudflare Pages auto-strips .html extensions with a 308, so
+# /googled08dc82430d1ce9f.html redirects to the extensionless path.
+# An extensionless file with the same content lives beside it, and this
+# rule keeps the SPA catch-all below from swallowing either form.
+/googled08dc82430d1ce9f.html   /googled08dc82430d1ce9f   200
+
+# SPA fallback. Must stay LAST - it matches everything, so any path that
+# needs to serve real content has to be listed above it.
 /*    /index.html   200
