@@ -13,7 +13,7 @@ commit. With upload_folder, a typical backend change transfers a few KB.
 Usage:
     export HF_TOKEN=hf_...            # or HUGGING_FACE_TOKEN in .env locally
     python deploy/huggingface/push_space.py
-    python deploy/huggingface/push_space.py --repo AImRs/fie --dry-run
+    python deploy/huggingface/push_space.py --repo Ayush-Singh9791/fie --dry-run
 """
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ def build_tree(stage: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", default=os.getenv("HF_SPACE_REPO", "AImRs/fie"))
+    ap.add_argument("--repo", default=os.getenv("HF_SPACE_REPO", "Ayush-Singh9791/fie"))
     ap.add_argument("--message", default=None)
     ap.add_argument("--dry-run", action="store_true", help="build the tree, upload nothing")
     args = ap.parse_args()

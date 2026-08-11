@@ -14,7 +14,7 @@ const CrystalScene = lazy(() => import('../components/CrystalScene'))
 // The live demo. No login, no signup, no API key — this is the only link on the
 // page that lets a first-time visitor actually use FIE, so it is the primary
 // call to action for anyone not signed in.
-const DEMO_URL = 'https://aimrs-fie.hf.space'
+const DEMO_URL = 'https://ayush-singh9791-fie.hf.space'
 
 // Canonical DOI for the paper.
 //

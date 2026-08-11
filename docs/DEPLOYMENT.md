@@ -79,7 +79,7 @@ air-gapped deployments.
 
 ## Live deployment (current)
 
-**https://aimrs-fie.hf.space** — Hugging Face Space, Docker SDK, free CPU tier.
+**https://ayush-singh9791-fie.hf.space** — Hugging Face Space, Docker SDK, free CPU tier.
 
 Serves the demo at `/` and the full API at `/api/v1/*` from one HTTPS URL, so
 the Cloudflare Pages dashboard needs no separate backend and no CORS gymnastics.

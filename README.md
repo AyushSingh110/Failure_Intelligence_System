@@ -3,7 +3,7 @@
 **A 23M-parameter offline LLM guardrail — and an honest measurement of why guardrails fail.**
 
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97_Live_demo-try_it_now-yellow)](https://huggingface.co/spaces/Ayush-Singh9791/fie)
-[![API](https://img.shields.io/badge/API-live-brightgreen)](https://aimrs-fie.hf.space/health)
+[![API](https://img.shields.io/badge/API-live-brightgreen)](https://ayush-singh9791-fie.hf.space/health)
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
 [![Version](https://img.shields.io/badge/version-1.18.0-brightgreen)](https://pypi.org/project/fie-sdk)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
@@ -15,7 +15,7 @@
 
 ## ▶ Try it right now — no install, no signup
 
-### **[aimrs-fie.hf.space](https://aimrs-fie.hf.space)**
+### **[ayush-singh9791-fie.hf.space](https://ayush-singh9791-fie.hf.space)**
 
 Paste a prompt and watch all twelve detection layers score it in ~25 ms.
 Attack examples and benign ones are preloaded — including the "safe but scary"
@@ -25,9 +25,9 @@ seeing for yourself.
 The same URL serves the API:
 
 ```bash
-curl https://aimrs-fie.hf.space/health        # liveness
-curl https://aimrs-fie.hf.space/ready         # readiness (503 until models warm)
-curl https://aimrs-fie.hf.space/health/deep   # every dependency, per component
+curl https://ayush-singh9791-fie.hf.space/health        # liveness
+curl https://ayush-singh9791-fie.hf.space/ready         # readiness (503 until models warm)
+curl https://ayush-singh9791-fie.hf.space/health/deep   # every dependency, per component
 ```
 
 | Endpoint | What |
@@ -314,7 +314,7 @@ result = await scan_prompt_async("Ignore all previous instructions")
 from fie import monitor
 
 @monitor(
-    fie_url = "https://aimrs-fie.hf.space",
+    fie_url = "https://ayush-singh9791-fie.hf.space",
     api_key = "your-api-key",       # sign in at the dashboard to generate one
     mode    = "monitor",
 )

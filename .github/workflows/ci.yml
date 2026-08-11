@@ -290,7 +290,7 @@ jobs:
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO || 'AImRs/fie' }}
+          HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO || 'Ayush-Singh9791/fie' }}
         run: python deploy/huggingface/push_space.py
 
       # The Space rebuilds its container after the upload, so give it time
@@ -298,7 +298,7 @@ jobs:
       # live backend and needs reverting.
       - name: Wait for the Space to come back up
         env:
-          SPACE_URL: ${{ vars.SPACE_URL || 'https://aimrs-fie.hf.space' }}
+          SPACE_URL: ${{ vars.SPACE_URL || 'https://ayush-singh9791-fie.hf.space' }}
         run: |
           echo "waiting for $SPACE_URL/ready ..."
           for i in $(seq 1 60); do
@@ -316,7 +316,7 @@ jobs:
 
       - name: Verify the detector is not degraded
         env:
-          SPACE_URL: ${{ vars.SPACE_URL || 'https://aimrs-fie.hf.space' }}
+          SPACE_URL: ${{ vars.SPACE_URL || 'https://ayush-singh9791-fie.hf.space' }}
         run: |
           curl -sf --max-time 30 "$SPACE_URL/health/deep" -o deep.json
           python -c "
