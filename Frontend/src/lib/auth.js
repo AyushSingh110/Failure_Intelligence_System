@@ -17,11 +17,33 @@ function normalizeSession(data) {
 }
 
 function getCurrentRedirectUri() {
-  if (typeof window === 'undefined') {
-    return import.meta.env.VITE_REDIRECT_URI || ''
+  // VITE_REDIRECT_URI wins whenever it is configured.
+  //
+  // This used to derive the redirect_uri from window.location.origin, which
+  // fails the moment the app is reached from any host other than the single
+  // canonical one registered in Google Cloud Console — and there are several:
+  //
+  //   https://<deploy-hash>.failure-intelligence-system.pages.dev  (every
+  //       Cloudflare Pages deployment gets its own preview subdomain)
+  //   https://failure-intelligence-system-6h53.vercel.app
+  //   a custom domain, later
+  //
+  // Google then rejects the request with `Error 400: redirect_uri_mismatch`,
+  // and the error surfaces on Google's page rather than ours, so nothing in
+  // the app logs explains it. Pinning the value makes the redirect_uri
+  // deterministic: it is whatever is registered, regardless of which URL the
+  // user happened to open.
+  const configured = import.meta.env.VITE_REDIRECT_URI
+  if (configured) {
+    return configured
   }
-  // Must include /login so Google redirects back to the page
-  // that actually processes the ?code= callback — not the landing page.
+
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  // Fallback for local dev, where VITE_REDIRECT_URI is usually unset.
+  // Must include /login so Google redirects back to the page that actually
+  // processes the ?code= callback — not the landing page.
   return window.location.origin + '/login'
 }
 
