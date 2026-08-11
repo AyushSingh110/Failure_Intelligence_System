@@ -2,7 +2,7 @@
 
 **A 23M-parameter offline LLM guardrail — and an honest measurement of why guardrails fail.**
 
-[![Live demo](https://img.shields.io/badge/%F0%9F%A4%97_Live_demo-try_it_now-yellow)](https://aimrs-fie.hf.space)
+[![Live demo](https://img.shields.io/badge/%F0%9F%A4%97_Live_demo-try_it_now-yellow)](https://huggingface.co/spaces/Ayush-Singh9791/fie)
 [![API](https://img.shields.io/badge/API-live-brightgreen)](https://aimrs-fie.hf.space/health)
 [![PyPI](https://img.shields.io/badge/PyPI-fie--sdk-blue?logo=pypi&logoColor=white)](https://pypi.org/project/fie-sdk)
 [![Version](https://img.shields.io/badge/version-1.18.0-brightgreen)](https://pypi.org/project/fie-sdk)
