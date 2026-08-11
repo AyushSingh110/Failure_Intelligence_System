@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>FIE — How Every Request Is Processed</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Inter',system-ui,sans-serif;padding:48px 24px 100px;min-width:1200px}
+.page{max-width:1120px;margin:0 auto}
+
+/* ─── Header ─── */
+.hdr{text-align:center;margin-bottom:56px}
+.hdr-eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#484f58;margin-bottom:14px}
+.hdr h1{font-size:32px;font-weight:700;color:#f0f6fc;letter-spacing:-0.8px;line-height:1.2;margin-bottom:10px}
+.hdr .tagline{font-size:14px;color:#6e7681;max-width:620px;margin:0 auto 20px;line-height:1.7}
+.badge-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#161b22;border:1px solid #21262d;border-radius:100px;padding:5px 14px;font-size:11px;color:#8b949e}
+.badge b{color:#c9d1d9}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-blue{background:#1f6feb}.dot-red{background:#da3633}.dot-green{background:#238636}.dot-amber{background:#9e6a03}.dot-orange{background:#bd4b00}
+
+/* ─── Stage connector ─── */
+.connector{display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:0}
+.conn-line{width:2px;height:36px;background:linear-gradient(#21262d,#30363d)}
+.conn-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid #30363d}
+.conn-label{font-size:10px;color:#484f58;letter-spacing:1px;margin:4px 0;font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+
+/* ─── Stage card ─── */
+.stage{border-radius:14px;border:1px solid #21262d;overflow:hidden;position:relative}
+.stage-head{display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid #21262d}
+.stage-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.stage-info{flex:1}
+.stage-title{font-size:15px;font-weight:600;color:#f0f6fc;margin-bottom:2px}
+.stage-sub{font-size:11.5px;color:#6e7681}
+.stage-timing{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:3px 10px;border-radius:100px;border:1px solid;margin-left:auto}
+.t-sync{color:#56d364;border-color:#23863640;background:#0a1f0a}
+.t-fast{color:#79bcff;border-color:#1f6feb40;background:#0d1e36}
+.t-async{color:#e3b341;border-color:#9e6a0340;background:#1c1400}
+
+.stage-body{padding:22px}
+
+/* Phase themes */
+.ph-in   {border-color:#1f6feb30}.ph-in .stage-head{background:#0d1e36}.ph-in .stage-num{background:#1f6feb;color:#fff}
+.ph-fast {border-color:#23863630}.ph-fast .stage-head{background:#0c1f0c}.ph-fast .stage-num{background:#238636;color:#fff}
+.ph-det  {border-color:#da363330}.ph-det .stage-head{background:#1e0e0e}.ph-det .stage-num{background:#b62424;color:#fff}
+.ph-agg  {border-color:#e3b34130}.ph-agg .stage-head{background:#1e1500}.ph-agg .stage-num{background:#9e6a03;color:#fff}
+.ph-llm  {border-color:#1f6feb30}.ph-llm .stage-head{background:#0d1e36}.ph-llm .stage-num{background:#1f6feb;color:#fff}
+.ph-pipe {border-color:#bd4b0030}.ph-pipe .stage-head{background:#1e1000}.ph-pipe .stage-num{background:#bd4b00;color:#fff}
+.ph-jury {border-color:#bd561d30}.ph-jury .stage-head{background:#1e0e00}.ph-jury .stage-num{background:#bd561d;color:#fff}
+.ph-exp  {border-color:#8957e530}.ph-exp  .stage-head{background:#150d24}.ph-exp .stage-num{background:#8957e5;color:#fff}
+.ph-out  {border-color:#23863630}.ph-out .stage-head{background:#0c1f0c}.ph-out .stage-num{background:#238636;color:#fff}
+.ph-store{border-color:#1f6feb20}.ph-store .stage-head{background:#0d1522}.ph-store .stage-num{background:#1f6feb;color:#fff}
+
+/* ─── Fast-path grid ─── */
+.fp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.fp-box{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px 14px 14px 14px;display:flex;align-items:flex-start;gap:10px}
+.fp-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+.fp-label{font-size:12px;font-weight:600;color:#f0f6fc;margin-bottom:4px}
+.fp-detail{font-size:11px;color:#6e7681;line-height:1.5}
+.fp-outcome{font-size:10.5px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-top:6px}
+.fp-block{color:#ff7b72}.fp-allow{color:#56d364}.fp-cache{color:#79bcff}
+
+.fp-note{display:flex;align-items:center;gap:8px;background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:10px 14px;font-size:11.5px;color:#6e7681}
+.fp-note span{color:#e3b341;font-family:'JetBrains Mono',monospace;font-size:10.5px}
+
+/* ─── Layer grid ─── */
+.par-badge{display:inline-flex;align-items:center;gap:6px;background:#1e0e0e;border:1px solid #da363340;border-radius:100px;padding:4px 14px;font-size:10.5px;font-weight:600;color:#ff9492;margin-bottom:14px}
+.layer-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.lyr{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:11px 9px;text-align:center;cursor:default;transition:all .18s;position:relative}
+.lyr:hover{border-color:#da3633aa;background:#1e0e0e;transform:translateY(-2px)}
+.lyr-num{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;color:#6e7681;margin-bottom:4px;text-transform:uppercase}
+.lyr-name{font-size:11.5px;font-weight:600;color:#c9d1d9;margin-bottom:4px}
+.lyr-detail{font-size:9.5px;color:#484f58;line-height:1.45}
+.lyr-w{position:absolute;top:5px;right:7px;font-family:'JetBrains Mono',monospace;font-size:8px;color:#a01010}
+.lyr-new{position:absolute;top:5px;left:7px;font-size:8px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.5px}
+
+.layer-note{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px}
+.ln-left{font-size:11px;color:#6e7681}
+.ln-right{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#e3b341}
+
+/* ─── Zone grid ─── */
+.zone-title-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.zone-label{text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px;border-radius:6px}
+.zl-safe{background:#0a1f0a;color:#56d364;border:1px solid #23863640}
+.zl-unc {background:#1c1500;color:#e3b341;border:1px solid #9e6a0340}
+.zl-atk {background:#1c0a0a;color:#ff7b72;border:1px solid #da363340}
+
+.zone-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.zone-box{border-radius:10px;padding:16px;border:1px solid}
+.z-safe{background:#0a1f0a;border-color:#238636}
+.z-unc {background:#1c1500;border-color:#9e6a03}
+.z-atk {background:#1c0a0a;border-color:#da3633}
+
+.zone-cond{font-family:'JetBrains Mono',monospace;font-size:10px;color:#484f58;margin-bottom:10px;padding:6px 8px;background:#00000030;border-radius:4px}
+.zone-step{display:flex;align-items:flex-start;gap:7px;margin-bottom:6px;font-size:11.5px;color:#c9d1d9}
+.zone-step .arrow{color:#484f58;flex-shrink:0}
+.zone-outcome{margin-top:10px;padding-top:10px;border-top:1px solid #21262d;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.zo-safe{color:#56d364}.zo-unc{color:#e3b341}.zo-atk{color:#ff7b72}
+
+/* ─── Aggregation ─── */
+.agg-flow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 0}
+.agg-step{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:11px 14px;flex-shrink:0;min-width:170px}
+.agg-step-title{font-size:12px;font-weight:600;color:#f0f6fc;margin-bottom:3px}
+.agg-step-detail{font-size:10.5px;color:#6e7681}
+.agg-arrow{color:#484f58;font-size:18px;flex-shrink:0}
+
+/* ─── LLM execution ─── */
+.llm-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.llm-main{background:#0d1e36;border:1px solid #1f6feb40;border-radius:10px;padding:16px}
+.llm-async{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:16px}
+.bx-title{font-size:13px;font-weight:600;color:#f0f6fc;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.bx-detail{font-size:11px;color:#6e7681;line-height:1.6}
+
+.async-badge{font-size:9.5px;font-weight:600;background:#1c1500;color:#e3b341;border:1px solid #9e6a0340;border-radius:100px;padding:2px 9px;margin-left:auto}
+
+/* ─── Analysis pipeline ─── */
+.model-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.model-box{background:#0d1a2e;border:1px solid #1f6feb30;border-radius:8px;padding:13px;text-align:center}
+.model-name{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:#79bcff;margin-bottom:4px}
+.model-detail{font-size:10px;color:#484f58;line-height:1.5}
+
+.pipe-row{display:flex;align-items:stretch;gap:10px;margin-bottom:14px}
+.pipe-box{flex:1;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:13px}
+.pipe-arrow{display:flex;align-items:center;color:#484f58;font-size:20px;flex-shrink:0}
+.pb-title{font-size:12px;font-weight:600;color:#f0f6fc;margin-bottom:4px}
+.pb-detail{font-size:10.5px;color:#6e7681;line-height:1.5}
+
+/* ─── Jury agents ─── */
+.agent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.agent-box{background:#1e0e00;border:1px solid #bd561d30;border-radius:10px;padding:16px}
+.agent-title{font-size:13px;font-weight:600;color:#ffa657;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.agent-detail{font-size:11px;color:#6e7681;line-height:1.6}
+.agent-verdict{margin-top:10px;font-size:10.5px;color:#8b949e;padding-top:10px;border-top:1px solid #30363d}
+
+/* ─── Explainability ─── */
+.explain-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.exp-box{background:#150d24;border:1px solid #8957e530;border-radius:8px;padding:14px}
+
+/* ─── Outcomes ─── */
+.outcome-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.outcome-box{border-radius:12px;padding:20px 18px;border:1px solid;text-align:center}
+.oc-valid{background:#091a0a;border-color:#238636}
+.oc-corr {background:#1c1500;border-color:#9e6a03}
+.oc-blk  {background:#1a0808;border-color:#b62424}
+.outcome-icon{font-size:30px;margin-bottom:12px}
+.outcome-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.oc-valid .outcome-title{color:#56d364}
+.oc-corr  .outcome-title{color:#e3b341}
+.oc-blk   .outcome-title{color:#ff7b72}
+.outcome-desc{font-size:11.5px;color:#8b949e;line-height:1.6;margin-bottom:12px}
+.outcome-when{font-size:10px;font-family:'JetBrains Mono',monospace;color:#484f58;background:#00000030;padding:6px 10px;border-radius:4px}
+
+/* ─── Storage ─── */
+.store-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.store-box{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px}
+.store-title{font-size:12px;font-weight:600;color:#f0f6fc;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.store-detail{font-size:10.5px;color:#6e7681;line-height:1.5}
+
+/* ─── Footer ─── */
+footer{text-align:center;margin-top:70px;font-size:10px;color:#21262d;letter-spacing:2px;text-transform:uppercase}
+footer a{color:#30363d;text-decoration:none}
+
+/* ─── TL;DR banner (the 30-second version) ─── */
+.tldr{background:linear-gradient(180deg,#11171f,#0d1218);border:1px solid #21262d;border-radius:16px;padding:26px 28px;margin-bottom:40px}
+.tldr-head{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#f0f6fc;margin-bottom:6px}
+.tldr-head .pill{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#79bcff;background:#0d1e36;border:1px solid #1f6feb40;border-radius:100px;padding:3px 10px}
+.tldr-lead{font-size:13px;color:#8b949e;line-height:1.7;margin-bottom:20px;max-width:840px}
+.tldr-lead b{color:#c9d1d9}
+.tldr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tldr-card{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:15px 16px;border-left:3px solid}
+.tldr-card.in{border-left-color:#1f6feb}
+.tldr-card.run{border-left-color:#238636}
+.tldr-card.out{border-left-color:#8957e5}
+.tldr-card .tc-t{font-size:12.5px;font-weight:700;color:#f0f6fc;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.tldr-card .tc-d{font-size:11.5px;color:#8b949e;line-height:1.6}
+@media(max-width:760px){.tldr-grid{grid-template-columns:1fr}}
+
+/* ─── Utilities ─── */
+.inner-down{display:flex;flex-direction:column;align-items:center;gap:0;margin:12px 0}
+.inner-line{width:2px;height:18px;background:#21262d}
+.inner-tip{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #30363d}
+.chip{display:inline-flex;align-items:center;gap:5px;background:#161b22;border:1px solid #21262d;border-radius:6px;padding:3px 10px;font-size:10.5px;color:#6e7681;margin:3px 2px}
+.chip-red{border-color:#da363340;color:#ff9492;background:#1c0a0a}
+.chip-green{border-color:#23863640;color:#56d364;background:#0a1f0a}
+.chip-blue{border-color:#1f6feb40;color:#79bcff;background:#0d1e36}
+.chip-amber{border-color:#9e6a0340;color:#e3b341;background:#1c1400}
+.mt8{margin-top:8px}
+.mb12{margin-bottom:12px}
+.text-sm{font-size:11px;color:#6e7681;line-height:1.6}
+.highlight{color:#f0f6fc}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════ -->
+<header class="hdr">
+  <div class="hdr-eyebrow">Failure Intelligence Engine · Request Lifecycle</div>
+  <h1>How Every Request Is Processed</h1>
+  <p class="tagline">
+    Every prompt passes through 12 security layers before reaching your model. Every output is monitored
+    for hallucinations by a shadow ensemble and a three-agent AI jury.
+    This is what happens, in order.
+  </p>
+  <div class="badge-row">
+    <span class="badge"><span class="dot dot-blue"></span> v1.13.0</span>
+    <span class="badge"><span class="dot dot-red"></span> 12 detection layers</span>
+    <span class="badge"><span class="dot dot-orange"></span> 3 shadow models</span>
+    <span class="badge"><span class="dot dot-orange"></span> DiagnosticJury: 3 agents</span>
+    <span class="badge"><span class="dot dot-green"></span> XGBoost FSV classifier</span>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════
+     TL;DR — the 30-second version
+══════════════════════════════════════════════════ -->
+<div class="tldr">
+  <div class="tldr-head"><span class="pill">TL;DR</span> The 30-second version</div>
+  <p class="tldr-lead">
+    Think of FIE as a <b>security checkpoint wrapped around your AI model</b>. Nothing reaches your
+    model until it's been screened, and nothing the model says goes unchecked. There are just three
+    moments to understand — everything below is the detail behind them.
+  </p>
+  <div class="tldr-grid">
+    <div class="tldr-card in">
+      <div class="tc-t">🛡️ Before — screen the prompt</div>
+      <div class="tc-d">12 detectors check every incoming prompt in parallel (under 20ms). Clear attacks — jailbreaks, prompt injection, smuggled instructions — are <b>blocked before your model runs</b>.</div>
+    </div>
+    <div class="tldr-card run">
+      <div class="tc-t">🤖 During — your model answers</div>
+      <div class="tc-d">Safe prompts pass straight through to your own LLM. The answer returns to the user <b>at full speed</b> — FIE adds no delay on the path the user feels.</div>
+    </div>
+    <div class="tldr-card out">
+      <div class="tc-t">🔬 After — check the answer</div>
+      <div class="tc-d">In the background, 3 shadow models and a 3-agent jury catch hallucinations. The result is <b>VALIDATED, CORRECTED, or BLOCKED</b> — and the system learns from every confirmed case.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 1 — INPUT
+══════════════════════════════════════════════════ -->
+<div class="stage ph-in">
+  <div class="stage-head">
+    <div class="stage-num">1</div>
+    <div class="stage-info">
+      <div class="stage-title">Prompt Arrives</div>
+      <div class="stage-sub">User application sends a prompt to FIE via the Python SDK or REST API</div>
+    </div>
+    <div class="stage-timing t-fast">instant</div>
+  </div>
+  <div class="stage-body">
+    <div class="fp-grid">
+      <div class="fp-box">
+        <div class="fp-icon">🐍</div>
+        <div>
+          <div class="fp-label">Python SDK</div>
+          <div class="fp-detail">Wrap any LLM call with <code style="font-family:monospace;font-size:10.5px;color:#79bcff">@fie.monitor(domain=)</code></div>
+          <div class="fp-outcome fp-allow">pip install fie-sdk</div>
+        </div>
+      </div>
+      <div class="fp-box">
+        <div class="fp-icon">⚡</div>
+        <div>
+          <div class="fp-label">REST API</div>
+          <div class="fp-detail">Direct POST to <code style="font-family:monospace;font-size:10.5px;color:#79bcff">POST /api/v1/monitor</code> with prompt + context</div>
+        </div>
+      </div>
+      <div class="fp-box">
+        <div class="fp-icon">🎛</div>
+        <div>
+          <div class="fp-label">Playground</div>
+          <div class="fp-detail">Interactive web dashboard — test prompts and inspect raw detection signals</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Connector -->
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 2 — FAST-PATH CHECK
+══════════════════════════════════════════════════ -->
+<div class="stage ph-fast">
+  <div class="stage-head">
+    <div class="stage-num">2</div>
+    <div class="stage-info">
+      <div class="stage-title">Fast-Path Check</div>
+      <div class="stage-sub">O(1) SHA-256 hash lookup — runs before all 12 detection layers</div>
+    </div>
+    <div class="stage-timing t-fast">&lt;1ms</div>
+  </div>
+  <div class="stage-body">
+    <div class="fp-grid" style="margin-bottom:12px">
+      <div class="fp-box">
+        <div class="fp-icon">🚫</div>
+        <div>
+          <div class="fp-label">Known Attack Hash</div>
+          <div class="fp-detail">SHA-256 of this prompt matches a confirmed attack — no inference needed</div>
+          <div class="fp-outcome fp-block">→ BLOCK instantly</div>
+        </div>
+      </div>
+      <div class="fp-box">
+        <div class="fp-icon">✅</div>
+        <div>
+          <div class="fp-label">Whitelisted Prompt</div>
+          <div class="fp-detail">Reviewer labeled this as a false positive — skip all detection</div>
+          <div class="fp-outcome fp-allow">→ ALLOW instantly</div>
+        </div>
+      </div>
+      <div class="fp-box">
+        <div class="fp-icon">🗃</div>
+        <div>
+          <div class="fp-label">SHA-256 Result Cache</div>
+          <div class="fp-detail">512 entries · 5-min TTL · LRU eviction · Domain-keyed</div>
+          <div class="fp-outcome fp-cache">→ Return cached result</div>
+        </div>
+      </div>
+    </div>
+    <div class="fp-note">
+      <span>↓ If none match:</span> Prompt proceeds to the 12 detection layers. Every new unique prompt reaches this point.
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 3 — 12 DETECTION LAYERS
+══════════════════════════════════════════════════ -->
+<div class="stage ph-det">
+  <div class="stage-head">
+    <div class="stage-num">3</div>
+    <div class="stage-info">
+      <div class="stage-title">12 Detection Layers — Running in Parallel</div>
+      <div class="stage-sub">Every layer runs simultaneously via ThreadPoolExecutor. Total latency = slowest single layer, not their sum</div>
+    </div>
+    <div class="stage-timing t-sync">&lt;20ms total</div>
+  </div>
+  <div class="stage-body">
+    <div class="par-badge">⚡ All 12 layers fire simultaneously — not sequentially</div>
+    <div class="layer-grid">
+      <div class="lyr"><div class="lyr-num">L1</div><div class="lyr-name">Regex Library</div><div class="lyr-detail">1,200+ hand-crafted patterns. Deterministic. Near-zero false positives.</div><div class="lyr-w">w=1.5</div></div>
+      <div class="lyr"><div class="lyr-num">L2</div><div class="lyr-name">PromptGuard</div><div class="lyr-detail">Leet-speak normalizer + multi-group co-occurrence scoring.</div><div class="lyr-w">w=1.1</div></div>
+      <div class="lyr"><div class="lyr-num">L3</div><div class="lyr-name">Many-Shot</div><div class="lyr-detail">Power-law scoring on repeated dialogue patterns. Injects CWD context.</div><div class="lyr-w">w=1.2</div></div>
+      <div class="lyr"><div class="lyr-num">L4</div><div class="lyr-name">Indirect Injection</div><div class="lyr-detail">Detects injection via documents, emails, and tool outputs.</div><div class="lyr-w">w=0.9</div></div>
+      <div class="lyr"><div class="lyr-num">L5</div><div class="lyr-name">GCG Suffix</div><div class="lyr-detail">Entropy + punctuation density. Suppresses false positives on code fences.</div><div class="lyr-w">w=1.3</div></div>
+      <div class="lyr"><div class="lyr-num">L6</div><div class="lyr-name">Perplexity Proxy</div><div class="lyr-detail">Detects base64, ROT-N, and URL-encoded obfuscation attacks.</div><div class="lyr-w">w=0.7</div></div>
+      <div class="lyr"><div class="lyr-num">L7</div><div class="lyr-name">PAIR v4</div><div class="lyr-detail">XGBoost intent classifier. 3× hard-positive weighting. 97.18% TPR.</div><div class="lyr-w">w=1.0</div></div>
+      <div class="lyr"><div class="lyr-num">L8</div><div class="lyr-name">Direct Harm</div><div class="lyr-detail">Two-gate: verb + target co-occurrence. Boosts 0.72 → 0.85 on hit.</div><div class="lyr-w">w=1.1</div></div>
+      <div class="lyr"><div class="lyr-num">L9</div><div class="lyr-name">Virtualization</div><div class="lyr-detail">Virtual-frame + nesting depth. Catches "pretend you are an AI that…" patterns.</div><div class="lyr-w">w=1.0</div></div>
+      <div class="lyr"><div class="lyr-num">L10</div><div class="lyr-name">Fiction Harm</div><div class="lyr-detail">Proximity scoring: fictional frame + harmful target within window distance.</div><div class="lyr-w">w=1.1</div></div>
+      <div class="lyr"><div class="lyr-num">L11</div><div class="lyr-name">Multilingual</div><div class="lyr-detail">Script anomaly detection + phrase matching. 3-tier approach with translation.</div><div class="lyr-w">w=1.0</div></div>
+      <div class="lyr"><div class="lyr-new">NEW</div><div class="lyr-num">L12</div><div class="lyr-name">Romanisation</div><div class="lyr-detail">Pinyin · Arabizi · Romaji · Korean RR · IAST. N-gram fingerprints. No external deps.</div><div class="lyr-w">w=1.0</div></div>
+    </div>
+    <div class="layer-note">
+      <div class="ln-left">Weight modifier: <b style="color:#c9d1d9">Framing Filter</b> — reduces layer scores by ×0.72 when fictional/academic framing is detected (except L1, L8, L10, L12)</div>
+      <div class="ln-right">Session boost: up to +0.20 crescendo</div>
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 4 — AGGREGATION
+══════════════════════════════════════════════════ -->
+<div class="stage ph-agg">
+  <div class="stage-head">
+    <div class="stage-num">4</div>
+    <div class="stage-info">
+      <div class="stage-title">Score Aggregation &amp; Routing</div>
+      <div class="stage-sub">Layer signals are combined, boosted, and routed to one of three zones</div>
+    </div>
+    <div class="stage-timing t-fast">&lt;1ms</div>
+  </div>
+  <div class="stage-body">
+    <div class="agg-flow">
+      <div class="agg-step"><div class="agg-step-title">⚖ Weighted Vote</div><div class="agg-step-detail">Each layer contributes score × weight. Corroboration: +0.08 (2 layers), +0.12 (3+ layers)</div></div>
+      <div class="agg-arrow">→</div>
+      <div class="agg-step"><div class="agg-step-title">🔄 Session Boost</div><div class="agg-step-detail">Crescendo: escalating turns add up to +0.20. Stored in in-memory LRU (Redis on Cloud Run)</div></div>
+      <div class="agg-arrow">→</div>
+      <div class="agg-step"><div class="agg-step-title">🎯 Domain Multiplier</div><div class="agg-step-detail">Medical ×0.80 · Finance ×0.82 · Legal ×0.83 · Education ×0.88 · Dev ×1.12</div></div>
+      <div class="agg-arrow">→</div>
+      <div class="agg-step"><div class="agg-step-title">🔀 Three-Zone Router</div><div class="agg-step-detail">Final confidence score determines which zone — SAFE, UNCERTAIN, or CLEAR ATTACK</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 5 — ZONE ROUTING
+══════════════════════════════════════════════════ -->
+<div class="stage ph-agg">
+  <div class="stage-head">
+    <div class="stage-num">5</div>
+    <div class="stage-info">
+      <div class="stage-title">Three-Zone Decision</div>
+      <div class="stage-sub">The aggregated confidence score routes every request to exactly one outcome</div>
+    </div>
+  </div>
+  <div class="stage-body">
+    <div class="zone-grid">
+      <div class="zone-box z-safe">
+        <div class="zone-cond">confidence &lt; threshold × 0.60</div>
+        <div class="zone-step"><span class="arrow">✅</span><span><b>CLEAR SAFE</b> — no meaningful attack signal detected</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>Result is cached (512 entries, 5-min TTL)</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>Prompt is forwarded to the user's LLM</span></div>
+        <div class="zone-outcome zo-safe">→ LLM runs</div>
+      </div>
+      <div class="zone-box z-unc">
+        <div class="zone-cond">threshold × 0.60 ≤ confidence &lt; threshold</div>
+        <div class="zone-step"><span class="arrow">⚠️</span><span><b>UNCERTAIN</b> — signal present but below conviction threshold</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>Sent to <b>LlamaGuard Tier-3</b> (Prompt Guard 2, 86M params, ~300ms via Groq)</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>LG safe: prompt passes · LG unsafe: blocked</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>LlamaGuard unavailable: fail-secure → BLOCK (never silently pass)</span></div>
+        <div class="zone-outcome zo-unc">→ LlamaGuard decides</div>
+      </div>
+      <div class="zone-box z-atk">
+        <div class="zone-cond">confidence ≥ threshold</div>
+        <div class="zone-step"><span class="arrow">🚫</span><span><b>CLEAR ATTACK</b> — high confidence adversarial prompt</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>Request blocked immediately — LLM never runs</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>Event recorded to Feedback Store (MongoDB + JSONL)</span></div>
+        <div class="zone-step"><span class="arrow">→</span><span>After human review: SHA-256 added to fast-path BLOCK set</span></div>
+        <div class="zone-outcome zo-atk">→ Blocked + logged</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="connector">
+  <div class="conn-line"></div>
+  <div class="conn-label">SAFE / UNCERTAIN-safe paths merge</div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 6 — LLM EXECUTION
+══════════════════════════════════════════════════ -->
+<div class="stage ph-llm">
+  <div class="stage-head">
+    <div class="stage-num">6</div>
+    <div class="stage-info">
+      <div class="stage-title">LLM Execution &amp; Output Scanning</div>
+      <div class="stage-sub">The user's model runs. The response is returned immediately. Scanning happens asynchronously — zero added latency for the user</div>
+    </div>
+    <div class="stage-timing t-async">async scan</div>
+  </div>
+  <div class="stage-body">
+    <div class="llm-row">
+      <div class="llm-main">
+        <div class="bx-title">🤖 LLM Call — Your Model</div>
+        <div class="bx-detail">
+          The user's chosen LLM generates its response. FIE does not interfere with this call — the response is returned to the user at full speed (typically 500–2000ms).
+          <br><br>
+          FIE wraps the response and triggers the monitoring pipeline on a background daemon thread.
+        </div>
+      </div>
+      <div class="llm-async">
+        <div class="bx-title">🔍 Output Scanning <span class="async-badge">ASYNC — zero added latency</span></div>
+        <div class="bx-detail">
+          <b style="color:#c9d1d9">Non-streaming responses:</b> <code style="font-family:monospace;font-size:10px;color:#79bcff">scan_output_async()</code> on daemon thread. Checks for policy echo (0.92), system prompt leakage (0.88), harmful output (0.90).<br><br>
+          <b style="color:#c9d1d9">Streaming responses:</b> <code style="font-family:monospace;font-size:10px;color:#79bcff">stream_guard / astream_guard</code> buffers 400 chars, scans, then either passes through or yields a refusal and stops the stream.
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="chip chip-red">📛 POLICY_ECHO — threshold 0.92</span>
+      <span class="chip chip-red">🔓 SYS_PROMPT_LEAK — threshold 0.88</span>
+      <span class="chip chip-red">⚠️ HARMFUL_OUTPUT — threshold 0.90</span>
+      <span class="chip chip-amber">Flagged outputs → Feedback Store → human review queue</span>
+    </div>
+  </div>
+</div>
+
+<div class="connector">
+  <div class="conn-line"></div>
+  <div class="conn-label">FastAPI routes to LangGraph</div>
+  <div class="conn-arrow"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 7 — ANALYSIS PIPELINE
+══════════════════════════════════════════════════ -->
+<div class="stage ph-pipe">
+  <div class="stage-head">
+    <div class="stage-num">7</div>
+    <div class="stage-info">
+      <div class="stage-title">Shadow Ensemble + Failure Signal Vector</div>
+      <div class="stage-sub">Three shadow models generate independent answers. Their signals, combined with semantic analysis, feed the XGBoost classifier</div>
+    </div>
+    <div class="stage-timing t-async">LangGraph pipeline</div>
+  </div>
+  <div class="stage-body">
+    <div class="text-sm mb12"><span class="highlight">Shadow models</span> answer the same question independently — in parallel via Groq. Disagreement between them is the strongest hallucination signal.</div>
+    <div class="model-grid">
+      <div class="model-box">
+        <div class="model-name">llama-3.3-70b-versatile</div>
+        <div class="model-detail">Primary reasoning model. Strong factual knowledge. Groq API parallel call.</div>
+      </div>
+      <div class="model-box">
+        <div class="model-name">deepseek-r1-distill-llama-70b</div>
+        <div class="model-detail">Different reasoning chain and training distribution for independent 2nd opinion.</div>
+      </div>
+      <div class="model-box">
+        <div class="model-name">qwen-qwq-32b</div>
+        <div class="model-detail">Cross-check from a different training lineage. Parallel Groq call.</div>
+      </div>
+    </div>
+    <div class="pipe-row">
+      <div class="pipe-box">
+        <div class="pb-title">📊 Failure Signal Vector (FSV)</div>
+        <div class="pb-detail">
+          <b style="color:#c9d1d9">Entropy</b> — response variance across shadow outputs<br>
+          <b style="color:#c9d1d9">Consistency</b> — self-consistency across rephrased prompts<br>
+          <b style="color:#c9d1d9">Ensemble disagreement</b> — inter-model pairwise cosine distance<br>
+          <b style="color:#c9d1d9">Embedding distance</b> — semantic distance between primary and shadow answers<br>
+          SHAP ablation showed <b style="color:#ffa657">10 features explain 100% of predictive signal</b> (of 560 total)
+        </div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-box">
+        <div class="pb-title">🌲 XGBoost Failure Classifier</div>
+        <div class="pb-detail">
+          FSV → <code style="font-family:monospace;font-size:10px;color:#79bcff">failure_type</code>: hallucination | adversarial | degradation | safe<br>
+          <code style="font-family:monospace;font-size:10px;color:#79bcff">failure_prob</code>: 0.0–1.0 (Platt calibrated)<br>
+          SHAP top-10 feature attributions for explainability<br>
+          Fallback chain: v4 → v3 → v2 → rule-based<br>
+          Inference: &lt;10ms
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 8 — DIAGNOSTIC JURY
+══════════════════════════════════════════════════ -->
+<div class="stage ph-jury">
+  <div class="stage-head">
+    <div class="stage-num">8</div>
+    <div class="stage-info">
+      <div class="stage-title">DiagnosticJury — 3 Specialist Agents in Parallel</div>
+      <div class="stage-sub">Three AI agents independently analyze the failure mode with full FSV context. Their verdicts are merged by weighted vote.</div>
+    </div>
+    <div class="stage-timing t-async">parallel agents</div>
+  </div>
+  <div class="stage-body">
+    <div class="agent-grid">
+      <div class="agent-box">
+        <div class="agent-title">⚔️ Adversarial Specialist</div>
+        <div class="agent-detail">
+          Re-evaluates all 12 detection layer signals with full context and FSV snapshot.
+          Runs PAIR v4 again in context-aware mode. Checks for structural attack patterns the pre-flight guard may have missed at lower confidence.
+        </div>
+        <div class="agent-verdict">Verdicts: ADVERSARIAL_ATTACK · PROMPT_INJECTION · JAILBREAK · CLEAR</div>
+      </div>
+      <div class="agent-box">
+        <div class="agent-title">📝 Linguistic Auditor</div>
+        <div class="agent-detail">
+          Analyzes grammar, coherence, and linguistic quality of the model's response. Detects hedge phrases ("I think", "I'm not sure"), refusal signals, and confidence calibration mismatches.
+        </div>
+        <div class="agent-verdict">Verdicts: LINGUISTIC_DEGRADATION · HEDGED_RESPONSE · REFUSAL · CLEAR</div>
+      </div>
+      <div class="agent-box">
+        <div class="agent-title">🎓 Domain Critic</div>
+        <div class="agent-detail">
+          Checks for factual hallucination using 5 sub-layers: contradiction signal, self-contradiction between primary/shadow, hedge detection, temporal knowledge cutoff, and external Wikipedia/Serper verification.
+        </div>
+        <div class="agent-verdict">Verdicts: FACTUAL_HALLUCINATION · TEMPORAL_CUTOFF · KNOWLEDGE_BOUNDARY · CLEAR</div>
+      </div>
+    </div>
+    <div class="inner-down"><div class="inner-line"></div><div class="inner-tip"></div></div>
+    <div class="info-row">
+      <div class="fp-icon">⚖️</div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:#f0f6fc;margin-bottom:3px">Jury Verdict — Weighted Merge</div>
+        <div class="bx-detail">Three verdicts are merged using weights based on <code style="font-family:monospace;font-size:10px;color:#79bcff">failure_type</code> from XGBoost. Confidence scores are combined. A <code style="font-family:monospace;font-size:10px;color:#79bcff">requires_human_review</code> flag is set when agents disagree or confidence is near-threshold.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 9 — EXPLAINABILITY
+══════════════════════════════════════════════════ -->
+<div class="stage ph-exp">
+  <div class="stage-head">
+    <div class="stage-num">9</div>
+    <div class="stage-info">
+      <div class="stage-title">Explainability Layer</div>
+      <div class="stage-sub">Every decision produces a human-readable explanation with SHAP attributions, evidence, and a full decision trace</div>
+    </div>
+  </div>
+  <div class="stage-body">
+    <div class="explain-row">
+      <div class="exp-box">
+        <div class="bx-title">🔍 Internal Mode (operators / audit)</div>
+        <div class="bx-detail">
+          Full SHAP values for every FSV feature · Raw matched text from detection layers · Specific threshold values · All layer scores · Full jury reasoning chains · Decision trace with ordered steps · Uncertainty notes for near-threshold calls
+        </div>
+      </div>
+      <div class="exp-box">
+        <div class="bx-title">👤 External Mode (end users)</div>
+        <div class="bx-detail">
+          Outcome labels only · No threshold values (hides detection mechanics from attackers) · Only <code style="font-family:monospace;font-size:10px;color:#bc8cff">safe_to_expose=True</code> signals · Human-readable explanation of why the request was blocked or flagged · No raw matched text
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px" class="text-sm">
+      <b style="color:#c9d1d9">Explanation quality score</b> = 0.25×jury + 0.20×evidence + 0.20×signals + 0.20×fix + 0.15×source − penalties
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 10 — FINAL OUTCOMES
+══════════════════════════════════════════════════ -->
+<div class="stage ph-out">
+  <div class="stage-head">
+    <div class="stage-num">10</div>
+    <div class="stage-info">
+      <div class="stage-title">Final Outcome — One of Three Results</div>
+      <div class="stage-sub">Every request ends in exactly one outcome, with full traceability back to every detection signal</div>
+    </div>
+  </div>
+  <div class="stage-body">
+    <div class="outcome-grid">
+      <div class="outcome-box oc-valid">
+        <div class="outcome-icon">✅</div>
+        <div class="outcome-title">VALIDATED</div>
+        <div class="outcome-desc">The primary model's response was confirmed correct by the shadow ensemble and jury. No hallucination or attack detected.</div>
+        <div class="outcome-when">Primary model trusted · Response returned as-is</div>
+      </div>
+      <div class="outcome-box oc-corr">
+        <div class="outcome-icon">🔧</div>
+        <div class="outcome-title">CORRECTED</div>
+        <div class="outcome-desc">Hallucination detected. The primary model's answer diverges from shadow consensus. The shadow majority answer is returned instead.</div>
+        <div class="outcome-when">Shadow consensus replaces primary output</div>
+      </div>
+      <div class="outcome-box oc-blk">
+        <div class="outcome-icon">🚫</div>
+        <div class="outcome-title">BLOCKED</div>
+        <div class="outcome-desc">An adversarial attack was detected — either in the pre-flight guard (before LLM ran) or confirmed by the jury after analysis.</div>
+        <div class="outcome-when">Refusal returned · Event logged for review</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+<!-- ══════════════════════════════════════════════════
+     STAGE 11 — STORAGE & FEEDBACK LOOP
+══════════════════════════════════════════════════ -->
+<div class="stage ph-store">
+  <div class="stage-head">
+    <div class="stage-num">11</div>
+    <div class="stage-info">
+      <div class="stage-title">Storage, Alerts &amp; Feedback Loop</div>
+      <div class="stage-sub">Every outcome is persisted. Confirmed labels feed back to Stage 2, making future identical prompts instant O(1) decisions</div>
+    </div>
+    <div class="stage-timing t-async">async / fire-and-forget</div>
+  </div>
+  <div class="stage-body">
+    <div class="store-grid">
+      <div class="store-box">
+        <div class="store-title">🍃 MongoDB Persistence</div>
+        <div class="store-detail">
+          Full trace stored: FSV values, SHAP attributions, jury reasoning, matched evidence, detection scores, all timestamps.<br><br>
+          In-memory fallback when offline. All queries scoped to <code style="font-family:monospace;font-size:10px;color:#79bcff">tenant_id</code> — multi-tenant isolation.
+        </div>
+      </div>
+      <div class="store-box">
+        <div class="store-title">📧 Email Alerts (async)</div>
+        <div class="store-detail">
+          Fire-and-forget daemon threads — a SendGrid outage never causes request failures.<br><br>
+          🚨 <b style="color:#c9d1d9">Attack detected</b> — jury confirms<br>
+          👁 <b style="color:#c9d1d9">Human review needed</b> — near-threshold<br>
+          📉 <b style="color:#c9d1d9">Degradation spike</b> — risk rate &gt;40%<br>
+          📅 <b style="color:#c9d1d9">Weekly digest</b> — via cron
+        </div>
+      </div>
+      <div class="store-box">
+        <div class="store-title">🔁 Feedback Loop</div>
+        <div class="store-detail">
+          Reviewer labels an event via <code style="font-family:monospace;font-size:10px;color:#79bcff">POST /flags/{id}/label</code>.<br><br>
+          <b style="color:#c9d1d9">true_positive</b> → SHA-256 added to fast-path BLOCK set (Stage 2). Next identical prompt → blocked in microseconds.<br><br>
+          <b style="color:#c9d1d9">false_positive</b> → SHA-256 added to whitelist. Never blocked again.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     TIMING SUMMARY
+══════════════════════════════════════════════════ -->
+<div style="margin-top:40px;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:24px">
+  <div style="font-size:14px;font-weight:600;color:#f0f6fc;margin-bottom:16px">⏱ Where Time Goes</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+    <div>
+      <div style="font-size:11px;color:#6e7681;margin-bottom:4px">Fast-path + 12 layers</div>
+      <div style="font-size:22px;font-weight:700;color:#79bcff;font-family:'JetBrains Mono',monospace">&lt;20ms</div>
+      <div style="font-size:10.5px;color:#484f58">Parallel execution. User never feels this.</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#6e7681;margin-bottom:4px">UNCERTAIN zone only (LlamaGuard)</div>
+      <div style="font-size:22px;font-weight:700;color:#e3b341;font-family:'JetBrains Mono',monospace">~300ms</div>
+      <div style="font-size:10.5px;color:#484f58">Only for ambiguous prompts in the uncertain zone.</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#6e7681;margin-bottom:4px">LLM response (user's model)</div>
+      <div style="font-size:22px;font-weight:700;color:#56d364;font-family:'JetBrains Mono',monospace">500–2000ms</div>
+      <div style="font-size:10.5px;color:#484f58">Dominated by your model. FIE adds nothing here.</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#6e7681;margin-bottom:4px">Analysis pipeline (async)</div>
+      <div style="font-size:22px;font-weight:700;color:#ffa657;font-family:'JetBrains Mono',monospace">background</div>
+      <div style="font-size:10.5px;color:#484f58">Shadow ensemble + XGBoost + jury. Never on the critical path.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .page -->
+<footer>
+  FIE v1.13.0 · Ayush Singh · <a href="https://github.com/AyushSingh110/Failure_Intelligence_System">github.com/AyushSingh110/Failure_Intelligence_System</a>
+</footer>
+</body>
+</html>

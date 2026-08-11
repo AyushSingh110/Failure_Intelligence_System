@@ -114,9 +114,26 @@ static/
 # default, but the public reference docs that README links to are kept.
 # NOTE: must be `docs/*` (not `docs/`) so the negations below can re-include.
 docs/*
+
+# Public reference docs. Every file the README links to MUST be listed here,
+# or the link 404s on GitHub while working fine locally — which is exactly
+# what happened: six of seven README doc links were dead, including
+# RESEARCH_LOG.md, the method trail the README cites as its evidence.
 !docs/ARCHITECTURE.md
 !docs/CODEBASE.md
 !docs/OPERATIONS.md
+!docs/DEPLOYMENT.md
+!docs/PRODUCTION_ENGINEERING.md
+!docs/RESEARCH_LOG.md
+!docs/OVERREFUSAL_FINDINGS.md
+!docs/HALLUCINATION_OPTIMIZATION_LOG.md
+!docs/HALLUCINATION_PIPELINE.md
+!docs/HALLUCINATION_DETECTION_EXPLAINED.md
+!docs/fie_architecture.html
+!docs/fie_flowchart.html
+
+# Still private on purpose: paper sources (arxiv_*, *.tex), draft articles,
+# and figure notebooks. Those are working material, not reference docs.
 
 # scripts/ holds local retraining experiments — excluded by default, but the
 # model-artifact tooling that CI and the Dockerfile depend on is kept.

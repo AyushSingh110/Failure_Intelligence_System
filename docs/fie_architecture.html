@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FIE — Failure Intelligence Engine · Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0d14;font-family:'Segoe UI',Arial,sans-serif;color:#c9d1d9;overflow-x:auto}
+.page{position:relative;width:1900px;margin:0 auto;padding-bottom:100px}
+
+h1{text-align:center;font-size:21px;color:#58a6ff;padding:26px 0 5px;letter-spacing:3px;text-transform:uppercase;font-weight:300}
+.tagline{text-align:center;font-size:10px;color:#484f58;letter-spacing:1.8px;padding-bottom:22px;text-transform:uppercase}
+
+/* ── Node base ── */
+.nd{position:absolute;border-radius:8px;padding:10px 13px;border:1px solid;z-index:10;line-height:1.35;cursor:default;transition:box-shadow .2s,transform .15s}
+.nd:hover{transform:scale(1.02);z-index:40;box-shadow:0 0 20px rgba(255,255,255,.08)}
+.t{font-size:11px;font-weight:700;margin-bottom:4px}
+.s{font-size:9.5px;opacity:.85;line-height:1.55}
+
+/* ── Node colour themes ── */
+.cu  {background:#0e1e2e;border-color:#4493f8;color:#79bcff}
+.cg  {background:#1c0e0e;border-color:#da3633;color:#ff7b72}
+.cl  {background:#1e0a0a;border-color:#a01010;color:#ff9492}
+.ca  {background:#1e1400;border-color:#e3b341;color:#f0c060}
+.cs  {background:#0a1f0a;border-color:#3fb950;color:#56d364}
+.cun {background:#1a1500;border-color:#d29922;color:#e3b341}
+.cat {background:#1c0808;border-color:#b22222;color:#ff7b72}
+.cll {background:#1a1200;border-color:#cc8800;color:#e3b341}
+.cllm{background:#0d1a2e;border-color:#4493f8;color:#79bcff}
+.csc {background:#150d24;border-color:#8957e5;color:#bc8cff}
+.cst {background:#130e20;border-color:#6e40c9;color:#a371f7}
+.cfb {background:#0a1f0a;border-color:#3fb950;color:#56d364}
+.cfa {background:#091a1a;border-color:#009b8d;color:#39d3bb}
+.cpl {background:#0d1622;border-color:#1f6feb;color:#58a6ff}
+.cen {background:#091620;border-color:#0969da;color:#58a6ff}
+.cfs {background:#071816;border-color:#1a7f64;color:#3fb950}
+.cxg {background:#1c1200;border-color:#db6d28;color:#ffa657}
+.cjr {background:#1a0d00;border-color:#bd561d;color:#ffa657}
+.cex {background:#091a14;border-color:#1a7f64;color:#3fb950}
+.cem {background:#1a1500;border-color:#d29922;color:#e3b341}
+.cmg {background:#091a0d;border-color:#1a7f64;color:#3fb950}
+.cse {background:#0e1628;border-color:#1f6feb;color:#58a6ff}
+.cvd {background:#1a0d00;border-color:#bd561d;color:#ffa657}
+.cgt {background:#091620;border-color:#1a7f64;color:#3fb950}
+.cnp {background:#0c1220;border-color:#2d3e58;color:#6e8aaa}
+
+/* ── Section backgrounds ── */
+.sbg{position:absolute;border-radius:12px;border:1px dashed;z-index:2;pointer-events:none}
+.s-guard   {background:rgba(210,50,50,.04); border-color:rgba(210,50,50,.28)}
+.s-thread  {background:rgba(180,40,40,.06); border-color:rgba(200,70,70,.42)}
+.s-pipe    {background:rgba(28,106,235,.04);border-color:rgba(28,106,235,.22)}
+.s-shadow  {background:rgba(9,100,218,.07); border-color:rgba(9,100,218,.3)}
+.s-jury    {background:rgba(185,80,25,.06); border-color:rgba(185,80,25,.3)}
+
+/* ── Section labels ── */
+.slbl{position:absolute;font-size:9px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;pointer-events:none;z-index:12}
+
+/* ── Pulse animations ── */
+@keyframes pR{0%,100%{box-shadow:0 0 0 0 rgba(255,80,70,0)}50%{box-shadow:0 0 14px 3px rgba(255,80,70,.45)}}
+@keyframes pB{0%,100%{box-shadow:0 0 0 0 rgba(70,150,255,0)}50%{box-shadow:0 0 14px 3px rgba(70,150,255,.4)}}
+@keyframes pG{0%,100%{box-shadow:0 0 0 0 rgba(55,180,80,0)}50%{box-shadow:0 0 14px 3px rgba(55,180,80,.4)}}
+@keyframes pGo{0%,100%{box-shadow:0 0 0 0 rgba(200,150,30,0)}50%{box-shadow:0 0 12px 2px rgba(200,150,30,.4)}}
+@keyframes pP{0%,100%{box-shadow:0 0 0 0 rgba(130,80,220,0)}50%{box-shadow:0 0 12px 2px rgba(130,80,220,.4)}}
+@keyframes pO{0%,100%{box-shadow:0 0 0 0 rgba(200,100,40,0)}50%{box-shadow:0 0 12px 2px rgba(200,100,40,.4)}}
+@keyframes pT{0%,100%{box-shadow:0 0 0 0 rgba(50,200,180,0)}50%{box-shadow:0 0 12px 2px rgba(50,200,180,.4)}}
+.pr{animation:pR 2s ease-in-out infinite}
+.pb{animation:pB 2.2s ease-in-out infinite}
+.pg{animation:pG 2.4s ease-in-out infinite}
+.pgo{animation:pGo 2.6s ease-in-out infinite}
+.pp{animation:pP 2s ease-in-out infinite}
+.po{animation:pO 2.2s ease-in-out infinite}
+.pt{animation:pT 2.4s ease-in-out infinite}
+.l1{animation:pR 1.8s .00s ease-in-out infinite}
+.l2{animation:pR 1.8s .15s ease-in-out infinite}
+.l3{animation:pR 1.8s .30s ease-in-out infinite}
+.l4{animation:pR 1.8s .45s ease-in-out infinite}
+.l5{animation:pR 1.8s .60s ease-in-out infinite}
+.l6{animation:pR 1.8s .75s ease-in-out infinite}
+.l7{animation:pR 1.8s .90s ease-in-out infinite}
+.l8{animation:pR 1.8s 1.05s ease-in-out infinite}
+.l9{animation:pR 1.8s 1.20s ease-in-out infinite}
+.l10{animation:pR 1.8s 1.35s ease-in-out infinite}
+.l11{animation:pR 1.8s 1.50s ease-in-out infinite}
+.l12{animation:pR 1.8s 1.65s ease-in-out infinite}
+
+/* ── SVG overlay ── */
+#sv{position:absolute;top:0;left:0;pointer-events:none;z-index:5}
+
+/* ── Legend ── */
+.legend{position:absolute;display:flex;flex-wrap:wrap;gap:6px}
+.lg{font-size:9px;padding:4px 10px;border-radius:4px;border:1px solid;letter-spacing:.4px}
+
+/* ── Plain-English overview strip (read this first) ── */
+.overview{max-width:1500px;margin:0 auto 30px;padding:0 30px}
+.ov-head{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#58a6ff;text-align:center;margin-bottom:6px;font-weight:700}
+.ov-sub{font-size:13px;color:#8b949e;text-align:center;max-width:760px;margin:0 auto 22px;line-height:1.7}
+.ov-flow{display:flex;align-items:stretch;justify-content:center;gap:0;flex-wrap:wrap}
+.ov-step{flex:1;min-width:150px;max-width:230px;background:#11161f;border:1px solid #21262d;border-radius:10px;padding:16px 16px 14px;text-align:center;position:relative}
+.ov-ico{font-size:24px;margin-bottom:8px}
+.ov-t{font-size:13px;font-weight:700;color:#f0f6fc;margin-bottom:5px}
+.ov-d{font-size:11px;color:#8b949e;line-height:1.55}
+.ov-arrow{display:flex;align-items:center;color:#30363d;font-size:20px;padding:0 6px}
+.ov-1{border-top:2px solid #4493f8}
+.ov-2{border-top:2px solid #da3633}
+.ov-3{border-top:2px solid #e3b341}
+.ov-4{border-top:2px solid #3fb950}
+.ov-5{border-top:2px solid #8957e5}
+.ov-divider{max-width:1500px;margin:0 auto 8px;padding:0 30px;display:flex;align-items:center;gap:14px;color:#30363d;font-size:10px;letter-spacing:2px;text-transform:uppercase}
+.ov-divider::before,.ov-divider::after{content:"";flex:1;height:1px;background:#21262d}
+@media(max-width:900px){.ov-arrow{display:none}.ov-step{max-width:100%}}
+
+/* ── Positioning context for the absolute technical diagram ── */
+.diagram-canvas{position:relative;width:1900px;height:2130px;margin:24px auto 0}
+</style>
+</head>
+<body>
+<div class="page" id="page">
+
+<h1>⚡ FIE — Failure Intelligence Engine</h1>
+<p class="tagline">Complete System Architecture · v1.13.0 · 12-Layer Parallel Detection · LangGraph Pipeline · Feedback Loop · Streaming Interception</p>
+
+<!-- ═══════════ PLAIN-ENGLISH OVERVIEW (read this first) ═══════════ -->
+<div class="overview">
+  <div class="ov-head">The whole system in five steps</div>
+  <div class="ov-sub">New here? Read this strip first. FIE sits between your users and your AI model. It checks every prompt going in, lets safe ones reach your model, and checks every answer coming out — all explained below. The full technical map follows underneath.</div>
+  <div class="ov-flow">
+    <div class="ov-step ov-1">
+      <div class="ov-ico">📥</div>
+      <div class="ov-t">1 · A prompt arrives</div>
+      <div class="ov-d">A user sends a prompt through one line of code — the <code>@monitor()</code> decorator or the REST API.</div>
+    </div>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step ov-2">
+      <div class="ov-ico">🛡️</div>
+      <div class="ov-t">2 · The guard screens it</div>
+      <div class="ov-d">12 detectors run at once in under 20ms. Obvious attacks are blocked before your model ever sees them.</div>
+    </div>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step ov-3">
+      <div class="ov-ico">🤖</div>
+      <div class="ov-t">3 · Your model answers</div>
+      <div class="ov-d">Safe prompts pass straight through to your LLM. The answer goes back to the user with no delay.</div>
+    </div>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step ov-4">
+      <div class="ov-ico">🔬</div>
+      <div class="ov-t">4 · The answer is checked</div>
+      <div class="ov-d">In the background, 3 shadow models + an AI jury catch hallucinations. No added latency for the user.</div>
+    </div>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step ov-5">
+      <div class="ov-ico">🏷️</div>
+      <div class="ov-t">5 · A verdict + learning</div>
+      <div class="ov-d">Every request ends as VALIDATED, CORRECTED, or BLOCKED — and confirmed attacks are remembered for next time.</div>
+    </div>
+  </div>
+</div>
+<div class="ov-divider">Full technical architecture below</div>
+
+<div class="diagram-canvas" id="canvas">
+
+<!-- ═══════════ LAYOUT CONSTANTS (for reference)
+  PAGE WIDTH: 1900px
+  LEFT SIDEBAR:  x=22..220     (w=198)
+  THREADPOOL:    x=230..1200   (w=970)
+  RIGHT SIDEBAR: x=1250..1500  (w=250)
+  NOTES COLUMN:  x=1520..1880  (w=360)
+
+  ROWS (top edges):
+    ROW0 (Client):          y=82
+    GUARD SECTION top:      y=150
+    ROW1A (Layers A):       y=190
+    ROW1B (Layers B):       y=330
+    AGGREGATOR:             y=470
+    THREE-ZONES:            y=540
+    GUARD SECTION bottom ~= y=630
+    ROW2 (LLM+Scanner):     y=660
+    ROW3 (FastAPI):         y=890
+    LANGGRAPH SECTION top:  y=960
+    INGEST/CLASSIFY/EXTRACT:y=990
+    SHADOW ENSEMBLE header: y=1080
+    ENSEMBLE MODELS:        y=1100
+    FSV:                    y=1240
+    XGBOOST:                y=1340
+    JURY header:            y=1430
+    JURY AGENTS:            y=1450
+    VERDICT:                y=1580
+    EXPLAINABILITY:         y=1660
+    BUILD_RESPONSE:         y=1800
+    MONGODB+OUTCOMES:       y=1900
+    LEGEND:                 y=2020
+═══════════ -->
+
+<!-- ═══════════ SECTION BACKGROUNDS ═══════════ -->
+<div class="sbg s-guard"  style="left:22px;top:148px;width:1218px;height:492px"></div>
+<div class="sbg s-thread" style="left:228px;top:170px;width:982px;height:290px"></div>
+<div class="sbg s-pipe"   style="left:22px;top:958px;width:1218px;height:880px"></div>
+<div class="sbg s-shadow" style="left:228px;top:1078px;width:732px;height:130px"></div>
+<div class="sbg s-jury"   style="left:228px;top:1428px;width:732px;height:130px"></div>
+
+<!-- ═══════════ SECTION LABELS ═══════════ -->
+<div class="slbl" style="left:32px;top:138px;color:#ff7b72">⚔ Pre-Flight Adversarial Guard — fie/adversarial.py · fie/preflight.py</div>
+<div class="slbl" style="left:238px;top:160px;color:#ff9492">⚡ ThreadPoolExecutor — 12 Layers in Parallel · 10s timeout · Each layer is an independent black-box function</div>
+<div class="slbl" style="left:32px;top:948px;color:#58a6ff">🔗 LangGraph Pipeline — 12 Nodes · engine/pipeline/langgraph_pipeline.py</div>
+<div class="slbl" style="left:238px;top:1068px;color:#5b9cf6">Shadow Ensemble — 3 Groq models in parallel</div>
+<div class="slbl" style="left:238px;top:1418px;color:#ffa657">DiagnosticJury — 3 agents in parallel</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 0 — CLIENT  (centered in main column)
+══════════════════════════════════════════════════ -->
+<!-- Main column center ~ x=715, so center node at x=525, w=380 -->
+<div class="nd cu pb" id="n-client" style="left:525px;top:82px;width:380px;height:60px">
+  <div class="t">👤 Client / User App</div>
+  <div class="s">Python @monitor(domain=) decorator · POST /api/v1/monitor · fie-sdk (pip install fie-sdk)</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 1 — LEFT SIDEBAR
+══════════════════════════════════════════════════ -->
+<!-- Feedback Fast-Path: x=28, y=190 -->
+<div class="nd cfb pg" id="n-ffp" style="left:28px;top:190px;width:192px;height:100px">
+  <div class="t">⚡ Feedback Fast-Path</div>
+  <div class="s">is_whitelisted(prompt)? → allow<br>is_known_attack(prompt)? → block<br>O(1) hash · runs BEFORE all 12 layers</div>
+</div>
+
+<!-- SHA-256 Cache: x=28, y=306 -->
+<div class="nd cse" id="n-cache" style="left:28px;top:306px;width:192px;height:72px">
+  <div class="t">🗃 SHA-256 Result Cache</div>
+  <div class="s">512 entries · TTL 300s · LRU eviction<br>Domain-keyed: prompt+\x00domain=X</div>
+</div>
+
+<!-- Framing Filter: x=28, y=394 -->
+<div class="nd ca" id="n-frame" style="left:28px;top:394px;width:192px;height:106px">
+  <div class="t">🎭 Framing Filter</div>
+  <div class="s">Dampens weak layers ×0.72<br>Only when fictional/academic framing<br>Exempt: regex, direct_harm,<br>fiction_harm, virtualization</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 1 — RIGHT SIDEBAR (x=1250)
+══════════════════════════════════════════════════ -->
+<!-- Session Tracker -->
+<div class="nd cse pb" id="n-session" style="left:1250px;top:190px;width:240px;height:100px">
+  <div class="t">🔄 Session Tracker</div>
+  <div class="s">Crescendo boost (cap +0.20)<br>4 escalation rules · pre-boost stored<br>In-memory LRU · Redis (Cloud Run)</div>
+</div>
+
+<!-- LlamaGuard -->
+<div class="nd cll pgo" id="n-llama" style="left:1250px;top:306px;width:240px;height:100px">
+  <div class="t">🦙 LlamaGuard Tier-3 (UNCERTAIN)</div>
+  <div class="s">Prompt Guard 2 · 86M · via Groq (~300ms)<br>Circuit breaker · LRU cache<br>Fail-secure: unavailable → BLOCK</div>
+</div>
+
+<!-- Domain Thresholds -->
+<div class="nd ca pgo" id="n-domain" style="left:1250px;top:422px;width:240px;height:88px">
+  <div class="t">🎯 Domain-Aware Thresholds</div>
+  <div class="s">medical×0.80 · finance×0.82 · legal×0.83<br>education×0.88 · default×1.00 · dev×1.12<br>Auto-inferred from first 800 chars</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     12 LAYERS — Row A (L1–L6)  y=190, h=116
+     x pitch: 238 + (i*162), w=152
+     L1:238  L2:400  L3:562  L4:724  L5:886  L6:1048
+══════════════════════════════════════════════════ -->
+<div class="nd cl l1" id="l1" style="left:238px;top:190px;width:152px;height:116px">
+  <div class="t">L1 · Regex Pattern Library</div>
+  <div class="s">w = 1.5 (highest weight)<br>Near-zero FPR<br>Deterministic matching</div>
+</div>
+<div class="nd cl l2" id="l2" style="left:400px;top:190px;width:152px;height:116px">
+  <div class="t">L2 · PromptGuard Scorer</div>
+  <div class="s">Leet-speak normalization<br>w = 1.1<br>Multi-group cooccurrence</div>
+</div>
+<div class="nd cl l3" id="l3" style="left:562px;top:190px;width:152px;height:116px">
+  <div class="t">L3 · Many-Shot Detector</div>
+  <div class="s">Power-law scoring<br>w = 1.2<br>Injects CWD context</div>
+</div>
+<div class="nd cl l4" id="l4" style="left:724px;top:190px;width:152px;height:116px">
+  <div class="t">L4 · Indirect Injection</div>
+  <div class="s">doc / email / tools<br>w = 0.9<br>Context-aware</div>
+</div>
+<div class="nd cl l5" id="l5" style="left:886px;top:190px;width:152px;height:116px">
+  <div class="t">L5 · GCG Suffix Scanner</div>
+  <div class="s">Entropy + punct density<br>w = 1.3<br>Code-fence suppress</div>
+</div>
+<div class="nd cl l6" id="l6" style="left:1048px;top:190px;width:152px;height:116px">
+  <div class="t">L6 · Perplexity Proxy</div>
+  <div class="s">b64 / ROT / URL encoding<br>w = 0.7 (lowest)<br>Obfuscation detect</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     12 LAYERS — Row B (L7–L12)  y=330, h=116
+══════════════════════════════════════════════════ -->
+<div class="nd cl l7" id="l7" style="left:238px;top:330px;width:152px;height:116px">
+  <div class="t">L7 · PAIR v4 Classifier</div>
+  <div class="s">XGBoost · 3× hard-positive<br>97.18% TPR novel attacks<br>w = 1.0</div>
+</div>
+<div class="nd cl l8" id="l8" style="left:400px;top:330px;width:152px;height:116px">
+  <div class="t">L8 · Direct Harm</div>
+  <div class="s">2-gate: verb + target<br>w = 1.1<br>0.72 → 0.85 boost</div>
+</div>
+<div class="nd cl l9" id="l9" style="left:562px;top:330px;width:152px;height:116px">
+  <div class="t">L9 · Virtualization Det.</div>
+  <div class="s">Virtual-frame + nesting<br>depth analysis<br>w = 1.0</div>
+</div>
+<div class="nd cl l10" id="l10" style="left:724px;top:330px;width:152px;height:116px">
+  <div class="t">L10 · Fiction Harm</div>
+  <div class="s">Proximity scoring<br>Frame + target distance<br>w = 1.1</div>
+</div>
+<div class="nd cl l11" id="l11" style="left:886px;top:330px;width:152px;height:116px">
+  <div class="t">L11 · Multilingual 3-Tier</div>
+  <div class="s">Script anomaly + phrases<br>romanised (Pinyin/Arabizi/Romaji)<br>translate-then-PAIR · w = 1.0</div>
+</div>
+<!-- L12 Row B col 6 — Copyright reproduction -->
+<div class="nd cl l12" id="l12" style="left:1048px;top:330px;width:152px;height:116px">
+  <div class="t">L12 · Copyright</div>
+  <div class="s">Verbatim-reproduction requests<br>pattern-based, high precision<br>12.5% → 100% on its vector · w = 1.0</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     AGGREGATOR  y=470
+══════════════════════════════════════════════════ -->
+<div class="nd ca pgo" id="n-agg" style="left:228px;top:470px;width:982px;height:50px">
+  <div class="t" style="font-size:11.5px;text-align:center">
+    ⚖ Weighted Vote Aggregator → Corroboration Boost (+0.08 / +0.12) → Crescendo Trajectory Boost → Domain Multiplier → Three-Zone Router
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     THREE ZONES  y=542
+══════════════════════════════════════════════════ -->
+<!-- SAFE: x=228, w=230 -->
+<div class="nd cs pg" id="n-safe" style="left:228px;top:542px;width:240px;height:72px">
+  <div class="t">✅ CLEAR SAFE</div>
+  <div class="s">confidence &lt; threshold × 0.60<br>Allow + cache immediately</div>
+</div>
+<!-- UNCERTAIN: x=508, w=340 -->
+<div class="nd cun pgo" id="n-unc" style="left:508px;top:542px;width:340px;height:72px">
+  <div class="t">⚠ UNCERTAIN → LlamaGuard</div>
+  <div class="s">0.60× – 1.0× of per-type threshold<br>Fail-secure: block if LG unavailable · FIE_UNCERTAIN_ALLOW=1 for dev</div>
+</div>
+<!-- ATTACK: x=888, w=240 -->
+<div class="nd cat pr" id="n-atk" style="left:888px;top:542px;width:240px;height:72px">
+  <div class="t">🚫 CLEAR ATTACK</div>
+  <div class="s">confidence ≥ threshold<br>Block + record in feedback_store</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 2 — LLM + OUTPUT SCANNING  y=660
+══════════════════════════════════════════════════ -->
+<!-- LLM Call: x=228, w=290 -->
+<div class="nd cllm pb" id="n-llm" style="left:228px;top:660px;width:290px;height:80px">
+  <div class="t">🤖 LLM Call (User's Model)</div>
+  <div class="s">Response returned immediately to user<br>500–2000ms typical · @monitor hooks</div>
+</div>
+
+<!-- Output Scanner: x=560, w=360 -->
+<div class="nd csc pp" id="n-scan" style="left:560px;top:660px;width:360px;height:80px">
+  <div class="t">🔍 Output Scanner (Non-Streaming)</div>
+  <div class="s">scan_output_async() · daemon thread · zero added latency<br>Gate1: POLICY_ECHO (0.92) · Gate2: SYS_PROMPT_LEAK (0.88)<br>Gate3: HARMFUL_OUTPUT (0.90) · → feedback_store on flag</div>
+</div>
+
+<!-- Stream Guard: x=560, y=762, w=360 -->
+<div class="nd cst pp" id="n-stream" style="left:560px;top:762px;width:360px;height:80px">
+  <div class="t">🛡 Streaming Interception</div>
+  <div class="s">stream_guard / astream_guard · fie/stream_guard.py<br>Buffer 400 chars → scan_output → CLEAN: pass-through<br>FLAGGED: yield refusal + stop · → feedback_store on flag</div>
+</div>
+
+<!-- Feedback Store: x=980, y=648, w=310, h=210 -->
+<div class="nd cfb pg" id="n-fb" style="left:980px;top:648px;width:310px;height:210px">
+  <div class="t">🔁 Feedback Store · fie/feedback_store.py</div>
+  <div class="s" style="margin-top:6px">
+    record(kind, flag_type, confidence, prompt)<br>
+    → MongoDB: fie_db.flagged_events<br>
+    → ~/.fie/flagged_events.jsonl (fallback)<br><br>
+    apply_label(event_id, "true_positive")<br>
+    → _KNOWN_ATTACK_HASHES (instant block)<br>
+    apply_label(event_id, "false_positive")<br>
+    → _WHITELIST_HASHES (instant allow)<br><br>
+    GET /api/v1/flags · POST /flags/{id}/label
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 3 — FASTAPI  y=890
+══════════════════════════════════════════════════ -->
+<div class="nd cfa pt" id="n-api" style="left:228px;top:878px;width:700px;height:66px">
+  <div class="t">⚡ FastAPI Server · app/main.py</div>
+  <div class="s">Routes: /track · /analyze · /diagnose · /monitor · /feedback · /calibration · /trend · /clusters · /telemetry · /notify · /digest · /flags · /playground · Rate limiting · CORS · Security headers · Request ID correlation</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 4 — LANGGRAPH PIPELINE
+══════════════════════════════════════════════════ -->
+<!-- Ingest/Classify/Extract chain: y=990 -->
+<div class="nd cpl" id="n-ingest" style="left:38px;top:990px;width:160px;height:68px">
+  <div class="t">📥 Ingest</div>
+  <div class="s">Prompt + context<br>Session binding</div>
+</div>
+<div class="nd cpl" id="n-classify" style="left:214px;top:990px;width:160px;height:68px">
+  <div class="t">🏷 Classify</div>
+  <div class="s">Question type<br>factual / reasoning</div>
+</div>
+<div class="nd cpl" id="n-extract" style="left:390px;top:990px;width:180px;height:68px">
+  <div class="t">🔎 Extract Claims</div>
+  <div class="s">Atomic factual claims<br>for ground-truth verify</div>
+</div>
+
+<!-- Shadow Ensemble Models: y=1100 -->
+<div class="nd cen pb" id="n-m1" style="left:240px;top:1100px;width:220px;height:100px">
+  <div class="t">🔵 llama-3.3-70b-versatile</div>
+  <div class="s">Primary reasoning · Groq API<br>ensemble_disagreement #1 feature<br>_ensemble_blind flag if &lt;2 models</div>
+</div>
+<div class="nd cen pb" id="n-m2" style="left:476px;top:1100px;width:220px;height:100px">
+  <div class="t">🟣 deepseek-r1-distill-llama-70b</div>
+  <div class="s">Independent 2nd opinion<br>Different reasoning chain<br>Parallel Groq call</div>
+</div>
+<div class="nd cen pb" id="n-m3" style="left:712px;top:1100px;width:220px;height:100px">
+  <div class="t">🟡 qwen-qwq-32b</div>
+  <div class="s">Cross-check · diff. training dist.<br>Parallel Groq call<br>&lt;2 models → _ensemble_blind=True</div>
+</div>
+
+<!-- Ground Truth: x=38, y=1230 -->
+<div class="nd cgt" id="n-gt" style="left:38px;top:1230px;width:196px;height:100px">
+  <div class="t">🌍 Ground Truth Verification</div>
+  <div class="s">Wikidata → Serper (Google)<br>Self-consistency check<br>Factual questions only<br>→ Escalate to jury</div>
+</div>
+
+<!-- FSV: x=240, y=1234, w=692 -->
+<div class="nd cfs pt" id="n-fsv" style="left:240px;top:1234px;width:692px;height:76px">
+  <div class="t">📊 Build FSV — 560-Feature Failure Signal Vector (SHAP slim: top-10)</div>
+  <div class="s">entropy.py: response variance · consistency.py: self-consistency across rephrases · ensemble.py: inter-model disagreement (skipped if _ensemble_blind) · embedding.py: semantic distance · SHAP ablation: 10 features = 100% predictive signal</div>
+</div>
+
+<!-- XGBoost: x=240, y=1334, w=692 -->
+<div class="nd cxg po" id="n-xgb" style="left:240px;top:1334px;width:692px;height:76px">
+  <div class="t">🌲 XGBoost Classifier v4 · engine/failure_classifier.py · &lt;10ms</div>
+  <div class="s">FSV (560 features, slim: top-10) → failure_type: hallucination|adversarial|degradation|safe · failure_prob: 0.0–1.0 (Platt calibrated) · top_features: SHAP · fallback: v4→v3→v2→rule-based</div>
+</div>
+
+<!-- DiagnosticJury Agents: y=1450 -->
+<div class="nd cjr po" id="n-j1" style="left:240px;top:1450px;width:220px;height:100px">
+  <div class="t">⚔ Adversarial Specialist</div>
+  <div class="s">Re-evaluates attack layers<br>with full context + FSV<br>attack_signal confidence</div>
+</div>
+<div class="nd cjr po" id="n-j2" style="left:476px;top:1450px;width:220px;height:100px">
+  <div class="t">📝 Linguistic Auditor</div>
+  <div class="s">Grammar analysis<br>Hedge phrases · refusal signals<br>Confidence calibration</div>
+</div>
+<div class="nd cjr po" id="n-j3" style="left:712px;top:1450px;width:220px;height:100px">
+  <div class="t">🎓 Domain Critic</div>
+  <div class="s">Factual claim grounding<br>External source verify<br>Domain plausibility</div>
+</div>
+
+<!-- JuryVerdict: x=240, y=1578, w=692 -->
+<div class="nd cvd po" id="n-verdict" style="left:240px;top:1578px;width:692px;height:58px">
+  <div class="t">⚖ JuryVerdict — weighted merge by failure_type · requires_human_review flag</div>
+</div>
+
+<!-- Explainability: x=240, y=1662, w=692, h=112 -->
+<div class="nd cex pt" id="n-explain" style="left:240px;top:1662px;width:692px;height:112px">
+  <div class="t">🧠 Explainability Layer · engine/explainability/explanation_builder.py</div>
+  <div class="s" style="margin-top:5px">
+    ExplanationBundle: signals [{name, value, weight}] · evidence (matched text) · attributions (SHAP→features)<br>
+    decision_trace: ordered steps · uncertainty_notes: near-threshold reasons<br>
+    Internal mode: full detail (operators/audit) · External mode: sanitized, safe_to_expose (end users)<br>
+    Score = 0.25×jury + 0.20×evidence + 0.20×signals + 0.20×fix + 0.15×source − penalties
+  </div>
+</div>
+
+<!-- Build Response: x=240, y=1800, w=692 -->
+<div class="nd cpl pb" id="n-resp" style="left:240px;top:1800px;width:692px;height:58px">
+  <div class="t">📤 build_response → Return to User · VALIDATED / CORRECTED / BLOCKED</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     EMAIL ALERTS (right lane of pipeline)
+══════════════════════════════════════════════════ -->
+<div class="nd cem pgo" id="n-email" style="left:990px;top:1100px;width:300px;height:228px">
+  <div class="t">📧 Email Alerts · app/notifications.py</div>
+  <div class="s" style="margin-top:8px">
+    All sends: fire-and-forget daemon threads<br>
+    Never blocks the main request<br><br>
+    🚨 <b style="color:#ffa657">attack_detected</b><br>
+    &nbsp;&nbsp;→ jury confirms · ALERT_EMAIL<br><br>
+    👁 <b style="color:#ffa657">human_review</b><br>
+    &nbsp;&nbsp;→ requires_human_review=True<br><br>
+    📉 <b style="color:#ffa657">degradation_spike</b><br>
+    &nbsp;&nbsp;→ risk rate &gt;40% · 1×/hr/tenant<br><br>
+    📅 <b style="color:#ffa657">weekly_digest</b><br>
+    &nbsp;&nbsp;→ POST /admin/digest or cron
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ROW 5 — BOTTOM: MONGODB + OUTCOMES  y=1900
+══════════════════════════════════════════════════ -->
+<div class="nd cmg pg" id="n-mongo" style="left:38px;top:1900px;width:250px;height:92px">
+  <div class="t">🍃 MongoDB · storage/database.py</div>
+  <div class="s">fie_db.flagged_events · sessions<br>analytics · thresholds (hot-reload)<br>In-memory fallback when offline</div>
+</div>
+
+<div class="nd cs" id="n-val" style="left:840px;top:1900px;width:200px;height:68px">
+  <div class="t">✅ VALIDATED</div>
+  <div class="s">Response confirmed correct<br>Primary model trusted</div>
+</div>
+<div class="nd cun" id="n-cor" style="left:1060px;top:1900px;width:200px;height:68px">
+  <div class="t">🔧 CORRECTED</div>
+  <div class="s">Response corrected<br>Shadow consensus used</div>
+</div>
+<div class="nd cat" id="n-blk" style="left:1280px;top:1900px;width:200px;height:68px">
+  <div class="t">🚫 BLOCKED</div>
+  <div class="s">Response suppressed<br>Refusal returned</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     NOTE PANELS (far right column x=1540)
+══════════════════════════════════════════════════ -->
+<!-- Feedback Loop Flow -->
+<div class="nd cnp" id="n-fbnote" style="left:1540px;top:648px;width:330px;height:222px">
+  <div class="t" style="color:#3fb950;margin-bottom:8px">🔁 Feedback Loop Flow</div>
+  <div class="s">
+    1. Detection event fires (CLEAR ATTACK or output flag)<br><br>
+    2. feedback_store.record() → MongoDB + JSONL<br><br>
+    3. Reviewer: POST /flags/{id}/label<br>&nbsp;&nbsp;&nbsp;{"label":"true_positive"}<br><br>
+    4. apply_label() adds SHA-256(prompt) to<br>&nbsp;&nbsp;&nbsp;_KNOWN_ATTACK_HASHES instantly<br><br>
+    5. Next identical prompt → blocked in<br>&nbsp;&nbsp;&nbsp;microseconds, skips all 12 layers<br><br>
+    6. Server restart → _load_confirmed_from_db()<br>&nbsp;&nbsp;&nbsp;rebuilds sets from MongoDB
+  </div>
+</div>
+
+<!-- Key Design Decisions -->
+<div class="nd cnp" id="n-design" style="left:1540px;top:892px;width:330px;height:300px">
+  <div class="t" style="color:#58a6ff;margin-bottom:8px">⚙ Key Design Decisions</div>
+  <div class="s">
+    <b style="color:#c9d1d9">11 parallel layers</b><br>
+    Total latency = slowest, not sum<br><br>
+    <b style="color:#c9d1d9">Feedback fast-path</b><br>
+    O(1) hash — no model inference for confirmed attacks<br><br>
+    <b style="color:#c9d1d9">Fail-secure UNCERTAIN</b><br>
+    LG outage degrades precision, not security<br><br>
+    <b style="color:#c9d1d9">400-char stream buffer</b><br>
+    Catches policy-echo without destroying streaming UX<br><br>
+    <b style="color:#c9d1d9">Fire-and-forget emails</b><br>
+    SendGrid outage never causes request failures<br><br>
+    <b style="color:#c9d1d9">Two explainability modes</b><br>
+    Internal mode for operators, external hides<br>
+    threshold values from attackers<br><br>
+    <b style="color:#c9d1d9">Domain multipliers</b><br>
+    One knob per domain — same detection logic,<br>
+    different risk tolerance
+  </div>
+</div>
+
+<!-- Explanation Modes note -->
+<div class="nd cnp" id="n-expnote" style="left:990px;top:1662px;width:310px;height:200px">
+  <div class="t" style="color:#3fb950;margin-bottom:8px">🧠 Explanation Modes</div>
+  <div class="s">
+    <b style="color:#c9d1d9">Internal mode</b> (operators/audit):<br>
+    Full SHAP values · raw matched text<br>
+    Specific threshold values · all signals<br><br>
+    <b style="color:#c9d1d9">External mode</b> (end users):<br>
+    Outcome labels only · no thresholds<br>
+    safe_to_expose=True signals only<br>
+    Hides detection mechanics from attackers<br><br>
+    <b style="color:#c9d1d9">Confidence formula:</b><br>
+    0.25×jury + 0.20×evidence + 0.20×signals<br>
+    + 0.20×fix + 0.15×source − penalties
+  </div>
+</div>
+
+<!-- Outcome description note -->
+<div class="nd cnp" style="left:990px;top:1880px;width:510px;height:88px">
+  <div class="t" style="color:#58a6ff;margin-bottom:5px">📊 Three Outcomes + MongoDB Persistence</div>
+  <div class="s">
+    VALIDATED: primary model confirmed correct by shadow jury · CORRECTED: hallucination detected, shadow consensus replaces primary response · BLOCKED: adversarial attack intercepted before LLM ran · All events persisted to MongoDB with full trace, SHAP values, and jury reasoning.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     LEGEND
+══════════════════════════════════════════════════ -->
+<div class="legend" style="left:38px;top:2024px;width:1840px">
+  <span class="lg" style="background:#1c0e0e;border-color:#da3633;color:#ff7b72">⚔ Adversarial Detection</span>
+  <span class="lg" style="background:#0d1a2e;border-color:#4493f8;color:#79bcff">🤖 LLM / Model Call</span>
+  <span class="lg" style="background:#150d24;border-color:#8957e5;color:#bc8cff">🔍 Output Scanner</span>
+  <span class="lg" style="background:#0a1f0a;border-color:#3fb950;color:#56d364">🔁 Feedback Loop</span>
+  <span class="lg" style="background:#0d1622;border-color:#1f6feb;color:#58a6ff">🔗 LangGraph Pipeline</span>
+  <span class="lg" style="background:#1c1200;border-color:#db6d28;color:#ffa657">🌲 XGBoost Classifier</span>
+  <span class="lg" style="background:#091a14;border-color:#1a7f64;color:#3fb950">🧠 Explainability</span>
+  <span class="lg" style="background:#1a1500;border-color:#d29922;color:#e3b341">📧 Email Alerts</span>
+  <span class="lg" style="background:#091620;border-color:#0969da;color:#58a6ff">🌐 Shadow Ensemble</span>
+  <span class="lg" style="background:#1a0d00;border-color:#bd561d;color:#ffa657">👨‍⚖️ DiagnosticJury</span>
+  <span class="lg" style="background:#0e1628;border-color:#1f6feb;color:#58a6ff">🔄 Session Tracker</span>
+  <span class="lg" style="background:#0c1220;border-color:#2d3e58;color:#6e8aaa">📝 Notes / Design</span>
+</div>
+<p style="position:absolute;left:38px;top:2070px;font-size:9px;color:#30383f;letter-spacing:1px">
+  FIE v1.13.0 · Ayush Singh · github.com/AyushSingh110/Failure_Intelligence_System
+</p>
+
+<!-- ══════════════════════════════════════════════════
+     SVG CONNECTIONS
+     All coordinates carefully matched to node positions above.
+══════════════════════════════════════════════════ -->
+<svg id="sv" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab"  markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#58a6ff"/></marker>
+  <marker id="ar"  markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#ff7b72"/></marker>
+  <marker id="ag"  markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#56d364"/></marker>
+  <marker id="ago" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#e3b341"/></marker>
+  <marker id="ap"  markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#bc8cff"/></marker>
+  <marker id="ao"  markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#ffa657"/></marker>
+  <marker id="at"  markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3z" fill="#39d3bb"/></marker>
+</defs>
+
+<!-- ── 1. Client → Guard center (down) ── -->
+<!-- Client center-x = 525+190=715, bottom=142 → agg area top=148 -->
+<path id="p01" d="M715,142 L715,170" stroke="#58a6ff" stroke-width="2" fill="none" marker-end="url(#ab)"/>
+
+<!-- ── 2. Client → FFP (dashed arc left) ── -->
+<path d="M525,112 C380,112 224,165 124,220" stroke="#56d364" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#ag)" opacity=".7"/>
+
+<!-- ── 3. All layers → Aggregator (fan in to agg top center x=719, y=470) ── -->
+<!-- L1 bottom: x=314, y=306; L2:476,306; L3:638,306; L4:800,306; L5:962,306; L6:1124,306 -->
+<!-- L7 bottom: x=314, y=446; L8:476,446; L9:638,446; L10:800,446; L11:962,446 -->
+<path id="pl1a" d="M314,306 C314,395 600,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl2a" d="M476,306 C476,388 620,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl3a" d="M638,306 C638,390 690,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl4a" d="M800,306 C800,390 760,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl5a" d="M962,306 C962,388 840,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl6a" d="M1124,306 C1124,395 860,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl7a" d="M314,446 L314,460 C314,470 480,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl8a" d="M476,446 C476,460 560,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl9a" d="M638,446 L638,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl10a" d="M800,446 C800,460 770,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl11a" d="M962,446 C962,460 850,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+<path id="pl12a" d="M1124,446 C1124,462 920,470 719,470" stroke="#a01010" stroke-width="1" fill="none" marker-end="url(#ar)" opacity=".55"/>
+
+<!-- ── 4. Aggregator → Three zones ── -->
+<!-- Aggregator bottom y=520; SAFE center x=348, UNCERT center x=678, ATTACK center x=1008 -->
+<path d="M348,520 L348,542" stroke="#56d364" stroke-width="1.5" fill="none" marker-end="url(#ag)"/>
+<path d="M678,520 L678,542" stroke="#e3b341" stroke-width="1.5" fill="none" marker-end="url(#ago)"/>
+<path d="M1008,520 L1008,542" stroke="#ff7b72" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+
+<!-- ── 5. UNCERTAIN → LlamaGuard (arc right) ── -->
+<!-- UNCERT right edge x=848, center y=578; LlamaGuard left x=1250, center y=356 -->
+<path d="M848,578 C1060,578 1150,380 1250,356" stroke="#e3b341" stroke-width="1.5" fill="none" stroke-dasharray="6,3" marker-end="url(#ago)" opacity=".8"/>
+
+<!-- ── 6. SAFE → LLM (down) ── -->
+<!-- SAFE bottom: x=348, y=614; LLM top: x=373, y=660 -->
+<path id="p06" d="M348,614 L348,660" stroke="#56d364" stroke-width="1.5" fill="none" marker-end="url(#ag)"/>
+
+<!-- ── 7. LLM right → Output Scanner left ── -->
+<!-- LLM right: x=518, y=700; Scanner left: x=560, y=700 -->
+<path d="M518,700 L560,700" stroke="#bc8cff" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#ap)" opacity=".9"/>
+
+<!-- ── 8. Scanner bottom → Stream Guard top ── -->
+<!-- Scanner bottom center: x=740, y=740; Stream Guard top center: x=740, y=762 -->
+<path d="M740,740 L740,762" stroke="#8957e5" stroke-width="1.2" fill="none" marker-end="url(#ap)" opacity=".7"/>
+
+<!-- ── 9. Scanner right → Feedback Store ── -->
+<!-- Scanner right: x=920, y=690; FB Store left: x=980, y=718 -->
+<path d="M920,690 L980,718" stroke="#56d364" stroke-width="1.5" fill="none" marker-end="url(#ag)" opacity=".8"/>
+
+<!-- ── 10. Stream Guard right → Feedback Store ── -->
+<!-- Stream right: x=920, y=802; FB left: x=980, y=780 -->
+<path d="M920,802 L980,780" stroke="#56d364" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#ag)" opacity=".7"/>
+
+<!-- ── 11. ATTACK right → Feedback Store (arc) ── -->
+<!-- ATTACK right x=1128, y=578; FB top x=1135, y=648 -->
+<path d="M1128,578 C1200,578 1200,620 1135,648" stroke="#ff7b72" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#ar)" opacity=".65"/>
+
+<!-- ── 12. Feedback Store → FFP (feedback learning loop, dashed) ── -->
+<!-- FB left: x=980, y=680; arc back to FFP right: x=220, y=240 -->
+<path d="M980,680 C900,640 860,580 860,540 C860,480 820,380 560,310 C380,258 220,264 220,240" stroke="#56d364" stroke-width="1.5" fill="none" stroke-dasharray="8,4" marker-end="url(#ag)" opacity=".4"/>
+
+<!-- ── 13. LLM bottom → FastAPI ── -->
+<!-- LLM bottom: x=373, y=740; FastAPI top: x=373, y=878 -->
+<path id="p12" d="M373,740 L373,878" stroke="#39d3bb" stroke-width="1.5" fill="none" marker-end="url(#at)" opacity=".75"/>
+
+<!-- ── 14. FastAPI → LangGraph (Ingest) ── -->
+<!-- FastAPI bottom: x=450, y=944; arc → Ingest top: x=118, y=990 -->
+<path id="p13" d="M450,944 C450,970 200,970 118,990" stroke="#39d3bb" stroke-width="1.5" fill="none" marker-end="url(#at)" opacity=".75"/>
+
+<!-- ── 15. Ingest → Classify → Extract (chain) ── -->
+<path d="M198,1024 L214,1024" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".85"/>
+<path d="M374,1024 L390,1024" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".85"/>
+
+<!-- ── 16. Extract → Shadow Ensemble (fan down) ── -->
+<!-- Extract bottom center: x=480, y=1058 -->
+<path d="M480,1058 C480,1082 350,1092 350,1100" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".75"/>
+<path d="M480,1058 C480,1082 586,1092 586,1100" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".75"/>
+<path d="M480,1058 C480,1082 822,1092 822,1100" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".75"/>
+
+<!-- ── 17. Ensemble models → FSV (converge) ── -->
+<!-- M1 bottom: x=350, y=1200; M2: x=586; M3: x=822; FSV top center: x=586, y=1234 -->
+<path d="M350,1200 C350,1220 460,1228 560,1234" stroke="#0969da" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".75"/>
+<path d="M586,1200 L586,1234" stroke="#0969da" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".75"/>
+<path d="M822,1200 C822,1220 720,1228 620,1234" stroke="#0969da" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".75"/>
+
+<!-- ── 18. Ground Truth → FSV (dashed) ── -->
+<!-- GT right: x=234, y=1280; FSV left: x=240, y=1272 -->
+<path d="M234,1280 L240,1272" stroke="#1a7f64" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#at)" opacity=".75"/>
+
+<!-- ── 19. FSV → XGBoost ── -->
+<path id="p18" d="M586,1310 L586,1334" stroke="#1a7f64" stroke-width="2" fill="none" marker-end="url(#at)"/>
+
+<!-- ── 20. XGBoost → Jury agents (fan) ── -->
+<!-- XGBoost bottom center: x=586, y=1410; Jury top centers: J1=350, J2=586, J3=822 y=1450 -->
+<path id="p19" d="M586,1410 C586,1432 350,1440 350,1450" stroke="#db6d28" stroke-width="1.5" fill="none" marker-end="url(#ao)"/>
+<path d="M586,1410 L586,1450" stroke="#db6d28" stroke-width="1.5" fill="none" marker-end="url(#ao)"/>
+<path d="M586,1410 C586,1432 822,1440 822,1450" stroke="#db6d28" stroke-width="1.5" fill="none" marker-end="url(#ao)"/>
+
+<!-- ── 21. Jury → Verdict (converge) ── -->
+<!-- J1 bottom: x=350, y=1550; J2: x=586; J3: x=822; Verdict top center: x=586, y=1578 -->
+<path d="M350,1550 C350,1566 460,1572 560,1578" stroke="#bd561d" stroke-width="1.5" fill="none" marker-end="url(#ao)" opacity=".85"/>
+<path d="M586,1550 L586,1578" stroke="#bd561d" stroke-width="1.5" fill="none" marker-end="url(#ao)" opacity=".85"/>
+<path d="M822,1550 C822,1566 720,1572 620,1578" stroke="#bd561d" stroke-width="1.5" fill="none" marker-end="url(#ao)" opacity=".85"/>
+
+<!-- ── 22. Verdict → Explainability ── -->
+<path id="p21" d="M586,1636 L586,1662" stroke="#bd561d" stroke-width="2" fill="none" marker-end="url(#ao)"/>
+
+<!-- ── 23. Explainability → Build Response ── -->
+<path id="p22" d="M586,1774 L586,1800" stroke="#1a7f64" stroke-width="2" fill="none" marker-end="url(#at)"/>
+
+<!-- ── 24. Build Response → MongoDB (left arc) ── -->
+<!-- Response left x=240, y=1829; MongoDB top center: x=163, y=1900 -->
+<path d="M240,1829 C160,1829 163,1870 163,1900" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#ab)" opacity=".65"/>
+
+<!-- ── 25. Build Response → Outcomes (fan right) ── -->
+<!-- Response bottom center: x=586, y=1858; VALID: x=940, CORR: x=1160, BLKD: x=1380 all y=1900 -->
+<path d="M586,1858 C586,1882 940,1888 940,1900" stroke="#56d364" stroke-width="1.5" fill="none" marker-end="url(#ag)" opacity=".65"/>
+<path d="M586,1858 C586,1882 1160,1888 1160,1900" stroke="#e3b341" stroke-width="1.5" fill="none" marker-end="url(#ago)" opacity=".65"/>
+<path d="M586,1858 C586,1882 1380,1888 1380,1900" stroke="#ff7b72" stroke-width="1.5" fill="none" marker-end="url(#ar)" opacity=".65"/>
+
+<!-- ── 26. Verdict → Email Alerts (dashed) ── -->
+<!-- Verdict right: x=932, y=1607; Email bottom: x=1140, y=1328 -->
+<path d="M932,1607 C1060,1607 1140,1500 1140,1328" stroke="#e3b341" stroke-width="1.5" fill="none" stroke-dasharray="6,3" marker-end="url(#ago)" opacity=".65"/>
+
+<!-- ── 27. Session Tracker → Aggregator ── -->
+<!-- Session bottom: x=1370, y=290; arc → Agg right: x=1210, y=490 -->
+<path d="M1370,290 C1370,420 1260,460 1210,490" stroke="#58a6ff" stroke-width="1" fill="none" stroke-dasharray="5,3" marker-end="url(#ab)" opacity=".45"/>
+
+<!-- ── 28. Domain Thresholds → Aggregator ── -->
+<!-- Domain bottom: x=1370, y=510; Agg right: x=1210, y=495 -->
+<path d="M1370,510 C1300,510 1260,500 1210,495" stroke="#e3b341" stroke-width="1" fill="none" stroke-dasharray="5,3" marker-end="url(#ago)" opacity=".45"/>
+
+<!-- ══════════════════════════════════════════════════
+     ANIMATED PARTICLES
+══════════════════════════════════════════════════ -->
+<!-- Client → Guard -->
+<circle r="5" fill="#58a6ff" opacity=".9"><animateMotion dur="1.3s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p01"/></animateMotion></circle>
+
+<!-- Layers → Aggregator -->
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.00s" repeatCount="indefinite"><mpath xlink:href="#pl1a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.10s" repeatCount="indefinite"><mpath xlink:href="#pl2a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.20s" repeatCount="indefinite"><mpath xlink:href="#pl3a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.30s" repeatCount="indefinite"><mpath xlink:href="#pl4a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.40s" repeatCount="indefinite"><mpath xlink:href="#pl5a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.50s" repeatCount="indefinite"><mpath xlink:href="#pl6a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.60s" repeatCount="indefinite"><mpath xlink:href="#pl7a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.70s" repeatCount="indefinite"><mpath xlink:href="#pl8a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.80s" repeatCount="indefinite"><mpath xlink:href="#pl9a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="0.90s" repeatCount="indefinite"><mpath xlink:href="#pl10a"/></animateMotion></circle>
+<circle r="4" fill="#ff7b72" opacity=".85"><animateMotion dur="1.1s" begin="1.00s" repeatCount="indefinite"><mpath xlink:href="#pl11a"/></animateMotion></circle>
+<circle r="4" fill="#3fb950" opacity=".85"><animateMotion dur="1.1s" begin="1.10s" repeatCount="indefinite"><mpath xlink:href="#pl12a"/></animateMotion></circle>
+
+<!-- Safe → LLM -->
+<circle r="4.5" fill="#56d364" opacity=".9"><animateMotion dur="0.9s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p06"/></animateMotion></circle>
+
+<!-- LLM → FastAPI -->
+<circle r="4.5" fill="#39d3bb" opacity=".85"><animateMotion dur="1.2s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p12"/></animateMotion></circle>
+
+<!-- FastAPI → LangGraph -->
+<circle r="4.5" fill="#39d3bb" opacity=".85"><animateMotion dur="1.5s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p13"/></animateMotion></circle>
+
+<!-- FSV → XGBoost -->
+<circle r="4.5" fill="#3fb950" opacity=".9"><animateMotion dur="0.8s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p18"/></animateMotion></circle>
+
+<!-- XGBoost → Jury -->
+<circle r="4.5" fill="#ffa657" opacity=".9"><animateMotion dur="0.9s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p19"/></animateMotion></circle>
+
+<!-- Verdict → Explainability -->
+<circle r="4.5" fill="#ffa657" opacity=".9"><animateMotion dur="0.8s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p21"/></animateMotion></circle>
+
+<!-- Explainability → Response -->
+<circle r="4.5" fill="#3fb950" opacity=".9"><animateMotion dur="0.8s" repeatCount="indefinite" calcMode="linear"><mpath xlink:href="#p22"/></animateMotion></circle>
+
+</svg>
+
+</div><!-- end .diagram-canvas -->
+
+</div><!-- end .page -->
+
+<script>
+(function(){
+  const canvas = document.getElementById('canvas');
+  const sv   = document.getElementById('sv');
+  const H = 2130;
+  const W = 1900;
+  if(canvas){ canvas.style.minHeight = H+'px'; }
+  if(sv){ sv.setAttribute('width', W+'px'); sv.setAttribute('height', H+'px'); }
+})();
+</script>
+</body>
+</html>
