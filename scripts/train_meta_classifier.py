@@ -37,19 +37,28 @@ CHECKPOINT_PATH = ROOT / "data" / "meta_clf_checkpoint.jsonl"
 MODEL_OUT_PKL   = ROOT / "fie" / "models" / "meta_clf.pkl"
 MODEL_OUT_JSON  = ROOT / "fie" / "models" / "meta_clf.json"
 
-LAYER_NAMES = [
-    "regex",
-    "semantic",
-    "indirect",
-    "gcg_suffix",
-    "many_shot",
-    "pair",
-    "base64",
-    "unicode",
-    "fiction_harm",
-    "payload_split",
-    "multilingual",
-]
+def _live_layer_names() -> list[str]:
+    """
+    Feature names taken from the RUNNING pipeline, never hardcoded.
+
+    This list used to be a literal, and it silently rotted: the layers were
+    renamed after training (semantic -> prompt_guard, pair -> pair_classifier,
+    indirect -> indirect_injection) and three others were merged away. The
+    trained model kept asking for the old names, `layer_scores.get(name, 0.0)`
+    dutifully returned 0.0, and 6 of 11 features became constant zero — while
+    the classifier still fired on 27% of prompts and blended into the final
+    confidence. Nothing errored. Nothing warned.
+
+    Deriving the names from scan_prompt() means a future rename produces a
+    retrain that is obviously different, instead of a model quietly reading
+    zeros.
+    """
+    from fie.adversarial import scan_prompt, warmup
+    warmup()
+    return sorted(scan_prompt("probe").layer_scores.keys())
+
+
+LAYER_NAMES: list[str] = []   # populated in main() from the live pipeline
 
 
 def _load_dataset(path: str) -> list[dict]:
@@ -112,8 +121,22 @@ def main() -> None:
                         help="flush checkpoint every N prompts (default: 50)")
     args = parser.parse_args()
 
+    global LAYER_NAMES
+    LAYER_NAMES = _live_layer_names()
+    print(f"Live pipeline exposes {len(LAYER_NAMES)} layers: {', '.join(LAYER_NAMES)}")
+
     dataset = _load_dataset(args.dataset)
     print(f"Loaded {len(dataset)} rows from {args.dataset}")
+
+    # A checkpoint scored against different layer names cannot be mixed with
+    # new rows — that is precisely how the previous model ended up training on
+    # columns that no longer existed.
+    if CHECKPOINT_PATH.exists() and not args.resume:
+        import shutil as _shutil
+        backup = CHECKPOINT_PATH.with_suffix(".jsonl.bak")
+        _shutil.move(str(CHECKPOINT_PATH), str(backup))
+        print(f"Archived previous checkpoint -> {backup.name} "
+              f"(scored against a different layer set)")
 
     # ── Scoring phase ─────────────────────────────────────────────────────────
     already_scored: set[str] = set()
@@ -136,10 +159,14 @@ def main() -> None:
             print(f"  [warn] row {i}: scan failed ({exc}) — skipping")
             continue
 
+        # Store EVERY score the pipeline produced, not a fixed subset, so a
+        # future layer rename does not invalidate an expensive checkpoint.
+        # `_schema` records which names this row was scored against.
         record = {
             "prompt": prompt,
             "label": row["label"],
-            **{f"layer_{k}": scores.get(k, 0.0) for k in LAYER_NAMES},
+            "_schema": ",".join(LAYER_NAMES),
+            **{f"layer_{k}": float(v) for k, v in scores.items()},
         }
         checkpoint_file.write(json.dumps(record) + "\n")
         batch_count += 1

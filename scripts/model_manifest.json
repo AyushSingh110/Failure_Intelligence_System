@@ -65,15 +65,15 @@
     },
     {
       "path": "fie/models/meta_clf.pkl",
-      "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
-      "size": 179675,
-      "used_by": "SDK meta-layer — XGBoost meta-classifier on 11 layer scores (v1.14.0)"
+      "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+      "size": 212131,
+      "used_by": "SDK meta-layer - XGBoost meta-classifier on all 12 layer scores. Retrained 2026-08-11: the previous model was fitted on an older layer naming scheme, so 6 of its 11 features were constant zero and it never saw pair_classifier. Trained on a 1:1 balanced set."
     },
     {
       "path": "fie/models/meta_clf.json",
-      "sha256": "a7389bb4d198eaec29222cb35cf5f786d865b3e9f0a457a2c6b63159189ef620",
-      "size": 602,
-      "used_by": "SDK meta-layer — meta-classifier threshold + feature names metadata"
+      "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+      "size": 725,
+      "used_by": "SDK meta-layer - XGBoost meta-classifier on all 12 layer scores. Retrained 2026-08-11: the previous model was fitted on an older layer naming scheme, so 6 of its 11 features were constant zero and it never saw pair_classifier. Trained on a 1:1 balanced set."
     },
     {
       "path": "fie/models/failure_classifier_v4.pkl",

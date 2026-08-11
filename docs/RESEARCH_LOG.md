@@ -1501,3 +1501,77 @@ remains the honest open blind spot.
   (AdvBench mirror, MIT).
 - Augmentation: local llama3.1:8b via Ollama (Llama-3 Community License; research
   use permitted). No closed-model (GPT-4/Claude) outputs, no scraped user chats.
+
+---
+
+## E27 — The meta-classifier was reading zeros, and adds nothing once fixed (2026-08-11)
+
+### The bug
+
+`fie/models/meta_clf.json` pinned its feature names to a layer naming scheme
+that no longer existed. Layers were renamed after the model was trained
+(`semantic` -> `prompt_guard`, `pair` -> `pair_classifier`,
+`indirect` -> `indirect_injection`) and three others were merged away.
+
+`_run_meta_classifier` builds its feature vector with
+`layer_scores.get(name, 0.0)`, so every stale name silently resolved to 0.0:
+
+| | features | matching a real layer | constant zero |
+| --- | --- | --- | --- |
+| before | 11 | 5 | **6** |
+| after | 12 | 12 | 0 |
+
+It never saw `pair_classifier` — the layer the E10 ablation identifies as
+carrying the common case. Nothing errored; nothing warned.
+
+### Training data was also 92.6% positive
+
+The recovered training set was 14,872 attack / 1,185 benign. A model fitted on
+that skew is structurally biased toward predicting "attack" — the exact
+behaviour the over-refusal work is trying to reduce. Retrained on a 1:1
+balanced sample (1,185 / 1,185, seed 42). Best-F1 threshold moved 0.50 -> 0.41.
+
+### Effect on detection: none
+
+Ablation via `FIE_DISABLE_META=1`, on 134 decontaminated JailbreakBench attacks
+plus 250 XSTest safe prompts (n=384), 10,000-sample paired bootstrap, seed 42:
+
+| metric | meta OFF | meta ON | paired difference |
+| --- | --- | --- | --- |
+| recall | 97.0% [93.8–99.3] | 97.0% [93.8–99.3] | +0.0000, p=1.00 |
+| precision | 49.6% [43.6–55.7] | 49.6% [43.6–55.7] | +0.0000, p=1.00 |
+| F1 | 65.7% [60.1–70.9] | 65.7% [60.1–70.9] | +0.0000, p=1.00 |
+| over-refusal | 52.8% [46.6–59.1] | 52.8% [46.6–59.1] | +0.0000, p=1.00 |
+
+Not "small" — **identical**. The meta-classifier fires on 83% of prompts
+(50/60 sampled) and blends into the evidence on every one, shifting confidence
+values (7 of 22 golden prompts moved), yet flips **no verdict at all**. The
+40/60 blend, capped at 0.95, is never large enough to carry a confidence across
+its per-attack-type threshold.
+
+### Reading
+
+Consistent with E10: the weighted vote plus PAIR already determines the outcome,
+and a learned layer on top buys nothing. The honest options are to delete the
+meta-classifier or to give it authority it currently lacks (e.g. let it override
+rather than blend). Deleting it removes a component, a model artifact, and a
+class of silent-failure bug.
+
+Kept for now, correctly fitted, so the decision is made on measurement rather
+than inertia.
+
+### Incidental: XSTest CI width
+
+Over-refusal on XSTest's 250 prompts carries a 95% CI of roughly **+/-6 points**
+(52.8% [46.6-59.1]). Any claimed improvement below ~6 points on XSTest alone is
+indistinguishable from sampling noise. This validates the previously reported
+53.6% (inside the interval) and sets the bar for what counts as a real gain.
+
+### Reproduce
+
+```bash
+python scripts/train_meta_classifier.py --dataset data/meta_clf_balanced.jsonl
+python scripts/eval_meta_impact.py     --eval   data/benchmark_audit/jbb_clean.jsonl     --benign data/overrefusal/xstest_safe_clean.jsonl
+pytest tests/test_detection_golden.py
+```
+Seed 42, scikit-learn 1.7.2, 10,000 bootstrap resamples.

@@ -1089,7 +1089,15 @@ def scan_prompt(
     # Blends learned aggregation with the weighted-vote result.
     # When meta_prob > threshold and no layer fired, it can surface attacks
     # that individually stay below per-layer thresholds (correlated weak signal).
-    _meta_prob = _run_meta_classifier(layer_scores)
+    # FIE_DISABLE_META=1 removes the meta-classifier from the decision entirely,
+    # so its contribution can be measured by ablation rather than assumed.
+    # Added while investigating a bug where the model was reading 6 of its 11
+    # features as constant zero: without a switch there was no way to ask
+    # "what does this component actually buy us?"
+    _meta_prob = (
+        0.0 if _os.environ.get("FIE_DISABLE_META", "").strip() in ("1", "true", "yes")
+        else _run_meta_classifier(layer_scores)
+    )
 
     # ── Benign framing filter (dampening on fired layer names) ────────────────
     fired_names = [r.layer_name for r in fired_results]
@@ -1310,7 +1318,7 @@ def scan_prompt(
     else:
         # LlamaGuard unavailable or skipped — block conservatively instead of allowing
         # through silently. UNCERTAIN means we couldn't clear it, not that it's safe.
-        import os as _os
+        # (os imported at module scope as _os)
         _strict = _os.environ.get("FIE_UNCERTAIN_ALLOW", "").lower() not in ("1", "true", "yes")
         if _strict:
             mitigation = _MITIGATIONS.get(best_type, _DEFAULT_MITIGATION)

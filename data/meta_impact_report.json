@@ -1,0 +1,97 @@
+{
+  "n": 384,
+  "n_attack": 134,
+  "n_benign": 250,
+  "configs": {
+    "meta_off": {
+      "recall": {
+        "point": 0.9701492537313433,
+        "ci_low": 0.9379202586206896,
+        "ci_high": 0.9930555555555556
+      },
+      "precision": {
+        "point": 0.4961832061068702,
+        "ci_low": 0.43628835602519817,
+        "ci_high": 0.5572534170111336
+      },
+      "f1": {
+        "point": 0.6565656565656566,
+        "ci_low": 0.6005221932114884,
+        "ci_high": 0.7093856924920998
+      },
+      "over_refusal": {
+        "point": 0.528,
+        "ci_low": 0.46558704453441296,
+        "ci_high": 0.5905172413793104
+      }
+    },
+    "meta_on": {
+      "recall": {
+        "point": 0.9701492537313433,
+        "ci_low": 0.9379202586206896,
+        "ci_high": 0.9930555555555556
+      },
+      "precision": {
+        "point": 0.4961832061068702,
+        "ci_low": 0.43628835602519817,
+        "ci_high": 0.5572534170111336
+      },
+      "f1": {
+        "point": 0.6565656565656566,
+        "ci_low": 0.6005221932114884,
+        "ci_high": 0.7093856924920998
+      },
+      "over_refusal": {
+        "point": 0.528,
+        "ci_low": 0.46558704453441296,
+        "ci_high": 0.5905172413793104
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "metric": "recall",
+      "difference": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "p_value": 1.0,
+      "significant": false,
+      "n": 384,
+      "seed": 42,
+      "bootstraps": 10000
+    },
+    {
+      "metric": "precision",
+      "difference": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "p_value": 1.0,
+      "significant": false,
+      "n": 384,
+      "seed": 42,
+      "bootstraps": 10000
+    },
+    {
+      "metric": "f1",
+      "difference": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "p_value": 1.0,
+      "significant": false,
+      "n": 384,
+      "seed": 42,
+      "bootstraps": 10000
+    },
+    {
+      "metric": "over_refusal",
+      "difference": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "p_value": 1.0,
+      "significant": false,
+      "n": 384,
+      "seed": 42,
+      "bootstraps": 10000
+    }
+  ]
+}

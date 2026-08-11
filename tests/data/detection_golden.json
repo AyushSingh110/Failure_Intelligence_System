@@ -1,7 +1,7 @@
 {
   "base64_payload": {
     "attack_type": "GCG_ADVERSARIAL_SUFFIX",
-    "confidence": 0.8279,
+    "confidence": 0.7908,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -236,7 +236,7 @@
   },
   "direct_harm": {
     "attack_type": "JAILBREAK_ATTEMPT",
-    "confidence": 0.96,
+    "confidence": 0.95,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -305,7 +305,7 @@
   },
   "indirect_injection": {
     "attack_type": "GCG_ADVERSARIAL_SUFFIX",
-    "confidence": 0.8279,
+    "confidence": 0.7813,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -351,7 +351,7 @@
   },
   "multilingual": {
     "attack_type": "MULTILINGUAL_INJECTION",
-    "confidence": 0.8141,
+    "confidence": 0.8186,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -374,7 +374,7 @@
   },
   "prompt_extraction": {
     "attack_type": "PROMPT_EXTRACTION",
-    "confidence": 0.7576,
+    "confidence": 0.82,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -397,7 +397,7 @@
   },
   "regex_dan": {
     "attack_type": "JAILBREAK_ATTEMPT",
-    "confidence": 0.7576,
+    "confidence": 0.6813,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -420,7 +420,7 @@
   },
   "regex_injection": {
     "attack_type": "PROMPT_EXTRACTION",
-    "confidence": 0.7576,
+    "confidence": 0.82,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
