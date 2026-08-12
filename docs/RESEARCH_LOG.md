@@ -1575,3 +1575,118 @@ python scripts/eval_meta_impact.py     --eval   data/benchmark_audit/jbb_clean.j
 pytest tests/test_detection_golden.py
 ```
 Seed 42, scikit-learn 1.7.2, 10,000 bootstrap resamples.
+
+---
+
+## E28 — HarmAug reproduces, and its cost depends on which over-refusal benchmark you use
+
+**Date:** 2026-08-12  **Status:** complete  **Phase:** 1 of 2
+
+### Question
+
+HarmAug (Lee et al., ICLR) generates harmful instruction prompts with an LLM and
+trains a compact safety classifier on them. It reports improved detection. It
+does not report over-refusal, and neither does the 14-model guardrail benchmark
+that followed it. Does the recall gain reproduce on FIE, and what does it cost?
+
+### Method
+
+2,000 prompts generated across 12 harm categories x 8 phrasing styles with an
+affirmative-prefix jailbreak (`scripts/harmaug_generate.py`).
+
+Decontaminated against AdvBench, HarmBench, JailbreakBench, XSTest, OR-Bench-hard
+and our own val/test splits — exact match plus cosine >= 0.95
+(`scripts/harmaug_build_trainset.py`). Removed: 2 benchmark near-matches (both
+AdvBench's "bomb from household items", cosine 0.96-0.97), 120 near-clones of
+each other. Kept 1,878. Verified independently: 0 held-out prompts present.
+
+Trained with the **v6.3b recipe unchanged** — same estimator, hyper-parameters,
+seed, split and per-source weights — swapping only the base corpus, so the delta
+is attributable to the augmentation and not to a different training setup.
+
+| corpus | rows | attack |
+| --- | --- | --- |
+| v6.3b (baseline) | 4,236 | 53.8% |
+| + HarmAug (full) | 6,114 | 68.0% |
+| + HarmAug (capped 60/40) | 4,812 | 59.3% |
+
+PAIR-isolated: identical ONNX embeddings, only the SVM head differs. Fixed
+threshold 0.50 for all three. Paired bootstrap over prompts, 10,000 resamples,
+seed 42.
+
+### Result
+
+Recall (higher better), * = paired CI excludes zero:
+
+| set (n) | v6.3b | +HarmAug | delta |
+| --- | --- | --- | --- |
+| HarmBench (387) | 84.2% | 89.1% | **+4.9\*** (p<0.001) |
+| StrongREJECT (242) | 89.7% | 95.0% | **+5.4\*** (p<0.001) |
+| SORRY-Bench soft-harm (53) | 66.0% | 73.6% | +7.5 (p=0.128) |
+| test attacks (168) | 89.3% | 87.5% | -1.8 (p=0.333) |
+
+Over-refusal (lower better):
+
+| set (n) | v6.3b | +HarmAug | delta |
+| --- | --- | --- | --- |
+| XSTest safe (250) | 52.8% | 48.8% | **-4.0\*** (p=0.041) |
+| **OR-Bench-hard (250)** | 90.4% | **95.6%** | **+5.2\*** (p<0.001) |
+| test benign (147) | 11.6% | 12.2% | +0.7 (p=0.821) |
+
+### Reading
+
+**The recall gain reproduces.** +4.9 and +5.4 points on two held-out attack
+benchmarks, both significant. HarmAug works.
+
+**The cost is benchmark-dependent, and the sign flips.** Over-refusal *improves*
+by 4 points on XSTest and *worsens* by 5.2 points on OR-Bench-hard — both
+significant, on 250 prompts each, in opposite directions.
+
+This is the finding. A paper that measures over-refusal on XSTest alone would
+report HarmAug as a free win: better recall AND better over-refusal. Measuring
+OR-Bench-hard instead shows the model now flags 95.6% of safe prompts. The two
+benchmarks disagree about the same models, so "does augmentation hurt
+over-refusal?" has no benchmark-independent answer at this sample size.
+
+Averaging the two is not a summary, it is an artefact: the mean over-refusal
+change for the capped variant is -1.2 points, describing a model that got 3.6
+points worse on the harder benchmark. `eval_harmaug.py` refuses to report that
+mean for this reason.
+
+**Capping helps but does not resolve it.** The 60/40 variant keeps nearly all
+the recall gain (+4.4 / +4.5) at a smaller OR-Bench cost (+3.6 vs +5.2). The
+trade-off curve is real, so the class ratio is a tunable knob — but no cap
+removes the divergence, because the divergence is not about balance.
+
+### Caveats
+
+- PAIR-isolated, not full-pipeline. The other 11 layers can mask or amplify this;
+  a pipeline gate is a separate step before anything ships.
+- The capped model's own calibrated threshold is 0.60; it is evaluated here at
+  0.50 like the others, which is the correct choice for isolating the head but
+  runs it off its own calibration.
+- SORRY-Bench soft-harm (n=53) and benign_aug_test (n=24) are too small to
+  resolve effects of this size; their intervals span 25+ points.
+- Neither model ships. v6.3b remains the default.
+
+### Reproduce
+
+```bash
+python scripts/harmaug_generate.py --target 2000
+python scripts/harmaug_build_trainset.py
+python scripts/harmaug_build_trainset.py --max-pos-frac 0.60 \
+       --out data/pair_training/train.harmaug_capped.jsonl
+python scripts/train_pair_harmaug.py
+python scripts/train_pair_harmaug.py \
+       --base data/pair_training/train.harmaug_capped.jsonl --tag v64_harmaug_capped
+python scripts/eval_harmaug.py
+```
+Seed 42, scikit-learn 1.7.2, ONNX MiniLM embeddings, 10,000 bootstrap resamples.
+
+### Next (Phase 2)
+
+BenignAug: the symmetric construction. If positives-only augmentation moves
+over-refusal by 5 points in a benchmark-dependent direction, generating matched
+*benign* prompts is the obvious counterpart, and no published work does it. The
+open question E28 raises first: **why do XSTest and OR-Bench-hard disagree?**
+That is worth characterising before adding another augmentation on top.

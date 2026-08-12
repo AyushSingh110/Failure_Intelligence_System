@@ -167,6 +167,9 @@ scripts/*
 !scripts/harmaug_build_trainset.py
 # community feedback -> public dataset
 !scripts/export_community_dataset.py
+# Phase 1 / E28: train + evaluate the HarmAug reproduction
+!scripts/train_pair_harmaug.py
+!scripts/eval_harmaug.py
 
 # Node / frontend dependencies are restored by `npm install` — never commit.
 node_modules/
