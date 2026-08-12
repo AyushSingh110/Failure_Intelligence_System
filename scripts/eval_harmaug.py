@@ -96,16 +96,32 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--thr", type=float, default=0.50,
                     help="fixed decision threshold for ALL models (default 0.50)")
+    ap.add_argument("--model", action="append", default=None, metavar="TAG=FILE",
+                    help="add a model to the comparison, e.g. "
+                         "--model benignaug=pair_intent_classifier_v65_benignaug.pkl "
+                         "(repeatable; the first spec overall is the baseline)")
+    ap.add_argument("--experiment", default="E28 - HarmAug reproduction (Phase 1)",
+                    help="label recorded in the report")
+    ap.add_argument("--out", default="harmaug_eval_report.json",
+                    help="report filename under data/benchmark_audit/")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
     args = ap.parse_args()
     THR = args.thr
+
+    specs = list(MODEL_SPECS)
+    for spec in (args.model or []):
+        if "=" not in spec:
+            print(f"ERROR: --model needs TAG=FILE, got {spec!r}")
+            return 1
+        tag, fn = spec.split("=", 1)
+        specs.append((tag.strip(), fn.strip()))
 
     import numpy as np
     import joblib
     from stats_utils import bootstrap_ci, paired_bootstrap_diff
 
     models = {}
-    for tag, fn in MODEL_SPECS:
+    for tag, fn in specs:
         p = MODELS / fn
         if not p.exists():
             print(f"ERROR: missing {fn}")
@@ -182,7 +198,7 @@ def main() -> int:
 
     W = 30 + 22 * len(tags)
     print("=" * W)
-    print(f"  E28 - HarmAug reproduction @ fixed {THR}  (PAIR-isolated, 95% CI)")
+    print(f"  {args.experiment} @ fixed {THR}  (PAIR-isolated, 95% CI)")
     print("=" * W)
     hdr = f"  {'set (n)':<28}" + "".join(f"{t:>22}" for t in tags)
     print(hdr)
@@ -255,10 +271,10 @@ def main() -> int:
         print(f"      verdict: {v}")
 
     report = {
-        "experiment": "E28 - HarmAug reproduction (Phase 1)",
+        "experiment": args.experiment,
         "threshold": THR,
         "baseline": baseline,
-        "models": {t: fn for t, fn in MODEL_SPECS},
+        "models": {t: fn for t, fn in specs},
         "n": {n: len(ps) for n, (ps, _) in sets.items()},
         "kind": {n: k for n, (_, k) in sets.items()},
         "rates": {n: {t: [round(v, 4) for v in rates[n][t]] for t in tags}
@@ -271,9 +287,9 @@ def main() -> int:
                 "register-specific effect is distinguishable from a general one.",
     }
     AUD.mkdir(parents=True, exist_ok=True)
-    (AUD / "harmaug_eval_report.json").write_text(
-        json.dumps(report, indent=2), encoding="utf-8")
-    print(f"\nSaved -> {(AUD / 'harmaug_eval_report.json').relative_to(ROOT)}")
+    out_path = AUD / args.out
+    out_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(f"\nSaved -> {out_path.relative_to(ROOT)}")
 
     if args.json:
         print(json.dumps(report, indent=2))
