@@ -13,6 +13,8 @@ function normalizeSession(data) {
     ...data,
     token,
     access_token: token,
+    // Preserved so an API-key session survives a normalize() round-trip.
+    api_key: data.api_key || '',
   }
 }
 
@@ -103,5 +105,42 @@ export function clearSession() {
 
 export function isLoggedIn() {
   const session = getSession()
-  return Boolean(session?.token)
+  return Boolean(session?.token || session?.api_key)
+}
+
+// ── API-key sign-in ──────────────────────────────────────────────────────────
+//
+// A second way into the dashboard that does not depend on Google.
+//
+// The backend has always accepted `X-API-Key` (app/auth_guard.py::resolve_user
+// takes either a bearer token or a key), but the frontend only ever offered
+// Google. That made an outage in Google's consent-screen configuration a total
+// lockout from your own operator console — including the screens you need to
+// diagnose the outage.
+//
+// Keys are per-tenant and issued by the backend; this only stores one the user
+// already has. It is not a bypass of authentication, just a different
+// credential for the same check.
+
+export function saveApiKeySession(apiKey, profile = {}) {
+  const session = {
+    ...profile,
+    api_key: apiKey,
+    token: '',            // no JWT — requests authenticate with the key itself
+    auth_method: 'api_key',
+  }
+  localStorage.setItem(TOKEN_KEY, JSON.stringify(session))
+  return session
+}
+
+/**
+ * Auth headers for the current session, whichever credential it holds.
+ * Returns {} when signed out, so callers can spread it unconditionally.
+ */
+export function getAuthHeaders() {
+  const s = getSession()
+  if (!s) return {}
+  if (s.token) return { Authorization: `Bearer ${s.token}` }
+  if (s.api_key) return { 'X-API-Key': s.api_key }
+  return {}
 }

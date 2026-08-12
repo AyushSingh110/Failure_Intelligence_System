@@ -4,6 +4,7 @@
  */
 
 import { demoResponseFor } from './demoData'
+import { getAuthHeaders } from './auth'
 
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '')
 
@@ -55,7 +56,9 @@ function setOffline(value) {
 }
 
 async function request(method, path, body = null, token = null) {
-  const headers = { 'Content-Type': 'application/json' }
+  // Explicit token wins; otherwise fall back to whatever credential the stored
+  // session holds (bearer JWT from Google, or an API key).
+  const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   let res
@@ -122,7 +125,7 @@ export const api = {
 
   // Export
   exportCsv: async (token) => {
-    const headers = { 'Content-Type': 'application/json' }
+    const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() }
     if (token) headers['Authorization'] = `Bearer ${token}`
     const res = await fetch(`${BASE}/inferences/export/csv`, { headers })
     if (!res.ok) throw new Error('Export failed')

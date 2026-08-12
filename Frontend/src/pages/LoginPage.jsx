@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   getGoogleAuthUrl,
+  saveApiKeySession,
   getGoogleRedirectUri,
   parseGoogleCallback,
   saveSession,
@@ -19,6 +20,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
   const [status,  setStatus]  = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [apiKey,  setApiKey]  = useState('')
   const authAttempted = useRef(false)
 
   // redirect if already logged in
@@ -26,6 +29,29 @@ export default function LoginPage() {
     const hasCode = new URLSearchParams(window.location.search).has('code')
     if (!hasCode && isLoggedIn()) navigate('/dashboard', { replace: true })
   }, [navigate])
+
+  // API-key sign-in: a second door into the dashboard that does not depend on
+  // Google's consent screen. The key is verified against /auth/me before any
+  // session is stored, so a typo fails here rather than producing a broken
+  // half-logged-in state.
+  const signInWithKey = async () => {
+    const key = apiKey.trim()
+    if (!key) { setError('Enter your API key'); return }
+    setLoading(true); setError(''); setStatus('Verifying key...')
+    try {
+      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+      const res = await fetch(`${BASE}/auth/me`, { headers: { 'X-API-Key': key } })
+      if (!res.ok) {
+        throw new Error(res.status === 401 ? 'That API key was not recognised' : `Verification failed (${res.status})`)
+      }
+      const profile = await res.json()
+      saveApiKeySession(key, profile)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(err.message || 'Could not verify that key')
+      setLoading(false); setStatus('')
+    }
+  }
 
   // handle Google OAuth callback
   useEffect(() => {
@@ -364,6 +390,53 @@ export default function LoginPage() {
                 </svg>
                 Continue with Google
               </button>
+            </div>
+          )}
+
+          {/* API-key fallback. Kept collapsed so Google stays the primary path,
+              but always available — an operator locked out of their own console
+              by a third-party consent screen cannot fix anything. */}
+          {!loading && (
+            <div style={{ marginTop: '14px', textAlign: 'center' }}>
+              {!showKey ? (
+                <button
+                  type="button"
+                  onClick={() => setShowKey(true)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#7a9bb8', fontSize: '12.5px', textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                  }}
+                >
+                  Sign in with an API key instead
+                </button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginTop: '4px' }}>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') signInWithKey() }}
+                    placeholder="fie-xxxxxxxxxxxxxxxx"
+                    autoFocus
+                    style={{
+                      padding: '11px 13px', borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      background: 'rgba(255,255,255,0.04)', color: '#e8eef5',
+                      fontSize: '13.5px', fontFamily: 'JetBrains Mono, monospace',
+                      outline: 'none',
+                    }}
+                  />
+                  <button type="button" onClick={signInWithKey} className="google-btn">
+                    Sign in with API key
+                  </button>
+                  <span style={{ fontSize: '11.5px', color: '#7a9bb8', lineHeight: 1.5 }}>
+                    Find your key in Settings once signed in, or in the
+                    <code style={{ margin: '0 4px' }}>FIE_API_KEY</code>
+                    entry of your server&apos;s .env
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
