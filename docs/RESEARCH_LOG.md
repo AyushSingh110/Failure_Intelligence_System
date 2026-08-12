@@ -1690,3 +1690,126 @@ over-refusal by 5 points in a benchmark-dependent direction, generating matched
 *benign* prompts is the obvious counterpart, and no published work does it. The
 open question E28 raises first: **why do XSTest and OR-Bench-hard disagree?**
 That is worth characterising before adding another augmentation on top.
+
+---
+
+## E29 — BenignAug: the symmetric augmentation buys back over-refusal and pays for it in recall
+
+**Date:** 2026-08-13  **Status:** complete (under-powered — see Limitations)  **Phase:** 2 of 2
+
+### Question
+
+E28 established that HarmAug's positives-only augmentation raises attack recall
+and raises OR-Bench-hard over-refusal from 90.4% to 95.6%. A positives-only
+construction can only push the boundary one way. Does the mirror image — LLM-
+generated prompts that are genuinely SAFE but sit in the same topical space —
+pay that cost back? No published work does the benign half.
+
+### Method
+
+Same 12 harm categories and 8 phrasing styles as HarmAug, but asking for the
+legitimate counterpart in each domain ("defensive security" for "cybercrime",
+"lab safety" for "chemical harm"). Categories mirror HarmAug's taxonomy and
+deliberately NOT XSTest's or OR-Bench's templates — E28 showed those two
+benchmarks disagree about the same models, so an augmentation written in either
+register would make the cross-benchmark comparison meaningless.
+
+Every generated prompt was verified by a teacher model with an explicit rubric
+(is this actually harmful, or merely alarming-sounding?) and the verdict stored.
+
+**The obvious teacher is the wrong one.** HarmAug labels with a guard model.
+`gpt-oss-safeguard-20b` flags ~80% of OR-Bench-hard safe prompts, so using it
+here would reject precisely the hard negatives this augmentation exists to
+produce. A general instruct model with a rubric was used instead, validated
+before use: **12/12** correct on known-harmful prompts sampled from the HarmAug
+corpus, **11/12** on known-safe XSTest prompts. The 0% rejection rate on
+generated output is therefore real filtering, not a rubber stamp.
+
+663 generated, 0 rejected by the teacher, 0 contaminated, 16 near-clones
+removed, **647 kept**. Decontaminated and trained exactly as in E28: v6.3b
+recipe unchanged, only the base corpus swapped. Corpus 6114 rows / 68.0% attack
+-> 6761 / 61.5%.
+
+### Result — vs HarmAug (the question being asked)
+
+| set (n) | harmaug | +BenignAug | delta |
+| --- | --- | --- | --- |
+| **OR-Bench-hard (250)** | 95.6% | **88.4%** | **−7.2\*** (p<0.001) |
+| XSTest safe (250) | 48.8% | 50.0% | +1.2 (p=0.640) |
+| HarmBench (387) | 89.1% | 87.6% | −1.6 (p=0.192) |
+| **StrongREJECT (242)** | 95.0% | **88.4%** | **−6.6\*** (p<0.001) |
+| test attacks (168) | 87.5% | 82.7% | −4.8 (p=0.061) |
+
+### Result — vs v6.3b (the shipped baseline)
+
+| set | v6.3b | +HarmAug | +HarmAug+Benign |
+| --- | --- | --- | --- |
+| HarmBench | 84.2% | 89.1% | 87.6% (**+3.4\***) |
+| StrongREJECT | 89.7% | 95.0% | 88.4% (−1.2) |
+| test attacks | 89.3% | 87.5% | 82.7% (**−6.5\***) |
+| XSTest safe | 52.8% | 48.8% | 50.0% (−2.8) |
+| OR-Bench-hard | 90.4% | 95.6% | 88.4% (−2.0) |
+
+### Reading
+
+**BenignAug does exactly what it was designed to do.** OR-Bench-hard
+over-refusal falls 7.2 points against HarmAug (p<0.001), landing at 88.4% —
+*below* the v6.3b baseline of 90.4%. The symmetric construction reverses the
+cost E28 identified. That is the contribution: the benign half works.
+
+**And it is not free.** StrongREJECT recall falls 6.6 points against HarmAug
+(p<0.001), erasing that gain entirely, and held-out attack recall regresses 6.5
+points against v6.3b (p=0.008). HarmBench's gain survives (+3.4 vs baseline);
+StrongREJECT's does not.
+
+So the two augmentations are not complements that stack — they are opposite
+directions along the same trade-off curve. HarmAug buys recall with
+over-refusal; BenignAug buys it back with recall. Neither is a free lunch, and
+the honest framing is a curve, not a ranking.
+
+**The cost is unevenly distributed.** OR-Bench-hard moves 7.2 points while
+XSTest does not move at all (+1.2, p=0.640) — the same benchmark divergence
+E28 found, now appearing in the opposite direction. Whatever distinguishes
+these two over-refusal benchmarks is doing more work than either augmentation.
+That question, raised at the end of E28, is now the most interesting open
+problem in this line and should be answered before either augmentation ships.
+
+### Limitations — this is under-powered
+
+- **647 benign rows against 1,878 HarmAug positives.** The intended 2,000 was
+  not reached: Groq's free tier caps at 1,000 requests/day shared across the
+  whole organisation (all four keys), and teacher verification costs 2 requests
+  per row. The asymmetry means BenignAug is under-dosed relative to HarmAug, so
+  the balance point of the trade-off is not established — only its direction.
+  Re-running to 2,000 is a one-command resume.
+- v6.5's own calibrated threshold is 0.65; it is evaluated here at 0.50 like
+  every other model. Fixed-threshold is correct for isolating the head, but it
+  runs this model off its calibration.
+- PAIR-isolated, not full-pipeline.
+- Generator and judge are the same model (different tasks, explicit rubric).
+  An independent judge is preferable when request budget allows.
+- Nothing ships. v6.3b remains the default.
+
+### Reproduce
+
+```bash
+python scripts/benignaug_generate.py --target 2000
+python scripts/benignaug_build_trainset.py
+python scripts/train_pair_harmaug.py \
+       --base data/pair_training/train.harmaug_benignaug.jsonl --tag v65_benignaug
+python scripts/eval_harmaug.py \
+       --model benignaug=pair_intent_classifier_v65_benignaug.pkl \
+       --experiment "E29 - BenignAug (Phase 2)" --out benignaug_eval_report.json
+python scripts/eval_harmaug.py \
+       --model benignaug=pair_intent_classifier_v65_benignaug.pkl \
+       --baseline harmaug --out benignaug_vs_harmaug.json
+```
+Seed 42, scikit-learn 1.7.2, ONNX MiniLM embeddings, 10,000 bootstrap resamples.
+
+### Next
+
+**Characterise the XSTest / OR-Bench-hard divergence.** Across E28 and E29 the
+two benchmarks respond differently to every intervention, in both directions.
+Until that is explained, any over-refusal claim in this project — and arguably
+in the wider literature, which usually reports one of them — is
+benchmark-conditional rather than general.
