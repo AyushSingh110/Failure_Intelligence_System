@@ -31,6 +31,7 @@ enforced by scripts/verify_onnx_equivalence.py, which requires cosine similarity
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from pathlib import Path
 
@@ -180,7 +181,19 @@ class OnnxEncoder:
                 # which on a shared host oversubscribes badly: FIE already runs
                 # 12 detection layers concurrently, and each nested ORT pool
                 # would multiply against that.
-                opts.intra_op_num_threads = 1
+                #
+                # FIE_ONNX_THREADS raises the ceiling for OFFLINE BULK JOBS only
+                # (dataset decontamination, augmentation builds), where one
+                # process encodes tens of thousands of texts with no concurrent
+                # request load and single-threading is the bottleneck rather
+                # than the safeguard. The serving default is unchanged at 1 —
+                # do not set this in the API or Space environment.
+                _threads = os.getenv("FIE_ONNX_THREADS", "").strip()
+                try:
+                    n_threads = max(1, int(_threads)) if _threads else 1
+                except ValueError:
+                    n_threads = 1
+                opts.intra_op_num_threads = n_threads
                 opts.inter_op_num_threads = 1
 
                 self._session = ort.InferenceSession(

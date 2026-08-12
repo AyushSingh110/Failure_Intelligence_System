@@ -144,6 +144,30 @@ scripts/*
 !scripts/train_meta_classifier.py
 !scripts/nllb_augment.py
 
+# Reproducibility pipeline. These are NOT scratch experiments: they produce the
+# numbers quoted in README.md and docs/RESEARCH_LOG.md, and a reader who cannot
+# run them cannot check any claim the project makes. They were excluded by the
+# blanket scripts/* rule for months, which meant the published findings had no
+# runnable provenance — including a commit titled "HarmAug-style generator" that
+# contained only a .gitignore edit, because the generator itself was ignored.
+#
+# NOTE: '#' only starts a comment at the START of a line. A trailing comment
+# becomes part of the pattern and silently matches nothing, so each entry below
+# is annotated above it rather than beside it.
+#
+# bootstrap CIs / paired tests — underpins every reported result
+!scripts/stats_utils.py
+# E8: benchmark leakage removal
+!scripts/decontaminate_training.py
+# E27: meta-classifier ablation
+!scripts/eval_meta_impact.py
+# Phase 1: augmentation corpus
+!scripts/harmaug_generate.py
+# Phase 1: decontaminate + merge
+!scripts/harmaug_build_trainset.py
+# community feedback -> public dataset
+!scripts/export_community_dataset.py
+
 # Node / frontend dependencies are restored by `npm install` — never commit.
 node_modules/
 
