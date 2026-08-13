@@ -173,6 +173,8 @@ scripts/*
 # Phase 2 / E29: BenignAug — the symmetric benign augmentation
 !scripts/benignaug_generate.py
 !scripts/benignaug_build_trainset.py
+# Operator recovery: read your own API key when Google sign-in is down
+!scripts/show_api_key.py
 
 # Node / frontend dependencies are restored by `npm install` — never commit.
 node_modules/
