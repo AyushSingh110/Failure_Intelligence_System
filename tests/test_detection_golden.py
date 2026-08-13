@@ -35,6 +35,7 @@ from pathlib import Path
 
 import pytest
 
+ROOT = Path(__file__).resolve().parent.parent
 GOLDEN_PATH = Path(__file__).parent / "data" / "detection_golden.json"
 
 # Fixed corpus. Each entry targets a specific layer or routing zone so a
@@ -109,6 +110,73 @@ def _require_models() -> None:
         )
 
 
+def _manifest_drift() -> list[str]:
+    """
+    Local model files whose checksum differs from scripts/model_manifest.json.
+
+    The golden values are only meaningful relative to a specific set of model
+    artifacts, and those artifacts are NOT tracked in git — they live on a
+    GitHub Release and the manifest pins their checksums. A locally retrained
+    model therefore changes detection output while every tracked file stays
+    identical.
+
+    That has now caused two separate incidents. The second one was worse: the
+    golden file was regenerated against a local meta_clf.pkl that had drifted
+    from the published one, which turned the local suite green and CI red,
+    because CI downloads the release. Detecting the drift is the only thing
+    that distinguishes "behaviour regressed" from "you are running different
+    models than the baseline was recorded with".
+
+    Returns a list of human-readable drift descriptions; empty means clean.
+    """
+    import hashlib
+
+    manifest_path = ROOT / "scripts" / "model_manifest.json"
+    if not manifest_path.exists():
+        return []
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    drift = []
+    for art in manifest.get("artifacts", []):
+        path = ROOT / art["path"]
+        # Only check what is present. A missing model is a different failure and
+        # is already handled by _require_models() / download_models.py --strict.
+        if not path.exists():
+            continue
+        try:
+            got = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            continue
+        if got != art.get("sha256"):
+            drift.append(f"{art['path']}\n"
+                         f"      manifest: {art.get('sha256', '?')[:16]}...\n"
+                         f"      local:    {got[:16]}...")
+    return drift
+
+
+def _require_manifest_match() -> None:
+    """Fail with an accurate diagnosis when local models are not the pinned ones."""
+    drift = _manifest_drift()
+    if not drift:
+        return
+    pytest.fail(
+        "Local model artifacts do NOT match scripts/model_manifest.json, so the "
+        "golden baseline does not describe the models you are running:\n\n    "
+        + "\n    ".join(drift)
+        + "\n\n  This is not a detection regression. Either:\n"
+          "    * restore the pinned models:\n"
+          "        rm the drifted file(s) && python scripts/download_models.py --strict\n"
+          "    * or, if the retrained model is meant to ship, publish it to the\n"
+          "      release, update model_manifest.json (sha256 + size), and only\n"
+          "      THEN regenerate the golden file.\n"
+          "  Regenerating the golden against an unpublished model turns this\n"
+          "  suite green locally and red in CI, which is what happened before."
+    )
+
+
 def build_snapshot() -> dict:
     """Run the whole corpus and return the golden structure."""
     from fie.adversarial import warmup
@@ -129,6 +197,11 @@ def test_detection_output_matches_golden():
             f"No golden file at {GOLDEN_PATH}. "
             "Generate it with: python -m tests.test_detection_golden --update"
         )
+
+    # Diagnose model drift BEFORE comparing. Otherwise the mismatch is reported
+    # as a behaviour regression and the reader goes looking for a code change
+    # that does not exist.
+    _require_manifest_match()
 
     expected = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
     actual   = build_snapshot()
@@ -189,7 +262,26 @@ def test_no_layer_silently_missing():
         )
 
 
-def _update() -> None:
+def _update(force: bool = False) -> None:
+    # Refuse to record a baseline against models that are not the published
+    # ones. This is the exact mistake that made CI red while the local suite
+    # passed: the golden was regenerated against a locally retrained
+    # meta_clf.pkl, so it described models no other machine had.
+    drift = _manifest_drift()
+    if drift and not force:
+        print("REFUSING to regenerate: local models differ from "
+              "scripts/model_manifest.json\n")
+        for d in drift:
+            print(f"    {d}")
+        print("\n  The golden file would describe models that only exist on this")
+        print("  machine, and CI (which downloads the release) would fail.\n")
+        print("  Restore the pinned models:")
+        print("      python scripts/download_models.py --strict")
+        print("  Or, if the retrained model is meant to ship: publish it to the")
+        print("  release, update model_manifest.json, then regenerate.")
+        print("  To override anyway: --update --force")
+        raise SystemExit(1)
+
     GOLDEN_PATH.parent.mkdir(parents=True, exist_ok=True)
     snapshot = build_snapshot()
     GOLDEN_PATH.write_text(
@@ -201,7 +293,7 @@ def _update() -> None:
 
 if __name__ == "__main__":
     if "--update" in sys.argv:
-        _update()
+        _update(force="--force" in sys.argv)
     else:
         print(__doc__)
         print("Run with --update to regenerate the golden file.")

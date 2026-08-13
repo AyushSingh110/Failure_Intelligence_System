@@ -1,7 +1,7 @@
 {
   "base64_payload": {
     "attack_type": "GCG_ADVERSARIAL_SUFFIX",
-    "confidence": 0.8045,
+    "confidence": 0.7908,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -305,7 +305,7 @@
   },
   "indirect_injection": {
     "attack_type": "GCG_ADVERSARIAL_SUFFIX",
-    "confidence": 0.7985,
+    "confidence": 0.7813,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
@@ -397,7 +397,7 @@
   },
   "regex_dan": {
     "attack_type": "JAILBREAK_ATTEMPT",
-    "confidence": 0.6811,
+    "confidence": 0.6813,
     "degraded_layers": [],
     "is_attack": true,
     "layer_scores": {
