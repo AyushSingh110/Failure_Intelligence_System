@@ -125,6 +125,8 @@ docs/*
 !docs/DEPLOYMENT.md
 !docs/PRODUCTION_ENGINEERING.md
 !docs/RESEARCH_LOG.md
+# Verified numbers for CV / email / paper / interview - single source of truth
+!docs/FACT_SHEET.md
 !docs/OVERREFUSAL_FINDINGS.md
 !docs/HALLUCINATION_OPTIMIZATION_LOG.md
 !docs/HALLUCINATION_PIPELINE.md

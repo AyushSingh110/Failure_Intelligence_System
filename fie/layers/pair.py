@@ -112,7 +112,7 @@ _pair_load_error: str = ""
 # scan — it is not a theoretical race.
 _pair_lock = threading.Lock()
 
-# ── Meta-classifier (XGBoost on 11 layer scores) ─────────────────────────────
+# ── Meta-classifier (XGBoost on 12 layer scores) ─────────────────────────────
 _meta_clf             = None
 _meta_clf_threshold:  float      = 0.50
 _meta_clf_features:   list[str]  = []

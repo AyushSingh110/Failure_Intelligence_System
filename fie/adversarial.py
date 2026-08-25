@@ -1085,7 +1085,7 @@ def scan_prompt(
     # can apply a fail-secure policy; aggregation treats them as 0.0 either way.
     degraded = sorted(r.layer_name for r in all_results if r.status != LayerStatus.OK)
 
-    # ── Meta-classifier (XGBoost on 11 layer scores) ─────────────────────────
+    # ── Meta-classifier (XGBoost on 12 layer scores) ─────────────────────────
     # Blends learned aggregation with the weighted-vote result.
     # When meta_prob > threshold and no layer fired, it can surface attacks
     # that individually stay below per-layer thresholds (correlated weak signal).

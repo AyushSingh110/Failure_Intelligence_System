@@ -17,7 +17,7 @@
 
 ### **[ayush-singh9791-fie.hf.space](https://ayush-singh9791-fie.hf.space)**
 
-Paste a prompt and watch all twelve detection layers score it in ~25 ms.
+Paste a prompt and watch all twelve detection layers score it in ~33 ms.
 Attack examples and benign ones are preloaded — including the "safe but scary"
 prompts FIE gets wrong, because the over-refusal problem below is real and worth
 seeing for yourself.
@@ -115,7 +115,7 @@ else:
     print(response)                  # clean prompt, model ran normally
 ```
 
-No API key, no network, no configuration. ~22 ms per scan, offline, with
+No API key, no network, no configuration. ~33 ms per scan, offline, with
 bundled models.
 
 **Warm up before serving traffic** — model loading is lazy, so the first scan
@@ -130,7 +130,7 @@ warmup()      # returns {"pair_classifier": "ready", ...}
 
 ## What it detects, and what it does not
 
-**Detects** (offline, in parallel, ~22 ms): prompt injection · jailbreaks (DAN,
+**Detects** (offline, in parallel, ~33 ms): prompt injection · jailbreaks (DAN,
 persona, override tags) · token smuggling · many-shot conditioning · encoded
 payloads (Base64, leetspeak, homoglyphs) · indirect injection in documents ·
 GCG adversarial suffixes · fiction/roleplay wrapping · multilingual injection ·
@@ -202,7 +202,7 @@ flowchart TD
     U["User / App<br/>wraps any LLM call with @monitor()"]
     U -->|prompt| FP
 
-    subgraph GUARD["PRE-FLIGHT GUARD — before your model, ~22ms, offline"]
+    subgraph GUARD["PRE-FLIGHT GUARD — before your model, ~33ms, offline"]
         direction TB
         FP["Fast-path check<br/>known-attack and whitelist hashes"]
         L["12 layers in parallel on a shared pool<br/>PAIR · regex · GCG · many-shot ·<br/>indirect · multilingual · copyright · …"]

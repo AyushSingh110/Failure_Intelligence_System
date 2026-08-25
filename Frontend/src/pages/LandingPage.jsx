@@ -50,7 +50,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Adversarial Attack Protection',
-    desc: 'Ten detection layers catch prompt injection, jailbreaks, token smuggling, many-shot attacks, model extraction, and Crescendo multi-turn attacks.',
+    desc: 'Twelve detection layers catch prompt injection, jailbreaks, token smuggling, many-shot attacks, model extraction, and Crescendo multi-turn attacks.',
     color: '#ff4466',
   },
   {
@@ -1200,7 +1200,7 @@ function RadarRings() {
 // ── Floating metric chips ──────────────────────────────────────────────────────
 const CHIPS = [
   { label: '12 layers',  color: '#00d4ff', top: '8%',     right: '-5%',  delay: 0    },
-  { label: '<15ms',      color: '#00ff88', top: '42%',    right: '-6%',  delay: 0.7  },
+  { label: '~33ms',      color: '#00ff88', top: '42%',    right: '-6%',  delay: 0.7  },
   { label: '96% recall', color: '#a78bfa', bottom: '22%', right: '-5%',  delay: 1.3  },
   { label: '0% FPR',     color: '#ffaa00', bottom: '8%',  left: '-3%',   delay: 0.35 },
 ]
@@ -1524,7 +1524,7 @@ function HeroSection({ loggedIn, copy, copied }) {
           {/* Quiet proof points — static, scannable */}
           <motion.div variants={heroItem} className="hero-metrics">
             <span><strong>11</strong> detection layers</span><i/>
-            <span><strong>&lt;15ms</strong> overhead</span><i/>
+            <span><strong>~33ms</strong> overhead</span><i/>
             <span><strong>97.5%</strong> precision</span>
           </motion.div>
 
@@ -2021,7 +2021,7 @@ const AF_PATHS = {
 
 const AF_NODES = [
   { key: 'prompt', x: 9.4,  y: 50, label: 'Prompt',         sub: 'user input',        icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
-  { key: 'guard',  x: 30,   y: 50, label: '12-Layer Guard', sub: '<15ms pre-flight',  icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  { key: 'guard',  x: 30,   y: 50, label: '12-Layer Guard', sub: '~33ms pre-flight',  icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
   { key: 'llm',    x: 58.6, y: 26, label: 'Primary LLM',    sub: 'your model',        icon: 'M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z' },
   { key: 'jury',   x: 58.6, y: 74, label: 'Shadow Jury',    sub: '3-model consensus', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
   { key: 'out',    x: 89,   y: 50, label: 'Secure Output',  sub: 'delivered',         icon: 'M20 6L9 17l-5-5' },
@@ -2229,7 +2229,7 @@ function ArchFlowDemo() {
           ↳ {scenario.outcome} — {scenario.outcomeDesc}
         </div>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#44607c', letterSpacing: '0.06em' }}>
-          2,006 PROMPTS · 12 LAYERS · &lt;15MS
+          2,006 PROMPTS · 12 LAYERS · ~33MS
         </div>
       </div>
     </div>
@@ -2443,7 +2443,7 @@ function FeatSection1({ loggedIn }) {
             Stop attacks before<br/>they reach your model.
           </h2>
           <p style={{ fontSize: '15.5px', lineHeight: 1.72, color: '#8da8c4', marginBottom: '32px', maxWidth: '440px' }}>
-            12 detection layers run in parallel — regex, PAIR/SVM, many-shot, virtualization, indirect injection, and more. Total overhead under 15ms.
+            12 detection layers run in parallel — regex, PAIR/SVM, many-shot, virtualization, indirect injection, and more. Total overhead about 33ms (p95 42ms).
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
             {[
