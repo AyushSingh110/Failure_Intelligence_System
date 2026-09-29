@@ -1,0 +1,2 @@
+I built FIE, a small offline guardrail that checks every LLM prompt with 12 detection layers in about 33 ms, with no API calls.
+While testing it, I found 52.5% of JailbreakBench was already in my training data. So I removed it and published the lower, honest numbers.
