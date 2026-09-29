@@ -2,9 +2,13 @@
 
 **A 23M-parameter offline LLM guardrail — and an honest measurement of why guardrails fail.**
 
-## ▶ [Watch the 25-second overview](https://github.com/AyushSingh110/Failure_Intelligence_System/blob/main/docs/media/fie-overview.mp4)
+## ▶ [Watch the 2-minute walkthrough: how FIE works](https://github.com/AyushSingh110/Failure_Intelligence_System/blob/main/docs/media/fie-explainer.mp4)
 
-[![FIE overview video: a jailbreak prompt scanned by 12 detection layers and blocked](https://raw.githubusercontent.com/AyushSingh110/Failure_Intelligence_System/main/docs/media/fie-overview.jpg)](https://github.com/AyushSingh110/Failure_Intelligence_System/blob/main/docs/media/fie-overview.mp4)
+[![FIE walkthrough video: the attack problem, the 3-step detection pipeline, output monitoring, results and known weaknesses](https://raw.githubusercontent.com/AyushSingh110/Failure_Intelligence_System/main/docs/media/fie-explainer.jpg)](https://github.com/AyushSingh110/Failure_Intelligence_System/blob/main/docs/media/fie-explainer.mp4)
+
+Covers the problem, the pipeline step by step (quick lookup → 12 parallel layers →
+weighted vote and routing), what happens after the model answers, the results, and
+where FIE still fails. Short on time? [25-second overview](https://github.com/AyushSingh110/Failure_Intelligence_System/blob/main/docs/media/fie-overview.mp4).
 
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97_Live_demo-try_it_now-yellow)](https://huggingface.co/spaces/Ayush-Singh9791/fie)
 [![API](https://img.shields.io/badge/API-live-brightgreen)](https://ayush-singh9791-fie.hf.space/health)

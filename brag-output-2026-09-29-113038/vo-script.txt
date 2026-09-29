@@ -1,0 +1,11 @@
+Every A I chatbot can be talked into breaking its own rules. Often, one sentence is enough.
+Attackers hide instructions inside documents, wrap requests in fiction, switch languages, or add strange text that confuses the model.
+F I E, the Failure Intelligence Engine, sits between your users and your model. Every prompt is checked before your model ever sees it.
+Step one is a quick lookup. Prompts already confirmed as attacks, or as safe, get an answer instantly.
+Step two: twelve detection layers check the prompt at the same time. Some match known attack patterns. Some look at structure, like fake chat history or hidden instructions. Others read the meaning, to catch reworded attacks.
+Step three: each layer's score is weighted by how reliable it is, and layers that agree raise the score. Conversation history counts too, so slow, step by step attacks get noticed. Then F I E decides. Safe prompts go through. Clear attacks are blocked. Borderline cases get a second opinion.
+Here is a real scan. Two layers catch this prompt, and F I E blocks it as prompt extraction, in about thirty three milliseconds, on a normal C P U.
+After your model answers, F I E keeps watching. It checks responses for leaked system prompts and harmful content. On the server, three shadow models and a jury of specialist agents flag hallucinations. Confirmed attacks are remembered for next time.
+Across four public attack benchmarks, F I E catches about eighty six percent of attacks, with a model of just twenty three million parameters.
+We also tested it honestly. Over half of one popular benchmark had leaked into the training data, so we removed it and reported the lower numbers. And we published where F I E still fails. It blocks too many safe prompts that only sound dangerous. Even a twenty billion parameter guard struggles there.
+Failure Intelligence Engine. Install it with pip, or try the live demo. No sign up needed.

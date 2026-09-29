@@ -133,11 +133,13 @@ docs/*
 !docs/HALLUCINATION_DETECTION_EXPLAINED.md
 !docs/fie_architecture.html
 !docs/fie_flowchart.html
-# 25s overview video + thumbnail linked at the top of the README
+# Overview + walkthrough videos and thumbnails linked at the top of the README
 !docs/media/
 docs/media/*
 !docs/media/fie-overview.mp4
 !docs/media/fie-overview.jpg
+!docs/media/fie-explainer.mp4
+!docs/media/fie-explainer.jpg
 
 # Still private on purpose: paper sources (arxiv_*, *.tex), draft articles,
 # and figure notebooks. Those are working material, not reference docs.
