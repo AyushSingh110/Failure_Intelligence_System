@@ -8,7 +8,7 @@
 
 Covers the problem, the pipeline step by step (quick lookup → 12 parallel layers →
 weighted vote and routing), what happens after the model answers, the results, and
-where FIE still fails. Short on time? [25-second overview](https://github.com/AyushSingh110/Failure_Intelligence_System/blob/main/docs/media/fie-overview.mp4).
+where FIE still fails.
 
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97_Live_demo-try_it_now-yellow)](https://huggingface.co/spaces/Ayush-Singh9791/fie)
 [![API](https://img.shields.io/badge/API-live-brightgreen)](https://ayush-singh9791-fie.hf.space/health)
