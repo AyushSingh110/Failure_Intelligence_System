@@ -141,6 +141,10 @@ docs/media/*
 !docs/media/fie-explainer.mp4
 !docs/media/fie-explainer.jpg
 
+# Rebuild log, plans and execution reports (docs/fie_rebuild_2026/). Tracked so
+# the source-of-truth log is under version control. See WP-001, decision OD-12.
+!docs/fie_rebuild_2026/
+
 # Still private on purpose: paper sources (arxiv_*, *.tex), draft articles,
 # and figure notebooks. Those are working material, not reference docs.
 
@@ -201,3 +205,7 @@ fie/models/minilm-onnx/
 # rather than tracked in git.
 data/harmaug/
 data/benignaug/
+
+# Evaluation harness working output (evals/). Pinned baselines under
+# evals/baselines/ ARE tracked; per-run output is not.
+evals/runs/
