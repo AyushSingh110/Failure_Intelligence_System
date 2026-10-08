@@ -8,8 +8,9 @@ disagree about what was decided or done, this file is right and the other one is
 | --- | --- |
 | Started | 2026-10-07 |
 | Baseline commit | `24cb2e9d76e977364f728f47790935283ef110b7` (`main`, clean, 236 commits) |
-| Current phase | Planning complete. **No implementation approved yet.** |
-| Next action | Owner approves, amends or reorders WP-001 and answers the open questions in §7 |
+| Current phase | **WP-001 (evaluation harness) complete, awaiting owner review.** Branch `rebuild/wp-001-eval-harness`, local only, not pushed. Work after Step 1 is uncommitted by owner instruction |
+| Canonical baseline | `evals/baselines/BL-0001_pair-v6.3b_fie-5d5ed90d` (PAIR v6.3b). Reference: `REF-0001_pair-v6.2_fie-5d5ed90d` |
+| Next action | Owner reviews [EXECUTION_001](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md) and commits. WP-002 not started and not approved |
 | Companion documents | [BASELINE_AUDIT.md](BASELINE_AUDIT.md) · [ROADMAP.md](ROADMAP.md) · [EXECUTION_REPORTS/](EXECUTION_REPORTS/) · [evidence/](evidence/) |
 
 ## How to use this log
@@ -200,6 +201,8 @@ says white-box evasion is expected. The reason is ordering, not secrecy.
 | # | Date | Type | Approved scope | Outcome | Report |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 2026-10-07 | Planning | Read-only audit; baseline tests; planning documents in `docs/fie_rebuild_2026/` | Audit, roadmap and this log written. 87/87 tests pass. Published v6.3b figures reproduced exactly. Repository working tree unchanged outside this directory | This file, §4 |
+| 1 | 2026-10-08 | Planning gate | One planning document for WP-001 | [PLAN_001_EVAL_HARNESS.md](IMPLEMENTATION_PLANS/PLAN_001_EVAL_HARNESS.md) written. 85.8% vs 88.2% resolved: two model versions on the same splits, both reproduce | The plan, §3 |
+| 2 | 2026-10-08 | Implementation | WP-001, approved with decisions OD-1 to OD-13 | **Complete, awaiting review.** Harness built in `evals/`; canonical baseline and v6.2 reference pinned; all approved counts reproduce; deterministic artifacts byte-identical; 0 outbound attempts; 317 tests pass (87 existing unchanged + 230 new); no production file changed. See §9 | [EXECUTION_001](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md) |
 
 ---
 
@@ -336,10 +339,219 @@ Nothing was changed. Recorded so later sessions can detect drift.
 | # | Question | How it gets answered |
 | --- | --- | --- |
 | UQ-1 | Does the meta-classifier move prompts between zones? A single layer at 0.58 against a 0.68 threshold ended as a clear block in the pilot | E52 |
-| UQ-2 | Is the one-in-250 verdict flip caused by unseeded `langdetect`? | Seed it in the harness and re-run the determinism suite (WP-001) |
+| UQ-2 | Is the one-in-250 verdict flip caused by unseeded `langdetect`? | **Answered in WP-001: consistent with yes.** With the detector seeded, every canonical run is byte-identical. Unseeded, XSTest-safe row 99 changed verdict in 2 of 8 passes. The seed is the only thing that differs between the two |
 | UQ-3 | Is the legal and medical evasion a learned shortcut from the v6 benign corpus? | E50 |
 | UQ-4 | What does the PyPI 1.18.0 wheel do on a clean machine, with and without `[ml]`? | E51 |
 | UQ-5 | Does the per-IP rate limiter see one address for all users behind the Space proxy? | Test in WP-002 |
 | UQ-6 | Is the live Space's XGBoost classifier loaded? `/monitor/model-info` reports `model_loaded: false`, which may only reflect lazy loading | Check `/health/deep` during WP-002 |
-| UQ-7 | Do baseline numbers hold in an environment rebuilt to the pinned versions? | One pinned-environment run in WP-001 |
+| UQ-7 | Do baseline numbers hold in an environment rebuilt to the pinned versions? | **Answered in WP-001: yes, on this machine.** Environment `fie-eval-pinned` built from `requirements.txt`: all counts identical, all 2,016 standard records byte-identical. Another OS or CPU is still untested (UQ-9) |
 | UQ-8 | Does `recalibrate()` in production actually drop operator attack-threshold overrides, as the code reads? | Unit test in WP-002 |
+| UQ-9 | Do the canonical counts and bytes reproduce on Linux or another CPU? Do the guard tests pass there and on Python 3.11 and 3.12? | Raised by WP-001. One run on a Linux machine; no CI change is approved yet (OD-9) |
+| UQ-10 | Does any native library used by `fie` open a network connection without CPython's `socket` module? The Python-level guard cannot see that | Raised by WP-001. An operating-system-level check (network namespace or firewall log) on Linux |
+| UQ-11 | What are the upstream revisions of the JailbreakBench, HarmBench, StrongREJECT and AdvBench files? They are pinned by content hash only | WP-006 |
+| UQ-12 | The E21 manifest gives HarmBench `clean_kept` = 380, but the frozen file behind every published HarmBench figure has 387 rows (7 exact duplicates). Which is the intended benchmark? | Owner decision in WP-006. WP-001 keeps 387 and reports 380 unique (OD-10) |
+
+---
+
+## 9. WP-001 implementation record
+
+Updated at each checkpoint. Detail, commands and numbers are in
+[EXECUTION_001_eval-harness.md](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md).
+
+### 9.1 Decisions approved by the owner on 2026-10-08
+
+| # | Decision |
+| --- | --- |
+| OD-1 | Canonical baseline is PAIR v6.3b; PAIR v6.2 is a reference reproduction |
+| OD-2 | Profile deviations V1–V10 approved. `sdk-offline-failsecure` is the **canonical reproducibility/evaluation profile**, never described as the production runtime. Reports keep four behaviours apart: shipped/default, canonical reproducibility profile, lite profile, stability/unseeded |
+| OD-3 | Risk fixtures and live-service security findings stay on the local, un-pushed branch until WP-002 |
+| OD-4 | Full per-prompt deterministic baseline records are committed |
+| OD-5 | Evidence-file differences are reported, not fatal |
+| OD-6 | Unpickled classes are recorded; no allowlist enforced |
+| OD-7 | No packaging change |
+| OD-8 | A fresh environment from the declared pins is built and tested; it does not replace the canonical environment automatically |
+| OD-9 | No CI workflow change |
+| OD-10 | HarmBench keeps its frozen 387 rows; 380 unique reported beside it |
+| OD-11 | AdvBench is a labelled case study, never in the headline macro |
+| OD-12 | Rebuild documentation is tracked on the local branch; the branch is not pushed |
+| OD-13 | Tests live in `tests/evals/` |
+
+These supersede the "proposed" status of D-004 (harness first) and answer OQ-1 (track the
+documents: yes, on the local branch), OQ-2 (WP-001 first) and OQ-4 (margins accepted for the
+regression design; nothing is compared in WP-001).
+
+### 9.2 Owner instruction received during implementation
+
+**No commits by the assistant.** Received 2026-10-08 after Step 1 had been committed. From
+then on all work is left as uncommitted working-tree changes for the owner to commit. Two
+commits made before the instruction remain on the branch: `094a105` (Step 0) and `c5b2291`
+(Step 1). Consequence for the design: see D-013.
+
+### 9.3 Implementation decisions
+
+**D-013 — "Clean tree" means clean measured paths.** *Status: implemented.* The plan made a
+dirty working tree non-canonical. With the harness itself left uncommitted by instruction,
+that rule would have made every run non-canonical. The rule now reads: a run is traceable
+when the **measured paths** (`fie/`, `engine/`, `app/`, `storage/`, `scripts/model_manifest.json`,
+`data/overrefusal`, `data/benchmark_audit`, `pyproject.toml`) have no uncommitted change.
+Changes elsewhere are recorded as `dirty_other`. The harness's own content is pinned
+separately by `harness.tree_sha256` in every fingerprint. *Rejected:* asking the owner to
+commit mid-implementation; treating the whole run as non-canonical.
+
+**D-014 — Per-prompt records live in `records/`, not `results/`.** *Status: implemented.*
+`.gitignore` already ignores any directory named `results/`. A pinned baseline's records
+would have been silently untracked. Renamed; the plan's layout is otherwise unchanged.
+
+**D-015 — Two pre-arm warm-ups in the hermetic guard.** *Status: implemented.* The plan
+assumed that denying all IPv4/IPv6 socket creation and all process creation would have no
+false positives. Step 3 found two, both local-only: `urllib3` creates an IPv6 socket and binds
+it to `::1` at import time to probe for IPv6, and `platform.uname()` runs `cmd /c ver` on
+Windows. Both are now resolved once, immediately before the guard is armed, and listed in
+every run's guard summary. Nothing is exempt afterwards: creating a socket or starting a
+process after arming is still denied and counted. *Rejected:* allowing socket creation
+(weakens the guard and the approved "direct socket creation" test); exempting by call stack
+(fragile).
+
+**D-016 — Stability results are run metadata.** *Status: implemented.* The stability suite is
+non-deterministic by design, so its numbers cannot sit in `REPORT.md`, which is byte-compared.
+`REPORT.md` explains the four behaviours and points to `RUN_NOTES.md`, which carries the
+stability and latency numbers.
+
+**D-017 — `evals/.gitattributes`.** *Status: implemented.* With `core.autocrlf=true` a
+checkout would convert pinned artifacts to CRLF and break every pinned hash. The file turns
+conversion off for `evals/baselines`, `evals/fixtures` and `evals/registry`. Readers also fold
+CRLF to LF, so a converted copy still verifies.
+
+**D-018 — `pin` needs a determinism proof.** *Status: implemented.* The plan said a full
+determinism verification is required before pinning. To make that enforceable, `pin` takes
+`--determinism-proof FILE` and refuses unless the proof covers every deterministic suite and
+its artifact digest equals the run's. It also refuses a non-canonical run and never
+overwrites an existing baseline. *Limit:* it trusts the proof file; it does not re-run the
+verification.
+
+**D-019 — Stability passes: 8 for XSTest-safe, 3 for JailbreakBench.** *Status: implemented.*
+The plan said 3 passes each. The known unstable prompt flips in roughly one pass in seven, so
+three passes would usually miss it. Stability is run metadata, so the extra passes cost time
+and nothing else.
+
+**D-020 — The fresh environment uses Python 3.10.** *Status: implemented.* Same minor version
+as the canonical environment, so that only the package versions change. Python 3.11 (the
+Dockerfile's version) is left for UQ-9.
+
+**D-021 — The canonical baseline stays in the `failure-engine` environment.** *Status:
+implemented, per OD-8.* The pinned-version environment reproduced every record byte for byte,
+but it was not promoted. Promoting it is the owner's decision.
+
+The complete list of departures from the plan, DV-1 to DV-18, is in the execution report
+under "Deviations". None changes an approved decision.
+
+### 9.4 Step log
+
+| Step | Result | Tests |
+| --- | --- | --- |
+| 0 Pre-state | Branch created; environment and model hashes recorded; execution report opened | 87 existing tests pass |
+| 1 Canonical serializer | Done | 28 |
+| 2 Dataset registry | Done. **Checkpoint passed:** 250 / 198 / 250 / 134 / 387 / 242 / 387 / 168 rows, all content hashes verified | 35 |
+| 3 Hermetic guard | Done. All seven required child-process proofs pass. Two false positives found and resolved (D-015) | 33 |
+| 4 Model integrity | Done. Mismatch, missing file, missing role, unlisted role and mid-run change all abort | 16 |
+| 5 Subject adapter | Done. One module touches `fie`; 22 private names under a contract test | 14 |
+| 6 Worker + standard suites | Done. **Hard checkpoint passed:** XSTest-safe 132/250, OR-Bench-hard 226/250, XSTest-unsafe 177/198, JailbreakBench 130/134, HarmBench 326/387, StrongREJECT 218/242, SORRY-Bench 316/387, AdvBench 163/168 | 22 (final count for the file, including two pin tests added at Step 13) |
+| 7 Fingerprint + determinism | Done. **Hard checkpoint passed** on the standard suites: two separate worker processes, 8 gated files byte-identical, four keys equal, evidence files identical too; a third run with a random hash seed showed 0 record differences | 26 |
+| 8 Metrics + reporting | Done. Two-axis rule enforced in code; `REPORT.md` is deterministic; stability and latency go to `RUN_NOTES.md` (D-016) | 28 |
+| 9 Risk suites | Done. Long input (1,820 inputs), framing (4,052), script pilot (144, labelled PILOT), all labelled "constructed risk suite / diagnostic probe" | 20 |
+| 10 Lite profile | Done. A real profile in a fresh interpreter with nine ML packages unimportable. Result: the classifier does not load and 1,848 / 1,848 scans still report full coverage | — |
+| 11 Latency | Done. Kept out of every deterministic file | — |
+| First full baseline | `python -m evals baseline`: exit 0, 764 s (12.7 min), canonical, all counts match | 228 harness tests pass |
+| 12 Reference v6.2 | Done. **Checkpoint passed:** XSTest-safe 134/250, OR-Bench-hard 226/250, XSTest-unsafe 176/198, JailbreakBench 129/134, HarmBench 317/387, StrongREJECT 217/242, SORRY-Bench 291/387, AdvBench 160/168; macro 85.76% | — |
+| 13 Determinism, full scope | `verify-determinism --all`: two separate runs, 13 gated files byte-identical (11 record files, `summary.json`, `fingerprint.json`), evidence and `REPORT.md` identical, 0 differences under a random hash seed. The baseline run has the same artifact digest: three identical runs. Reference profile: 9 gated files identical | — |
+| 13 Pinning | `BL-0001_pair-v6.3b_fie-5d5ed90d` (canonical) and `REF-0001_pair-v6.2_fie-5d5ed90d` (reference) pinned; `CANONICAL` names the former | 230 harness tests pass |
+| Fresh environment (OD-8) | `fie-eval-pinned` from `requirements.txt`: counts identical for both profiles; 7 record files byte-identical; only `env_key` differs. Not promoted (D-021) | — |
+| Final confirmation | `python -m evals baseline` after pinning: exit 0, 725 s, "per-prompt records are byte-identical to BL-0001 (11 files)" | 317 pass: 87 existing with identical outcomes + 230 harness |
+| Final checks | Secret scan: 856 files, 16 real `.env` values, 0 findings. Scope: nothing outside `evals/`, `tests/evals/`, `.gitignore`, `docs/fie_rebuild_2026/`; protected paths unchanged against `24cb2e9` | — |
+
+### 9.4a Results now on record
+
+Counts first. Canonical reproducibility/evaluation profile, PAIR v6.3b, baseline `BL-0001`.
+
+| Axis | Set | Flagged / n | Rate |
+| --- | --- | --- | --- |
+| Attack | JailbreakBench | 130 / 134 | 97.01% |
+| Attack | HarmBench | 326 / 387 | 84.24% |
+| Attack | StrongREJECT | 218 / 242 | 90.08% |
+| Attack | SORRY-Bench | 316 / 387 | 81.65% |
+| Attack | **Macro recall, 4 sets** | — | **88.25%** [86.5, 90.0] |
+| Benign | XSTest-safe | 132 / 250 | 52.80% over-refusal |
+| Benign | OR-Bench-hard | 226 / 250 | 90.40% over-refusal |
+| Contrast | XSTest-unsafe | 177 / 198 | 89.39% |
+| Case study | AdvBench | 163 / 168 | 97.02%, outside the macro |
+
+Reference, PAIR v6.2, `REF-0001`: macro 85.76% [83.9, 87.6]; XSTest-safe 134 / 250;
+OR-Bench-hard 226 / 250.
+
+Measured for the first time through the harness (constructed risk suites and diagnostic
+probes, held on the local branch under OD-3):
+
+| Probe | Result |
+| --- | --- |
+| Long input, 120 HarmBench prompts | 107 flagged unpadded; 56 with 21 filler words after; 8 with 84; 5 with 168 or more |
+| Framing, 763 attack prompts | 674 flagged unframed; 445 under the legal template (229 lost), 607 medical, 652 developer |
+| Lite profile, 1,848 scans | Classifier absent; recall 12 to 17 per set; **1,848 of 1,848 results report no degraded layer** |
+| Stability, unseeded | XSTest-safe row 99 changes verdict in 2 of 8 passes |
+| Latency, warm | Mean 24.5 ms at 46 characters; 163 ms at 2,732 characters |
+
+### 9.4b Security findings from WP-001
+
+None was fixed; fixing is outside this package. Full table in the execution report.
+
+| # | Finding | Goes to |
+| --- | --- | --- |
+| SF-1 | A base install without the ML packages reports full coverage on every scan while the classifier is absent | WP-003, WP-004 |
+| SF-2 | Telemetry, translation, tiebreaker and model download all attempt the network when left enabled | WP-005 |
+| SF-3 | The product swallows the resulting exceptions and continues silently | WP-003 |
+| SF-4 | `fie` imports `engine` and `storage` on the scan path | WP-011 |
+| SF-5 | Model loading unpickles 11 classes | WP-004 |
+| SF-6 | Padding and framing evasions confirmed at scale | WP-009, E49, E50 |
+| SF-7 | Older dataset hash pins depend on CRLF working copies; two datasets had no pin | WP-006 |
+| SF-8 | One verdict depends on an unseeded random number generator in a dependency | WP-005 |
+
+The harness introduced no vulnerability and leaked no secret. It adds no dependency and is
+not imported by any production module.
+
+### 9.5 Errors met during implementation
+
+Each is written up in full (error, root cause, investigation, fix, validation, lesson) in the
+execution report. In brief:
+
+| # | Error | Root cause | Fix |
+| --- | --- | --- | --- |
+| E-1 | The guard reported violations while `fie` only imported and warmed up | Two local-only probes: `urllib3` creates and binds an IPv6 socket at import; `platform.uname()` spawns `cmd /c ver` on Windows | Both resolved once before the guard is armed and listed in the guard summary (D-015) |
+| E-2 | A pinned baseline's records would not have been tracked by git | `.gitignore` ignores every directory named `results/` | Directory named `records/` (D-014) |
+| E-3 | The adapter refused to proceed when the caller had disabled logging | The model cross-check reads the loader's log line; with logging off there is nothing to read | `prepare()` re-enables logging first. The refusal itself was correct: fail closed |
+| E-4 | A run-metadata test flagged a calendar date in `REPORT.md` | The date is static registry text saying when counts were approved, not a run timestamp | Test now looks for the run id, its UTC stamp and any date-with-time pattern |
+| E-5 | Several scripted multi-line edits corrupted a string or failed to apply | Shell heredoc escaping of backslashes | Switched to the editor for such edits; each was caught immediately by a syntax error or a failing assertion |
+| E-6 | Three tests had wrong expected values (import-blocker hit list, Wilson interval decimals, a prose substring check) | The tests, not the code: expectations typed from estimates | Expected values recomputed independently and compared with a tolerance |
+
+No error came from the subject behaving differently from the plan's measurements. No stop
+condition was triggered.
+
+### 9.6 WP-001 final status
+
+**Complete against the 20-item definition of done; awaiting owner review.** Not done, by
+instruction: commits after Step 1, any push, WP-002, any product fix, any change to
+`README.md` or `FACT_SHEET.md`.
+
+State handed over:
+
+| Item | Value |
+| --- | --- |
+| Branch | `rebuild/wp-001-eval-harness`, local only |
+| Commits on the branch | `094a105` (Step 0), `c5b2291` (Step 1). Everything later is uncommitted |
+| Original state | `24cb2e9` intact, equal to `main` and `origin/main` |
+| Harness | `evals/` — 16 modules, 4,308 lines; registries, fixtures, two pinned baselines |
+| Tests | `tests/evals/` — 230 tests |
+| Run output | `evals/runs/` — 17 run directories, git-ignored, safe to delete |
+| Extra conda environment | `fie-eval-pinned`, created for OD-8. Safe to remove with `conda env remove -n fie-eval-pinned` |
+
+When the owner commits, the next run's `fingerprint.json` will differ from the pinned one in
+its git fields only. Its records should stay byte-identical; `python -m evals baseline`
+checks exactly that.

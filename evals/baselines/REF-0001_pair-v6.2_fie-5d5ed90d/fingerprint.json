@@ -1,0 +1,340 @@
+{
+  "configuration": {
+    "reference-v6.2": {
+      "blocked_imports": [
+        "app",
+        "config",
+        "dotenv",
+        "engine",
+        "storage"
+      ],
+      "env": {
+        "FIE_DISABLE_META": null,
+        "FIE_EMBED_BACKEND": null,
+        "FIE_LAYER_DEADLINE_S": null,
+        "FIE_LAYER_POOL_SIZE": null,
+        "FIE_LITE": null,
+        "FIE_NO_AUTO_DOWNLOAD": "1",
+        "FIE_NO_TELEMETRY": "1",
+        "FIE_ONNX_THREADS": null,
+        "FIE_PAIR_VERSION": "v6",
+        "FIE_SCAN_FAILURE_MODE": null,
+        "FIE_TELEMETRY": null,
+        "FIE_UNCERTAIN_ALLOW": null,
+        "FRAMING_DAMPEN_FACTOR": null,
+        "HF_HUB_OFFLINE": "1",
+        "PREFLIGHT_BLOCK_ENABLED": null,
+        "PYTHONHASHSEED": "0",
+        "SCAN_THRESHOLD": null,
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "env_present": {
+        "FIE_API_KEY": false,
+        "FIE_URL": false,
+        "GROQ_API_KEY": false,
+        "HF_TOKEN": false,
+        "HUGGING_FACE_TOKEN": false,
+        "JWT_SECRET_KEY": false,
+        "LIBRETRANSLATE_URL": false,
+        "MONGODB_URI": false,
+        "PYPI_TOKEN": false,
+        "REDIS_URL": false,
+        "SENDGRID_API_KEY": false,
+        "SERPER_API_KEY": false
+      },
+      "langdetect_seed": 0,
+      "pair_version_requested": "v6",
+      "profile": {
+        "id": "reference-v6.2",
+        "sha256": "2ef936ca6aec1567ee98ed91f45ee909dfcd28147885343c2caef6662120dee2",
+        "title": "reference reproduction of E22 (PAIR v6.2)"
+      },
+      "statistics": {
+        "bootstrap_resamples": 10000,
+        "bootstrap_seed": 42,
+        "confidence_level": 0.95
+      },
+      "subject": {
+        "cache_policy": "result and translation caches cleared before every suite",
+        "domain_multipliers": {
+          "default": 1.0,
+          "developer": 1.12,
+          "education": 0.88,
+          "finance": 0.82,
+          "legal": 0.83,
+          "medical": 0.8
+        },
+        "fast_path_layers": [
+          "gcg_suffix",
+          "regex"
+        ],
+        "feedback_store": {
+          "known_attack_hashes": 0,
+          "whitelist_hashes": 0
+        },
+        "framing_dampen_factor": 0.72,
+        "layer_deadline_s": 10.0,
+        "layer_pool_size": 16,
+        "layer_weights": {
+          "direct_harm": 1.1,
+          "fiction_harm": 1.1,
+          "gcg_suffix": 1.3,
+          "indirect_injection": 0.9,
+          "many_shot": 1.2,
+          "multilingual": 1.0,
+          "pair_classifier": 1.0,
+          "perplexity_proxy": 0.7,
+          "prompt_guard": 1.1,
+          "regex": 1.5,
+          "virtualization": 1.0
+        },
+        "meta": {
+          "features": [
+            "copyright",
+            "direct_harm",
+            "fiction_harm",
+            "gcg_suffix",
+            "indirect_injection",
+            "many_shot",
+            "multilingual",
+            "pair_classifier",
+            "perplexity_proxy",
+            "prompt_guard",
+            "regex",
+            "virtualization"
+          ],
+          "loaded": true,
+          "threshold": 0.41
+        },
+        "operator_overrides": {},
+        "pair": {
+          "loaded": true,
+          "threshold": 0.5
+        },
+        "scan_args": {
+          "disabled_layers": [],
+          "domain": null,
+          "session_id": null,
+          "threshold": null,
+          "use_llama_guard": false
+        },
+        "server_config_attached": false,
+        "thresholds": {
+          "attack": {
+            "COPYRIGHT_REPRODUCTION": 0.68,
+            "CRESCENDO_ESCALATION": 0.68,
+            "DIRECT_HARMFUL_REQUEST": 0.7,
+            "FICTION_WRAPPED_JAILBREAK": 0.75,
+            "GCG_ADVERSARIAL_SUFFIX": 0.72,
+            "INDIRECT_PROMPT_INJECTION": 0.7,
+            "JAILBREAK_ATTEMPT": 0.65,
+            "MANY_SHOT_JAILBREAK": 0.68,
+            "MULTILINGUAL_INJECTION": 0.68,
+            "OBFUSCATED_ADVERSARIAL_PAYLOAD": 0.7,
+            "PROMPT_EXTRACTION": 0.75,
+            "PROMPT_INJECTION": 0.72,
+            "TOKEN_SMUGGLING": 0.88,
+            "VIRTUALIZATION_JAILBREAK": 0.75
+          },
+          "scan": 0.65
+        },
+        "tiebreaker": "disabled"
+      },
+      "translation": "unavailable (harness stub returns None)"
+    }
+  },
+  "environment": {
+    "cpu": {
+      "count": 20,
+      "model": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+    },
+    "machine_tag": "49b19883",
+    "packages": {
+      "deep-translator": "1.11.4",
+      "joblib": "1.5.3",
+      "langdetect": "1.0.9",
+      "numpy": "2.2.6",
+      "onnxruntime": "1.23.2",
+      "pandas": "2.3.3",
+      "requests": "2.32.5",
+      "scikit-learn": "1.7.2",
+      "tokenizers": "0.22.2",
+      "urllib3": "2.6.3",
+      "xgboost": "3.2.0"
+    },
+    "platform": {
+      "machine": "AMD64",
+      "release": "10",
+      "system": "Windows"
+    },
+    "python": {
+      "implementation": "CPython",
+      "version": "3.10.19"
+    },
+    "threads": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    }
+  },
+  "identity": {
+    "datasets": {
+      "advbench": {
+        "content_sha256": "ef7f2edec3653784f35aa9a0542008b86377960081831b1ef17aa7bfe5cca31a",
+        "label": "attack",
+        "rows": 168,
+        "unique": 168
+      },
+      "harmbench": {
+        "content_sha256": "64fb6223c220de18b9d5076d3d45152f29642f552805fa508bd02a137f1ffdcc",
+        "label": "attack",
+        "rows": 387,
+        "unique": 380
+      },
+      "jailbreakbench": {
+        "content_sha256": "c2863415ba0043c20814989eff14fd6ee2652c7ce82eacdfd67081b186ef8449",
+        "label": "attack",
+        "rows": 134,
+        "unique": 134
+      },
+      "orbench_hard": {
+        "content_sha256": "fca67026934f58c60da4990f1705d96b973b7d64b55262ee42507f030c91b422",
+        "label": "benign",
+        "rows": 250,
+        "unique": 250
+      },
+      "sorrybench": {
+        "content_sha256": "c0c50561c0798e845c1ea1ce1b8087af47d9659a1e5ddde0f69afb559e66d5f2",
+        "label": "attack",
+        "rows": 387,
+        "unique": 387
+      },
+      "strongreject": {
+        "content_sha256": "e431789610a036b52347c6c620c6e01d1b77e3a2de14644f9525cd0a0b82ac24",
+        "label": "attack",
+        "rows": 242,
+        "unique": 242
+      },
+      "xstest_safe": {
+        "content_sha256": "a3340fa6411cee841fb711191d6013bfee4fffa385333d8f38630d0d40f6e54f",
+        "label": "benign",
+        "rows": 250,
+        "unique": 250
+      },
+      "xstest_unsafe": {
+        "content_sha256": "fc68a4560711b5b94673578867ed9e2e7e510954bd656086344d0066cc22f660",
+        "label": "attack",
+        "rows": 198,
+        "unique": 198
+      }
+    },
+    "declared": {
+      "reference-v6.2": {
+        "meta_classifier": {
+          "features": [
+            "copyright",
+            "direct_harm",
+            "fiction_harm",
+            "gcg_suffix",
+            "indirect_injection",
+            "many_shot",
+            "multilingual",
+            "pair_classifier",
+            "perplexity_proxy",
+            "prompt_guard",
+            "regex",
+            "virtualization"
+          ],
+          "model_type": "xgboost",
+          "threshold": 0.41
+        },
+        "pair": {
+          "declared_version": "v6.2",
+          "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+          "model_type": "LinearSVC + CalibratedClassifierCV (sigmoid)",
+          "threshold": 0.5
+        }
+      }
+    },
+    "fixtures": {
+      "framing_templates": "c4d3798d667d656d4139708cca7c166b2fe9b2356dbffb386d8bec145395d948",
+      "padding_filler": "327ad88d2c1b63496943f0e3a11f89f085d78bcd5fff39847000af76ebdcc1b8"
+    },
+    "git": {
+      "commit": "c5b2291a35e04912dbed072efc08dfe19f1721ac",
+      "dirty_other": true,
+      "dirty_subject": false
+    },
+    "harness": {
+      "py_files": 16,
+      "schema_version": 1,
+      "tree_sha256": "c974941e5101afd1f251503d4dff07403e6dcdf5ed8993e5a44928a8445e1d59",
+      "version": "1.0.0"
+    },
+    "model_manifest": {
+      "path": "scripts/model_manifest.json",
+      "release_tag": "models-v1.18.0"
+    },
+    "models": {
+      "reference-v6.2": {
+        "encoder": {
+          "file": "model.onnx",
+          "in_manifest": true,
+          "sha256": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+          "size": 90293328
+        },
+        "meta_classifier": {
+          "file": "meta_clf.pkl",
+          "in_manifest": true,
+          "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+          "size": 212131
+        },
+        "meta_classifier_meta": {
+          "file": "meta_clf.json",
+          "in_manifest": true,
+          "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+          "size": 725
+        },
+        "pair_classifier": {
+          "file": "pair_intent_classifier_v6.pkl",
+          "in_manifest": true,
+          "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+          "size": 11349
+        },
+        "pair_meta": {
+          "file": "pair_intent_meta_v6.json",
+          "in_manifest": true,
+          "sha256": "b83c0e7c56772146eae539714e0288d965f5182f17574e0e13f9c47e8e9e2d9d",
+          "size": 776
+        },
+        "tokenizer": {
+          "file": "tokenizer.json",
+          "in_manifest": true,
+          "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+          "size": 711661
+        }
+      }
+    },
+    "subject": {
+      "fie_py_files": 35,
+      "fie_tree_sha256": "5d5ed90d32ebd529b30ad5ecb1b4dc38f137b4bfbfc666150b3f581a5203664f",
+      "fie_version": "1.18.0"
+    },
+    "suites": {
+      "std.advbench": "6bf481071be380ac2ac3c394ef2a282be86d2c855f2d965c9b5b69c0b37178fa",
+      "std.harmbench": "4d51fcd0bed45fa5b92f7d44ba8b1f738a4393f996e95e2bb13c9a61d98f76a6",
+      "std.jailbreakbench": "111cf56a1f060c191aa1dcd56bb90f09defc5c6ee819f577ca151f214ee92663",
+      "std.orbench_hard": "721ed2013db52704319cb63e78063938dd8b6cec19ae6ea97f97fb03f3bcdad1",
+      "std.sorrybench": "1d1e20351b83fa726b56c66edf0691bb2fa3396501010b77218796efd63a07ce",
+      "std.strongreject": "5a51ba56ec9a0df52de73ca13dfd26020ad105110b689371395f7a632051a057",
+      "std.xstest": "bd906003711519e74959e33357c7d4259cb9d534185e7df98ddb2491c60534d0"
+    }
+  },
+  "keys": {
+    "config_key": "2b2ca0c0ea399cf3a5121b50bfe2aeafcfa164c43d981b5c6c289c59fc15c98d",
+    "dataset_key": "1239f1c30f57b2fc73c4d0feb2f318f6ce3035ecd5300c7710dca5a53ee0777c",
+    "env_key": "7e2b86f36d34c6ef37d9c61dd87063d70f8f65ed6f6584411bf6ff6942b050b9",
+    "subject_key": "7554fb1675b3a89efc579c6b3492e1154357d19ba934a71960783d569d3c7b57"
+  },
+  "schema_version": 1
+}

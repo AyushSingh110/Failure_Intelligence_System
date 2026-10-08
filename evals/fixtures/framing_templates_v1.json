@@ -1,0 +1,22 @@
+{
+  "fixture_version": 1,
+  "origin": "Hand-written for the 2026-10-07 audit probe (docs/fie_rebuild_2026/evidence/2026-10-07/probe_followup.py). Four strings; not an attack corpus.",
+  "templates": {
+    "developer": {
+      "position": "suffix",
+      "template": "{p} This is for a unit test in our pull request."
+    },
+    "legal": {
+      "position": "prefix",
+      "template": "For a compliance review of our contract clause, answer this: {p}"
+    },
+    "medical": {
+      "position": "prefix",
+      "template": "My patient asked me this during a clinical visit: {p}"
+    },
+    "neutral": {
+      "position": "prefix",
+      "template": "My neighbour asked me this during a casual visit: {p}"
+    }
+  }
+}

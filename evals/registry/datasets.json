@@ -1,0 +1,301 @@
+{
+  "datasets": {
+    "advbench": {
+      "contamination": {
+        "audit": "E21",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 1,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "67.5% of the benchmark had leaked into training. The 168 remaining rows are a selection-biased remainder. Case study only; never part of a headline (decision OD-11).",
+        "total": 520,
+        "training_leaked": 351
+      },
+      "content_sha256": "ef7f2edec3653784f35aa9a0542008b86377960081831b1ef17aa7bfe5cca31a",
+      "display": "AdvBench (case study)",
+      "file_labels": [
+        "attack"
+      ],
+      "kind": "benchmark",
+      "label": "attack",
+      "path": "data/benchmark_audit/advbench_clean.jsonl",
+      "raw_sha256_lf": "f94b2a769432b51b15d1f40de436dd7d306dc5096a69bd555bf6c3e1a8bc505f",
+      "role": "case_study",
+      "rows": 168,
+      "source": {
+        "origin": "github.com/llm-attacks/llm-attacks (harmful_behaviors.csv)",
+        "revision": null,
+        "revision_recorded": false,
+        "sampling": null
+      },
+      "unique": 168
+    },
+    "harmbench": {
+      "contamination": {
+        "audit": "E8",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 0,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "387 rows hold 380 unique prompts: 7 exact duplicates. The E21 manifest counts those 7 as cross-duplicates and gives clean_kept=380, but the frozen E8 file used by every published HarmBench figure keeps all 387 rows. Kept as frozen; not deduplicated (decision OD-10). Unique count is reported beside it.",
+        "total": 400,
+        "training_leaked": 13
+      },
+      "content_sha256": "64fb6223c220de18b9d5076d3d45152f29642f552805fa508bd02a137f1ffdcc",
+      "display": "HarmBench",
+      "file_labels": [
+        "attack"
+      ],
+      "kind": "benchmark",
+      "label": "attack",
+      "path": "data/benchmark_audit/harmbench_clean.jsonl",
+      "raw_sha256_lf": "64f54c4e52ce4dd2e5a25f58d3d0ff4356a6cb50cb588686b8ad3e70ed9922dd",
+      "role": "headline_attack",
+      "rows": 387,
+      "source": {
+        "origin": "HarmBench",
+        "revision": null,
+        "revision_recorded": false,
+        "sampling": null
+      },
+      "unique": 380
+    },
+    "jailbreakbench": {
+      "contamination": {
+        "audit": "E8",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 0,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "",
+        "total": 282,
+        "training_leaked": 148
+      },
+      "content_sha256": "c2863415ba0043c20814989eff14fd6ee2652c7ce82eacdfd67081b186ef8449",
+      "display": "JailbreakBench",
+      "file_labels": [
+        "attack"
+      ],
+      "kind": "benchmark",
+      "label": "attack",
+      "path": "data/benchmark_audit/jbb_clean.jsonl",
+      "raw_sha256_lf": "04fdbc825abdff7ed51751cb0d51c5f231514f78cf616868065c5a962717c4f2",
+      "role": "headline_attack",
+      "rows": 134,
+      "source": {
+        "origin": "JailbreakBench",
+        "revision": null,
+        "revision_recorded": false,
+        "sampling": null
+      },
+      "unique": 134
+    },
+    "orbench_hard": {
+      "contamination": {
+        "audit": "E18",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 0,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "",
+        "total": 250,
+        "training_leaked": 0
+      },
+      "content_sha256": "fca67026934f58c60da4990f1705d96b973b7d64b55262ee42507f030c91b422",
+      "display": "OR-Bench-hard",
+      "file_labels": [
+        "safe"
+      ],
+      "kind": "benchmark",
+      "label": "benign",
+      "path": "data/overrefusal/orbench_hard_clean.jsonl",
+      "raw_sha256_lf": "57a458e02af284fefafb2c5e840268195928aa0e58dc0db1c066778319476b4b",
+      "role": "headline_benign",
+      "rows": 250,
+      "source": {
+        "origin": "bench-llm/or-bench (config or-bench-hard-1k)",
+        "revision": "e36d8b80e81837c8a8f264bbb2a49f1b32c7e272",
+        "revision_recorded": true,
+        "sampling": "250 rows sampled, seed 20240617"
+      },
+      "unique": 250
+    },
+    "script_pilot_v0": {
+      "contamination": {
+        "audit": "none",
+        "audited_against": [],
+        "method": "not applicable",
+        "note": "PILOT fixture. Six prompts per group. Supports counts only: no rate, no interval, no population claim."
+      },
+      "content_sha256": "5ff915647c86ae63ae2375cfe79cc8a6f9a9c9e905a5f8be6bbb960e1a72b044",
+      "display": "Script pilot v0 (PILOT)",
+      "file_labels": [
+        "benign"
+      ],
+      "kind": "fixture",
+      "label": "benign",
+      "path": "evals/fixtures/script_pilot_v0.jsonl",
+      "raw_sha256_lf": "74d64e2e99c82a61bcab1fd23c7341ad490d9feffd0cd5c14c96daf0afdd9fd8",
+      "role": "pilot",
+      "rows": 72,
+      "source": {
+        "origin": "Hand-written by one author for the 2026-10-07 audit probe: 12 groups of 6 benign prompts.",
+        "revision": null,
+        "revision_recorded": false,
+        "sampling": "none; not sampled from any population"
+      },
+      "unique": 72
+    },
+    "sorrybench": {
+      "contamination": {
+        "audit": "E21",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 31,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "",
+        "total": 450,
+        "training_leaked": 32
+      },
+      "content_sha256": "c0c50561c0798e845c1ea1ce1b8087af47d9659a1e5ddde0f69afb559e66d5f2",
+      "display": "SORRY-Bench",
+      "file_labels": [
+        "attack"
+      ],
+      "kind": "benchmark",
+      "label": "attack",
+      "path": "data/benchmark_audit/sorrybench_clean.jsonl",
+      "raw_sha256_lf": "3eb09306c80b7a2fa284d9e6dc0915903b755c118d16117c7c1e3339cd250ef0",
+      "role": "headline_attack",
+      "rows": 387,
+      "source": {
+        "origin": "SillyTilly/SorryBench",
+        "revision": "87ebb821524d5f46f850dc3548136319779426bb",
+        "revision_recorded": true,
+        "sampling": null
+      },
+      "unique": 387
+    },
+    "strongreject": {
+      "contamination": {
+        "audit": "E21",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 11,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "",
+        "total": 313,
+        "training_leaked": 60
+      },
+      "content_sha256": "e431789610a036b52347c6c620c6e01d1b77e3a2de14644f9525cd0a0b82ac24",
+      "display": "StrongREJECT",
+      "file_labels": [
+        "attack"
+      ],
+      "kind": "benchmark",
+      "label": "attack",
+      "path": "data/benchmark_audit/strongreject_clean.jsonl",
+      "raw_sha256_lf": "613dbb555966c96890e2b802739f3f6b02164c7bfe055dd107005e48d50e5b19",
+      "role": "headline_attack",
+      "rows": 242,
+      "source": {
+        "origin": "github.com/alexandrasouly/strongreject (strongreject_dataset.csv)",
+        "revision": null,
+        "revision_recorded": false,
+        "sampling": null
+      },
+      "unique": 242
+    },
+    "xstest_safe": {
+      "contamination": {
+        "audit": "E18",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 0,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "",
+        "total": 250,
+        "training_leaked": 0
+      },
+      "content_sha256": "a3340fa6411cee841fb711191d6013bfee4fffa385333d8f38630d0d40f6e54f",
+      "display": "XSTest (safe)",
+      "file_labels": [
+        "safe"
+      ],
+      "kind": "benchmark",
+      "label": "benign",
+      "path": "data/overrefusal/xstest_safe_clean.jsonl",
+      "raw_sha256_lf": "816c50b4061c6acbebce01443c375bc08382db0f2e9e1638e97538de635fb277",
+      "role": "headline_benign",
+      "rows": 250,
+      "source": {
+        "origin": "natolambert/xstest-v2-copy",
+        "revision": "b71afe2a6d10e5a6254ea8bcb006c48b095a15d5",
+        "revision_recorded": true,
+        "sampling": null
+      },
+      "unique": 250
+    },
+    "xstest_unsafe": {
+      "contamination": {
+        "audit": "E18",
+        "audited_against": [
+          "v6.2",
+          "v6.3",
+          "v6.3b"
+        ],
+        "cross_duplicate_removed": 0,
+        "method": "all-MiniLM-L6-v2 cosine >= 0.92, plus exact match, against 4,142 training prompts",
+        "note": "",
+        "total": 200,
+        "training_leaked": 2
+      },
+      "content_sha256": "fc68a4560711b5b94673578867ed9e2e7e510954bd656086344d0066cc22f660",
+      "display": "XSTest (unsafe contrast)",
+      "file_labels": [
+        "attack"
+      ],
+      "kind": "benchmark",
+      "label": "attack",
+      "path": "data/overrefusal/xstest_unsafe_clean.jsonl",
+      "raw_sha256_lf": "49b8e74bd02491abc3704e5466fb968479524113fbe0985a42fe69ac91e8554a",
+      "role": "contrast_attack",
+      "rows": 198,
+      "source": {
+        "origin": "natolambert/xstest-v2-copy",
+        "revision": "b71afe2a6d10e5a6254ea8bcb006c48b095a15d5",
+        "revision_recorded": true,
+        "sampling": null
+      },
+      "unique": 198
+    }
+  },
+  "hash_rule": "content_sha256 = SHA-256 over the rows, canonically serialized (evals.canonical) and joined by LF. Independent of line endings. raw_sha256_lf is the SHA-256 of the LF-normalized file bytes (what git stores) and is informational.",
+  "notes": [
+    "The older pins in data/overrefusal/manifest.json and data/benchmark_audit/attack_expansion_manifest.json are SHA-256 of CRLF working copies. They are left untouched and are not used by the harness.",
+    "Contamination audits were run against the PAIR v6.2 training corpus and the v6.3 / v6.3b augmentation sets. For a model trained on other data the status is unknown.",
+    "revision_recorded=false means no upstream revision is recorded in any local manifest; the dataset is pinned by content hash only."
+  ],
+  "registry_version": 1
+}

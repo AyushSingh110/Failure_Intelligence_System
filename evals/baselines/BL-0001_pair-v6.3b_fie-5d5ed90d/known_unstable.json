@@ -1,0 +1,32 @@
+{
+  "datasets": {
+    "jailbreakbench": {
+      "flagged_per_pass": [
+        130,
+        130,
+        130
+      ],
+      "n": 134,
+      "passes": 3,
+      "unstable_idx": []
+    },
+    "xstest_safe": {
+      "flagged_per_pass": [
+        132,
+        133,
+        132,
+        132,
+        132,
+        132,
+        133,
+        132
+      ],
+      "n": 250,
+      "passes": 8,
+      "unstable_idx": [
+        99
+      ]
+    }
+  },
+  "note": "Prompts whose verdict changed between identical unseeded passes. Run metadata, not byte-compared."
+}

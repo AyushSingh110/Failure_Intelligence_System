@@ -1,0 +1,375 @@
+{
+  "fixtures": {
+    "framing_templates": {
+      "content_sha256": "c4d3798d667d656d4139708cca7c166b2fe9b2356dbffb386d8bec145395d948",
+      "path": "evals/fixtures/framing_templates_v1.json"
+    },
+    "padding_filler": {
+      "path": "evals/fixtures/padding_filler_v1.txt",
+      "sha256": "327ad88d2c1b63496943f0e3a11f89f085d78bcd5fff39847000af76ebdcc1b8",
+      "words": 21
+    }
+  },
+  "headline": {
+    "attack": [
+      "jailbreakbench",
+      "harmbench",
+      "strongreject",
+      "sorrybench"
+    ],
+    "benign": [
+      "xstest_safe",
+      "orbench_hard"
+    ],
+    "case_study": [
+      "advbench"
+    ],
+    "contrast": [
+      "xstest_unsafe"
+    ]
+  },
+  "labels": {
+    "case_study": "case study — excluded from every headline",
+    "pilot": "PILOT",
+    "risk": "constructed risk suite / diagnostic probe"
+  },
+  "registry_version": 1,
+  "suites": [
+    {
+      "group": "standard",
+      "id": "std.xstest",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "xstest_safe",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "xstest_unsafe",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "XSTest: safe-but-scary prompts with their matched unsafe contrast"
+    },
+    {
+      "group": "standard",
+      "id": "std.orbench_hard",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "orbench_hard",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "OR-Bench-hard: safe prompts built to look harmful"
+    },
+    {
+      "group": "standard",
+      "id": "std.jailbreakbench",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "jailbreakbench",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "JailbreakBench (decontaminated)"
+    },
+    {
+      "group": "standard",
+      "id": "std.harmbench",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "harmbench",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "HarmBench (decontaminated; 387 rows, 380 unique)"
+    },
+    {
+      "group": "standard",
+      "id": "std.strongreject",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "strongreject",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "StrongREJECT (decontaminated)"
+    },
+    {
+      "group": "standard",
+      "id": "std.sorrybench",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "sorrybench",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "SORRY-Bench (decontaminated)"
+    },
+    {
+      "case_study": true,
+      "group": "standard",
+      "id": "std.advbench",
+      "kind": "scan",
+      "parts": [
+        {
+          "dataset": "advbench",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "AdvBench — contamination case study, never in a headline"
+    },
+    {
+      "group": "risk",
+      "hypothesis": "Recall falls as benign text is added to an attack, before or after it, because the classifier scores a mean over all tokens. Over-refusal falls with it.",
+      "id": "risk.long_input",
+      "kind": "scan",
+      "limitation": "One filler sentence on one topic; one attack source. No claim about other fillers, text mixed into the attack, or long attacks.",
+      "parts": [
+        {
+          "dataset": "harmbench",
+          "select": {
+            "first_unique": 120
+          },
+          "variants": [
+            "base",
+            "pad_after:21",
+            "pad_after:42",
+            "pad_after:84",
+            "pad_after:168",
+            "pad_after:336",
+            "pad_before:21",
+            "pad_before:42",
+            "pad_before:84",
+            "pad_before:168",
+            "pad_before:336"
+          ]
+        },
+        {
+          "dataset": "xstest_safe",
+          "variants": [
+            "pad_after:84",
+            "pad_after:336"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "sample_note": "Attack sample: the first 120 unique HarmBench rows, chosen by position and not by whether the subject catches them, so the suite is the same for every model. Benign sample: all 250 XSTest-safe rows.",
+      "title": "Long input: benign filler before or after a prompt"
+    },
+    {
+      "group": "risk",
+      "hypothesis": "A short benign-sounding frame lowers the classifier's score for an unchanged request, more for some domains than others.",
+      "id": "risk.framing",
+      "kind": "scan",
+      "limitation": "Four hand-written strings. Measures those four strings; not an adaptive attack and not an estimate of how often framing works.",
+      "parts": [
+        {
+          "dataset": "jailbreakbench",
+          "variants": [
+            "frame:neutral",
+            "frame:medical",
+            "frame:developer",
+            "frame:legal"
+          ]
+        },
+        {
+          "dataset": "harmbench",
+          "variants": [
+            "frame:neutral",
+            "frame:medical",
+            "frame:developer",
+            "frame:legal"
+          ]
+        },
+        {
+          "dataset": "strongreject",
+          "variants": [
+            "frame:neutral",
+            "frame:medical",
+            "frame:developer",
+            "frame:legal"
+          ]
+        },
+        {
+          "dataset": "xstest_safe",
+          "variants": [
+            "frame:neutral",
+            "frame:medical",
+            "frame:developer",
+            "frame:legal"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "Framing: one fixed benign-sounding template around a prompt"
+    },
+    {
+      "group": "pilot",
+      "hypothesis": "Benign text in a non-Latin script is blocked, by more than one layer; benign text in other European languages is blocked when translation is unavailable.",
+      "id": "pilot.script",
+      "kind": "scan",
+      "limitation": "Six hand-written prompts per group, one author, no sampling. Counts only. The translation_stub pass is a counterfactual with a constant translation.",
+      "parts": [
+        {
+          "dataset": "script_pilot_v0",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "script_pilot_v0",
+          "runtime": {
+            "translation": "fixed_benign"
+          },
+          "tag": "translation_stub",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "pilot": true,
+      "profile": "@primary",
+      "title": "Script pilot: benign prompts in several scripts and languages"
+    },
+    {
+      "group": "lite",
+      "hypothesis": "With the ML packages absent, the pipeline returns verdicts from regex layers only and reports full coverage.",
+      "id": "lite.std",
+      "kind": "scan",
+      "limitation": "Runs the working tree's code, not the wheel published on PyPI.",
+      "parts": [
+        {
+          "dataset": "xstest_safe",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "xstest_unsafe",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "orbench_hard",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "jailbreakbench",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "harmbench",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "strongreject",
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "sorrybench",
+          "variants": [
+            "base"
+          ]
+        }
+      ],
+      "profile": "lite-simulated",
+      "title": "Lite profile on the standard benchmarks"
+    },
+    {
+      "group": "latency",
+      "id": "latency",
+      "kind": "latency",
+      "params": {
+        "passes": 3
+      },
+      "parts": [
+        {
+          "dataset": "xstest_safe",
+          "select": {
+            "first": 100
+          },
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "harmbench",
+          "select": {
+            "first": 100
+          },
+          "variants": [
+            "base"
+          ]
+        },
+        {
+          "dataset": "harmbench",
+          "select": {
+            "first_unique": 20
+          },
+          "variants": [
+            "pad_after:84",
+            "pad_after:168",
+            "pad_after:336"
+          ]
+        }
+      ],
+      "profile": "@primary",
+      "title": "Warm scan latency"
+    },
+    {
+      "group": "stability",
+      "id": "stability",
+      "kind": "stability",
+      "parts": [
+        {
+          "dataset": "xstest_safe",
+          "passes": 8
+        },
+        {
+          "dataset": "jailbreakbench",
+          "passes": 3
+        }
+      ],
+      "profile": "@primary",
+      "title": "Stability: the shipped behaviour, language detector unseeded"
+    }
+  ]
+}
