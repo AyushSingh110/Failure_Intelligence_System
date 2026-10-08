@@ -1,41 +1,50 @@
 from __future__ import annotations
 import logging
 from collections import defaultdict
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Depends, Request
 from app.limiter import rate_limit
-from app.routes._helpers import get_signal_logs_collection
 from app.schemas import TrendResponse, ClusterSummaryResponse, TelemetryPing
-from app.auth_guard import require_admin
+from app.auth_guard import Principal, ensure_principal, public, require_platform_admin, require_tenant
+from app.tenancy import TenantScope, tenant_analytics
+from storage.tenant_store import (
+    calibration_stats_all_tenants,
+    insert_sdk_telemetry,
+    sdk_telemetry_since_all_tenants,
+    signal_logs_collection_all_tenants,
+)
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 # Trend and clusters
 
+# Each tenant has its own trend and its own clusters. A cluster centroid carries
+# the model's normalised answers, so a shared registry showed one tenant's
+# outputs to every caller.
+
 @router.get("/trend", response_model=TrendResponse)
-def get_trend() -> TrendResponse:
-    from engine.evolution.tracker import evolution_tracker
-    return TrendResponse(**evolution_tracker.trend_summary())
+def get_trend(principal: Principal = Depends(require_tenant)) -> TrendResponse:
+    analytics = tenant_analytics.for_scope(TenantScope(ensure_principal(principal)))
+    return TrendResponse(**analytics.trend_summary())
 
 
 @router.get("/clusters", response_model=ClusterSummaryResponse)
-def get_clusters() -> ClusterSummaryResponse:
-    from engine.archetypes.clustering import archetype_registry
-    clusters = archetype_registry.summarize()
+def get_clusters(principal: Principal = Depends(require_tenant)) -> ClusterSummaryResponse:
+    analytics = tenant_analytics.for_scope(TenantScope(ensure_principal(principal)))
+    clusters = analytics.summarize()
     return ClusterSummaryResponse(total_clusters=len(clusters), clusters=clusters)
 
 
 @router.delete("/clusters/reset", response_model=dict)
-def reset_clusters() -> dict:
-    from engine.archetypes.clustering import ArchetypeClusterRegistry
-    import engine.archetypes.clustering as clustering_module
-    clustering_module.archetype_registry = ArchetypeClusterRegistry()
+def reset_clusters(principal: Principal = Depends(require_tenant)) -> dict:
+    """Clears the caller's own clusters. No other tenant is affected."""
+    tenant_analytics.for_scope(TenantScope(ensure_principal(principal))).reset_clusters()
     return {"status": "reset", "message": "Archetype registry cleared"}
 
 
 # Telemetry
 
-@router.post("/telemetry", response_model=dict)
+@router.post("/telemetry", response_model=dict, dependencies=[Depends(public)])
 @rate_limit("30/minute")
 def receive_telemetry(request: Request, body: TelemetryPing) -> dict:
     """
@@ -43,18 +52,15 @@ def receive_telemetry(request: Request, body: TelemetryPing) -> dict:
     No prompt text, no API keys, no PII — only event type and boolean signals.
     """
     try:
-        from storage.database import _db, _fallback_mode
         from datetime import datetime
 
         clean = body.model_dump()
         clean["received_at"] = datetime.utcnow().isoformat()
-
-        if not _fallback_mode and _db is not None:
-            _db["sdk_telemetry"].insert_one(clean)
+        insert_sdk_telemetry(clean)
     except Exception as exc:
         logger.warning(
             "degraded capability=receive_telemetry impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
     return {"status": "ok"}
 
@@ -64,12 +70,10 @@ def receive_telemetry(request: Request, body: TelemetryPing) -> dict:
 @router.get("/analytics/usage", response_model=dict)
 def analytics_usage(
     days:          int = 7,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """Request volume, latency, and failure detection rate over the past N days."""
-    require_admin(authorization, x_api_key)
-    col = get_signal_logs_collection()
+    col = signal_logs_collection_all_tenants()
     if col is None:
         return {"error": "MongoDB unavailable"}
 
@@ -111,19 +115,17 @@ def analytics_usage(
     except Exception as exc:
         logger.warning(
             "degraded capability=analytics_usage impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
-        return {"error": str(exc)}
+        return {"error": "analytics unavailable"}
 
 
 @router.get("/analytics/model-performance", response_model=dict)
 def analytics_model_performance(
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """XGBoost vs POET agreement rate, accuracy from real user feedback."""
-    require_admin(authorization, x_api_key)
-    col = get_signal_logs_collection()
+    col = signal_logs_collection_all_tenants()
     if col is None:
         return {"error": "MongoDB unavailable"}
 
@@ -180,24 +182,22 @@ def analytics_model_performance(
     except Exception as exc:
         logger.warning(
             "degraded capability=analytics_model_performance impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
-        return {"error": str(exc)}
+        return {"error": "analytics unavailable"}
 
 
 @router.get("/analytics/calibration", response_model=dict)
 def analytics_calibration(
     question_type: str = "all",
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """
     Confidence calibration curves from real user feedback.
     Pass ?question_type=FACTUAL for per-type curves.
     Returns points ready for a calibration plot (predicted vs actual accuracy).
     """
-    require_admin(authorization, x_api_key)
-    col = get_signal_logs_collection()
+    col = signal_logs_collection_all_tenants()
     if col is None:
         return {"error": "MongoDB unavailable"}
 
@@ -257,19 +257,17 @@ def analytics_calibration(
     except Exception as exc:
         logger.warning(
             "degraded capability=analytics_calibration impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
-        return {"error": str(exc)}
+        return {"error": "analytics unavailable"}
 
 
 @router.get("/analytics/question-breakdown", response_model=dict)
 def analytics_question_breakdown(
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """Per-question-type breakdown: volume, failure rate, fix rate, escalation rate, avg XGB prob."""
-    require_admin(authorization, x_api_key)
-    col = get_signal_logs_collection()
+    col = signal_logs_collection_all_tenants()
     if col is None:
         return {"error": "MongoDB unavailable"}
 
@@ -313,34 +311,31 @@ def analytics_question_breakdown(
     except Exception as exc:
         logger.warning(
             "degraded capability=analytics_question_breakdown impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
-        return {"error": str(exc)}
+        return {"error": "analytics unavailable"}
 
 
 @router.get("/analytics/paper-metrics", response_model=dict)
 def analytics_paper_metrics(
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """
     All metrics needed for the research paper results section in one call.
     Combine with notebook-generated AUC figures for the complete results table.
     """
-    require_admin(authorization, x_api_key)
-    col = get_signal_logs_collection()
+    col = signal_logs_collection_all_tenants()
     if col is None:
         return {"error": "MongoDB unavailable"}
 
     try:
         from datetime import datetime
-        from storage.signal_logger import get_calibration_stats
         from engine.fie_config import (
             get_all_thresholds, get_config_version,
             MODEL_VERSION, MODEL_TRAINED, RECALIBRATION_INTERVAL,
         )
 
-        calib_stats = get_calibration_stats()
+        calib_stats = calibration_stats_all_tenants()
 
         pipeline_docs     = list(col.find({}, {"gt_source": 1, "question_type": 1, "fix_applied": 1}))
         gt_source_counts: dict = defaultdict(int)
@@ -403,29 +398,24 @@ def analytics_paper_metrics(
     except Exception as exc:
         logger.warning(
             "degraded capability=analytics_paper_metrics impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
-        return {"error": str(exc)}
+        return {"error": "analytics unavailable"}
 
 
 @router.get("/analytics/sdk-telemetry", response_model=dict)
 def analytics_sdk_telemetry(
     days:          int = 30,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """Admin view of anonymized SDK usage telemetry from opted-in fie-sdk clients."""
-    require_admin(authorization, x_api_key)
     try:
-        from storage.database import _db, _fallback_mode
         from datetime import datetime, timedelta
 
-        if _fallback_mode or _db is None:
-            return {"error": "MongoDB unavailable"}
-
-        col    = _db["sdk_telemetry"]
         cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
-        docs   = list(col.find({"received_at": {"$gte": cutoff}}, {"_id": 0}))
+        docs   = sdk_telemetry_since_all_tenants(cutoff)
+        if docs is None:
+            return {"error": "MongoDB unavailable"}
         total  = len(docs)
 
         if total == 0:
@@ -468,6 +458,6 @@ def analytics_sdk_telemetry(
     except Exception as exc:
         logger.warning(
             "degraded capability=analytics_sdk_telemetry impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
+            "reason=%s", type(exc).__name__,
         )
-        return {"error": str(exc)}
+        return {"error": "analytics unavailable"}

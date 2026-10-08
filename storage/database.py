@@ -8,15 +8,26 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
-#Module-level MongoDB client and collection 
+#Module-level MongoDB client and collection
 _client     = None
 _db         = None
 _collection = None
+# In-memory store used when MongoDB is unavailable. Keyed by "<tenant>:<request_id>",
+# so two tenants can never address the same entry.
 _fallback_records: dict[str, InferenceRequest] = {}
 _fallback_mode = False
 
+_RESERVED_TENANTS = frozenset({"", "anonymous"})
 
-#Internal helpers 
+
+class InferenceIdConflict(Exception):
+    """
+    The request_id is already held by a different tenant and the database still
+    has the pre-WP-002 unique index on `request_id` alone. Nothing was written.
+    """
+
+
+#Internal helpers
 
 def _get_collection():
     """Returns the inferences collection, initializing if needed."""
@@ -26,12 +37,13 @@ def _get_collection():
     return _collection
 
 
-def _to_doc(record: InferenceRequest) -> dict[str, Any]:
-    """Converts InferenceRequest to a MongoDB document."""
-    doc = record.model_dump()
-    # Use request_id as the MongoDB _id for fast lookups
-    doc["_id"] = doc["request_id"]
-    return doc
+def _doc_id(tenant_id: str, request_id: str) -> str:
+    """Document id namespaced by tenant: one tenant cannot name another tenant's document."""
+    return f"{tenant_id}:{request_id}"
+
+
+def _valid_tenant(tenant_id: Any) -> bool:
+    return isinstance(tenant_id, str) and tenant_id.strip() not in _RESERVED_TENANTS
 
 
 def _from_doc(doc: dict[str, Any]) -> InferenceRequest | None:
@@ -44,7 +56,39 @@ def _from_doc(doc: dict[str, Any]) -> InferenceRequest | None:
         return None
 
 
-#Public API 
+def _fallback_sorted(tenant_id: str | None) -> list[InferenceRequest]:
+    records = (
+        r for r in _fallback_records.values()
+        if tenant_id is None or r.tenant_id == tenant_id
+    )
+    return sorted(records, key=lambda record: record.timestamp, reverse=True)
+
+
+#Public API
+
+def request_indexes(col) -> None:
+    """
+    Ask for the indexes the tenant-scoped queries use. Each request is independent
+    and a failure is logged, not raised: a missing index is slow, not unsafe, and
+    must not push the whole store into in-memory fallback.
+
+    The unique index on `request_id` alone is deliberately no longer requested:
+    it made request ids one global namespace. Its replacement is the unique
+    index on (tenant_id, request_id). Dropping the old index on an existing
+    database is an owner-run migration step.
+    """
+    wanted = (
+        ([("tenant_id", 1), ("request_id", 1)], {"unique": True}),
+        ([("tenant_id", 1), ("timestamp", -1)], {}),
+        ("timestamp", {}),
+        ("model_name", {}),
+    )
+    for keys, options in wanted:
+        try:
+            col.create_index(keys, background=True, **options)
+        except Exception as exc:
+            logger.warning("inferences index request failed (%s): %s", keys, type(exc).__name__)
+
 
 def initialize_vault() -> None:
     """
@@ -75,7 +119,7 @@ def initialize_vault() -> None:
         _client = MongoClient(
             settings.mongodb_uri,
             server_api=ServerApi("1"),
-            serverSelectionTimeoutMS=10000,  
+            serverSelectionTimeoutMS=10000,
             connectTimeoutMS=10000,
             socketTimeoutMS=10000,
             tls=True,
@@ -89,12 +133,7 @@ def initialize_vault() -> None:
         _db         = _client[settings.mongodb_db_name]
         _collection = _db["inferences"]
 
-        # Create index on request_id for fast lookups
-        _collection.create_index("request_id", unique=True, background=True)
-        # Create index on timestamp for chronological queries
-        _collection.create_index("timestamp", background=True)
-        # Create index on model_name for filtering by model
-        _collection.create_index("model_name", background=True)
+        request_indexes(_collection)
 
         count = _collection.count_documents({})
         _fallback_mode = False
@@ -149,48 +188,55 @@ def flush_vault() -> None:
 
 def save_inference(data: InferenceRequest) -> bool:
     """
-    Inserts one inference record into MongoDB.
+    Stores one inference record under the tenant named on the record.
+
+    The record's `tenant_id` is the scope of the write. Routes never set it from
+    a request: storage.tenant_store.TenantStore overwrites it with the
+    authenticated tenant before calling this. A record with no real tenant is
+    refused — there is no shared or anonymous bucket.
+
+    The write can only create or update a document of that same tenant. Raises
+    InferenceIdConflict when the id belongs to another tenant and the old
+    single-field unique index is still in place.
     """
+    tenant_id = data.tenant_id
+    if not _valid_tenant(tenant_id):
+        logger.error("Refused to save an inference without a tenant")
+        return False
+    doc_id = _doc_id(tenant_id, data.request_id)
     try:
         if _fallback_mode:
-            _fallback_records[data.request_id] = data
+            _fallback_records[doc_id] = data
             return True
         col = _get_collection()
         if col is None:
-            _fallback_records[data.request_id] = data
+            _fallback_records[doc_id] = data
             return True
-        doc = _to_doc(data)
+        doc = data.model_dump()
         col.update_one(
-            {"_id": doc["_id"]},
-            {"$set": doc},
+            {"tenant_id": tenant_id, "request_id": data.request_id},
+            {"$set": doc, "$setOnInsert": {"_id": doc_id}},
             upsert=True,
         )
         return True
     except Exception as exc:
-        logger.error("Failed to save inference %s: %s", data.request_id, exc)
+        if type(exc).__name__ == "DuplicateKeyError":
+            raise InferenceIdConflict(data.request_id) from None
+        logger.error("Failed to save inference %s: %s", data.request_id, type(exc).__name__)
         return False
 
 
-def get_all_inferences(limit: int = 200, offset: int = 0) -> list[InferenceRequest]:
+def list_inferences_all_tenants(limit: int = 200, offset: int = 0) -> list[InferenceRequest]:
     """
-    Returns stored inference records sorted by timestamp descending.
+    Stored inference records of EVERY tenant, newest first.
+    Platform-admin use only; callers must go through authorize_cross_tenant_read.
     """
     try:
         if _fallback_mode:
-            all_recs = sorted(
-                _fallback_records.values(),
-                key=lambda record: record.timestamp,
-                reverse=True,
-            )
-            return all_recs[offset: offset + limit]
+            return _fallback_sorted(None)[offset: offset + limit]
         col  = _get_collection()
         if col is None:
-            all_recs = sorted(
-                _fallback_records.values(),
-                key=lambda record: record.timestamp,
-                reverse=True,
-            )
-            return all_recs[offset: offset + limit]
+            return _fallback_sorted(None)[offset: offset + limit]
         docs = col.find({}, sort=[("timestamp", -1)]).skip(offset).limit(limit)
         records = []
         for doc in docs:
@@ -199,28 +245,20 @@ def get_all_inferences(limit: int = 200, offset: int = 0) -> list[InferenceReque
                 records.append(record)
         return records
     except Exception as exc:
-        logger.error("Failed to fetch inferences: %s", exc)
+        logger.error("Failed to fetch inferences: %s", type(exc).__name__)
         return []
 
 
 def get_inferences_for_tenant(tenant_id: str, limit: int = 200, offset: int = 0) -> list[InferenceRequest]:
     """Returns inference records for a single tenant, newest first."""
+    if not _valid_tenant(tenant_id):
+        return []
     try:
         if _fallback_mode:
-            all_recs = sorted(
-                (r for r in _fallback_records.values() if r.tenant_id == tenant_id),
-                key=lambda record: record.timestamp,
-                reverse=True,
-            )
-            return all_recs[offset: offset + limit]
+            return _fallback_sorted(tenant_id)[offset: offset + limit]
         col = _get_collection()
         if col is None:
-            all_recs = sorted(
-                (r for r in _fallback_records.values() if r.tenant_id == tenant_id),
-                key=lambda record: record.timestamp,
-                reverse=True,
-            )
-            return all_recs[offset: offset + limit]
+            return _fallback_sorted(tenant_id)[offset: offset + limit]
         docs = col.find({"tenant_id": tenant_id}, sort=[("timestamp", -1)]).skip(offset).limit(limit)
         records = []
         for doc in docs:
@@ -229,133 +267,108 @@ def get_inferences_for_tenant(tenant_id: str, limit: int = 200, offset: int = 0)
                 records.append(record)
         return records
     except Exception as exc:
-        logger.error("Failed to fetch inferences for tenant %s: %s", tenant_id, exc)
+        logger.error("Failed to fetch inferences for a tenant: %s", type(exc).__name__)
         return []
 
 
-def get_inference_by_id(request_id: str) -> InferenceRequest | None:
-    """Returns a single inference record by request_id, or None."""
+def get_inference_all_tenants(request_id: str) -> InferenceRequest | None:
+    """
+    One inference record by request_id, whichever tenant holds it.
+    Platform-admin use only; callers must go through authorize_cross_tenant_read.
+    """
     try:
         if _fallback_mode:
-            return _fallback_records.get(request_id)
+            return next((r for r in _fallback_records.values() if r.request_id == request_id), None)
         col = _get_collection()
         if col is None:
-            return _fallback_records.get(request_id)
+            return next((r for r in _fallback_records.values() if r.request_id == request_id), None)
         doc = col.find_one({"request_id": request_id})
         if doc is None:
             return None
         return _from_doc(doc)
     except Exception as exc:
-        logger.error("Failed to fetch inference %s: %s", request_id, exc)
+        logger.error("Failed to fetch inference %s: %s", request_id, type(exc).__name__)
         return None
 
 
 def get_inference_by_id_for_tenant(request_id: str, tenant_id: str) -> InferenceRequest | None:
     """Returns a single inference record if it belongs to the given tenant."""
+    if not _valid_tenant(tenant_id):
+        return None
     try:
         if _fallback_mode:
-            record = _fallback_records.get(request_id)
-            if record and record.tenant_id == tenant_id:
-                return record
-            return None
+            return _fallback_records.get(_doc_id(tenant_id, request_id))
         col = _get_collection()
         if col is None:
-            record = _fallback_records.get(request_id)
-            if record and record.tenant_id == tenant_id:
-                return record
-            return None
-        doc = col.find_one({"request_id": request_id, "tenant_id": tenant_id})
+            return _fallback_records.get(_doc_id(tenant_id, request_id))
+        doc = col.find_one({"tenant_id": tenant_id, "request_id": request_id})
         if doc is None:
             return None
         return _from_doc(doc)
     except Exception as exc:
-        logger.error(
-            "Failed to fetch inference %s for tenant %s: %s",
-            request_id,
-            tenant_id,
-            exc,
-        )
+        logger.error("Failed to fetch inference %s for a tenant: %s", request_id, type(exc).__name__)
         return None
-
-
-def delete_inference(request_id: str) -> bool:
-    """Deletes a single inference record. Returns True if deleted."""
-    try:
-        if _fallback_mode:
-            return _fallback_records.pop(request_id, None) is not None
-        col    = _get_collection()
-        if col is None:
-            return _fallback_records.pop(request_id, None) is not None
-        result = col.delete_one({"request_id": request_id})
-        return result.deleted_count > 0
-    except Exception as exc:
-        logger.error("Failed to delete inference %s: %s", request_id, exc)
-        return False
 
 
 def delete_inference_for_tenant(request_id: str, tenant_id: str) -> bool:
     """Deletes one inference record if it belongs to the given tenant."""
+    if not _valid_tenant(tenant_id):
+        return False
     try:
         if _fallback_mode:
-            record = _fallback_records.get(request_id)
-            if record and record.tenant_id == tenant_id:
-                _fallback_records.pop(request_id, None)
-                return True
-            return False
+            return _fallback_records.pop(_doc_id(tenant_id, request_id), None) is not None
         col = _get_collection()
         if col is None:
-            record = _fallback_records.get(request_id)
-            if record and record.tenant_id == tenant_id:
-                _fallback_records.pop(request_id, None)
-                return True
-            return False
-        result = col.delete_one({"request_id": request_id, "tenant_id": tenant_id})
+            return _fallback_records.pop(_doc_id(tenant_id, request_id), None) is not None
+        result = col.delete_one({"tenant_id": tenant_id, "request_id": request_id})
         return result.deleted_count > 0
     except Exception as exc:
-        logger.error(
-            "Failed to delete inference %s for tenant %s: %s",
-            request_id,
-            tenant_id,
-            exc,
-        )
+        logger.error("Failed to delete inference %s for a tenant: %s", request_id, type(exc).__name__)
         return False
 
 
-# User feedback storage 
+# User feedback storage
 
 def save_feedback(feedback_doc: dict) -> bool:
     """
     Saves a user feedback record to the 'feedback' collection.
+    The document must name its tenant; storage.tenant_store sets it.
     """
+    if not _valid_tenant(feedback_doc.get("tenant_id")):
+        logger.error("Refused to save feedback without a tenant")
+        return False
     try:
         if _fallback_mode or _db is None:
             logger.warning("Feedback not saved — MongoDB unavailable")
             return False
         col = _db["feedback"]
-        col.create_index("request_id", background=True)
-        col.create_index("tenant_id", background=True)
+        col.create_index([("tenant_id", 1), ("request_id", 1)], background=True)
         col.insert_one(feedback_doc)
         return True
     except Exception as exc:
-        logger.error("Failed to save feedback: %s", exc)
+        logger.error("Failed to save feedback: %s", type(exc).__name__)
         return False
 
 
-def get_feedback_for_request(request_id: str) -> list[dict]:
-    """Returns all feedback records for a given request_id."""
+def get_feedback_for_request(request_id: str, tenant_id: str) -> list[dict]:
+    """Returns the tenant's feedback records for a given request_id."""
+    if not _valid_tenant(tenant_id):
+        return []
     try:
         if _fallback_mode or _db is None:
             return []
         col  = _db["feedback"]
-        docs = list(col.find({"request_id": request_id}, {"_id": 0}))
+        docs = list(col.find({"tenant_id": tenant_id, "request_id": request_id}, {"_id": 0}))
         return docs
     except Exception as exc:
-        logger.error("Failed to fetch feedback for %s: %s", request_id, exc)
+        logger.error("Failed to fetch feedback for %s: %s", request_id, type(exc).__name__)
         return []
 
 
 def clear_inferences_for_tenant(tenant_id: str) -> int:
     """Deletes all inference records for a single tenant and returns the number removed."""
+    if not _valid_tenant(tenant_id):
+        return 0
     try:
         if _fallback_mode:
             to_delete = [key for key, record in _fallback_records.items() if record.tenant_id == tenant_id]
@@ -371,5 +384,5 @@ def clear_inferences_for_tenant(tenant_id: str) -> int:
         result = col.delete_many({"tenant_id": tenant_id})
         return int(result.deleted_count)
     except Exception as exc:
-        logger.error("Failed to clear inferences for tenant %s: %s", tenant_id, exc)
+        logger.error("Failed to clear inferences for a tenant: %s", type(exc).__name__)
         return 0

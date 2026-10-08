@@ -11,9 +11,12 @@ _TTL_HOURS      = 24   # sessions expire after 24 hours of inactivity
 _COMPRESS_AFTER = 8    # trigger summarization when turns reach this count
 _KEEP_RAW       = 4    # keep this many recent turns as raw after compression
 
-# In-memory fallback when MongoDB is unavailable
-_fallback: dict[str, list[dict]]  = {}
-_fallback_summaries: dict[str, str] = {}  # session_id → rolling summary text
+# In-memory fallback when MongoDB is unavailable.
+# A session belongs to one tenant: every key is (tenant_id, session_id), in memory
+# and in MongoDB. The session id is a label the client chooses; it is never
+# enough on its own to reach a conversation.
+_fallback: dict[tuple[str, str], list[dict]]  = {}
+_fallback_summaries: dict[tuple[str, str], str] = {}  # (tenant, session) → rolling summary text
 _fallback_lock = threading.Lock()
 
 # MongoDB collection (lazy init)
@@ -117,7 +120,7 @@ def _get_collection():
 
         # TTL index — MongoDB auto-deletes docs after expires_at
         col.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0)
-        col.create_index("session_id")
+        request_indexes(col)
 
         _collection = col
         _mongo_ok   = True
@@ -130,10 +133,27 @@ def _get_collection():
         return None
 
 
-def store_turn(session_id: str, role: str, content: str) -> None:
-    """Append one turn to a session. Compresses old turns into summary when needed."""
-    if not session_id:
+def request_indexes(col) -> None:
+    """Ask for the index the (tenant, session) lookups use. Failure is logged, not raised."""
+    try:
+        col.create_index([("tenant_id", 1), ("session_id", 1)])
+    except Exception as exc:
+        logger.warning("session_context index request failed: %s", type(exc).__name__)
+
+
+def _valid_tenant(tenant_id) -> bool:
+    return isinstance(tenant_id, str) and tenant_id.strip() not in ("", "anonymous")
+
+
+def store_turn(session_id: str, role: str, content: str, *, tenant_id: Optional[str] = None) -> None:
+    """
+    Append one turn to the tenant's session. Compresses old turns into summary when needed.
+    Without a tenant nothing is stored.
+    """
+    if not session_id or not _valid_tenant(tenant_id):
         return
+    owned = {"tenant_id": tenant_id, "session_id": session_id}
+    key   = (tenant_id, session_id)
 
     col  = _get_collection()
     turn = {"role": role, "content": content[:4000]}  # cap content size
@@ -143,7 +163,7 @@ def store_turn(session_id: str, role: str, content: str) -> None:
             expires = datetime.now(timezone.utc) + timedelta(hours=_TTL_HOURS)
 
             # Fetch current state so we can decide whether to compress
-            doc = col.find_one({"session_id": session_id}, {"turns": 1, "summary": 1}) or {}
+            doc = col.find_one(owned, {"turns": 1, "summary": 1}) or {}
             current_turns   = doc.get("turns", [])
             current_summary = doc.get("summary", "")
 
@@ -151,7 +171,7 @@ def store_turn(session_id: str, role: str, content: str) -> None:
             new_turns, new_summary = _maybe_compress(session_id, current_turns, current_summary)
 
             col.update_one(
-                {"session_id": session_id},
+                owned,
                 {
                     "$set": {
                         "turns":      new_turns,
@@ -165,23 +185,25 @@ def store_turn(session_id: str, role: str, content: str) -> None:
             logger.debug("SessionStore.store_turn MongoDB error: %s", exc)
     else:
         with _fallback_lock:
-            if session_id not in _fallback:
-                _fallback[session_id] = []
-            _fallback[session_id].append(turn)
+            if key not in _fallback:
+                _fallback[key] = []
+            _fallback[key].append(turn)
 
             new_turns, new_summary = _maybe_compress(
                 session_id,
-                _fallback[session_id],
-                _fallback_summaries.get(session_id, ""),
+                _fallback[key],
+                _fallback_summaries.get(key, ""),
             )
-            _fallback[session_id] = new_turns
+            _fallback[key] = new_turns
             if new_summary:
-                _fallback_summaries[session_id] = new_summary
+                _fallback_summaries[key] = new_summary
 
 
-def get_context(session_id: str, max_turns: int = 5) -> list[dict]:
+def get_context(session_id: str, max_turns: int = 5, *, tenant_id: Optional[str] = None) -> list[dict]:
     """
-    Returns context for session_id as a list of role/content dicts.
+    Returns the tenant's context for session_id as a list of role/content dicts.
+    Without a tenant, or for a session stored before sessions carried one, the
+    result is empty.
 
     If a rolling summary exists it is prepended as a system turn so shadow
     models receive full history without raw token blowup:
@@ -190,14 +212,15 @@ def get_context(session_id: str, max_turns: int = 5) -> list[dict]:
 
     Returns empty list if session not found or store unavailable.
     """
-    if not session_id:
+    if not session_id or not _valid_tenant(tenant_id):
         return []
+    key = (tenant_id, session_id)
 
     col = _get_collection()
 
     if col is not None:
         try:
-            doc = col.find_one({"session_id": session_id}, {"turns": 1, "summary": 1})
+            doc = col.find_one({"tenant_id": tenant_id, "session_id": session_id}, {"turns": 1, "summary": 1})
             if doc:
                 raw     = doc.get("turns", [])[-max_turns:]
                 summary = doc.get("summary", "")
@@ -206,8 +229,8 @@ def get_context(session_id: str, max_turns: int = 5) -> list[dict]:
             logger.debug("SessionStore.get_context MongoDB error: %s", exc)
     else:
         with _fallback_lock:
-            raw     = _fallback.get(session_id, [])[-max_turns:]
-            summary = _fallback_summaries.get(session_id, "")
+            raw     = _fallback.get(key, [])[-max_turns:]
+            summary = _fallback_summaries.get(key, "")
             return _build_context(raw, summary)
 
     return []
@@ -221,12 +244,15 @@ def _build_context(raw_turns: list[dict], summary: str) -> list[dict]:
     return [system_turn] + raw_turns
 
 
-def clear_session(session_id: str) -> None:
-    """Remove a session (used in tests or explicit reset)."""
+def clear_session(session_id: str, *, tenant_id: Optional[str] = None) -> None:
+    """Remove one of the tenant's sessions (used in tests or explicit reset)."""
+    if not session_id or not _valid_tenant(tenant_id):
+        return
+    key = (tenant_id, session_id)
     col = _get_collection()
     if col is not None:
         try:
-            col.delete_one({"session_id": session_id})
+            col.delete_one({"tenant_id": tenant_id, "session_id": session_id})
         except Exception as exc:
             logger.warning(
                 "degraded capability=clear_session impact='this optional step was skipped' "
@@ -234,5 +260,5 @@ def clear_session(session_id: str) -> None:
             )
     else:
         with _fallback_lock:
-            _fallback.pop(session_id, None)
-            _fallback_summaries.pop(session_id, None)
+            _fallback.pop(key, None)
+            _fallback_summaries.pop(key, None)

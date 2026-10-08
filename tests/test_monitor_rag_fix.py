@@ -64,10 +64,10 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
                 )
             ]
 
-        def fan_out(self, prompt: str, system_message: str | None = None):
+        def fan_out(self, prompt: str, system_message: str | None = None, cache_scope=None):
             return self._responses()
 
-        def fan_out_with_confidence(self, prompt: str, system_message: str | None = None):
+        def fan_out_with_confidence(self, prompt: str, system_message: str | None = None, cache_scope=None):
             return self._responses()
 
     monkeypatch.setattr(routes.settings, "groq_enabled", True)
@@ -104,7 +104,7 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
     monkeypatch.setattr(
         routes.failure_agent,
         "run_diagnostic",
-        lambda request: SimpleNamespace(
+        lambda request, **kwargs: SimpleNamespace(
             jury=JuryVerdict(
                 verdicts=[
                     AgentVerdict(
@@ -143,6 +143,16 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
     # decorator, so the test exercises the same code path as production.
     from starlette.requests import Request as StarletteRequest
 
+    # The handler serves authenticated tenants only (WP-002). Calling it directly
+    # bypasses FastAPI's dependency resolution, so the principal is passed in. The
+    # usage counter would otherwise open a MongoDB connection for this tenant.
+    from app.auth_guard import Principal
+    monkeypatch.setattr("app.auth.increment_usage", lambda tenant_id: True)
+    principal = Principal(
+        tenant_id="rag-fix-test", subject="rag-fix@example.test",
+        role="tenant", credential_kind="api_key",
+    )
+
     http_request = StarletteRequest({
         "type":    "http",
         "method":  "POST",
@@ -159,6 +169,7 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
             primary_model_name="user-gpt4",
             run_full_jury=True,
         ),
+        principal=principal,
     )
 
     assert response.fix_result is not None

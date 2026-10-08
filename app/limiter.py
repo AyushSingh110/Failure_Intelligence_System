@@ -3,11 +3,34 @@ import inspect
 import logging
 logger = logging.getLogger(__name__)
 
+def _remote_address(request) -> str:
+    client = getattr(request, "client", None)
+    return getattr(client, "host", None) or "127.0.0.1"
+
+
+def rate_key(request) -> str:
+    """
+    Whose budget a request spends.
+
+    An authenticated request is counted against its tenant, so two tenants behind
+    one address (a proxy, a NAT) have independent limits and one cannot exhaust
+    the other's. The tenant is taken from the principal the auth dependency put
+    on the request — never from a header, which a caller could set. A request
+    with no principal is counted against its socket address, as before.
+    Forwarded-address headers are not trusted: the proxy in front is unknown.
+    """
+    principal = getattr(getattr(request, "state", None), "principal", None)
+    tenant_id = getattr(principal, "tenant_id", None)
+    if isinstance(tenant_id, str) and tenant_id:
+        from app.security_events import tenant_ref
+        return f"tenant:{tenant_ref(tenant_id)}"
+    return _remote_address(request)
+
+
 try:
     from slowapi import Limiter
-    from slowapi.util import get_remote_address
 
-    limiter: Limiter | None = Limiter(key_func=get_remote_address)
+    limiter: Limiter | None = Limiter(key_func=rate_key)
     available: bool = True
 except ImportError:
     # slowapi is optional, but its absence is a real exposure rather than a

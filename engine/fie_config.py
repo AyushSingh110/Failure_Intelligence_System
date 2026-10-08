@@ -563,14 +563,27 @@ def recalibrate() -> dict:
             }
             for qt, t in new_thresholds.items():
                 doc[f"threshold_{qt}"] = t
-            cfg_col.replace_one({"_id": "thresholds"}, doc, upsert=True)
+            # $set, not replace: replacing the document dropped every field this
+            # function does not know about, including the operator's
+            # per-attack-type guard overrides (`attack_thresholds`).
+            fields = {k: v for k, v in doc.items() if k != "_id"}
+            cfg_col.update_one({"_id": "thresholds"}, {"$set": fields}, upsert=True)
         except Exception as exc:
             logger.warning("fie_config: failed to persist thresholds: %s", exc)
 
     with _lock:
+        old_version    = _config_version
         _thresholds    = new_thresholds
         _config_version = version
         _feedback_count_at_last_calib = len(labeled)
+
+    # Thresholds are shared by every tenant. A change is a platform action and is recorded.
+    try:
+        from app.security_events import emit
+        emit("platform.recalibration", severity="warning", outcome="changed",
+             reason="recalibrate", old_version=old_version, new_version=version, n_labeled=len(labeled))
+    except Exception as exc:   # pragma: no cover - defensive
+        logger.warning("platform.recalibration event failed: %s", type(exc).__name__)
 
     logger.info("fie_config recalibrated | version=%s | %s", version, per_type_stats)
     return {
@@ -582,13 +595,25 @@ def recalibrate() -> dict:
     }
 
 
+def auto_recalibration_enabled() -> bool:
+    """
+    Off unless FIE_AUTO_RECALIBRATE is set. These thresholds apply to every
+    tenant, so letting any tenant's feedback recompute them gave each tenant
+    control over the others' results. recalibrate() remains available as a
+    deliberate platform action.
+    """
+    return _os.environ.get("FIE_AUTO_RECALIBRATE", "").strip().lower() in ("1", "true", "yes")
+
+
 def maybe_recalibrate() -> None:
     """
-    Called after each feedback submission.
-    Triggers recalibration only when RECALIBRATION_INTERVAL new labels have
-    accumulated since the last calibration — runs in a background thread.
+    Automatic recalibration, when the platform switch is on (default: off).
+    Triggers only when RECALIBRATION_INTERVAL new labels have accumulated since
+    the last calibration — runs in a background thread.
     """
     global _feedback_count_at_last_calib
+    if not auto_recalibration_enabled():
+        return
     sig_col = _get_signal_collection()
     if sig_col is None:
         return

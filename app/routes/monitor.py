@@ -2,7 +2,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.limiter import rate_limit
 from app.routes._helpers import build_failure_signal
 from engine.agents.failure_agent import failure_agent
@@ -13,7 +13,20 @@ from app.schemas import (
     FeedbackRequest,
     FeedbackResponse,
 )
-from app.auth_guard import require_user, require_admin, resolve_user
+from app.auth_guard import (
+    Principal,
+    ensure_principal,
+    is_current_admin,
+    require_platform_admin,
+    require_tenant,
+)
+from app.security_events import emit
+from app.tenancy import TenantScope, tenant_analytics
+from storage.tenant_store import (
+    TenantStore,
+    calibration_stats_all_tenants,
+    recent_signal_logs_all_tenants,
+)
 from config import get_settings
 logger   = logging.getLogger(__name__)
 settings = get_settings()
@@ -24,18 +37,23 @@ router   = APIRouter()
 @router.post("/monitor", response_model=MonitorResponse)
 @rate_limit("60/minute")
 def monitor(
-    request:       Request,
-    body:          MonitorRequest,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    request:   Request,
+    body:      MonitorRequest,
+    principal: Principal = Depends(require_tenant),
 ) -> MonitorResponse:
 
     from app.schemas import DiagnosticRequest, InferenceRequest, MathematicalMetrics
     from engine.explainability.explanation_builder import attach_explanations_to_monitor
     from engine.detector.embedding import compute_embedding_distance
     from engine.archetypes.labeling import assign_failure_label
-    from engine.archetypes.clustering import archetype_registry
-    from engine.evolution.tracker import evolution_tracker
+
+    # Everything this request reads or writes is bounded by the caller's tenant.
+    # The scope is passed explicitly to every helper, including the ones that run
+    # in thread pools; nothing below takes a tenant from the request body.
+    principal = ensure_principal(principal)
+    scope     = TenantScope(principal)
+    store     = TenantStore(scope)
+    analytics = tenant_analytics.for_scope(scope)
 
     # Pre-flight guard
     if body.prompt:
@@ -50,11 +68,9 @@ def monitor(
                 )
                 # Persist so the dashboard can count and display blocked attacks
                 try:
-                    from app.schemas import InferenceRequest, MathematicalMetrics
-                    from storage.database import save_inference
                     _blocked_record = InferenceRequest(
                         request_id      = str(uuid.uuid4())[:12],
-                        tenant_id       = (resolve_user(authorization, x_api_key) or {}).get("tenant_id", "anonymous"),
+                        tenant_id       = principal.tenant_id,
                         timestamp       = datetime.utcnow(),
                         model_name      = body.primary_model_name or "blocked",
                         model_version   = "preflight-v1",
@@ -71,7 +87,7 @@ def monitor(
                             agreement_score = 0.0,
                         ),
                     )
-                    save_inference(_blocked_record)
+                    store.save_inference(_blocked_record)
                 except Exception as _save_exc:
                     logger.debug("Failed to persist blocked attack record: %s", _save_exc)
 
@@ -108,30 +124,27 @@ def monitor(
             logger.warning("preflight_check failed (allowing request through): %s", _pf_exc)
 
     # Step 0: Usage enforcement
-    current_user = resolve_user(authorization, x_api_key)
-    if current_user:
-        try:
-            from app.auth import increment_usage
-            allowed = increment_usage(current_user["tenant_id"])
-            if not allowed:
-                raise HTTPException(
-                    status_code=429,
-                    detail=(
-                        f"Usage limit reached for your plan "
-                        f"({current_user.get('calls_limit', 1000)} calls/month). "
-                        "Upgrade your plan or contact support."
-                    ),
-                )
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("Failed to update usage counters: %s", exc)
+    try:
+        from app.auth import increment_usage
+        allowed = increment_usage(principal.tenant_id)
+        if not allowed:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Usage limit reached for your plan. "
+                    "Upgrade your plan or contact support."
+                ),
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Failed to update usage counters: %s", type(exc).__name__)
 
     # Step 1: Session context threading
     if body.session_id and not body.context:
         try:
             from engine.session_store import get_context
-            _auto_ctx = get_context(body.session_id)
+            _auto_ctx = get_context(body.session_id, tenant_id=principal.tenant_id)
             if _auto_ctx:
                 body = body.model_copy(update={"context": _auto_ctx})
                 logger.info(
@@ -154,7 +167,7 @@ def monitor(
         groq = get_groq_service()
         if groq:
             groq_results       = groq.fan_out_with_confidence(
-                body.prompt, system_message=_canary_sysprompt
+                body.prompt, system_message=_canary_sysprompt, cache_scope=scope,
             )
             shadow_results_raw = groq_results
             successful         = [r for r in groq_results if r.success]
@@ -213,24 +226,23 @@ def monitor(
         "has_conversation_context":  _has_context,
     })
 
-    archetype_registry.assign(signal)
-    evolution_tracker.record(signal)
+    # This tenant's own clusters and trend. One tenant's traffic never moves another's.
+    analytics.assign(signal)
+    analytics.record(signal)
 
     # Spike alert — EMA high-risk rate >= 40%
     try:
         from app.notifications import notify_degradation_spike
-        _trend_snap = evolution_tracker.trend_summary()
+        _trend_snap = analytics.trend_summary()
         _risk_rate  = _trend_snap.get("ema_high_risk_rate", 0.0)
         if _risk_rate >= 0.40:
-            _notif_t  = current_user["tenant_id"] if current_user else "anonymous"
-            _notif_em = current_user.get("email")  if current_user else None
             notify_degradation_spike(
-                tenant_id   = _notif_t,
+                tenant_id   = principal.tenant_id,
                 risk_pct    = _risk_rate * 100,
                 ema_entropy = _trend_snap.get("ema_entropy", 0.0),
                 velocity    = _trend_snap.get("degradation_velocity", 0.0),
-                total       = _trend_snap.get("signals_count", 0),
-                to          = _notif_em,
+                total       = _trend_snap.get("signals_recorded", 0),
+                to          = principal.subject,
             )
     except Exception as _spike_exc:
         logger.debug("Spike notification failed (non-fatal): %s", _spike_exc)
@@ -291,24 +303,14 @@ def monitor(
             latency_ms    = body.latency_ms,
             canary_token  = _canary_token,
         )
-        diag_response = failure_agent.run_diagnostic(diag_request)
+        diag_response = failure_agent.run_diagnostic(
+            diag_request, registry=analytics, tracker=analytics,
+        )
         jury_verdict  = diag_response.jury
 
-    # FAISS auto-growth — persist confirmed adversarial detections
-    if jury_verdict and jury_verdict.is_adversarial and jury_verdict.jury_confidence >= 0.85:
-        try:
-            from engine.archetypes.registry import adversarial_registry
-            _adv_pv       = jury_verdict.primary_verdict
-            _adv_label    = _adv_pv.root_cause if _adv_pv else "ADVERSARIAL_PROMPT"
-            _adv_category = ((_adv_pv.evidence or {}).get("category", "UNKNOWN")) if _adv_pv else "UNKNOWN"
-            adversarial_registry.add_confirmed_detection(
-                prompt     = body.prompt,
-                label      = _adv_label,
-                category   = _adv_category,
-                confidence = jury_verdict.jury_confidence,
-            )
-        except Exception as _faiss_exc:
-            logger.debug("FAISS auto-growth failed (non-fatal): %s", _faiss_exc)
+    # The shared attack-pattern index is platform data. A request never adds to
+    # it: doing so copied one tenant's prompt into state that every other tenant's
+    # results depend on.
 
     # Step 5b: Multi-turn escalation
     multi_turn_result = None
@@ -323,6 +325,7 @@ def monitor(
                 question_type          = _question_type,
                 is_adversarial         = _jury_is_adversarial,
                 adversarial_confidence = _jury_confidence,
+                tenant_id              = principal.tenant_id,
             )
             if mt.is_escalating:
                 multi_turn_result = {
@@ -333,8 +336,7 @@ def monitor(
                     "evidence":      mt.evidence,
                 }
                 logger.warning(
-                    "MULTI_TURN_ESCALATION | conv=%s pattern=%s conf=%.3f",
-                    body.conversation_id, mt.pattern, mt.confidence,
+                    "MULTI_TURN_ESCALATION | pattern=%s conf=%.3f", mt.pattern, mt.confidence,
                 )
         except Exception as exc:
             logger.warning("multi_turn_tracker failed (non-fatal): %s", exc)
@@ -343,9 +345,8 @@ def monitor(
     extraction_result = None
     try:
         from engine.model_extraction_tracker import check_model_extraction
-        _tenant = current_user["tenant_id"] if current_user else "anonymous"
         ext = check_model_extraction(
-            tenant_id       = _tenant,
+            tenant_id       = principal.tenant_id,
             prompt          = body.prompt or "",
             conversation_id = body.conversation_id,
         )
@@ -357,8 +358,7 @@ def monitor(
                 "evidence":      ext.evidence,
             }
             logger.warning(
-                "MODEL_EXTRACTION | tenant=%s pattern=%s conf=%.3f",
-                _tenant, ext.pattern, ext.confidence,
+                "MODEL_EXTRACTION | pattern=%s conf=%.3f", ext.pattern, ext.confidence,
             )
     except Exception as exc:
         logger.debug("model_extraction_tracker failed (non-fatal): %s", exc)
@@ -416,6 +416,7 @@ def monitor(
                 use_wikidata    = _pipeline_gates.get("run_wikidata", True),
                 use_serper      = _pipeline_gates.get("run_serper",   True),
                 question_type   = _question_type,
+                scope           = scope,
             )
             gt_pipeline_result = gt   # keep raw result for provenance enrichment
             gt_result_schema = GroundTruthVerification(
@@ -688,14 +689,12 @@ def monitor(
 
     stored_request_id = None
     response = attach_explanations_to_monitor(response, request_id=stored_request_id)
-    if not (current_user and current_user.get("is_admin", False)):
+    if not is_current_admin(principal):
         response.explanation_internal = None
 
     # Step 9b: Signal logging
     _signal_log_id = ""
     try:
-        from storage.signal_logger import log_signal
-
         _layers_fired: list[str]        = []
         _layer_scores: dict[str, float] = {}
         _jury_verdict_str = ""
@@ -726,7 +725,7 @@ def monitor(
         ]
         _shadow_texts= [r.output_text for r in shadow_results_raw if r.success and r.output_text]
 
-        _signal_log_id = log_signal(
+        _signal_log_id = store.log_signal(
             request_id             = "",
             prompt                 = body.prompt,
             primary_output         = body.primary_output,
@@ -765,19 +764,7 @@ def monitor(
         stored_request_id = str(uuid.uuid4())[:12]
 
         if _signal_log_id:
-            try:
-                from storage.signal_logger import _get_collection as _slc
-                _sl_col = _slc()
-                if _sl_col is not None:
-                    _sl_col.update_one(
-                        {"log_id": _signal_log_id},
-                        {"$set": {"request_id": stored_request_id}},
-                    )
-            except Exception as exc:
-                logger.warning(
-                    "degraded capability=monitor impact='this optional step was skipped' "
-                    "reason=%s: %s", type(exc).__name__, exc,
-                )
+            store.attach_request_id(_signal_log_id, stored_request_id)
 
         if response.explanation_external is not None:
             response.explanation_external.request_id = stored_request_id
@@ -787,8 +774,8 @@ def monitor(
         # Email notifications (fire-and-forget)
         try:
             from app.notifications import notify_attack_detected, notify_human_review
-            _notif_tenant = current_user["tenant_id"] if current_user else "anonymous"
-            _notif_email  = current_user.get("email") if current_user else None
+            _notif_tenant = principal.tenant_id
+            _notif_email  = principal.subject
             _is_attack    = bool(jury_verdict and jury_verdict.is_adversarial)
 
             if _is_attack:
@@ -818,7 +805,7 @@ def monitor(
 
         inference_record = InferenceRequest(
             request_id    = stored_request_id,
-            tenant_id     = current_user["tenant_id"] if current_user else "anonymous",
+            tenant_id     = principal.tenant_id,
             timestamp     = datetime.utcnow(),
             model_name    = body.primary_model_name,
             model_version = "monitor-v1",
@@ -835,17 +822,16 @@ def monitor(
             human_explanation    = response.human_explanation,
             explanation_external = response.explanation_external,
         )
-        from storage.database import save_inference
-        save_inference(inference_record)
+        store.save_inference(inference_record)
     except Exception as exc:
-        logger.warning("Failed to save inference record: %s", exc)
+        logger.warning("Failed to save inference record: %s", type(exc).__name__)
 
     # Step 10: Update session store
     if body.session_id:
         try:
             from engine.session_store import store_turn
-            store_turn(body.session_id, "user",      body.prompt)
-            store_turn(body.session_id, "assistant", body.primary_output)
+            store_turn(body.session_id, "user",      body.prompt,         tenant_id=principal.tenant_id)
+            store_turn(body.session_id, "assistant", body.primary_output, tenant_id=principal.tenant_id)
         except Exception as _sess_save_exc:
             logger.debug("SessionStore save failed (non-fatal): %s", _sess_save_exc)
 
@@ -854,7 +840,7 @@ def monitor(
 
 # GET /monitor/status
 @router.get("/monitor/status", response_model=dict)
-def monitor_status() -> dict:
+def monitor_status(principal: Principal = Depends(require_tenant)) -> dict:
     """Current Ollama service status and model availability."""
     from engine.ollama_service import ollama_service
     available     = ollama_service.is_available()
@@ -871,8 +857,8 @@ def monitor_status() -> dict:
 
 # GET /monitor/model-info
 @router.get("/monitor/model-info", response_model=dict)
-def model_info() -> dict:
-    """Classifier version, thresholds, AUC, config version. No auth required."""
+def model_info(principal: Principal = Depends(require_tenant)) -> dict:
+    """Classifier version, thresholds, AUC, config version. Any authenticated tenant."""
     from engine.fie_config import (
         get_all_thresholds, get_config_version,
         MODEL_VERSION, MODEL_TRAINED, RECALIBRATION_INTERVAL,
@@ -907,48 +893,52 @@ def model_info() -> dict:
 
 @router.get("/monitor/calibration", response_model=dict)
 def get_calibration_stats(
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
-    """Calibration statistics from all labeled signal logs. Admin only."""
-    require_admin(authorization, x_api_key)
-    from storage.signal_logger import get_calibration_stats
-    return get_calibration_stats()
+    """Calibration statistics from all labeled signal logs of every tenant. Platform admin only."""
+    return calibration_stats_all_tenants()
 
 
 # GET /monitor/signal-logs
 
 @router.get("/monitor/signal-logs", response_model=list)
 def get_signal_logs(
-    limit:         int = 50,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    request:   Request,
+    limit:     int = 50,
+    principal: Principal = Depends(require_platform_admin),
 ) -> list:
-    """N most recent raw signal logs for debugging and auditing. Admin only."""
-    require_admin(authorization, x_api_key)
-    from storage.signal_logger import get_recent_logs
-    return get_recent_logs(limit=min(limit, 500))
+    """
+    N most recent raw signal logs of every tenant, for debugging and auditing.
+    Platform admin only. These rows hold prompts and answers, so the read is recorded.
+    """
+    emit("admin.cross_tenant_read", outcome="allowed", reason="signal_logs",
+         principal=principal, request=request, resource="signal_logs")
+    return recent_signal_logs_all_tenants(limit=max(1, min(limit, 500)))
 
 
 # POST /feedback/{request_id}
 @router.post("/feedback/{request_id}", response_model=FeedbackResponse)
 def submit_feedback(
-    request_id:    str,
-    body:          FeedbackRequest,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    request_id: str,
+    body:       FeedbackRequest,
+    principal:  Principal = Depends(require_tenant),
 ) -> FeedbackResponse:
-    #Ground Truth Feedback Loop.
-    from storage.database import save_feedback, get_inference_by_id_for_tenant
+    """
+    Ground Truth Feedback Loop — recorded inside the caller's tenant.
+
+    A correction is stored in this tenant's answer cache, the label is written to
+    this tenant's signal log, and the feedback document carries this tenant. No
+    threshold is recomputed and no retraining starts: both act on every tenant
+    and are platform actions, not side effects of a request.
+    """
     from engine.ground_truth_cache import save_to_cache
 
-    user = require_user(authorization, x_api_key)
+    principal = ensure_principal(principal)
+    scope     = TenantScope(principal)
+    store     = TenantStore(scope)
 
-    record = (
-        get_inference_by_id(request_id)
-        if user.get("is_admin", False)
-        else get_inference_by_id_for_tenant(request_id, user["tenant_id"])
-    )
+    # Only the caller's own record. A platform admin has no cross-tenant write.
+    record = store.get_inference(request_id)
     if record is None:
         raise HTTPException(
             status_code=404,
@@ -962,33 +952,26 @@ def submit_feedback(
             verified_answer = body.correct_answer.strip(),
             source          = "user_feedback",
             confidence      = 1.0,
-            verified_by     = user.get("email", "user"),
+            scope           = scope,
+            source_class    = "tenant_feedback",
         )
-        logger.info(
-            "GT cache updated from feedback | request_id=%s correct=%s",
-            request_id, body.correct_answer[:60],
-        )
+        logger.info("GT cache updated from feedback | request_id=%s", request_id)
 
-    # Update signal log with labeled outcome
+    # Update this tenant's signal log with the labeled outcome
+    sig_log = None
     try:
-        from storage.signal_logger import find_log_by_request_id, update_signal_feedback
-        sig_log = find_log_by_request_id(request_id)
+        sig_log = store.find_signal_log(request_id)
         if sig_log:
             fie_flagged   = sig_log.get("high_failure_risk", False)
             fie_corrected = sig_log.get("fix_applied", False)
             fie_was_correct = (not fie_corrected) if body.is_correct else fie_flagged
-            update_signal_feedback(
-                log_id          = sig_log["log_id"],
-                fie_was_correct = fie_was_correct,
-                correct_answer  = body.correct_answer or "",
-            )
+            store.label_signal(sig_log["log_id"], fie_was_correct, body.correct_answer or "")
     except Exception as _fe:
-        logger.debug("Signal feedback update failed (non-fatal): %s", _fe)
+        logger.debug("Signal feedback update failed (non-fatal): %s", type(_fe).__name__)
 
-    feedback_doc = {
+    store.save_feedback({
         "request_id":     request_id,
-        "tenant_id":      user["tenant_id"],
-        "submitted_by":   user.get("email", "unknown"),
+        "submitted_by":   principal.subject,
         "submitted_at":   datetime.utcnow().isoformat(),
         "is_correct":     body.is_correct,
         "correct_answer": body.correct_answer or "",
@@ -996,32 +979,21 @@ def submit_feedback(
         "question":       record.input_text,
         "model_answer":   record.output_text,
         "model_name":     record.model_name,
-    }
-    save_feedback(feedback_doc)
+    })
 
+    # Counted for a later, reviewed retraining design. Nothing is triggered here.
     try:
-        from engine.fie_config import maybe_recalibrate
-        maybe_recalibrate()
-    except Exception as exc:
-        logger.warning(
-            "degraded capability=submit_feedback impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
-        )
-
-    try:
-        from engine.retraining.buffer import add_to_buffer, maybe_trigger_retrain
-        from storage.signal_logger import find_log_by_request_id as _flbr
-        _sig = _flbr(request_id)
-        if _sig:
-            _buf_count = add_to_buffer(
-                log_id         = _sig.get("log_id", ""),
+        from engine.retraining.buffer import add_to_buffer
+        if sig_log:
+            add_to_buffer(
+                log_id         = sig_log.get("log_id", ""),
                 request_id     = request_id,
                 is_failure     = not body.is_correct,
                 correct_answer = body.correct_answer or "",
+                tenant_id      = principal.tenant_id,
             )
-            maybe_trigger_retrain(_buf_count)
     except Exception as _buf_exc:
-        logger.debug("Retraining buffer update failed (non-fatal): %s", _buf_exc)
+        logger.debug("Retraining buffer update failed (non-fatal): %s", type(_buf_exc).__name__)
 
     return FeedbackResponse(
         status        = "received",
@@ -1035,6 +1007,3 @@ def submit_feedback(
         ),
     )
 
-
-# local import needed by submit_feedback
-from storage.database import get_inference_by_id  # noqa: E402

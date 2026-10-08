@@ -20,7 +20,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 @pytest.fixture(scope="module")
 def client():
-    """FastAPI TestClient with MongoDB and Groq mocked out."""
+    """
+    FastAPI TestClient with MongoDB and Groq mocked out.
+
+    Tenant routes need a credential (WP-002). The fixture supplies one by
+    overriding the `require_tenant` policy with a fixed test principal, so the
+    monitor and diagnose tests exercise the same pipeline as before, as an
+    authenticated tenant. Admin routes are not overridden.
+    """
     # Patch MongoDB before app imports touch it
     mongo_mock = MagicMock()
     mongo_mock.return_value = MagicMock()
@@ -29,8 +36,18 @@ def client():
         with patch("storage.database._fallback_mode", True):
             with patch("storage.database._db", None):
                 from fastapi.testclient import TestClient
+                from app.auth_guard import Principal, require_tenant
                 from app.main import app
-                yield TestClient(app, raise_server_exceptions=False)
+
+                test_principal = Principal(
+                    tenant_id="integration-tests", subject="integration@example.test",
+                    role="tenant", credential_kind="api_key",
+                )
+                app.dependency_overrides[require_tenant] = lambda: test_principal
+                try:
+                    yield TestClient(app, raise_server_exceptions=False)
+                finally:
+                    app.dependency_overrides.pop(require_tenant, None)
 
 
 @pytest.fixture
@@ -79,12 +96,17 @@ class TestHealth:
 # ── /monitor endpoint ─────────────────────────────────────────────────────────
 
 class TestMonitor:
-    def test_monitor_requires_no_auth_returns_something(self, client, monitor_payload):
-        """Without auth, monitor should still process (anonymous allowed)."""
-        r = client.post("/api/v1/monitor", json=monitor_payload)
-        # Should not be 404 or 405
-        assert r.status_code != 404
-        assert r.status_code != 405
+    def test_monitor_without_a_credential_is_401(self, client, monitor_payload):
+        """Without a credential, monitor refuses: there is no anonymous tenant (WP-002)."""
+        from app.auth_guard import require_tenant
+        from app.main import app
+
+        override = app.dependency_overrides.pop(require_tenant)
+        try:
+            r = client.post("/api/v1/monitor", json=monitor_payload)
+        finally:
+            app.dependency_overrides[require_tenant] = override
+        assert r.status_code == 401
 
     def test_monitor_returns_json(self, client, monitor_payload):
         r = client.post("/api/v1/monitor", json=monitor_payload)

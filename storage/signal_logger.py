@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 _COLLECTION_NAME = "signal_logs"
 
 
+_RESERVED_TENANTS = frozenset({"", "anonymous"})
+
+
+def _valid_tenant(tenant_id) -> bool:
+    return isinstance(tenant_id, str) and tenant_id.strip() not in _RESERVED_TENANTS
+
+
 def _get_collection():
     """Returns the signal_logs MongoDB collection, or None if unavailable."""
     try:
@@ -54,17 +61,26 @@ def log_signal(
     fix_strategy:           str,
     fix_confidence:         float,
     fix_output:             str,
+    tenant_id:              str = "",
 ) -> str:
     """
     Saves a complete raw signal snapshot to the signal_logs collection.
     Returns the log_id (UUID string) so the caller can store it and
     later call update_signal_feedback() when user feedback arrives.
+
+    Every row names its tenant. A call without one writes nothing: a signal log
+    holds the prompt and the model's answer, and a row with no owner could later
+    be labelled or read by anyone.
     """
     log_id = str(uuid.uuid4())
+    if not _valid_tenant(tenant_id):
+        logger.error("Signal log dropped — no tenant (log_id=%s)", log_id)
+        return ""
 
     doc: dict[str, Any] = {
         "_id":                  log_id,
         "log_id":               log_id,
+        "tenant_id":            tenant_id,
         "request_id":           request_id,
         "timestamp":            datetime.utcnow().isoformat(),
 
@@ -127,7 +143,7 @@ def log_signal(
         col.insert_one(doc)
 
         # Indexes for fast lookups, range queries, and per-type calibration
-        col.create_index("request_id",      background=True)
+        col.create_index([("tenant_id", 1), ("request_id", 1)], background=True)
         col.create_index("timestamp",       background=True)
         col.create_index("feedback_received", background=True)
         col.create_index("jury_verdict",    background=True)
@@ -146,11 +162,16 @@ def update_signal_feedback(
     log_id:         str,
     fie_was_correct: bool,
     correct_answer:  Optional[str] = None,
+    *,
+    tenant_id:       str,
 ) -> bool:
     """
     Called when a user submits feedback via POST /feedback/{request_id}.
     This is what turns a raw log into a LABELED TRAINING EXAMPLE.
+    Only a log that belongs to `tenant_id` can be labelled.
     """
+    if not _valid_tenant(tenant_id):
+        return False
     try:
         col = _get_collection()
         if col is None:
@@ -164,7 +185,7 @@ def update_signal_feedback(
                 "feedback_at":       datetime.utcnow().isoformat(),
             }
         }
-        result = col.update_one({"log_id": log_id}, update)
+        result = col.update_one({"tenant_id": tenant_id, "log_id": log_id}, update)
         return result.modified_count > 0
 
     except Exception as exc:
@@ -172,20 +193,46 @@ def update_signal_feedback(
         return False
 
 
-def find_log_by_request_id(request_id: str) -> Optional[dict]:
-    """Returns the signal_log document for a given request_id, or None."""
+def find_log_by_request_id(request_id: str, tenant_id: str) -> Optional[dict]:
+    """Returns the tenant's signal_log document for a given request_id, or None."""
+    if not _valid_tenant(tenant_id):
+        return None
     try:
         col = _get_collection()
         if col is None:
             return None
-        return col.find_one({"request_id": request_id}, {"_id": 0})
+        return col.find_one({"tenant_id": tenant_id, "request_id": request_id}, {"_id": 0})
     except Exception as exc:
         logger.warning("Signal log lookup failed: %s", exc)
         return None
 
 
-def get_recent_logs(limit: int = 100) -> list[dict]:
-    """Returns the N most recent signal logs, newest first."""
+def attach_request_id(log_id: str, request_id: str, tenant_id: str) -> bool:
+    """Link a signal log to the inference record stored for the same request."""
+    if not _valid_tenant(tenant_id) or not log_id:
+        return False
+    try:
+        col = _get_collection()
+        if col is None:
+            return False
+        result = col.update_one({"tenant_id": tenant_id, "log_id": log_id},
+                                {"$set": {"request_id": request_id}})
+        return result.matched_count > 0
+    except Exception as exc:
+        logger.warning("Signal log link failed: %s", type(exc).__name__)
+        return False
+
+
+def signal_logs_collection_all_tenants():
+    """
+    The raw signal_logs collection, covering EVERY tenant. For platform-admin
+    analytics only; callers must hold the require_platform_admin policy.
+    """
+    return _get_collection()
+
+
+def get_recent_logs_all_tenants(limit: int = 100) -> list[dict]:
+    """Returns the N most recent signal logs of every tenant, newest first. Platform admin only."""
     try:
         col = _get_collection()
         if col is None:
@@ -193,14 +240,14 @@ def get_recent_logs(limit: int = 100) -> list[dict]:
         cursor = col.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit)
         return list(cursor)
     except Exception as exc:
-        logger.warning("Failed to fetch signal logs: %s", exc)
+        logger.warning("Failed to fetch signal logs: %s", type(exc).__name__)
         return []
 
 
-def get_calibration_stats() -> dict:
+def get_calibration_stats_all_tenants() -> dict:
     """
-    Computes calibration statistics from all labeled examples
-    (documents where feedback_received=True).
+    Computes calibration statistics from all labeled examples of every tenant
+    (documents where feedback_received=True). Platform admin only.
     """
     try:
         col = _get_collection()
@@ -291,8 +338,8 @@ def get_calibration_stats() -> dict:
         }
 
     except Exception as exc:
-        logger.warning("Calibration stats failed: %s", exc)
-        return {"error": str(exc)}
+        logger.warning("Calibration stats failed: %s", type(exc).__name__)
+        return {"error": "calibration statistics unavailable"}
 
 
 # Current hardcoded weights 

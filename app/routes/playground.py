@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
+import socket
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
+from urllib.parse import urlsplit
 
 import requests as _http
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.auth_guard import require_user
+from app.auth_guard import Principal, ensure_principal, require_tenant
+from app.tenancy import TenantScope, tenant_analytics
 
 logger = logging.getLogger("fie.playground")
 
@@ -66,6 +71,61 @@ class PlaygroundResponse(BaseModel):
     entropy_score:   float              = 0.0
 
 
+# ── Custom endpoint restriction ───────────────────────────────────────────────
+# The playground lets a caller name the URL the server will POST to. Without a
+# check, that turns the server into a client for whatever it can reach itself:
+# loopback services, the private network, the cloud metadata address.
+#
+# Allowed: `https` to a DNS name whose every resolved address is public.
+# Refused: any other scheme, credentials in the URL, IP literals in any spelling
+# (dotted, decimal, hex, IPv6, IPv4-mapped), single-label names, names that do
+# not resolve, and names that resolve to a non-public address. Redirects are
+# not followed, so a public host cannot bounce the request inward.
+#
+# Limit: the name is resolved here and again by the HTTP client, so a hostile
+# DNS server can answer differently the second time. Closing that needs a
+# pinned connection, which is outside this package.
+
+_DNS_NAME = re.compile(
+    r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$"
+)
+
+
+def _endpoint_allowed(endpoint: str) -> bool:
+    try:
+        parts = urlsplit(endpoint)
+        host  = (parts.hostname or "").lower().rstrip(".")
+        port  = parts.port
+    except ValueError:
+        return False
+    if parts.scheme != "https" or not host or parts.username or parts.password:
+        return False
+    # An IP literal is never accepted, whatever it points at.
+    try:
+        ipaddress.ip_address(host.strip("[]"))
+        return False
+    except ValueError:
+        pass
+    if not _DNS_NAME.match(host):
+        return False          # also rejects "localhost", "2130706433", "0x7f000001"
+    try:
+        infos = socket.getaddrinfo(host, port or 443, type=socket.SOCK_STREAM)
+    except Exception:
+        return False
+    addresses = {info[4][0] for info in infos}
+    if not addresses:
+        return False
+    for address in addresses:
+        try:
+            ip = ipaddress.ip_address(address.split("%", 1)[0])
+        except ValueError:
+            return False
+        mapped = getattr(ip, "ipv4_mapped", None)
+        if not ip.is_global or (mapped is not None and not mapped.is_global):
+            return False
+    return True
+
+
 # Internal helpers
 def _run_preflight(prompt: str) -> tuple[bool, str, float, list[str]]:
     try:
@@ -77,12 +137,12 @@ def _run_preflight(prompt: str) -> tuple[bool, str, float, list[str]]:
         return False, "", 0.0, []
 
 
-def _call_groq(model_name: str, prompt: str, groq) -> tuple[str, str, float, bool]:
+def _call_groq(model_name: str, prompt: str, groq, scope) -> tuple[str, str, float, bool]:
     t0 = time.perf_counter()
     try:
         from engine.groq_service import _MODEL_ALIASES
         resolved = _MODEL_ALIASES.get(model_name, model_name)
-        r = groq._call_single_model(resolved, prompt, max_tokens=500, temperature=0.2)
+        r = groq._call_single_model(resolved, prompt, max_tokens=500, temperature=0.2, cache_scope=scope)
         return r.output_text, r.model_name, (time.perf_counter() - t0) * 1000, r.success
     except Exception as exc:
         logger.error("groq call failed (%s): %s", model_name, exc)
@@ -90,27 +150,31 @@ def _call_groq(model_name: str, prompt: str, groq) -> tuple[str, str, float, boo
 
 
 def _call_custom(endpoint: str, api_key: str, prompt: str) -> tuple[str, str, float, bool]:
-    """Call any OpenAI-compatible endpoint the user provides."""
+    """Call an OpenAI-compatible endpoint the user provides, if it is a public https host."""
     t0 = time.perf_counter()
+    if not _endpoint_allowed(endpoint):
+        logger.warning("custom endpoint refused")
+        return "", "custom-model", (time.perf_counter() - t0) * 1000, False
     try:
         resp = _http.post(
             endpoint,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={"messages": [{"role": "user", "content": prompt}], "max_tokens": 500, "temperature": 0.2},
             timeout=30,
+            allow_redirects=False,
         )
         resp.raise_for_status()
         text = resp.json()["choices"][0]["message"]["content"].strip()
         return text, "custom-model", (time.perf_counter() - t0) * 1000, True
     except Exception as exc:
-        logger.error("custom model call failed: %s", exc)
+        logger.error("custom model call failed: %s", type(exc).__name__)
         return "", "custom-model", (time.perf_counter() - t0) * 1000, False
 
 
-def _run_shadow_ensemble(prompt: str, groq) -> tuple[str, list[ShadowResult], list[str]]:
+def _run_shadow_ensemble(prompt: str, groq, scope) -> tuple[str, list[ShadowResult], list[str]]:
     """Fan-out to all shadow models. Returns (best_answer, shadow_details, all_texts)."""
     try:
-        results   = groq.fan_out_with_confidence(prompt)
+        results   = groq.fan_out_with_confidence(prompt, cache_scope=scope)
         shadows   = []
         all_texts = []
         best_text = ""
@@ -155,15 +219,17 @@ def _run_signals(raw: str, shadow_texts: list[str]) -> tuple[float, float]:
         return 0.0, 0.0
 
 
-def _run_jury(prompt: str, raw: str, shadow_texts: list[str]):
-    """Run DiagnosticJury on all outputs. Returns jury result or None."""
+def _run_jury(prompt: str, raw: str, shadow_texts: list[str], scope):
+    """Run DiagnosticJury on all outputs, recording into the caller's own clusters and trend."""
     try:
         from engine.agents.failure_agent import failure_agent
         from app.schemas import DiagnosticRequest
 
         all_outputs = [raw] + shadow_texts
+        analytics   = tenant_analytics.for_scope(scope)
         return failure_agent.run_diagnostic(
-            DiagnosticRequest(prompt=prompt, model_outputs=all_outputs)
+            DiagnosticRequest(prompt=prompt, model_outputs=all_outputs),
+            registry=analytics, tracker=analytics,
         )
     except Exception as exc:
         logger.warning("jury failed: %s", exc)
@@ -173,9 +239,8 @@ def _run_jury(prompt: str, raw: str, shadow_texts: list[str]):
 #Endpoint
 @router.post("/playground", response_model=PlaygroundResponse)
 def playground(
-    body:          PlaygroundRequest,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    body:      PlaygroundRequest,
+    principal: Principal = Depends(require_tenant),
 ) -> PlaygroundResponse:
     """
     FIE Playground — full pipeline comparison.
@@ -186,7 +251,7 @@ def playground(
     Supports preset Groq models and any custom OpenAI-compatible endpoint.
     Results are NOT saved to MongoDB.
     """
-    require_user(authorization, x_api_key)
+    scope = TenantScope(ensure_principal(principal))
 
     if not body.prompt.strip():
         raise HTTPException(status_code=422, detail="Prompt cannot be empty.")
@@ -194,6 +259,11 @@ def playground(
     is_custom = bool(body.custom_endpoint and body.custom_api_key)
     if body.custom_endpoint and not body.custom_api_key:
         raise HTTPException(status_code=422, detail="custom_api_key required with custom_endpoint.")
+    if is_custom and not _endpoint_allowed(body.custom_endpoint):
+        raise HTTPException(
+            status_code=422,
+            detail="custom_endpoint must be an https URL of a public host.",
+        )
 
     from engine.groq_service import get_groq_service
     groq = get_groq_service()
@@ -216,7 +286,7 @@ def playground(
             )
         elif groq:
             raw_text, raw_model_name, raw_latency, raw_ok = _call_groq(
-                body.primary_model, body.prompt, groq
+                body.primary_model, body.prompt, groq, scope
             )
         return PlaygroundResponse(
             preflight_blocked     = True,
@@ -241,7 +311,7 @@ def playground(
     def _get_raw():
         if is_custom:
             return _call_custom(body.custom_endpoint, body.custom_api_key, body.prompt)
-        return _call_groq(body.primary_model, body.prompt, groq)
+        return _call_groq(body.primary_model, body.prompt, groq, scope)
 
     raw_text = raw_model_name = ""
     raw_latency = 0.0
@@ -252,7 +322,7 @@ def playground(
 
     with ThreadPoolExecutor(max_workers=2) as exe:
         fut_raw    = exe.submit(_get_raw)
-        fut_shadow = exe.submit(_run_shadow_ensemble, body.prompt, groq) if groq else None
+        fut_shadow = exe.submit(_run_shadow_ensemble, body.prompt, groq, scope) if groq else None
 
         raw_text, raw_model_name, raw_latency, raw_ok = fut_raw.result()
         if fut_shadow:
@@ -266,7 +336,7 @@ def playground(
     if raw_ok and shadow_texts:
         agreement, entropy = _run_signals(raw_text, shadow_texts)
 
-        jury_result = _run_jury(body.prompt, raw_text, shadow_texts)
+        jury_result = _run_jury(body.prompt, raw_text, shadow_texts, scope)
         if jury_result and jury_result.jury:
             j          = jury_result.jury
             jury_conf  = j.jury_confidence or 0.0

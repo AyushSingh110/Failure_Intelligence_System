@@ -2,9 +2,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from app.auth_guard import resolve_user, require_admin
+from app.auth_guard import Principal, ensure_principal, require_platform_admin, require_tenant
+from app.security_events import emit
+from app.tenancy import TenantScope
+from storage.tenant_store import TenantStore
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -19,12 +22,10 @@ class GuardConfigUpdate(BaseModel):
 
 @router.get("/admin/guard/config", response_model=dict)
 def get_guard_config(
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
 
     #Return the current pre-flight guard configuration.
-    require_admin(authorization, x_api_key)
     from engine.fie_config import get_preflight_config, get_config_version
     cfg = get_preflight_config()
     return {
@@ -42,12 +43,12 @@ def get_guard_config(
 # POST /admin/guard/config
 @router.post("/admin/guard/config", response_model=dict)
 def update_guard_config(
-    body:          GuardConfigUpdate,
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    body:      GuardConfigUpdate,
+    request:   Request,
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
-
-    require_admin(authorization, x_api_key)
+    # This switch applies to every tenant. The admin right was read from the user
+    # store for this request, and the change is recorded.
 
     if body.scan_threshold is not None:
         t = float(body.scan_threshold)
@@ -68,6 +69,11 @@ def update_guard_config(
         "GUARD_CONFIG_UPDATE | block_enabled=%s scan_threshold=%.4f",
         result["block_enabled"], result["scan_threshold"],
     )
+    emit(
+        "admin.config_change", severity="warning", outcome="changed", reason="guard_config",
+        principal=principal, request=request,
+        block_enabled=bool(result["block_enabled"]), scan_threshold=float(result["scan_threshold"]),
+    )
 
     return {
         "status":         "updated",
@@ -82,9 +88,8 @@ def update_guard_config(
 
 @router.post("/notifications/digest", response_model=dict)
 def send_weekly_digest(
-    days:          int  = Query(default=7, ge=1, le=90),
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    days:      int  = Query(default=7, ge=1, le=90),
+    principal: Principal = Depends(require_tenant),
 ) -> dict:
     """
     Compile a usage digest for the authenticated tenant and email it via SendGrid.
@@ -93,15 +98,12 @@ def send_weekly_digest(
     """
     from app.notifications import notify_weekly_digest
 
-    current_user = resolve_user(authorization, x_api_key)
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
+    principal = ensure_principal(principal)
     try:
-        from storage.database import get_inferences_for_tenant
-        inferences = get_inferences_for_tenant(current_user["tenant_id"])
+        inferences = TenantStore(TenantScope(principal)).list_inferences()
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.error("digest: could not load inferences: %s", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Could not load inferences")
 
     cutoff = datetime.utcnow() - timedelta(days=days)
     period = [
@@ -122,7 +124,7 @@ def send_weekly_digest(
     top_archetype = max(archetype_counts, key=archetype_counts.get) if archetype_counts else "STABLE"
 
     notify_weekly_digest(
-        tenant_id     = current_user["tenant_id"],
+        tenant_id     = principal.tenant_id,
         total         = total,
         high_risk     = high_risk,
         attacks       = attacks,
@@ -130,7 +132,7 @@ def send_weekly_digest(
         escalations   = escalations,
         top_archetype = top_archetype,
         period_days   = days,
-        to            = current_user.get("email"),
+        to            = principal.subject,
     )
 
     return {
@@ -142,7 +144,7 @@ def send_weekly_digest(
         "fix_applied":   fix_applied,
         "escalations":   escalations,
         "top_archetype": top_archetype,
-        "recipient":     current_user.get("email", "—"),
+        "recipient":     principal.subject,
         "note": (
             "Email delivery requires SENDGRID_API_KEY and NOTIFICATION_EMAIL in .env. "
             "Stats are returned regardless."

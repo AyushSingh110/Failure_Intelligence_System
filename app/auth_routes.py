@@ -1,14 +1,15 @@
 from __future__ import annotations
 import logging
 import os
-from typing import Optional
 
 import requests as http_requests
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+from app.auth_guard import Principal, ensure_principal, public, require_platform_admin, require_tenant
 from app.limiter import rate_limit
+from app.security_events import emit
 
 load_dotenv()
 
@@ -60,20 +61,23 @@ class UserInfo(BaseModel):
 # Rate limits protect the login surface from brute-force / credential-stuffing.
 # Limits are per client IP (slowapi get_remote_address) and no-op when slowapi
 # is not installed, so local development is unaffected.
-@router.post("/google-callback", response_model=LoginResponse)
+@router.post("/google-callback", response_model=LoginResponse, dependencies=[Depends(public)])
 @rate_limit("10/minute")
 def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginResponse:
     """
     React sends Google auth code here.
     We exchange it for user info, then create/fetch user.
+
+    Error bodies are generic on purpose: the provider's response and our own
+    exception text go to the log, not to the caller.
     """
     from app.auth import get_or_create_user, create_session_token
     client_id     = _google_client_id()
     client_secret = _google_client_secret()
     redirect_uri  = body.redirect_uri or _google_redirect_uri()
     logger.info(
-        "google_callback: redirect_uri=%s client_id_present=%s client_secret_present=%s",
-        redirect_uri, bool(client_id), bool(client_secret),
+        "google_callback: client_id_present=%s client_secret_present=%s",
+        bool(client_id), bool(client_secret),
     )
 
     #Exchange code for access token
@@ -91,32 +95,16 @@ def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginRespo
         )
         if not token_resp.ok:
             logger.error(
-                "Google token exchange failed. redirect_uri=%s client_id_present=%s client_secret_present=%s response=%s",
-                redirect_uri,
-                bool(client_id),
-                bool(client_secret),
-                token_resp.text,
+                "Google token exchange failed. client_id_present=%s client_secret_present=%s",
+                bool(client_id), bool(client_secret),
             )
-            raise HTTPException(status_code=400, detail=f"Token exchange failed: {token_resp.text}")
+            raise HTTPException(status_code=400, detail="Token exchange failed")
         tokens = token_resp.json()
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Token exchange failed: %s", exc)
-        response_text = ""
-        if getattr(exc, "response", None) is not None:
-            try:
-                response_text = exc.response.text
-            except Exception as exc:
-                logger.warning(
-                    "degraded capability=google_callback impact='this optional step was skipped' "
-                    "reason=%s: %s", type(exc).__name__, exc,
-                )
-                response_text = ""
-        detail = f"Token exchange failed: {exc}"
-        if response_text:
-            detail = f"{detail} | Google response: {response_text}"
-        raise HTTPException(status_code=400, detail=detail)
+        logger.error("Token exchange failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=400, detail="Token exchange failed")
 
     # Step 2 — Get user info from Google
     try:
@@ -128,15 +116,23 @@ def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginRespo
         user_resp.raise_for_status()
         google_user = user_resp.json()
     except Exception as exc:
-        logger.error("Failed to get Google user info: %s", exc)
-        raise HTTPException(status_code=400, detail=f"Failed to get user info: {exc}")
+        logger.error("Failed to get Google user info: %s", type(exc).__name__)
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+
+    # An account is tied to an e-mail address Google has verified. A profile with
+    # no e-mail (the caller can ask Google for a scope without one) or with an
+    # unverified one does not get an account.
+    email = google_user.get("email") if isinstance(google_user, dict) else None
+    if not isinstance(email, str) or not email.strip() or google_user.get("verified_email") is not True:
+        emit("authn.invalid", severity="warning", outcome="denied", reason="unverified_email", request=request)
+        raise HTTPException(status_code=403, detail="Login requires a verified e-mail address")
 
     # Step 3 — Create/fetch user in MongoDB
     try:
         user  = get_or_create_user(
-            email   = google_user.get("email", ""),
-            name    = google_user.get("name", ""),
-            picture = google_user.get("picture", ""),
+            email   = email,
+            name    = google_user.get("name", "") or "",
+            picture = google_user.get("picture", "") or "",
         )
         token = create_session_token(user)
 
@@ -152,29 +148,28 @@ def google_callback(request: Request, body: GoogleCallbackRequest) -> LoginRespo
             calls_limit = user.get("calls_limit", 1000),
         )
     except Exception as exc:
-        logger.error("User creation failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Login failed: {exc}")
+        logger.error("User creation failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Login failed")
 
 
 @router.get("/me", response_model=UserInfo)
 @rate_limit("60/minute")
 def get_me(
-    request:       Request,
-    authorization: Optional[str] = Header(None),
-    x_api_key:     Optional[str] = Header(None, alias="X-API-Key"),
+    request:   Request,
+    principal: Principal = Depends(require_tenant),
 ) -> UserInfo:
-    from app.auth import verify_session_token, get_user_by_email, get_user_by_api_key
-    user = None
-    if authorization and authorization.startswith("Bearer "):
-        payload = verify_session_token(authorization.split(" ")[1])
-        if payload:
-            user = get_user_by_email(payload["email"])
-    if not user and x_api_key:
-        user = get_user_by_api_key(x_api_key)
-    if not user:
+    """The caller's own account, read fresh from the user store."""
+    from app.auth import env_key_user, get_user_by_email
+
+    principal = ensure_principal(principal)
+    if principal.credential_kind == "env_key":
+        user = env_key_user(os.getenv("FIE_API_KEY", ""))   # the operator's key has no stored account
+    else:
+        user = get_user_by_email(principal.subject)
+    if not user or user.get("tenant_id") != principal.tenant_id:
         raise HTTPException(status_code=401, detail="Invalid session")
     return UserInfo(
-        email=user["email"], name=user["name"],
+        email=user["email"], name=user.get("name", ""),
         api_key=user["api_key"], tenant_id=user["tenant_id"],
         plan=user.get("plan","free"), is_admin=user.get("is_admin",False),
         calls_used=user.get("calls_used",0), calls_limit=user.get("calls_limit",1000),
@@ -183,24 +178,29 @@ def get_me(
 
 @router.get("/users")
 @rate_limit("30/minute")
-def get_users(request: Request, authorization: Optional[str] = Header(None)) -> list[dict]:
-    from app.auth import verify_session_token, get_all_users
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Authorization required")
-    payload = verify_session_token(authorization.split(" ")[1])
-    if not payload or not payload.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
+def get_users(
+    request:   Request,
+    principal: Principal = Depends(require_platform_admin),
+) -> list[dict]:
+    """Every registered user, without API keys. Platform admin only."""
+    from app.auth import get_all_users
     return get_all_users()
 
 
 @router.post("/regenerate-key")
 @rate_limit("5/minute")
-def regenerate_key_endpoint(request: Request, authorization: Optional[str] = Header(None)) -> dict:
-    from app.auth import verify_session_token, regenerate_api_key
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Authorization required")
-    payload = verify_session_token(authorization.split(" ")[1])
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    new_key = regenerate_api_key(payload["email"])
+def regenerate_key_endpoint(
+    request:   Request,
+    principal: Principal = Depends(require_tenant),
+) -> dict:
+    """Replace the caller's API key. The old key stops working immediately."""
+    from app.auth import regenerate_api_key
+
+    principal = ensure_principal(principal)
+    if principal.credential_kind == "env_key":
+        raise HTTPException(status_code=400, detail="The environment key is rotated in the deployment, not here")
+    new_key = regenerate_api_key(principal.subject)
+    if not new_key:
+        raise HTTPException(status_code=503, detail="Key rotation is unavailable; the existing key is unchanged")
+    emit("auth.key_rotated", outcome="changed", reason="key_rotation", principal=principal, request=request)
     return {"api_key": new_key, "message": "New API key generated"}

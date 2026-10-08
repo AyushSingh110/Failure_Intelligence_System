@@ -237,7 +237,15 @@ class AdversarialRegistry:
         Only adds prompts with confidence >= 0.85 and deduplicates against
         existing entries (cosine similarity >= 0.95 = skip as near-duplicate).
         Returns True if the pattern was added, False if skipped.
+
+        OFF unless the platform sets FIE_FAISS_AUTOGROW. This index is shared by
+        every tenant, so growing it from a request copied one tenant's prompt
+        into state that changes — and was returned in — other tenants' results.
+        With the switch off the index is its seed corpus plus whatever was
+        learned before, and no request can add to it.
         """
+        if os.environ.get("FIE_FAISS_AUTOGROW", "").strip().lower() not in ("1", "true", "yes"):
+            return False
         if confidence < 0.85:
             return False
 

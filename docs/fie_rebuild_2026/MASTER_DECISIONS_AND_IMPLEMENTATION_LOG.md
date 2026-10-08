@@ -8,9 +8,9 @@ disagree about what was decided or done, this file is right and the other one is
 | --- | --- |
 | Started | 2026-10-07 |
 | Baseline commit | `24cb2e9d76e977364f728f47790935283ef110b7` (`main`, clean, 236 commits) |
-| Current phase | **WP-001 (evaluation harness) complete, awaiting owner review.** Branch `rebuild/wp-001-eval-harness`, local only, not pushed. Work after Step 1 is uncommitted by owner instruction |
+| Current phase | **WP-002 (server isolation) implemented, awaiting owner review. NOT COMMITTED — the owner reviews and commits manually.** WP-001 is committed by the owner as `1e074d6`. Branch `rebuild/wp-001-eval-harness`. **The branch is on the public remote** (see §10.7) |
 | Canonical baseline | `evals/baselines/BL-0001_pair-v6.3b_fie-5d5ed90d` (PAIR v6.3b). Reference: `REF-0001_pair-v6.2_fie-5d5ed90d` |
-| Next action | Owner reviews [EXECUTION_001](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md) and commits. WP-002 not started and not approved |
+| Next action | Owner reviews [EXECUTION_002](EXECUTION_REPORTS/EXECUTION_002_server-isolation.md), commits, completes the deployment checklist (§10.9) and deploys. WP-003 not started and not approved |
 | Companion documents | [BASELINE_AUDIT.md](BASELINE_AUDIT.md) · [ROADMAP.md](ROADMAP.md) · [EXECUTION_REPORTS/](EXECUTION_REPORTS/) · [evidence/](evidence/) |
 
 ## How to use this log
@@ -202,7 +202,9 @@ says white-box evasion is expected. The reason is ordering, not secrecy.
 | --- | --- | --- | --- | --- | --- |
 | 0 | 2026-10-07 | Planning | Read-only audit; baseline tests; planning documents in `docs/fie_rebuild_2026/` | Audit, roadmap and this log written. 87/87 tests pass. Published v6.3b figures reproduced exactly. Repository working tree unchanged outside this directory | This file, §4 |
 | 1 | 2026-10-08 | Planning gate | One planning document for WP-001 | [PLAN_001_EVAL_HARNESS.md](IMPLEMENTATION_PLANS/PLAN_001_EVAL_HARNESS.md) written. 85.8% vs 88.2% resolved: two model versions on the same splits, both reproduce | The plan, §3 |
-| 2 | 2026-10-08 | Implementation | WP-001, approved with decisions OD-1 to OD-13 | **Complete, awaiting review.** Harness built in `evals/`; canonical baseline and v6.2 reference pinned; all approved counts reproduce; deterministic artifacts byte-identical; 0 outbound attempts; 317 tests pass (87 existing unchanged + 230 new); no production file changed. See §9 | [EXECUTION_001](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md) |
+| 2 | 2026-10-08 | Implementation | WP-001, approved with decisions OD-1 to OD-13 | **Complete; accepted and committed by the owner as `1e074d6`.** Harness built in `evals/`; canonical baseline and v6.2 reference pinned; all approved counts reproduce; deterministic artifacts byte-identical; 0 outbound attempts; 317 tests pass (87 existing unchanged + 230 new); no production file changed. See §9 | [EXECUTION_001](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md) |
+| 3 | 2026-10-08 | Planning gate | One planning document for WP-002 | [PLAN_002_SERVER_ISOLATION.md](IMPLEMENTATION_PLANS/PLAN_002_SERVER_ISOLATION.md) written. 51 routes and 41 state items inventoried; S1–S12 confirmed by code reading; 20 further findings (N1–N20) | The plan |
+| 4 | 2026-10-08 | Implementation | WP-002, approved with the recommendations of plan §31 (W2-1 to W2-22) | **Implemented, awaiting review. Not committed.** One principal, one policy per route, scoped data access. Every in-scope attack reproduced on the unmodified code and is closed. 635 tests pass (87 existing + 230 harness + 318 security). `fie/` untouched. See §10 | [EXECUTION_002](EXECUTION_REPORTS/EXECUTION_002_server-isolation.md) |
 
 ---
 
@@ -555,3 +557,162 @@ State handed over:
 When the owner commits, the next run's `fingerprint.json` will differ from the pinned one in
 its git fields only. Its records should stay byte-identical; `python -m evals baseline`
 checks exactly that.
+
+---
+
+## 10. WP-002 implementation record
+
+Detail, evidence and the full attack table are in
+[EXECUTION_002_server-isolation.md](EXECUTION_REPORTS/EXECUTION_002_server-isolation.md).
+
+### 10.1 Approval
+
+The owner approved WP-002 for implementation on 2026-10-08, with every recommendation of
+[PLAN_002](IMPLEMENTATION_PLANS/PLAN_002_SERVER_ISOLATION.md) §31 (W2-1 to W2-22) and a
+standing rule: **the assistant makes no commit, stage, push, stash or reset.**
+
+One further decision was taken during implementation. **D-022 — a tenth existing test may be
+edited.** *Status: approved by the owner.* The plan said nine tests in
+`tests/test_integration.py` would change. The first test of `tests/test_monitor_rag_fix.py`
+also calls `/monitor` with no credential. Raised as a stop condition before any file was
+modified; the owner approved editing that one test (a principal is passed in; assertions are
+unchanged).
+
+### 10.2 State
+
+| Item | Value |
+| --- | --- |
+| Implementation date | 2026-10-08 |
+| Branch | `rebuild/wp-001-eval-harness` |
+| HEAD before and after | `1e074d69e81d27932b47c01d57e78aff91c40c44` (the owner's WP-001 commit) |
+| Commit status | **NOT COMMITTED — owner will review and manually commit** |
+| Deployed | No |
+| Status | Complete with documented deviations |
+
+### 10.3 Files changed
+
+Created (production): `app/security_events.py`, `app/tenancy.py`, `storage/tenant_store.py`.
+
+Created (tests): `tests/security/` — `__init__.py`, `conftest.py`, `fakes.py`, and
+`test_authn.py`, `test_route_matrix.py`, `test_tenant_spoofing.py`,
+`test_inference_isolation.py`, `test_answer_cache_isolation.py`, `test_feedback_isolation.py`,
+`test_session_isolation.py`, `test_shared_state.py`, `test_admin_boundary.py`,
+`test_exposure.py`, `test_concurrency.py`, `test_failure_modes.py`, `test_static_boundary.py`,
+`test_performance_budget.py`.
+
+Modified (production, 25): `app/auth.py`, `app/auth_guard.py`, `app/auth_routes.py`,
+`app/limiter.py`, `app/main.py`, `app/routes/_helpers.py`, `app/routes/admin.py`,
+`app/routes/analytics.py`, `app/routes/community.py`, `app/routes/flags.py`,
+`app/routes/inference.py`, `app/routes/monitor.py`, `app/routes/playground.py`,
+`engine/agents/adversarial/specialist.py`, `engine/agents/failure_agent.py`,
+`engine/archetypes/registry.py`, `engine/fie_config.py`, `engine/groq_service.py`,
+`engine/ground_truth_cache.py`, `engine/multi_turn_tracker.py`, `engine/retraining/buffer.py`,
+`engine/session_store.py`, `engine/verifier/ground_truth_pipeline.py`, `storage/database.py`,
+`storage/signal_logger.py`.
+
+Modified (existing tests, 2): `tests/test_integration.py`, `tests/test_monitor_rag_fix.py`.
+
+Documentation: `EXECUTION_REPORTS/EXECUTION_002_server-isolation.md` (new), this file.
+
+Deleted: none. Not touched: `fie/`, `models/`, `scripts/`, `data/`, `evals/`, `tests/evals/`,
+`Frontend/`, `deploy/`, `.github/`, dependency files, `README.md`, `SECURITY.md`, `FACT_SHEET.md`.
+
+Size: 321 new production lines; 1,525 added and 829 removed in modified production files;
+3,235 lines of tests.
+
+### 10.4 Security invariants proven
+
+All seventeen of plan §15 hold, each with an automated test: I-1 no unauthenticated access to
+tenant data; I-2 the credential determines the tenant; I-3 a caller-supplied tenant cannot
+raise access; I-4 and I-5 no cross-tenant read of the cache or write of state; I-6 feedback
+changes nothing outside its tenant; I-7 sessions are per tenant; I-8 no existence oracle;
+I-9 shared state is immutable or platform-controlled; I-10 rows carry their tenant; I-11 no
+tokens and no start without a strong secret; I-12 admin rights are read from the store at the
+time; I-13 no response carries another tenant's text or identity; I-14 a missing tenant fails
+and is never served as global; I-15 an admin's cross-tenant read is explicit and recorded,
+with no cross-tenant write or delete; I-16 a key can be rotated; I-17 the playground cannot be
+pointed at internal addresses (limit: a DNS answer could change between check and use).
+
+### 10.5 Acceptance criteria and tests
+
+| Item | Result |
+| --- | --- |
+| AC-1 to AC-12, AC-14 to AC-22 | Pass. AC-11 and AC-22 pass with D-022 (ten tests edited, not nine). AC-14 with two stated exceptions: one hypothesis did not reproduce, one behaviour was already correct |
+| AC-13 baseline | Pass. `python -m evals baseline` on the final tree: exit 0, all eight counts equal, 11 per-prompt record files byte-identical to `BL-0001`, four fingerprint keys equal, `fie/` tree `5d5ed90d` unchanged. Flagged `canonical=False` only because WP-002 is uncommitted (D-013); expected to clear after the owner's commit |
+| Security suite | 318 passed. On the unmodified code the same suite: 115 passed, 203 failed |
+| Existing tests | 87 passed; 86 outcomes identical by name, 1 test renamed |
+| WP-001 harness tests | 230 passed |
+| Full suite | 635 passed, 0 failed, 0 skipped, 0 expected failures |
+
+Attack reproduction on the unmodified code: every in-scope finding (S1–S12 except the
+unknowable proxy question in S12, N1–N13, N16, the N18 header, N19's mechanism) reproduced.
+Not reproduced: the session "existence" read-oracle of N10 (the write side did reproduce).
+Not attempted: N19's claim that a crafted prompt can make an external verifier return a wrong
+answer.
+
+### 10.6 Deviations
+
+Fifteen, DV-1 to DV-15, in the execution report. The ones that change what the owner can
+expect: DV-1 (the tenth test); DV-2 (the three platform switches do **not** re-open
+request-path recalibration, retraining or index growth, because the routes no longer call
+those functions); DV-3 (one planned event has no trigger and is not emitted); DV-9 (the
+playground also refuses every IP literal); DV-13 (the security suite blanks `.env` keys in the
+test process).
+
+### 10.7 New findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| NF-1 | `fie.feedback_store.apply_label` reports success for an unknown event id on the MongoDB backend | Not fixed (`fie/`). Harmless: verified by test |
+| NF-2 | **The branch is on the public GitHub repository**, with the audit and the WP-002 plan, which describe attacks on the live service | **Owner action.** Decision OD-3 of WP-001 and plan §29 said it would stay local. The assistant did not push it |
+| NF-3 | Reasoning sub-step verification calls the answer pipeline without a scope; it now runs uncached and logs `cache.scope_missing` | Safe. Two-file change outside Artifact E; deferred |
+| NF-4 | Helper calls to the provider (explanation writer and others) are no longer cached | Safe. More provider calls |
+| NF-5 | The unrouted `engine/pipeline/langgraph_pipeline.py` now stores nothing | Safe |
+| NF-6 | `/ready` and `/health/deep` returned warm-up exception text | Fixed |
+| NF-7 | Spike-alert e-mail count was always 0 (wrong key) | Fixed in passing |
+| NF-8 | The Space-only `GET /api` route has no declared policy and is outside the route-matrix test | Not fixed (`deploy/`). Static banner |
+| NF-9 | A comment in `scripts/show_api_key.py` names a removed function | Not fixed (`scripts/`) |
+
+### 10.8 Residual risks
+
+- The live service is unchanged until the owner commits and deploys.
+- A stolen session token works for up to 24 hours. API keys are plain text in the database.
+  Both are WP-017.
+- The platform admin is trusted and can read every tenant on request; that read is now
+  recorded.
+- The scan-verdict and translation caches in `fie/` stay global: timing shows that some
+  caller recently scanned identical text.
+- Learned entries already in the attack-pattern index still take part in matching.
+- Past effects are not undone: thresholds already recalibrated, cache entries and records
+  already written. Legacy entries without a tenant are never served.
+- The suite runs against an in-repository fake of MongoDB, not against MongoDB.
+- The playground check resolves a name once and the HTTP client resolves it again.
+- Whether the Space's proxy presents one address to the rate limiter is still unknown;
+  authenticated traffic no longer depends on the answer.
+
+### 10.9 Deployment checklist (owner)
+
+1. `JWT_SECRET_KEY` (32+ characters) is set on the Space, or the build will not start.
+2. `FIE_ALLOW_INSECURE_DEV_SECRET` is not set on the Space.
+3. `ADMIN_EMAIL` on the Space is the intended account.
+4. Decide whether the server-side `FIE_API_KEY` should exist there.
+5. Decide whether to reset stored thresholds and whether to remove learned FAISS entries.
+6. On the production database, drop the unique index on `inferences.request_id` alone after
+   checking that no (`tenant_id`, `request_id`) pair is duplicated.
+7. Rotate the admin API key if it was ever shared.
+8. Tell known API users that anonymous access has ended.
+9. Do not set `FIE_AUTO_RECALIBRATE`, `FIE_AUTO_RETRAIN` or `FIE_FAISS_AUTOGROW`.
+10. Decide what to do about the public branch (NF-2).
+
+### 10.10 Deferred
+
+N14, N15, N17, the rest of N18, N20; NF-1, NF-3, NF-8, NF-9; key hashing and token revocation
+(WP-017); per-tenant provider metering; a pinned connection for the playground.
+
+### 10.11 Recommended manual commit command
+
+Not executed by the assistant.
+
+```text
+git add -- app/auth.py app/auth_guard.py app/auth_routes.py app/limiter.py app/main.py app/security_events.py app/tenancy.py app/routes/_helpers.py app/routes/admin.py app/routes/analytics.py app/routes/community.py app/routes/flags.py app/routes/inference.py app/routes/monitor.py app/routes/playground.py engine/agents/adversarial/specialist.py engine/agents/failure_agent.py engine/archetypes/registry.py engine/fie_config.py engine/groq_service.py engine/ground_truth_cache.py engine/multi_turn_tracker.py engine/retraining/buffer.py engine/session_store.py engine/verifier/ground_truth_pipeline.py storage/database.py storage/signal_logger.py storage/tenant_store.py tests/security tests/test_integration.py tests/test_monitor_rag_fix.py docs/fie_rebuild_2026/EXECUTION_REPORTS/EXECUTION_002_server-isolation.md docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md && git commit -m "security: isolate server tenant state and harden authentication (WP-002)"
+```

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 import threading
 import time
 import uuid
@@ -7,7 +8,7 @@ from contextlib import asynccontextmanager
 # Load .env before any module-level
 from dotenv import load_dotenv
 load_dotenv()
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from config import get_settings
 from engine.logging_config import configure_logging, bind_request_id
@@ -39,6 +40,7 @@ if _SENTRY_DSN:
 #Route packages
 from app.routes import router
 from app.auth_routes import router as auth_router
+from app.auth_guard import Principal, platform_admin_or_none, public
 
 # Rate limiting
 from app.limiter import limiter as _limiter, available as _rate_limiting_available
@@ -116,11 +118,43 @@ def _warm_models_in_background() -> None:
         else:
             logger.info("background_task=warmup component=detector status=ready detail=%s", status)
     except Exception as exc:
-        _WARMUP_STATE["detector"] = {"error": str(exc)}
+        # /ready and /health/deep are public: report the error's class, not its text.
+        _WARMUP_STATE["detector"] = {"error": type(exc).__name__}
         logger.error("background_task=warmup component=detector status=failed error=%s", exc)
 
     _WARMUP_STATE["done"] = True
     logger.info("background_task=warmup status=complete")
+
+
+# Startup security check
+
+def enforce_startup_security() -> None:
+    """
+    Refuse to serve without a strong signing secret.
+
+    A server that starts anyway would either accept tokens signed with a constant
+    from the public source, or silently refuse every dashboard login. Neither is
+    a state to discover in production, so startup fails instead.
+
+    FIE_ALLOW_INSECURE_DEV_SECRET=1 lets a developer run locally without a
+    secret. It is not a deployment option: it is logged as an error every start.
+    """
+    from app.auth import dev_secret_allowed, has_strong_secret
+    from app.security_events import emit
+
+    if has_strong_secret():
+        return
+    if dev_secret_allowed():
+        emit("startup.insecure_secret", severity="error", outcome="allowed", reason="dev_switch")
+        logger.error(
+            "startup=security status=INSECURE reason='FIE_ALLOW_INSECURE_DEV_SECRET is set; "
+            "session tokens are signed with a public constant. Never use this in production.'"
+        )
+        return
+    raise RuntimeError(
+        "JWT_SECRET_KEY is not set or is shorter than 32 characters. "
+        "Set a strong random secret before starting the server."
+    )
 
 
 # Lifespan
@@ -128,6 +162,8 @@ def _warm_models_in_background() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    enforce_startup_security()
+
     from storage.database import initialize_vault
     initialize_vault()
 
@@ -187,7 +223,8 @@ app.add_middleware(
     allow_origins     = _ALLOWED_ORIGINS,
     allow_credentials = True,
     allow_methods     = ["GET", "POST", "OPTIONS"],
-    allow_headers     = ["Authorization", "Content-Type", "X-Request-ID", "X-Tenant-ID"],
+    # No tenant header is offered: the tenant comes from the credential, never from the caller.
+    allow_headers     = ["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 app.include_router(router,      prefix="/api/v1")
@@ -214,6 +251,9 @@ _FRAME_ANCESTORS = os.getenv(
 )
 
 
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
 # Middleware: security headers + structured request logging
 @app.middleware("http")
 async def security_and_logging(request: Request, call_next):
@@ -225,7 +265,10 @@ async def security_and_logging(request: Request, call_next):
     3. Add production-grade security headers to every response.
     4. Log method, path, status, and latency at INFO level.
     """
-    rid = request.headers.get("X-Request-ID") or str(uuid.uuid4())[:8]
+    # A caller-supplied id is copied into logs and echoed back, so it is accepted
+    # only in a bounded, plain form. Anything else is replaced.
+    supplied = request.headers.get("X-Request-ID") or ""
+    rid = supplied if _REQUEST_ID.match(supplied) else str(uuid.uuid4())[:8]
     request.state.request_id = rid
     start = time.perf_counter()
 
@@ -287,7 +330,7 @@ async def security_and_logging(request: Request, call_next):
 
 
 #Root endpoints
-@app.get("/")
+@app.get("/", dependencies=[Depends(public)])
 def root() -> dict[str, str]:
     return {
         "system":  settings.app_name,
@@ -295,7 +338,7 @@ def root() -> dict[str, str]:
         "status":  "operational",
     }
 
-@app.get("/health")
+@app.get("/health", dependencies=[Depends(public)])
 def health() -> dict:
     """
     LIVENESS probe. "Is this process alive and able to serve?"
@@ -320,7 +363,7 @@ def health() -> dict:
     }
 
 
-@app.get("/ready")
+@app.get("/ready", dependencies=[Depends(public)])
 def ready(response: Response) -> dict:
     """
     READINESS probe. "Should this instance receive traffic yet?"
@@ -349,15 +392,27 @@ def ready(response: Response) -> dict:
     }
 
 
-@app.get("/health/deep")
-def health_deep() -> dict:
+@app.get("/health/deep", dependencies=[Depends(public)])
+def health_deep(admin: Principal | None = Depends(platform_admin_or_none)) -> dict:
     """
-    Deep health check — actively pings all critical dependencies.
-    Returns per-component status, latency, and error detail.
-    Use for readiness probes and on-call dashboards.
+    Deep health check — per-component status.
+
+    Public, with the same response shape for everyone. What differs is the depth:
+
+      anonymous / tenant  no outbound provider call is made on their behalf, and a
+                          failing component reports the error's class, not its text
+      platform admin      the provider is actively probed and error text is included
+
+    An open endpoint that spends provider quota on every hit, and prints internal
+    exception text, is a cost and an information leak for no operational gain.
     """
     import time as _time
     results: dict = {}
+    detailed = admin is not None
+
+    def _error(exc: Exception) -> str:
+        return str(exc)[:120] if detailed else type(exc).__name__
+
     # MongoDB
     try:
         from storage import database as _db_module
@@ -368,8 +423,8 @@ def health_deep() -> dict:
         else:
             results["mongodb"] = {"status": "degraded", "error": "not connected"}
     except Exception as exc:
-        logger.warning("health_deep: mongodb ping failed: %s", exc)
-        results["mongodb"] = {"status": "down", "error": str(exc)[:120]}
+        logger.warning("health_deep: mongodb ping failed: %s", type(exc).__name__)
+        results["mongodb"] = {"status": "down", "error": _error(exc)}
 
     # Groq
     try:
@@ -377,16 +432,20 @@ def health_deep() -> dict:
         t0   = _time.time()
         groq = get_groq_service()
         if groq and groq._api_key:
-            r = groq._call_single_model("llama-3.1-8b-instant", "Say ok", max_tokens=5)
-            if r.success:
-                results["groq"] = {"status": "ok", "latency_ms": r.latency_ms}
+            if detailed:
+                r = groq._call_single_model("llama-3.1-8b-instant", "Say ok", max_tokens=5)
+                if r.success:
+                    results["groq"] = {"status": "ok", "latency_ms": r.latency_ms}
+                else:
+                    results["groq"] = {"status": "degraded", "error": r.error[:120]}
             else:
-                results["groq"] = {"status": "degraded", "error": r.error[:120]}
+                # Configured, not probed: no provider call for an unauthenticated request.
+                results["groq"] = {"status": "configured"}
         else:
             results["groq"] = {"status": "not_configured"}
     except Exception as exc:
-        logger.warning("health_deep: groq probe failed: %s", exc)
-        results["groq"] = {"status": "down", "error": str(exc)[:120]}
+        logger.warning("health_deep: groq probe failed: %s", type(exc).__name__)
+        results["groq"] = {"status": "down", "error": _error(exc)}
 
     # FAISS adversarial-pattern index.
     # An empty index is NOT a failure: it is the correct state for a fresh
@@ -401,8 +460,8 @@ def health_deep() -> dict:
             "note":    None if size > 0 else "no confirmed attack patterns recorded yet",
         }
     except Exception as exc:
-        logger.warning("health_deep: faiss probe failed: %s", exc)
-        results["faiss"] = {"status": "down", "error": str(exc)[:120]}
+        logger.warning("health_deep: faiss probe failed: %s", type(exc).__name__)
+        results["faiss"] = {"status": "down", "error": _error(exc)}
 
     # Sentence encoder
     try:
@@ -413,8 +472,8 @@ def health_deep() -> dict:
             "backend": "transformer" if encoder.available else "ngram_fallback",
         }
     except Exception as exc:
-        logger.warning("health_deep: encoder probe failed: %s", exc)
-        results["encoder"] = {"status": "down", "error": str(exc)[:120]}
+        logger.warning("health_deep: encoder probe failed: %s", type(exc).__name__)
+        results["encoder"] = {"status": "down", "error": _error(exc)}
 
     # XGBoost failure classifier.
     # Uses status(), which triggers the lazy load first. Reading the module
@@ -424,8 +483,8 @@ def health_deep() -> dict:
         from engine.failure_classifier import status as _clf_status
         results["xgboost"] = _clf_status()
     except Exception as exc:
-        logger.warning("health_deep: xgboost probe failed: %s", exc)
-        results["xgboost"] = {"status": "down", "error": str(exc)[:120]}
+        logger.warning("health_deep: xgboost probe failed: %s", type(exc).__name__)
+        results["xgboost"] = {"status": "down", "error": _error(exc)}
 
     # Adversarial detector — the guard itself. Reported last because it is the
     # component whose degradation is least visible from the outside: a scan with
@@ -442,14 +501,14 @@ def health_deep() -> dict:
             "warmup":  _WARMUP_STATE.get("detector"),
         }
     except Exception as exc:
-        logger.warning("health_deep: detector probe failed: %s", exc)
-        results["detector"] = {"status": "down", "error": str(exc)[:120]}
+        logger.warning("health_deep: detector probe failed: %s", type(exc).__name__)
+        results["detector"] = {"status": "down", "error": _error(exc)}
 
     # "empty" and "not_configured" are HEALTHY states, not faults: an empty
     # attack-pattern index and an unconfigured optional provider are both
     # correct for a fresh deployment. Counting them as degraded made a
     # perfectly healthy server advertise "degraded" on a public endpoint.
-    _OK_STATES = {"ok", "empty", "not_configured"}
+    _OK_STATES = {"ok", "empty", "not_configured", "configured"}
     overall = (
         "healthy"  if all(v.get("status") in _OK_STATES for v in results.values()) else
         "degraded" if any(v.get("status") in _OK_STATES | {"degraded"} for v in results.values()) else
