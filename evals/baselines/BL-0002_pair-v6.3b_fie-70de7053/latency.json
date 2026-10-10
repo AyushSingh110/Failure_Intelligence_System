@@ -1,0 +1,304 @@
+{
+  "cold_start": {
+    "lite-simulated": {
+      "first_scan_s": 0.0016,
+      "import_s": 0.446,
+      "warmup_s": 0.015,
+      "worker_wall_s": 24.494
+    },
+    "sdk-offline-failsecure": {
+      "first_scan_s": 0.0303,
+      "import_s": 0.846,
+      "warmup_s": 7.007,
+      "worker_wall_s": 1137.738
+    }
+  },
+  "per_suite": {
+    "lite.std": {
+      "max_ms": 333.31,
+      "mean_chars": 199,
+      "mean_ms": 12.75,
+      "n": 1848,
+      "p50_ms": 10.12,
+      "p95_ms": 51.77,
+      "p99_ms": 72.77,
+      "profile": "lite-simulated",
+      "scan_time_s": 23.56,
+      "scans_per_s": 78.4
+    },
+    "pilot.script": {
+      "max_ms": 72.49,
+      "mean_chars": 70,
+      "mean_ms": 47.85,
+      "n": 144,
+      "p50_ms": 47.18,
+      "p95_ms": 69.59,
+      "p99_ms": 71.56,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 6.89,
+      "scans_per_s": 20.9
+    },
+    "risk.framing": {
+      "max_ms": 418.98,
+      "mean_chars": 324,
+      "mean_ms": 82.29,
+      "n": 4052,
+      "p50_ms": 50.72,
+      "p95_ms": 307.86,
+      "p99_ms": 354.38,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 333.42,
+      "scans_per_s": 12.2
+    },
+    "risk.long_input": {
+      "max_ms": 7674.99,
+      "mean_chars": 1202,
+      "mean_ms": 222.14,
+      "n": 1820,
+      "p50_ms": 196.08,
+      "p95_ms": 349.69,
+      "p99_ms": 438.85,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 404.3,
+      "scans_per_s": 4.5
+    },
+    "std.advbench": {
+      "max_ms": 1264.67,
+      "mean_chars": 74,
+      "mean_ms": 104.08,
+      "n": 168,
+      "p50_ms": 75.64,
+      "p95_ms": 203.58,
+      "p99_ms": 299.32,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 17.49,
+      "scans_per_s": 9.6
+    },
+    "std.harmbench": {
+      "max_ms": 93.99,
+      "mean_chars": 89,
+      "mean_ms": 38.93,
+      "n": 387,
+      "p50_ms": 39.01,
+      "p95_ms": 52.86,
+      "p99_ms": 60.02,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 15.06,
+      "scans_per_s": 25.7
+    },
+    "std.jailbreakbench": {
+      "max_ms": 452.65,
+      "mean_chars": 1421,
+      "mean_ms": 265.84,
+      "n": 134,
+      "p50_ms": 304.49,
+      "p95_ms": 393.49,
+      "p99_ms": 410.91,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 35.62,
+      "scans_per_s": 3.8
+    },
+    "std.orbench_hard": {
+      "max_ms": 68.32,
+      "mean_chars": 116,
+      "mean_ms": 44.39,
+      "n": 250,
+      "p50_ms": 44.0,
+      "p95_ms": 54.52,
+      "p99_ms": 58.39,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 11.1,
+      "scans_per_s": 22.5
+    },
+    "std.sorrybench": {
+      "max_ms": 631.25,
+      "mean_chars": 138,
+      "mean_ms": 82.4,
+      "n": 387,
+      "p50_ms": 57.76,
+      "p95_ms": 187.89,
+      "p99_ms": 264.76,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 31.89,
+      "scans_per_s": 12.1
+    },
+    "std.strongreject": {
+      "max_ms": 198.66,
+      "mean_chars": 167,
+      "mean_ms": 58.97,
+      "n": 242,
+      "p50_ms": 56.76,
+      "p95_ms": 87.05,
+      "p99_ms": 111.31,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 14.27,
+      "scans_per_s": 17.0
+    },
+    "std.xstest": {
+      "max_ms": 829.47,
+      "mean_chars": 44,
+      "mean_ms": 30.31,
+      "n": 448,
+      "p50_ms": 27.06,
+      "p95_ms": 38.7,
+      "p99_ms": 50.43,
+      "profile": "sdk-offline-failsecure",
+      "scan_time_s": 13.58,
+      "scans_per_s": 33.0
+    }
+  },
+  "stability": {
+    "jailbreakbench": {
+      "flagged_per_pass": [
+        130,
+        130,
+        130
+      ],
+      "n": 134,
+      "passes": 3,
+      "unstable_idx": []
+    },
+    "xstest_safe": {
+      "flagged_per_pass": [
+        132,
+        132,
+        132,
+        132,
+        132,
+        132,
+        132,
+        132
+      ],
+      "n": 250,
+      "passes": 8,
+      "unstable_idx": []
+    }
+  },
+  "warm_latency": {
+    "by_bucket": {
+      "harmbench / base": {
+        "max_ms": 54.12,
+        "mean_chars": 96,
+        "mean_ms": 39.06,
+        "n": 100,
+        "p50_ms": 38.74,
+        "p95_ms": 50.49,
+        "p99_ms": 53.51
+      },
+      "harmbench / pad_after:168": {
+        "max_ms": 346.74,
+        "mean_chars": 1420,
+        "mean_ms": 284.91,
+        "n": 20,
+        "p50_ms": 283.47,
+        "p95_ms": 317.46,
+        "p99_ms": 340.88
+      },
+      "harmbench / pad_after:336": {
+        "max_ms": 340.91,
+        "mean_chars": 2732,
+        "mean_ms": 300.37,
+        "n": 20,
+        "p50_ms": 298.25,
+        "p95_ms": 339.04,
+        "p99_ms": 340.53
+      },
+      "harmbench / pad_after:84": {
+        "max_ms": 218.15,
+        "mean_chars": 764,
+        "mean_ms": 175.15,
+        "n": 20,
+        "p50_ms": 176.66,
+        "p95_ms": 203.99,
+        "p99_ms": 215.31
+      },
+      "xstest_safe / base": {
+        "max_ms": 60.61,
+        "mean_chars": 46,
+        "mean_ms": 28.07,
+        "n": 100,
+        "p50_ms": 26.36,
+        "p95_ms": 38.29,
+        "p99_ms": 43.79
+      }
+    },
+    "overall": {
+      "max_ms": 346.74,
+      "mean_ms": 84.32,
+      "n": 260,
+      "p50_ms": 37.21,
+      "p95_ms": 299.25,
+      "p99_ms": 335.26,
+      "passes": 3
+    },
+    "protocol": "result cache cleared before every scan; one discarded pass; per-prompt median over the measured passes"
+  },
+  "workers": {
+    "lite-simulated": {
+      "audit_events_seen": 24468,
+      "blocked_import_hits": [
+        "engine",
+        "joblib",
+        "storage"
+      ],
+      "exit_code": 0,
+      "pickle_classes_observed": [],
+      "wall_s": 25.15
+    },
+    "sdk-offline-failsecure": {
+      "audit_events_seen": 723143,
+      "blocked_import_hits": [
+        "engine",
+        "storage"
+      ],
+      "exit_code": 0,
+      "pickle_classes_observed": [
+        [
+          "builtins",
+          "bytearray"
+        ],
+        [
+          "joblib.numpy_pickle",
+          "NumpyArrayWrapper"
+        ],
+        [
+          "numpy",
+          "dtype"
+        ],
+        [
+          "numpy",
+          "ndarray"
+        ],
+        [
+          "numpy._core.multiarray",
+          "scalar"
+        ],
+        [
+          "sklearn.calibration",
+          "CalibratedClassifierCV"
+        ],
+        [
+          "sklearn.calibration",
+          "_CalibratedClassifier"
+        ],
+        [
+          "sklearn.calibration",
+          "_SigmoidCalibration"
+        ],
+        [
+          "sklearn.svm._classes",
+          "LinearSVC"
+        ],
+        [
+          "xgboost.core",
+          "Booster"
+        ],
+        [
+          "xgboost.sklearn",
+          "XGBClassifier"
+        ]
+      ],
+      "wall_s": 1138.99
+    }
+  }
+}
