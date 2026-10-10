@@ -39,6 +39,29 @@ class GuardResult:
     # prompt is not a safe prompt. Defaults False so existing constructors and
     # any code unpacking this dataclass keep working unchanged.
     scan_failed:     bool = False
+    # Carried over from the scan result (ScanResult.zone, ScanResult.coverage.status).
+    # Both are None when no scan produced them: an empty prompt, or scan_failed.
+    # `blocked` is the enforcement decision; `zone` is the scanner's routing
+    # outcome, so in warn-only mode a result can be blocked=False with a block zone.
+    # `coverage_status` other than "full" means blocked=False rests on fewer layers
+    # than the full pipeline.
+    zone:            str | None = None
+    coverage_status: str | None = None
+    schema_version:  int = 2
+
+    def to_dict(self) -> dict:
+        """JSON-safe form, fixed key order."""
+        return {
+            "blocked":         bool(self.blocked),
+            "attack_type":     self.attack_type,
+            "confidence":      float(self.confidence),
+            "layers_fired":    sorted(self.layers_fired or []),
+            "refusal_message": self.refusal_message,
+            "scan_failed":     bool(self.scan_failed),
+            "zone":            self.zone,
+            "coverage_status": self.coverage_status,
+            "schema_version":  self.schema_version,
+        }
 
 
 # ── GuardedResponse ───────────────────────────────────────────────────────────
@@ -100,6 +123,16 @@ def _get_block_enabled() -> bool:
     )
 
 
+class _ScanOutcome(tuple):
+    """
+    The five values _safe_scan() has always returned, with the scan result's
+    zone and coverage status riding along as attributes. It is a tuple and
+    unpacks as one, so code that calls or replaces _safe_scan() is unaffected.
+    """
+    zone:            str | None = None
+    coverage_status: str | None = None
+
+
 # What to do when the scanner itself fails (not when it returns "safe").
 #
 #   "open"   — allow the prompt through. Availability over security.
@@ -133,13 +166,18 @@ def _safe_scan(
     try:
         from fie.adversarial import scan_prompt
         result = scan_prompt(prompt, session_id=session_id, domain=domain)
-        return (
+        outcome = _ScanOutcome((
             result.is_attack,
             result.attack_type or "",
             result.confidence,
             result.layers_fired,
             False,
-        )
+        ))
+        zone = getattr(result, "zone", None)
+        coverage_status = getattr(getattr(result, "coverage", None), "status", None)
+        outcome.zone = zone if isinstance(zone, str) else None
+        outcome.coverage_status = coverage_status if isinstance(coverage_status, str) else None
+        return outcome
     except Exception as exc:
         # ERROR, not debug: the guard just stopped guarding. This is precisely
         # the event an operator needs paged on, and it was previously invisible
@@ -171,15 +209,17 @@ def preflight_check(
             layers_fired=[], refusal_message="",
         )
 
-    is_attack, attack_type, confidence, layers_fired, scan_failed = _safe_scan(
-        prompt, session_id=session_id, domain=domain,
-    )
+    outcome = _safe_scan(prompt, session_id=session_id, domain=domain)
+    is_attack, attack_type, confidence, layers_fired, scan_failed = outcome
+    zone            = getattr(outcome, "zone", None)
+    coverage_status = getattr(outcome, "coverage_status", None)
 
     if not is_attack:
         return GuardResult(
             blocked=False, attack_type="", confidence=confidence,
             layers_fired=layers_fired, refusal_message="",
             scan_failed=scan_failed,
+            zone=zone, coverage_status=coverage_status,
         )
 
     # A fail-secure block is not a detection — warn-only mode must not be able
@@ -208,6 +248,8 @@ def preflight_check(
             confidence      = confidence,
             layers_fired    = layers_fired,
             refusal_message = _DEFAULT_REFUSAL,
+            zone            = zone,
+            coverage_status = coverage_status,
         )
 
     # Warn-only mode — log but let the request through
@@ -221,6 +263,8 @@ def preflight_check(
         confidence      = confidence,
         layers_fired    = layers_fired,
         refusal_message = "",
+        zone            = zone,
+        coverage_status = coverage_status,
     )
 
 

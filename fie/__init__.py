@@ -1,7 +1,10 @@
 from fie.monitor import monitor
 from fie.client import FIEClient
 from fie.config import get_config, FIEConfig
-from fie.adversarial import scan_prompt, scan_prompt_async, build_cwd_injection, ScanResult, LayerEvidence
+from fie.adversarial import (
+    scan_prompt, scan_prompt_async, build_cwd_injection,
+    ScanResult, ScanCoverage, ModelIdentity, LayerEvidence,
+)
 from fie.preflight import preflight_check, GuardedResponse
 from fie.output_scanner import scan_output, scan_output_async, OutputScanResult
 from fie.stream_guard import stream_guard, astream_guard
@@ -22,6 +25,8 @@ __all__      = [
     "scan_prompt_async",
     "build_cwd_injection",
     "ScanResult",
+    "ScanCoverage",
+    "ModelIdentity",
     "LayerEvidence",
     "preflight_check",
     "GuardedResponse",

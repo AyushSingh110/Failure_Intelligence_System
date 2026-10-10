@@ -30,6 +30,7 @@ enforced by scripts/verify_onnx_equivalence.py, which requires cosine similarity
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import threading
@@ -62,6 +63,35 @@ _RELEASE_BASE = (
 _MODEL_FILES = ("model.onnx", "tokenizer.json")
 
 _download_lock = threading.Lock()
+
+# Abbreviated SHA-256 of each model file this process has loaded, keyed by
+# (path, size, mtime). The file is 90 MB: hashing it costs a fraction of a
+# second, so it is done once per file, not once per encoder instance (the PAIR
+# layer and the server's encoder each hold their own instance of the same file).
+_DIGEST_HEX = 16
+_digest_cache: dict[tuple[str, int, int], str] = {}
+_digest_lock = threading.Lock()
+
+
+def _model_digest(model_path: Path) -> str | None:
+    """First 16 hex characters of the SHA-256 of `model_path`, or None if unreadable."""
+    try:
+        stat = model_path.stat()
+        key = (str(model_path), stat.st_size, stat.st_mtime_ns)
+        with _digest_lock:
+            cached = _digest_cache.get(key)
+        if cached is not None:
+            return cached
+        digest = hashlib.sha256()
+        with open(model_path, "rb") as f:
+            for block in iter(lambda: f.read(1 << 20), b""):
+                digest.update(block)
+        value = digest.hexdigest()[:_DIGEST_HEX]
+        with _digest_lock:
+            _digest_cache[key] = value
+        return value
+    except OSError:
+        return None
 
 
 def _ensure_model_downloaded(model_dir: Path) -> None:
@@ -132,6 +162,7 @@ class OnnxEncoder:
         self._loaded = False
         self._failed = False
         self._reason = ""
+        self._digest: str | None = None
 
     # ── Availability ──────────────────────────────────────────────────────────
 
@@ -147,6 +178,16 @@ class OnnxEncoder:
         if self._failed:
             return {"backend": "onnx", "state": "failed", "reason": self._reason}
         return {"backend": "onnx", "state": "ready", "path": str(self._model_dir)}
+
+    def identity(self) -> dict:
+        """
+        Which model this encoder runs, for scan results: the backend name and the
+        abbreviated SHA-256 of the file that was loaded. Unlike status(), this
+        carries no path, so it is safe to place in a public result. Never
+        triggers a load; the digest is None until a load has succeeded.
+        """
+        ready = self._loaded and not self._failed
+        return {"backend": "onnx", "digest": self._digest if ready else None}
 
     # ── Loading ───────────────────────────────────────────────────────────────
 
@@ -204,6 +245,9 @@ class OnnxEncoder:
                 self._tokenizer.enable_padding()
 
                 self._input_names = {i.name for i in self._session.get_inputs()}
+                # Once per file per process (see _model_digest). Done after the
+                # session is built, so a model that fails to load costs nothing.
+                self._digest = _model_digest(model_path)
                 logger.info(
                     "encoder=onnx status=ready path=%s inputs=%s",
                     self._model_dir, sorted(self._input_names),

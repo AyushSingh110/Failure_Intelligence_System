@@ -13,8 +13,10 @@ tests/test_detection_golden.py, which pins the exact confidence values.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import json as _json
+import re
 import threading
 from pathlib import Path
 
@@ -82,6 +84,35 @@ def _build_embedder(embed_model: str):
     return SentenceTransformer(embed_model)
 
 
+# ── Artifact identity ─────────────────────────────────────────────────────────
+# A scan result names the artifacts that produced it: a version taken from the
+# artifact's own metadata file and the first 16 hex characters of the SHA-256
+# of the file that was loaded. Both are already public (scripts/model_manifest.json
+# lists the full hashes). Neither a path nor a file name is ever recorded here.
+_DIGEST_HEX: int = 16
+_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$")
+
+
+def _file_digest(path: Path) -> str | None:
+    """Abbreviated SHA-256 of a model file, or None if it cannot be read."""
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as f:
+            for block in iter(lambda: f.read(1 << 20), b""):
+                digest.update(block)
+        return digest.hexdigest()[:_DIGEST_HEX]
+    except OSError:
+        return None
+
+
+def _declared_version(meta: dict) -> str | None:
+    """The version an artifact's metadata declares, if it is a plain short token."""
+    version = meta.get("version") if isinstance(meta, dict) else None
+    if isinstance(version, str) and _VERSION_RE.match(version):
+        return version
+    return None
+
+
 def _resolve_models_dir(sentinel: str) -> Path:
     """
     Pick the model directory containing `sentinel`.
@@ -104,6 +135,14 @@ _pair_embedder = None
 _pair_threshold: float = 0.60
 _pair_load_attempted: bool = False
 _pair_load_error: str = ""
+# Why the classifier is not usable, as a fixed code: "dependency" (a package it
+# needs cannot be imported), "model" (no classifier file is present) or
+# "load_failed" (the file exists and could not be loaded). Empty while usable or
+# while a load is still in progress. `_pair_load_error` keeps the free text for
+# logs and health(); it can contain a local path, so it never reaches a result.
+_pair_unavailable_reason: str = ""
+# {"version", "digest"} of the classifier file that was loaded. Empty otherwise.
+_pair_identity: dict = {}
 # PAIR loads two artifacts (an sklearn classifier and a sentence-transformer).
 # The lock makes that pair of assignments atomic with respect to other threads:
 # without it, a concurrent scan could observe the classifier already assigned
@@ -117,11 +156,17 @@ _meta_clf             = None
 _meta_clf_threshold:  float      = 0.50
 _meta_clf_features:   list[str]  = []
 _meta_clf_attempted:  bool       = False
+_meta_clf_identity:   dict       = {}     # {"version", "digest"} of the loaded file
 _meta_clf_lock        = threading.Lock()
+# Whether the calling thread's last _run_meta_classifier() call produced a real
+# probability. The function returns 0.0 both for "no attack pattern" and for
+# "could not run"; the scanner needs to tell them apart to report coverage.
+_meta_call = threading.local()
 
 
 def _load_meta_classifier() -> bool:
     global _meta_clf, _meta_clf_threshold, _meta_clf_features, _meta_clf_attempted
+    global _meta_clf_identity
     with _meta_clf_lock:
         if _meta_clf_attempted:
             return _meta_clf is not None
@@ -134,12 +179,16 @@ def _load_meta_classifier() -> bool:
             _meta_path  = _models_dir / "meta_clf.json"
             if not _clf_path.exists():
                 return False
+            _digest = _file_digest(_clf_path)
+            _version = None
             _meta_clf = joblib.load(_clf_path)
             if _meta_path.exists():
                 with open(_meta_path, encoding="utf-8") as f:
                     meta = _json2.load(f)
                 _meta_clf_threshold = float(meta.get("threshold", 0.30))
                 _meta_clf_features  = meta.get("layer_names", [])
+                _version = _declared_version(meta)
+            _meta_clf_identity = {"version": _version, "digest": _digest}
             return True
         except Exception as exc:
             logger.warning(
@@ -151,6 +200,7 @@ def _load_meta_classifier() -> bool:
 
 def _run_meta_classifier(layer_scores: dict[str, float]) -> float:
     """Return meta-classifier attack probability (0.0 if unavailable)."""
+    _meta_call.ran = False
     if not _load_meta_classifier():
         return 0.0
     try:
@@ -159,7 +209,9 @@ def _run_meta_classifier(layer_scores: dict[str, float]) -> float:
             [[layer_scores.get(f, 0.0) for f in _meta_clf_features]],
             dtype=_np.float32,
         )
-        return float(_meta_clf.predict_proba(vec)[0][1])
+        prob = float(_meta_clf.predict_proba(vec)[0][1])
+        _meta_call.ran = True
+        return prob
     except Exception as exc:
         logger.warning(
             "degraded capability=_run_meta_classifier impact='this optional step was skipped' "
@@ -197,9 +249,11 @@ def _load_pair_classifier() -> bool:
 def _load_pair_classifier_locked() -> bool:
     """Body of the PAIR load. Caller must hold _pair_lock."""
     global _pair_clf, _pair_embedder, _pair_threshold, _pair_load_attempted
-    global _pair_load_error
+    global _pair_load_error, _pair_unavailable_reason, _pair_identity
 
     _pair_load_attempted = True
+    _pair_unavailable_reason = ""
+    _pair_identity = {}
     try:
         import json as _json
         import joblib
@@ -265,6 +319,7 @@ def _load_pair_classifier_locked() -> bool:
                 f"no PAIR classifier found in {_models_dir} — "
                 "run `python scripts/download_models.py`"
             )
+            _pair_unavailable_reason = "model"
             logger.warning("layer=pair_classifier status=unavailable reason=%s",
                            _pair_load_error)
             return False
@@ -272,6 +327,10 @@ def _load_pair_classifier_locked() -> bool:
         # Build into locals. Nothing is published to module state until both
         # artifacts exist, so a failure here leaves the layer cleanly disabled
         # rather than half-initialised.
+        # Hash the file immediately before it is loaded: the identity on a scan
+        # result must describe the artifact that ran, not the one a manifest expects.
+        local_digest = _file_digest(clf_path)
+        local_version = None
         local_clf = joblib.load(clf_path)
 
         if meta_path.exists():
@@ -279,6 +338,7 @@ def _load_pair_classifier_locked() -> bool:
                 meta = _json.load(f)
             local_threshold = float(meta.get("threshold", 0.60))
             embed_model = meta.get("embed_model", "sentence-transformers/all-MiniLM-L6-v2")
+            local_version = _declared_version(meta)
         else:
             local_threshold = _pair_threshold
             embed_model = "sentence-transformers/all-MiniLM-L6-v2"
@@ -290,6 +350,7 @@ def _load_pair_classifier_locked() -> bool:
         _pair_embedder  = local_embedder
         _pair_threshold = local_threshold
         _pair_load_error = ""
+        _pair_identity = {"version": local_version, "digest": local_digest}
         # Report the backend actually in use, not the model NAME from meta.json.
         # Logging `embed_model` here printed "embedder=sentence-transformers/..."
         # even when ONNX was serving the embeddings, which reads as though torch
@@ -304,6 +365,7 @@ def _load_pair_classifier_locked() -> bool:
     except ImportError as exc:
         # Expected in lite installs (`pip install fie-sdk` without [ml]).
         _pair_load_error = f"missing dependency: {exc}"
+        _pair_unavailable_reason = "dependency"
         logger.warning(
             "layer=pair_classifier status=unavailable reason=%s "
             "action='pip install fie-sdk[ml]'", _pair_load_error,
@@ -314,6 +376,7 @@ def _load_pair_classifier_locked() -> bool:
         # Keep the traceback: this one is actionable and, per the ablation,
         # this layer carries most of the detection.
         _pair_load_error = f"{type(exc).__name__}: {exc}"
+        _pair_unavailable_reason = "load_failed"
         logger.error(
             "layer=pair_classifier status=failed reason=%s — detection recall "
             "will be materially reduced", _pair_load_error, exc_info=True,
@@ -368,6 +431,87 @@ def _pair_state() -> dict:
             "threshold": _pair_threshold,
             "error":     _pair_load_error or None,
         }
+
+
+def _pair_unavailable_state() -> str | None:
+    """
+    Why the classifier cannot run, as a fixed code, or None when it is usable.
+
+        None                        usable, or no load has been attempted yet
+        "unavailable_dependency"    a package it needs cannot be imported
+        "unavailable_model"         no classifier file is present
+        "unavailable_load_failed"   the file exists and could not be loaded
+        "loading"                   another thread is still inside the first load
+
+    Non-blocking by design: it takes no lock, so a scan thread never waits on a
+    load that another thread is running. It never triggers a load. The codes are
+    the public ones used in scan results; the free-text reason stays in
+    `_pair_state()["error"]`.
+    """
+    if _pair_clf is not None and _pair_embedder is not None:
+        return None
+    if not _pair_load_attempted:
+        return None
+    reason = _pair_unavailable_reason
+    return f"unavailable_{reason}" if reason else "loading"
+
+
+def _meta_call_ran() -> bool:
+    """True if this thread's last _run_meta_classifier() call returned a real probability."""
+    return bool(getattr(_meta_call, "ran", False))
+
+
+def _meta_call_reset() -> None:
+    """Forget this thread's last meta-classifier call (the caller is about to make one)."""
+    _meta_call.ran = False
+
+
+def _model_identities() -> dict[str, dict]:
+    """
+    What is loaded in this process, per artifact role, as plain values.
+
+    Read-only and non-blocking; never triggers a load. `loaded` is derived from
+    the live objects, not from the recorded identity, so a role that is not
+    usable can never report a version or a digest. No path and no file name.
+    """
+    pair_loaded = _pair_clf is not None and _pair_embedder is not None
+    meta_loaded = _meta_clf is not None
+    embedder = _pair_embedder if pair_loaded else None
+
+    encoder = {"loaded": pair_loaded, "version": None, "digest": None, "threshold": None, "backend": None}
+    describe = getattr(embedder, "identity", None)
+    if callable(describe):
+        try:
+            described = describe()
+            encoder["backend"] = described.get("backend")
+            encoder["digest"] = described.get("digest")
+        except Exception as exc:
+            logger.warning(
+                "degraded capability=encoder_identity impact='scan results omit the encoder digest' "
+                "reason=%s", type(exc).__name__,
+            )
+    elif embedder is not None and type(embedder).__name__ == "SentenceTransformer":
+        # The torch fallback loads from the Hugging Face cache, a directory of
+        # files rather than one artifact, so there is no single digest to report.
+        encoder["backend"] = "sentence-transformers"
+
+    return {
+        "pair_classifier": {
+            "loaded":    pair_loaded,
+            "version":   _pair_identity.get("version") if pair_loaded else None,
+            "digest":    _pair_identity.get("digest") if pair_loaded else None,
+            "threshold": _pair_threshold if pair_loaded else None,
+            "backend":   None,
+        },
+        "meta_classifier": {
+            "loaded":    meta_loaded,
+            "version":   _meta_clf_identity.get("version") if meta_loaded else None,
+            "digest":    _meta_clf_identity.get("digest") if meta_loaded else None,
+            "threshold": _meta_clf_threshold if meta_loaded else None,
+            "backend":   None,
+        },
+        "encoder": encoder,
+    }
 
 
 def _meta_state() -> dict:

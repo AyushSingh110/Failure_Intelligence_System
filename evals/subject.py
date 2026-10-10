@@ -3,15 +3,22 @@ The subject adapter: the ONLY module in the harness that imports or touches `fie
 
 Everything the harness knows about the guardrail goes through here, so that a
 refactor inside `fie` can break exactly one obvious place. The adapter reads
-several private names, because `fie` does not yet expose them publicly:
+several private names, because `fie` does not expose them publicly:
 
-    which model file was loaded      -> only a log line says so
-    the routing zone of a result     -> only an evidence string says so
     the result cache                 -> has no public clear()
+    thresholds, weights, hot-config  -> read for the configuration fingerprint
+
+Since WP-003 (truthful scan result) two things come from the public result:
+
+    the routing zone of a result     -> ScanResult.zone
+    which model produced a result    -> ScanResult.models[role].digest
+
+The old private zone rule (derive_zone) and the loader's log line are kept as
+cross-checks. If the public zone ever disagrees with the rule, or a result names
+a model other than the file the harness verified, the run stops.
 
 Each private dependency is listed in PRIVATE_CONTRACT and checked by
-tests/evals/test_subject_contract.py. WP-003 (truthful scan result) is expected
-to replace most of them with public fields.
+tests/evals/test_subject_contract.py.
 
 Nothing here modifies a file under `fie/`. The profile is applied at run time, in
 this process only: see evals/registry/profiles.json for the list of deviations
@@ -57,6 +64,7 @@ PRIVATE_CONTRACT = (
     ("fie.adversarial", "SCAN_THRESHOLD"),
     ("fie.adversarial", "_LAYER_POOL_SIZE"),
     ("fie.adversarial", "_LAYER_DEADLINE_S"),
+    ("fie.adversarial", "model_identities"),
     ("fie.multilingual", "translate_to_english"),
     ("fie.multilingual", "_TRANSLATION_CACHE"),
     ("fie.layers.pair", "_pair_state"),
@@ -84,6 +92,8 @@ class _M:
     langdetect_seed: int | None = 0
     load_log: list[str] = []
     state: dict = {}
+    # role -> 16-hex digest every result must report, taken from the verified files
+    expected_digests: dict = {}
 
 
 class _Capture(logging.Handler):
@@ -220,6 +230,7 @@ def prepare(profile: dict, repo_root: str | Path, verified: dict, declared: dict
         "warmup_s": round(warmup_s, 3),
     }
     _M.state = state
+    _M.expected_digests = {}
     _cross_check(profile, verified, declared, state)
     return state
 
@@ -259,6 +270,40 @@ def _cross_check(profile: dict, verified: dict, declared: dict, state: dict) -> 
         if expect.get("pair_declared_version") and d_pair.get("declared_version") != expect["pair_declared_version"]:
             problems.append(f"metadata declares version {d_pair.get('declared_version')!r}, profile "
                             f"expects {expect['pair_declared_version']!r}")
+
+    # The identity fie reports for itself must name the files that were hashed
+    # before fie was imported. This is the public counterpart of the log-line
+    # check above; a role the profile does not verify must report "not loaded".
+    identities = adv.model_identities()
+    expected_digests = {}
+    for role, want_loaded in (("pair_classifier", bool(expect.get("pair_loaded"))),
+                              ("meta_classifier", bool(expect.get("meta_loaded"))),
+                              ("encoder", bool(expect.get("pair_loaded")))):
+        ident = identities.get(role)
+        if ident is None:
+            problems.append(f"fie reports no identity for role '{role}'")
+            continue
+        if not want_loaded:
+            if ident.loaded or ident.digest is not None or ident.version is not None:
+                problems.append(f"fie reports role '{role}' as loaded, the profile expects it absent")
+            continue
+        want = (verified.get(role) or {}).get("sha256")
+        if role == "encoder" and ident.backend != "onnx":
+            continue                      # the torch fallback has no single file to hash
+        if not want:
+            continue
+        if ident.digest != want[:16]:
+            problems.append(f"fie reports digest {ident.digest!r} for role '{role}', the verified file "
+                            f"hashes to {want[:16]!r}")
+        else:
+            expected_digests[role] = want[:16]
+    if expect.get("pair_loaded") and pair_loaded and expect.get("pair_declared_version"):
+        reported = identities["pair_classifier"].version if "pair_classifier" in identities else None
+        if reported != expect["pair_declared_version"]:
+            problems.append(f"fie reports PAIR version {reported!r}, profile expects "
+                            f"{expect['pair_declared_version']!r}")
+    if not problems:
+        _M.expected_digests = expected_digests
 
     if expect.get("meta_loaded") and meta_loaded:
         d_meta = declared.get("meta_classifier", {})
@@ -338,8 +383,10 @@ def configuration() -> dict:
 
 def derive_zone(is_attack: bool, evidence) -> str:
     """
-    Routing zone of a result. Valid only while the tiebreaker is off and
-    FIE_UNCERTAIN_ALLOW is unset — both are asserted in prepare().
+    Routing zone of a result, by the harness's own rule. Valid only while the
+    tiebreaker is off and FIE_UNCERTAIN_ALLOW is unset — both are asserted in
+    prepare(). Since WP-003 the recorded zone is the result's public `zone`;
+    this rule is the cross-check in scan().
     """
     if not is_attack:
         return ZONE_ALLOW
@@ -381,9 +428,21 @@ def scan(text: str) -> tuple[dict, dict]:
                  "status": f"error:{type(exc).__name__}"},
                 {"error": str(exc)[:300]})
     evidence = r.evidence if isinstance(r.evidence, dict) else {}
+    zone = getattr(r, "zone", None)
+    derived = derive_zone(bool(r.is_attack), evidence)
+    if zone != derived:
+        raise SubjectError(
+            f"the result's public zone is {zone!r}; the harness's rule for this profile gives "
+            f"{derived!r}. One of them is wrong, so the run cannot be recorded.")
+    models = getattr(r, "models", None) or {}
+    for role, want in _M.expected_digests.items():
+        got = getattr(models.get(role), "digest", None)
+        if got != want:
+            raise SubjectError(
+                f"a result names digest {got!r} for role '{role}'; the verified file hashes to {want!r}")
     fields = {
         "flagged": bool(r.is_attack),
-        "zone": derive_zone(bool(r.is_attack), evidence),
+        "zone": zone,
         "type": r.attack_type,
         "conf": float(r.confidence),
         "layers_fired": sorted(r.layers_fired or []),
@@ -392,6 +451,11 @@ def scan(text: str) -> tuple[dict, dict]:
         "status": "ok",
     }
     return fields, _json_safe(evidence)
+
+
+def identity_report() -> dict:
+    """What fie says is loaded, per role, as plain values. For tests and run notes."""
+    return {role: ident.to_dict() for role, ident in _M.adv.model_identities().items()}
 
 
 # ── contract ─────────────────────────────────────────────────────────────────

@@ -153,9 +153,12 @@ class LayerResult:
     Normalised output from one detection layer.
 
     `status` distinguishes "this layer ran and found nothing" (OK, attack_type
-    None) from "this layer never produced an answer" (TIMEOUT / ERROR). Both
-    contribute zero to aggregation, but only the first is evidence of safety.
-    Defaults to OK so existing constructors stay valid.
+    None) from "this layer never produced an answer" (TIMEOUT / ERROR / one of
+    the UNAVAILABLE states). All contribute zero to aggregation, but only the
+    first is evidence of safety. Defaults to OK so existing constructors stay valid.
+
+    `notes` is internal: observations about optional components, used to build
+    `ScanResult.coverage`. It is never copied into a result's evidence.
     """
     layer_name  : str
     attack_type : str | None
@@ -163,6 +166,7 @@ class LayerResult:
     evidence    : dict
     latency_ms  : float = 0.0
     status      : str   = "ok"
+    notes       : dict  = field(default_factory=dict)
 
 
 # ── Threshold helpers ─────────────────────────────────────────────────────────
@@ -298,6 +302,238 @@ class _ScanCache:
 _scan_cache = _ScanCache(maxsize=512, ttl=300.0)
 
 
+# ── Scan-result contract (schema version 2) ───────────────────────────────────
+# A result states what ran, how the verdict was reached and which artifacts were
+# loaded. Every value below is a fixed code from a closed set. No exception
+# text, path, file name, host or environment value is ever placed in these
+# fields; that detail goes to the log and to health().
+
+RESULT_SCHEMA_VERSION: int = 2
+
+# The twelve detection layers, in pipeline order. `coverage.layers` always has
+# exactly these keys.
+ALL_LAYERS: tuple[str, ...] = (
+    "regex", "prompt_guard", "many_shot", "indirect_injection", "gcg_suffix",
+    "perplexity_proxy", "pair_classifier", "direct_harm", "virtualization",
+    "fiction_harm", "multilingual", "copyright",
+)
+
+# One per layer, per scan.
+#   ok                        ran and returned a normal result (signal or none)
+#   unavailable_dependency    a package the layer needs cannot be imported
+#   unavailable_model         the model file is not present
+#   unavailable_load_failed   the model exists and failed to load
+#   error                     raised while running
+#   timeout                   had not produced an answer when the scan needed it
+#   disabled                  removed from this scan by the caller
+#   bypassed                  no layer ran: a labelled-prompt fast path decided.
+#                             Only ever set on all twelve layers at once.
+LAYER_STATES: frozenset[str] = frozenset({
+    "ok", "unavailable_dependency", "unavailable_model", "unavailable_load_failed",
+    "error", "timeout", "disabled", "bypassed",
+})
+
+#   full       all twelve layers are `ok`
+#   partial    at least one layer is not `ok`, for any reason including `disabled`
+#   bypassed   no layer ran
+COVERAGE_STATUSES: tuple[str, ...] = ("full", "partial", "bypassed")
+
+# Components that are allowed to be absent. They are reported, and never lower
+# the coverage status.
+OPTIONAL_COMPONENT_STATES: dict[str, frozenset[str]] = {
+    "meta_classifier": frozenset({"ok", "unavailable", "disabled", "bypassed"}),
+    "tiebreaker":      frozenset({"not_needed", "confirmed", "cleared", "unavailable", "disabled"}),
+    "translation":     frozenset({"not_needed", "ok", "unavailable"}),
+}
+
+# The routing outcome, and who decided it. Assigned by the router at the end of
+# scan_prompt() and nowhere else; a detection layer cannot set either.
+ZONES: tuple[str, ...] = ("allow", "uncertain_allow", "uncertain_block", "clear_block")
+DECISION_SOURCES: tuple[str, ...] = (
+    "pipeline",           # the aggregated confidence was clearly below or above the threshold
+    "tiebreaker",         # uncertain band, and the tiebreaker model gave a verdict
+    "fail_secure",        # uncertain band, no tiebreaker verdict, blocked by default policy
+    "config",             # uncertain band, no tiebreaker verdict, allowed by FIE_UNCERTAIN_ALLOW
+    "feedback_override",  # a human label for this exact prompt decided; no layer ran
+)
+MODEL_ROLES: tuple[str, ...] = ("pair_classifier", "meta_classifier", "encoder")
+ENCODER_BACKENDS: tuple[str, ...] = ("onnx", "sentence-transformers")
+
+_BLOCKING_ZONES: frozenset[str] = frozenset({"uncertain_block", "clear_block"})
+_DIGEST_RE  = re.compile(r"^[0-9a-f]{16}$")
+_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$")
+
+
+class _FrozenDict(dict):
+    """
+    A dict that refuses mutation.
+
+    A real dict subclass rather than a mapping proxy, so `json.dumps`,
+    `dataclasses.asdict`, `copy.deepcopy` and `pickle` keep working on a result
+    that contains one.
+    """
+
+    def _readonly(self, *args, **kwargs):
+        raise TypeError("this mapping is read-only")
+
+    __setitem__ = __delitem__ = __ior__ = _readonly
+    clear = pop = popitem = setdefault = update = _readonly
+
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        return self
+
+    def __reduce__(self):
+        return (_FrozenDict, (dict(self),))
+
+
+def _json_safe(obj: Any, depth: int = 0) -> Any:
+    """Evidence may hold arbitrary objects; make a JSON-safe copy without guessing."""
+    if depth > 12:
+        return "<truncated>"
+    if obj is None or isinstance(obj, (bool, int, str)):
+        return obj
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else str(obj)
+    if isinstance(obj, dict):
+        # Sorted, so the bytes do not depend on which layer happened to finish first.
+        return {str(k): _json_safe(v, depth + 1)
+                for k, v in sorted(obj.items(), key=lambda kv: str(kv[0]))}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v, depth + 1) for v in obj]
+    if isinstance(obj, (set, frozenset)):
+        return sorted(str(v) for v in obj)
+    return f"<{type(obj).__name__}>"
+
+
+@dataclass(frozen=True)
+class ModelIdentity:
+    """
+    Which artifact filled one model role when a result was produced.
+
+    loaded      the artifact is loaded and usable in this process
+    version     what the artifact's own metadata declares, e.g. "v6.3b"
+    digest      first 16 hex characters of the SHA-256 of the file that was loaded
+    threshold   decision threshold (classifier roles only)
+    backend     "onnx" or "sentence-transformers" (encoder role only)
+
+    A role that is not loaded has `loaded=False` and nothing else: never a
+    default or an expected version. Values are validated on construction, so
+    this object cannot carry a path, a file name or free text.
+    """
+    loaded:    bool
+    version:   str | None   = None
+    digest:    str | None   = None
+    threshold: float | None = None
+    backend:   str | None   = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.loaded, bool):
+            raise ValueError("ModelIdentity.loaded must be a bool")
+        if not self.loaded and any(
+            v is not None for v in (self.version, self.digest, self.threshold, self.backend)
+        ):
+            raise ValueError("a model that is not loaded has no version, digest, threshold or backend")
+        if self.version is not None and not (
+            isinstance(self.version, str) and _VERSION_RE.match(self.version)
+        ):
+            raise ValueError("ModelIdentity.version must be a short version token")
+        if self.digest is not None and not (
+            isinstance(self.digest, str) and _DIGEST_RE.match(self.digest)
+        ):
+            raise ValueError("ModelIdentity.digest must be 16 lowercase hex characters")
+        if self.threshold is not None and (
+            isinstance(self.threshold, bool)
+            or not isinstance(self.threshold, (int, float))
+            or not 0.0 <= self.threshold <= 1.0
+        ):
+            raise ValueError("ModelIdentity.threshold must be a number between 0 and 1")
+        if self.backend is not None and self.backend not in ENCODER_BACKENDS:
+            raise ValueError("ModelIdentity.backend must be one of the known encoder backends")
+
+    def to_dict(self) -> dict:
+        return {
+            "loaded":    self.loaded,
+            "version":   self.version,
+            "digest":    self.digest,
+            "threshold": None if self.threshold is None else float(self.threshold),
+            "backend":   self.backend,
+        }
+
+
+@dataclass(frozen=True)
+class ScanCoverage:
+    """
+    What one scan actually ran.
+
+    status      "full" | "partial" | "bypassed"       (COVERAGE_STATUSES)
+    layers      {layer_name: state} for all twelve layers, always  (LAYER_STATES)
+    classifier  the state of "pair_classifier", for convenience
+    optional    {"meta_classifier", "tiebreaker", "translation"} -> state
+
+    The one-line check for a consumer is `result.coverage.status == "full"`.
+
+    `status` is derived from `layers` and the two are checked against each
+    other on construction, so a coverage object cannot say "full" while a layer
+    did not run. Components under `optional` are reported and never lower the
+    status. The object and both mappings are read-only.
+    """
+    status:     str
+    layers:     dict
+    classifier: str
+    optional:   dict
+
+    def __post_init__(self) -> None:
+        if self.status not in COVERAGE_STATUSES:
+            raise ValueError("unknown coverage status")
+        if not isinstance(self.layers, dict) or set(self.layers) != set(ALL_LAYERS):
+            raise ValueError("coverage.layers must name exactly the twelve detection layers")
+        layers = _FrozenDict((name, self.layers[name]) for name in ALL_LAYERS)
+        if any(not isinstance(state, str) or state not in LAYER_STATES for state in layers.values()):
+            raise ValueError("coverage.layers holds a value that is not a layer state")
+        states = set(layers.values())
+        if "bypassed" in states and states != {"bypassed"}:
+            raise ValueError("`bypassed` describes a whole scan: all twelve layers or none")
+        expected = "bypassed" if states == {"bypassed"} else ("full" if states == {"ok"} else "partial")
+        if self.status != expected:
+            raise ValueError("coverage status does not match the layer states")
+        if self.classifier != layers["pair_classifier"]:
+            raise ValueError("coverage.classifier must equal the pair_classifier layer state")
+        if not isinstance(self.optional, dict) or set(self.optional) != set(OPTIONAL_COMPONENT_STATES):
+            raise ValueError("coverage.optional must name exactly the optional components")
+        for name, allowed in OPTIONAL_COMPONENT_STATES.items():
+            state = self.optional[name]
+            if not isinstance(state, str) or state not in allowed:
+                raise ValueError("coverage.optional holds a value that is not a component state")
+        if (self.optional["meta_classifier"] == "bypassed") != (self.status == "bypassed"):
+            raise ValueError("an optional component is `bypassed` exactly when the scan is")
+        object.__setattr__(self, "layers", layers)
+        object.__setattr__(self, "optional", _FrozenDict(
+            (name, self.optional[name]) for name in OPTIONAL_COMPONENT_STATES
+        ))
+
+    def to_dict(self) -> dict:
+        return {
+            "status":     self.status,
+            "layers":     dict(self.layers),
+            "classifier": self.classifier,
+            "optional":   dict(self.optional),
+        }
+
+
+# A labelled-prompt fast path runs no layer at all. Saying `ok` would claim the
+# layers looked and found nothing; saying `disabled` would claim the caller
+# switched them off. Neither is true, so the whole scan is `bypassed`.
+_BYPASSED_COVERAGE = ScanCoverage(
+    status     = "bypassed",
+    layers     = dict.fromkeys(ALL_LAYERS, "bypassed"),
+    classifier = "bypassed",
+    optional   = {"meta_classifier": "bypassed", "tiebreaker": "not_needed", "translation": "not_needed"},
+)
+
+
 @dataclass
 class LayerEvidence:
     """Structured evidence from a single detection layer.
@@ -319,7 +555,38 @@ class LayerEvidence:
 # Result dataclass
 @dataclass
 class ScanResult:
-    """Result returned by scan_prompt()."""
+    """
+    Result returned by scan_prompt().
+
+    The verdict
+        is_attack       True when the prompt is blocked
+        attack_type     the winning attack type; None when allowed
+        confidence      aggregated confidence when blocked; 0.0 when allowed.
+                        It comes from the layers that ran: with partial coverage
+                        it is the confidence of what was looked at, not of a
+                        full scan
+        zone            "allow" | "uncertain_allow" | "uncertain_block" | "clear_block"
+        decided_by      "pipeline" | "tiebreaker" | "fail_secure" | "config" |
+                        "feedback_override"
+
+    What the verdict rests on
+        coverage        ScanCoverage: which layers ran and which did not
+        degraded_layers layers that should have run and did not
+        models          {role: ModelIdentity} for the artifacts loaded in this process
+        layer_scores, layers_fired, evidence, matched_text, mitigation
+
+    Invariant, enforced on construction:
+        is_attack == (zone in {"uncertain_block", "clear_block"})
+
+    An allowed result is only as strong as its coverage. `is_attack=False` with
+    `coverage.status == "partial"` means "nothing was found by the layers that
+    ran"; it is not a statement about the layers that did not. Check
+    `coverage.status == "full"` before treating an allow as a full-pipeline allow.
+
+    `schema_version` is 2. A result built by older code through the original
+    fields still works and takes a neutral form: `coverage=None`, `models={}`,
+    `decided_by=None`, and `zone` derived from `is_attack`.
+    """
     is_attack:      bool
     attack_type:    str | None          # e.g. "PROMPT_INJECTION", "JAILBREAK_ATTEMPT"
     category:       str | None          # e.g. "INJECTION", "JAILBREAK", "SMUGGLING"
@@ -330,16 +597,72 @@ class ScanResult:
     evidence:       dict = field(default_factory=dict)  # per-layer detail (raw dicts, backward compat)
     layer_scores:   dict = field(default_factory=dict)  # {layer_name: confidence} for all 12 layers
 
-    # Layers that did not produce a verdict this scan (timeout or error).
-    # Empty list = full pipeline ran. A non-empty list means this result was
-    # produced with reduced coverage: `is_attack=False` is weaker evidence of
-    # safety than usual, and fail-secure callers should treat it accordingly.
+    # Layers that should have produced a verdict this scan and did not: they
+    # timed out, raised, or were unavailable (a missing package, a missing model
+    # file, a failed load). A non-empty list means this result was produced with
+    # reduced coverage: `is_attack=False` is weaker evidence of safety than
+    # usual, and fail-secure callers should treat it accordingly.
+    #
+    # Two cases are deliberately NOT listed here and are reported by `coverage`:
+    # layers the caller disabled, and a labelled-prompt fast path (no layer ran).
+    # So an empty list alone does not prove a full scan; `coverage.status` does.
     degraded_layers: list[str] = field(default_factory=list)
+
+    # ── Schema version 2 ──────────────────────────────────────────────────────
+    # All defaulted, so every constructor that predates them keeps working.
+    zone:           str | None = None           # derived from is_attack when not given
+    decided_by:     str | None = None           # None: built by code that does not say
+    coverage:       ScanCoverage | None = None  # None: built by code that did not measure it
+    models:         dict = field(default_factory=dict)   # {role: ModelIdentity}
+    schema_version: int = RESULT_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.zone is None:
+            self.zone = "clear_block" if self.is_attack else "allow"
+        if self.zone not in ZONES:
+            raise ValueError(f"ScanResult.zone must be one of {ZONES}")
+        if bool(self.is_attack) != (self.zone in _BLOCKING_ZONES):
+            raise ValueError("ScanResult.is_attack and ScanResult.zone disagree")
+        if self.decided_by is not None and self.decided_by not in DECISION_SOURCES:
+            raise ValueError(f"ScanResult.decided_by must be one of {DECISION_SOURCES}")
 
     @property
     def is_degraded(self) -> bool:
         """True when at least one layer failed to report. See `degraded_layers`."""
         return bool(self.degraded_layers)
+
+    def to_dict(self) -> dict:
+        """
+        The JSON-safe form of this result: every public field, in a fixed key
+        order, containing nothing `json.dumps` cannot encode. Does not modify
+        the result.
+
+        The output is canonical: two results with the same content serialize to
+        the same bytes. `layers_fired` and the keys of `evidence` and
+        `layer_scores` are therefore sorted here (on the result itself they
+        follow the order in which layers finished, which varies between runs).
+        """
+        evidence = self.evidence if isinstance(self.evidence, dict) else {}
+        return {
+            "is_attack":       bool(self.is_attack),
+            "attack_type":     self.attack_type,
+            "category":        self.category,
+            "confidence":      float(self.confidence),
+            "layers_fired":    sorted(self.layers_fired or []),
+            "matched_text":    self.matched_text,
+            "mitigation":      self.mitigation,
+            "evidence":        _json_safe(evidence),
+            "layer_scores":    {str(k): float(v) for k, v in sorted((self.layer_scores or {}).items())},
+            "degraded_layers": sorted(self.degraded_layers or []),
+            "zone":            self.zone,
+            "decided_by":      self.decided_by,
+            "coverage":        self.coverage.to_dict() if self.coverage is not None else None,
+            "models":          {
+                str(role): ident.to_dict() if isinstance(ident, ModelIdentity) else _json_safe(ident)
+                for role, ident in (self.models or {}).items()
+            },
+            "schema_version":  self.schema_version,
+        }
 
     def get_layer_evidence(self, layer_name: str) -> LayerEvidence:
         """Return structured LayerEvidence for a given layer (never raises)."""
@@ -406,9 +729,13 @@ from fie.layers.perplexity import _run_perplexity_proxy
 from fie.layers.direct_harm import _run_direct_harm_detection
 from fie.layers.pair import (
     _load_meta_classifier,
+    _meta_call_ran,
+    _meta_call_reset,
     _meta_threshold,
+    _model_identities,
     _load_pair_classifier,
     _pair_state,
+    _pair_unavailable_state,
     _run_meta_classifier,
     _run_pair_classifier,
 )
@@ -575,11 +902,23 @@ def _layer_fiction_harm(prompt: str) -> tuple[str | None, float, dict]:
 def _layer_multilingual(prompt: str) -> tuple[str | None, float, dict]:
     from fie.multilingual import run_multilingual_detection, _cached_translate, _script_anomaly_score
     attack_type, confidence, evidence = run_multilingual_detection(prompt)
+    # Whether this layer asked for a translation and got one. An internal note
+    # for `coverage.optional["translation"]`; it changes nothing the layer
+    # returns. Known gap: a Tier 2.5 translation that fails on a prompt whose
+    # language confidence is below 0.90 leaves no trace in the evidence, so it
+    # is reported here as "not_needed".
+    if evidence.get("translated_text"):
+        translation = "ok"
+    elif evidence.get("tier25_romanised"):
+        translation = "unavailable"
+    else:
+        translation = "not_needed"
     # Translate-then-PAIR: if script anomaly or Tier 2.5 fired, translate and run
     # PAIR v4 on the English translation — closes ~40-pt multilingual recall gap.
     anomaly = _script_anomaly_score(prompt)
     if (anomaly >= 0.10 or evidence.get("tier25_romanised")) and len(prompt.strip()) >= 30:
         translated = evidence.get("translated_text") or _cached_translate(prompt)
+        translation = "ok" if translated else "unavailable"
         if translated and len(translated.strip()) >= 20:
             # PAIR is a *booster* here, not the primary signal: multilingual has
             # already produced its own verdict from script anomaly and phrase
@@ -596,14 +935,42 @@ def _layer_multilingual(prompt: str) -> tuple[str | None, float, dict]:
                 )
                 pair_type, pair_conf, pair_ev = None, 0.0, {}
             if pair_type and pair_conf > confidence:
-                return "MULTILINGUAL_INJECTION", round(pair_conf, 4), {
+                return _LayerOutput(("MULTILINGUAL_INJECTION", round(pair_conf, 4), {
                     **evidence,
                     "translate_pair_fired": True,
                     "pair_confidence":      round(pair_conf, 4),
                     "pair_threshold":       pair_ev.get("threshold"),
                     "translated_preview":   translated[:150],
-                }
-    return attack_type, confidence, evidence
+                }), notes={"translation": translation})
+    return _LayerOutput((attack_type, confidence, evidence), notes={"translation": translation})
+
+
+def _pair_task(prompt: str) -> tuple[str | None, float, dict]:
+    """
+    The classifier layer as the scanner runs it.
+
+    Returns exactly what `_layer_pair` returns, in every case. When the
+    classifier was not usable for this call, the same tuple is returned tagged
+    with the reason, so the scan reports the layer as unavailable instead of as
+    a layer that looked and found nothing. The verdict is unaffected: an
+    unusable classifier contributes "no signal" either way.
+
+    `_layer_pair` itself is left alone because evaluation scripts import it and
+    unpack three values.
+    """
+    usable = _load_pair_classifier()
+    out = _layer_pair(prompt)
+    if usable:
+        return out
+    state = _pair_unavailable_state()
+    if state not in (
+        LayerStatus.UNAVAILABLE_DEPENDENCY, LayerStatus.UNAVAILABLE_MODEL, LayerStatus.UNAVAILABLE_LOAD_FAILED,
+    ):
+        # Another thread was still inside the first model load when this scan
+        # needed the classifier (call warmup() at startup to avoid this). The
+        # model was not ready in time for this scan.
+        state = LayerStatus.TIMEOUT
+    return _LayerOutput(out, state=state)
 
 
 # ── Parallel layer runner ─────────────────────────────────────────────────────
@@ -632,11 +999,38 @@ _layer_pool_lock = threading.Lock()
 
 
 class LayerStatus:
-    """Terminal state of one detection layer for a single scan."""
+    """Terminal state of one detection layer for a single scan. See LAYER_STATES."""
     OK      = "ok"        # ran to completion
-    TIMEOUT = "timeout"   # still running when the scan deadline passed
+    TIMEOUT = "timeout"   # had not produced an answer when the scan needed it
     ERROR   = "error"     # raised
-    SKIPPED = "skipped"   # disabled by caller (ablation studies)
+    SKIPPED = "skipped"   # legacy name for DISABLED; never assigned by this module
+    UNAVAILABLE_DEPENDENCY  = "unavailable_dependency"   # a required package cannot be imported
+    UNAVAILABLE_MODEL       = "unavailable_model"        # the model file is not present
+    UNAVAILABLE_LOAD_FAILED = "unavailable_load_failed"  # the model exists and failed to load
+    DISABLED = "disabled"   # removed from this scan by the caller
+    BYPASSED = "bypassed"   # no layer ran: a labelled-prompt fast path decided
+
+
+class _LayerOutput(tuple):
+    """
+    A layer's (attack_type, confidence, evidence) with internal annotations.
+
+    It is a tuple and unpacks, compares and indexes as one, so nothing a layer
+    returns changes. The annotations are read by the layer runner only:
+
+        state   a LayerStatus other than OK, when the layer could not really run
+        notes   observations about optional components, e.g. {"translation": "ok"}
+
+    Neither is placed in a result's evidence.
+    """
+    state: str | None
+    notes: dict | None
+
+    def __new__(cls, values, state: str | None = None, notes: dict | None = None):
+        self = super().__new__(cls, values)
+        self.state = state
+        self.notes = notes
+        return self
 
 
 def _get_layer_pool() -> concurrent.futures.ThreadPoolExecutor:
@@ -686,9 +1080,14 @@ def _run_layer_safe(
     *which* layer is broken rather than reporting a uniformly clean prompt.
     """
     t0 = time.perf_counter()
+    notes: dict = {}
     try:
-        root, conf, evidence = layer_fn()
-        status = LayerStatus.OK
+        out = layer_fn()
+        root, conf, evidence = out
+        # A layer may tag what it returns (see _LayerOutput). The values are
+        # used exactly as returned; only the reported state and notes differ.
+        status = getattr(out, "state", None) or LayerStatus.OK
+        notes = getattr(out, "notes", None) or {}
     except Exception as exc:
         logger.warning(
             "layer=%s status=error reason=%s: %s",
@@ -704,6 +1103,7 @@ def _run_layer_safe(
         evidence    = evidence,
         latency_ms  = round((time.perf_counter() - t0) * 1000, 2),
         status      = status,
+        notes       = notes,
     )
 
 
@@ -738,7 +1138,7 @@ def _run_all_layers_parallel(
         ("indirect_injection",  lambda: _layer_indirect(prompt, primary_output)),
         ("gcg_suffix",          lambda: _layer_gcg(prompt)),
         ("perplexity_proxy",    lambda: _layer_perplexity(prompt)),
-        ("pair_classifier",     lambda: _layer_pair(prompt)),
+        ("pair_classifier",     lambda: _pair_task(prompt)),
         ("direct_harm",         lambda: _layer_direct_harm(prompt)),
         ("virtualization",      lambda: _layer_virtualization(prompt)),
         ("fiction_harm",        lambda: _layer_fiction_harm(prompt)),
@@ -884,6 +1284,102 @@ def health() -> dict:
         "scan_threshold": SCAN_THRESHOLD,
         "layers": sorted(_LAYER_WEIGHTS) + ["copyright"],
     }
+
+
+# ── Coverage and model identity ───────────────────────────────────────────────
+
+def model_identities() -> dict[str, ModelIdentity]:
+    """
+    The artifacts loaded in this process, by role: "pair_classifier",
+    "meta_classifier", "encoder". This is what `ScanResult.models` carries.
+
+    Read-only and non-blocking: it never triggers a model load. Before the
+    first scan or warmup() every role reports `loaded=False`.
+    """
+    identities: dict[str, ModelIdentity] = {}
+    for role, raw in _model_identities().items():
+        try:
+            identities[role] = ModelIdentity(**raw)
+        except (TypeError, ValueError):
+            # A value that is not safe to publish is dropped, never passed on.
+            identities[role] = ModelIdentity(loaded=bool(raw.get("loaded")))
+    return identities
+
+
+def classifier_state() -> str:
+    """
+    State of the PAIR classifier in this process, as a fixed code:
+    "ok", "not_loaded" (no load has completed yet), or one of the
+    "unavailable_*" layer states. Never triggers a load.
+
+    This is the publishable counterpart of health()["pair_classifier"]["error"],
+    which is free text and can contain a local directory path.
+    """
+    state = _pair_unavailable_state()
+    if state is None:
+        return "ok" if _model_identities()["pair_classifier"]["loaded"] else "not_loaded"
+    return state if state in LAYER_STATES else "not_loaded"
+
+
+_classifier_warning_logged: bool = False
+_classifier_warning_lock = threading.Lock()
+
+
+def _warn_classifier_unavailable_once(state: str) -> None:
+    """One WARNING per process when scans run without the classifier."""
+    global _classifier_warning_logged
+    if _classifier_warning_logged:
+        return
+    with _classifier_warning_lock:
+        if _classifier_warning_logged:
+            return
+        _classifier_warning_logged = True
+    logger.warning(
+        "scan coverage=partial reason=classifier_unavailable state=%s impact='the PAIR "
+        "classifier does not run; results come from the remaining layers and report "
+        "coverage.status=partial' action='pip install fie-sdk[ml] and fetch the model "
+        "files' note='logged once per process'", state,
+    )
+
+
+_REPORTABLE_STATES: frozenset[str] = LAYER_STATES - {"bypassed"}
+
+
+def _coverage_for(all_results: list[LayerResult], meta_classifier: str, tiebreaker: str) -> ScanCoverage:
+    """
+    Build the coverage statement for one scan from what the layer runner returned.
+
+    A layer with no result was removed from this scan by the caller, through
+    `disabled_layers` or by replacing the runner, and is reported as `disabled`.
+    """
+    layers = dict.fromkeys(ALL_LAYERS, LayerStatus.DISABLED)
+    translation = "not_needed"
+    for r in all_results:
+        if r.layer_name not in layers:
+            continue
+        if isinstance(r.status, str) and r.status in _REPORTABLE_STATES:
+            state = r.status
+        else:
+            state = LayerStatus.DISABLED if r.status == LayerStatus.SKIPPED else LayerStatus.ERROR
+        layers[r.layer_name] = state
+        if r.layer_name == "multilingual":
+            if state == LayerStatus.OK:
+                noted = (getattr(r, "notes", None) or {}).get("translation")
+                if noted in OPTIONAL_COMPONENT_STATES["translation"]:
+                    translation = noted
+            elif state in (LayerStatus.ERROR, LayerStatus.TIMEOUT):
+                # The layer that would have translated did not finish.
+                translation = "unavailable"
+    return ScanCoverage(
+        status     = "full" if set(layers.values()) == {LayerStatus.OK} else "partial",
+        layers     = layers,
+        classifier = layers["pair_classifier"],
+        optional   = {
+            "meta_classifier": meta_classifier,
+            "tiebreaker":      tiebreaker,
+            "translation":     translation,
+        },
+    )
 
 
 # ── Weighted vote aggregator ──────────────────────────────────────────────────
@@ -1040,6 +1536,8 @@ def scan_prompt(
                 is_attack=False, attack_type=None, category=None, confidence=0.0,
                 layers_fired=[], matched_text=None, mitigation="",
                 evidence={"feedback": "whitelisted"},
+                zone="allow", decided_by="feedback_override",
+                coverage=_BYPASSED_COVERAGE, models=model_identities(),
             )
             return result
         if is_known_attack(prompt):
@@ -1048,6 +1546,8 @@ def scan_prompt(
                 layers_fired=["feedback_store"], matched_text=None,
                 mitigation=_MITIGATIONS.get("PROMPT_INJECTION", _DEFAULT_MITIGATION),
                 evidence={"feedback": "confirmed_tp"},
+                zone="clear_block", decided_by="feedback_override",
+                coverage=_BYPASSED_COVERAGE, models=model_identities(),
             )
             return result
     except Exception as exc:
@@ -1081,9 +1581,15 @@ def scan_prompt(
     fired_results = [r for r in all_results if r.attack_type is not None]
     layer_scores  = {r.layer_name: r.confidence for r in all_results}
 
-    # Layers that never returned a verdict. Reported on the result so callers
-    # can apply a fail-secure policy; aggregation treats them as 0.0 either way.
+    # Layers that never returned a verdict: timed out, raised, or unavailable.
+    # Reported on the result so callers can apply a fail-secure policy;
+    # aggregation treats them as 0.0 either way.
     degraded = sorted(r.layer_name for r in all_results if r.status != LayerStatus.OK)
+
+    _classifier = next((r.status for r in all_results if r.layer_name == "pair_classifier"), None)
+    if isinstance(_classifier, str) and _classifier.startswith("unavailable_"):
+        _warn_classifier_unavailable_once(_classifier)
+    _models = model_identities()
 
     # ── Meta-classifier (XGBoost on 12 layer scores) ─────────────────────────
     # Blends learned aggregation with the weighted-vote result.
@@ -1094,10 +1600,23 @@ def scan_prompt(
     # Added while investigating a bug where the model was reading 6 of its 11
     # features as constant zero: without a switch there was no way to ask
     # "what does this component actually buy us?"
-    _meta_prob = (
-        0.0 if _os.environ.get("FIE_DISABLE_META", "").strip() in ("1", "true", "yes")
-        else _run_meta_classifier(layer_scores)
-    )
+    if _os.environ.get("FIE_DISABLE_META", "").strip() in ("1", "true", "yes"):
+        _meta_prob  = 0.0
+        _meta_optional = "disabled"
+    else:
+        _meta_call_reset()
+        _meta_prob  = _run_meta_classifier(layer_scores)
+        # 0.0 means both "no pattern" and "could not run"; ask which it was.
+        _meta_optional = "ok" if _meta_call_ran() else "unavailable"
+
+    def _contract(zone: str, decided_by: str, tiebreaker: str) -> dict:
+        """The schema-2 fields for this scan. The router below is the only caller."""
+        return {
+            "zone":       zone,
+            "decided_by": decided_by,
+            "coverage":   _coverage_for(all_results, _meta_optional, tiebreaker),
+            "models":     _models,
+        }
 
     # ── Benign framing filter (dampening on fired layer names) ────────────────
     fired_names = [r.layer_name for r in fired_results]
@@ -1207,6 +1726,7 @@ def scan_prompt(
             evidence     = best_evidence,
             layer_scores = layer_scores,
             degraded_layers = degraded,
+            **_contract("allow", "pipeline", "not_needed"),
         )
         _scan_cache.set(_cache_prompt, result)
         _record_session(prompt, result, session_id)
@@ -1229,6 +1749,7 @@ def scan_prompt(
             evidence     = best_evidence,
             layer_scores = layer_scores,
             degraded_layers = degraded,
+            **_contract("clear_block", "pipeline", "not_needed"),
         )
         # Feedback loop: record input block for human review
         try:
@@ -1272,6 +1793,9 @@ def scan_prompt(
         best_evidence["cwd_recommended"] = True
         best_evidence["cwd_notice"]      = _CWD_SYSTEM_NOTICE
     lg_verdict: bool | None = None
+    # Reported as coverage.optional["tiebreaker"]. "disabled" when the caller
+    # turned it off; "unavailable" when it was asked and gave no verdict.
+    _tiebreaker = "disabled" if use_llama_guard is False else "unavailable"
     if use_llama_guard is not False:
         try:
             from fie.llama_guard import query_llama_guard
@@ -1300,6 +1824,7 @@ def scan_prompt(
             evidence     = best_evidence | {"llama_guard": "confirmed_attack"},
             layer_scores = layer_scores,
             degraded_layers = degraded,
+            **_contract("uncertain_block", "tiebreaker", "confirmed"),
         )
     elif lg_verdict is False:
         # LlamaGuard says safe → clear
@@ -1314,6 +1839,7 @@ def scan_prompt(
             evidence     = best_evidence | {"llama_guard": "confirmed_safe"},
             layer_scores = layer_scores,
             degraded_layers = degraded,
+            **_contract("uncertain_allow", "tiebreaker", "cleared"),
         )
     else:
         # LlamaGuard unavailable or skipped — block conservatively instead of allowing
@@ -1333,6 +1859,7 @@ def scan_prompt(
                 evidence     = best_evidence | {"llama_guard": "unavailable_blocked"},
                 layer_scores = layer_scores,
                 degraded_layers = degraded,
+                **_contract("uncertain_block", "fail_secure", _tiebreaker),
             )
         else:
             # FIE_UNCERTAIN_ALLOW=1 restores old pass-through behaviour (dev/test use)
@@ -1347,6 +1874,7 @@ def scan_prompt(
                 evidence     = best_evidence | {"llama_guard": "unavailable_allowed"},
                 layer_scores = layer_scores,
                 degraded_layers = degraded,
+                **_contract("uncertain_allow", "config", _tiebreaker),
             )
 
     # Record UNCERTAIN-zone blocks in the feedback store (for human review queue)

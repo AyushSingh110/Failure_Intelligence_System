@@ -21,7 +21,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
+from typing import Any
 logger = logging.getLogger(__name__)
+
+# The four layers this scanner runs. The other eight are reported as `disabled`.
+_LITE_LAYERS: tuple[str, ...] = ("regex", "gcg_suffix", "many_shot", "multilingual")
 
 
 @dataclass
@@ -35,6 +39,37 @@ class LiteScanResult:
     # Layers that raised during this scan. Non-empty means reduced coverage:
     # is_attack=False is weaker evidence of safety than usual.
     degraded_layers: list[str] = field(default_factory=list)
+
+    # ── Schema version 2: the same fields ScanResult carries ──────────────────
+    # `coverage` is a fie.adversarial.ScanCoverage. A lite scan runs four of the
+    # twelve layers, so its status is always "partial": the eight layers it
+    # never runs are `disabled`, as are the meta-classifier and the tiebreaker.
+    # There is no uncertain band here, so `zone` is "allow" or "clear_block".
+    zone:           str | None = None
+    decided_by:     str | None = None
+    coverage:       Any = None
+    schema_version: int = 2
+
+    def __post_init__(self) -> None:
+        if self.zone is None:
+            self.zone = "clear_block" if self.is_attack else "allow"
+
+    def to_dict(self) -> dict:
+        """JSON-safe form. A subset of ScanResult.to_dict(), same keys, same order."""
+        from fie.adversarial import _json_safe
+
+        return {
+            "is_attack":       bool(self.is_attack),
+            "attack_type":     self.attack_type,
+            "confidence":      float(self.confidence),
+            "layers_fired":    sorted(self.layers_fired or []),
+            "evidence":        _json_safe(self.evidence if isinstance(self.evidence, dict) else {}),
+            "degraded_layers": sorted(self.degraded_layers or []),
+            "zone":            self.zone,
+            "decided_by":      self.decided_by,
+            "coverage":        self.coverage.to_dict() if self.coverage is not None else None,
+            "schema_version":  self.schema_version,
+        }
 
 
 def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
@@ -53,6 +88,8 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
     Returns LiteScanResult. All fields compatible with ScanResult equivalents.
     """
     from fie.adversarial import (
+        ALL_LAYERS,
+        ScanCoverage,
         _layer_regex,
         _layer_gcg,
         _layer_many_shot,
@@ -71,10 +108,18 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
     combined_ev: dict       = {}
     best_conf   = 0.0
     best_type   = None
+    states: dict[str, str] = {name: "disabled" for name in ALL_LAYERS}
+    translation = "not_needed"
 
     for name, fn in lite_layers:
         try:
-            attack_type, confidence, evidence = fn()
+            out = fn()
+            attack_type, confidence, evidence = out
+            states[name] = "ok"
+            if name == "multilingual":
+                noted = (getattr(out, "notes", None) or {}).get("translation")
+                if noted in ("ok", "unavailable"):
+                    translation = noted
         except Exception as exc:
             # Lite mode already runs a reduced layer set, so a further layer
             # loss matters more here than in the full pipeline. Record it on the
@@ -85,6 +130,9 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
                 name, type(exc).__name__, exc,
             )
             degraded_names.append(name)
+            states[name] = "error"
+            if name == "multilingual":
+                translation = "unavailable"
             continue
 
         if attack_type is not None:
@@ -103,4 +151,13 @@ def scan_prompt_lite(prompt: str, threshold: float = 0.65) -> LiteScanResult:
         layers_fired = fired_names,
         evidence     = combined_ev,
         degraded_layers = degraded_names,
+        zone         = "clear_block" if is_attack else "allow",
+        decided_by   = "pipeline",
+        coverage     = ScanCoverage(
+            status     = "partial",
+            layers     = states,
+            classifier = states["pair_classifier"],
+            optional   = {"meta_classifier": "disabled", "tiebreaker": "disabled",
+                          "translation": translation},
+        ),
     )

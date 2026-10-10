@@ -40,6 +40,27 @@ def _bold(t: str)   -> str: return _color(t, "1")
 def _dim(t: str)    -> str: return _color(t, "2")
 
 
+# Fields added to both JSON outputs by result schema version 2. Every key the
+# commands printed before is still printed first, unchanged; these follow.
+_SCHEMA_2_KEYS = ("zone", "decided_by", "coverage", "models", "degraded_layers", "schema_version")
+
+
+def _schema_2_fields(result) -> dict:
+    full = result.to_dict()
+    return {key: full[key] for key in _SCHEMA_2_KEYS}
+
+
+def _coverage_note(result) -> str | None:
+    """One line for the text output when the scan did not have full coverage."""
+    coverage = getattr(result, "coverage", None)
+    if coverage is None or coverage.status == "full":
+        return None
+    reduced = [f"{name}: {state}" for name, state in coverage.layers.items() if state != "ok"]
+    if coverage.status == "bypassed":
+        return "bypassed (decided by a stored label; no layer ran)"
+    return f"{coverage.status} ({', '.join(reduced)})"
+
+
 def _cmd_detect(args: argparse.Namespace) -> int:
     from fie.adversarial import scan_prompt
 
@@ -59,6 +80,7 @@ def _cmd_detect(args: argparse.Namespace) -> int:
             "matched_text": result.matched_text,
             "mitigation":   result.mitigation,
             "evidence":     result.evidence,
+            **_schema_2_fields(result),
         }, indent=2))
         return 1 if result.is_attack else 0
 
@@ -77,6 +99,9 @@ def _cmd_detect(args: argparse.Namespace) -> int:
     print(f"  {_bold('FIE Adversarial Scan')}")
     print(f"  {'─' * 40}")
     print(f"  Status     : {status}")
+    note = _coverage_note(result)
+    if note:
+        print(f"  Coverage   : {_yellow(note)}")
 
     if result.is_attack:
         print(f"  Attack type: {_yellow(result.attack_type or '')}")
@@ -119,6 +144,7 @@ def _cmd_explain(args: argparse.Namespace) -> int:
             "layers_fired": result.layers_fired,
             "evidence":     result.evidence,
             "mitigation":   result.mitigation,
+            **_schema_2_fields(result),
         }, indent=2))
         return 1 if result.is_attack else 0
 
@@ -128,6 +154,9 @@ def _cmd_explain(args: argparse.Namespace) -> int:
     print(f"  {'-' * 50}")
     ellipsis = "..." if len(prompt) > 80 else ""
     print(f"  Prompt   : {_dim(repr(prompt[:80] + ellipsis))}")
+    note = _coverage_note(result)
+    if note:
+        print(f"  Coverage : {_yellow(note)}")
     print()
 
     # Sort layers: fired first (by confidence desc), then silent

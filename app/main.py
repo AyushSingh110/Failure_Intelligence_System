@@ -491,9 +491,14 @@ def health_deep(admin: Principal | None = Depends(platform_admin_or_none)) -> di
     # PAIR unloaded still returns 200 with a confident-looking verdict, so this
     # is the only place an operator can see recall has silently dropped.
     try:
+        from fie.adversarial import classifier_state as _classifier_state
         from fie.adversarial import health as _detector_health
         det = _detector_health()   # non-blocking; never triggers a model load
         pair_ok = det["pair_classifier"]["loaded"]
+        if det["pair_classifier"].get("error"):
+            # The loader's error text names a local directory, and this endpoint
+            # is public. Report the fixed state code; the text stays in the log.
+            det["pair_classifier"]["error"] = _classifier_state()
         results["detector"] = {
             "status":  "ok" if pair_ok else "degraded",
             "mode":    "full_pipeline" if pair_ok else "reduced_recall",

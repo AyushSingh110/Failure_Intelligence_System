@@ -205,6 +205,8 @@ says white-box evasion is expected. The reason is ordering, not secrecy.
 | 2 | 2026-10-08 | Implementation | WP-001, approved with decisions OD-1 to OD-13 | **Complete; accepted and committed by the owner as `1e074d6`.** Harness built in `evals/`; canonical baseline and v6.2 reference pinned; all approved counts reproduce; deterministic artifacts byte-identical; 0 outbound attempts; 317 tests pass (87 existing unchanged + 230 new); no production file changed. See §9 | [EXECUTION_001](EXECUTION_REPORTS/EXECUTION_001_eval-harness.md) |
 | 3 | 2026-10-08 | Planning gate | One planning document for WP-002 | [PLAN_002_SERVER_ISOLATION.md](IMPLEMENTATION_PLANS/PLAN_002_SERVER_ISOLATION.md) written. 51 routes and 41 state items inventoried; S1–S12 confirmed by code reading; 20 further findings (N1–N20) | The plan |
 | 4 | 2026-10-08 | Implementation | WP-002, approved with the recommendations of plan §31 (W2-1 to W2-22) | **Implemented, awaiting review. Not committed.** One principal, one policy per route, scoped data access. Every in-scope attack reproduced on the unmodified code and is closed. 635 tests pass (87 existing + 230 harness + 318 security). `fie/` untouched. See §10 | [EXECUTION_002](EXECUTION_REPORTS/EXECUTION_002_server-isolation.md) |
+| 5 | 2026-10-10 | Planning gate | One planning document for WP-003 | [PLAN_003_TRUTHFUL_SCAN_RESULT.md](IMPLEMENTATION_PLANS/PLAN_003_TRUTHFUL_SCAN_RESULT.md) written; committed by the owner as `550226d` | The plan |
+| 6 | 2026-10-10 | Implementation | WP-003, approved with decisions W3-1 to W3-18 and the `bypassed` clarification | **Implemented, awaiting review. Not committed.** Results report coverage, zone, decision source and model identity. No verdict moved: ten canonical record files byte-identical to `BL-0001`; lite false-full-coverage 1,848 → 0 of 1,848. 785 tests pass. `BL-0002` not pinned (needs the owner's commit). See §11 | [EXECUTION_003](EXECUTION_REPORTS/EXECUTION_003_truthful-scan-result.md) |
 
 ---
 
@@ -715,4 +717,126 @@ Not executed by the assistant.
 
 ```text
 git add -- app/auth.py app/auth_guard.py app/auth_routes.py app/limiter.py app/main.py app/security_events.py app/tenancy.py app/routes/_helpers.py app/routes/admin.py app/routes/analytics.py app/routes/community.py app/routes/flags.py app/routes/inference.py app/routes/monitor.py app/routes/playground.py engine/agents/adversarial/specialist.py engine/agents/failure_agent.py engine/archetypes/registry.py engine/fie_config.py engine/groq_service.py engine/ground_truth_cache.py engine/multi_turn_tracker.py engine/retraining/buffer.py engine/session_store.py engine/verifier/ground_truth_pipeline.py storage/database.py storage/signal_logger.py storage/tenant_store.py tests/security tests/test_integration.py tests/test_monitor_rag_fix.py docs/fie_rebuild_2026/EXECUTION_REPORTS/EXECUTION_002_server-isolation.md docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md && git commit -m "security: isolate server tenant state and harden authentication (WP-002)"
+```
+
+---
+
+## 11. WP-003 implementation record
+
+Detail and evidence are in
+[EXECUTION_003_truthful-scan-result.md](EXECUTION_REPORTS/EXECUTION_003_truthful-scan-result.md).
+
+### 11.1 Approval
+
+The owner approved WP-003 for implementation on 2026-10-10 with decisions W3-1 to W3-18 of
+[PLAN_003](IMPLEMENTATION_PLANS/PLAN_003_TRUTHFUL_SCAN_RESULT.md) §26, with these departures from
+the plan's recommendations: **W3-9 `risk_score` deferred** (not added); W3-10 `decision` field
+and the inert-`threshold=` warning deferred; W3-12 the `/health/deep` path disclosure fixed as a
+single-file exception in `app/main.py`. Standing rule unchanged: the assistant makes no commit,
+stage, push, stash, reset or tag.
+
+**D-023 — fast-path results are `bypassed`.** *Status: approved by the owner with the
+implementation gate.* A prompt decided by a stored label runs no layer. Its layers are reported
+neither `ok` nor `disabled` but `bypassed`, with `coverage.status = "bypassed"`. `bypassed` is a
+whole-scan state only. No other new status value may be introduced without approval.
+
+### 11.2 State
+
+| Item | Value |
+| --- | --- |
+| Implementation date | 2026-10-10 |
+| Branch | `rebuild/wp-001-eval-harness` |
+| HEAD before and after | `550226da5691ada35a19835059ec17e22632d2c6` |
+| Commit status | **NOT COMMITTED — owner will review and manually commit** |
+| Deployed | No |
+| Status | Complete, with one owner-gated step (pin `BL-0002`) and documented deviations |
+
+### 11.3 Files changed
+
+Created: `tests/test_scan_result_contract.py` (141 tests),
+`EXECUTION_REPORTS/EXECUTION_003_truthful-scan-result.md`.
+
+Modified (production, 8): `fie/adversarial.py`, `fie/layers/pair.py`, `fie/onnx_encoder.py`,
+`fie/_lite.py`, `fie/preflight.py`, `fie/__main__.py`, `fie/__init__.py`, `app/main.py` (five
+lines, the detector block of `health_deep`).
+
+Modified (harness, 1): `evals/subject.py`. Modified (existing test, 1, W3-13):
+`tests/evals/test_subject_contract.py` (nine tests and one assertion added; none changed).
+
+Deleted: none. Not created: `evals/baselines/BL-0002…`; `CANONICAL` unchanged.
+
+Size: 888 production lines added and 32 removed; 72 added and 8 removed in the harness adapter;
+1,364 test lines.
+
+### 11.4 The contract now on record
+
+- `ScanResult.coverage`: `status` (`full` / `partial` / `bypassed`), `layers` (all twelve, one
+  of `ok`, `unavailable_dependency`, `unavailable_model`, `unavailable_load_failed`, `error`,
+  `timeout`, `disabled`, `bypassed`), `classifier`, `optional` (meta-classifier, tiebreaker,
+  translation; never lower the status).
+- `ScanResult.zone`: `allow`, `uncertain_allow`, `uncertain_block`, `clear_block`.
+  `decided_by`: `pipeline`, `tiebreaker`, `fail_secure`, `config`, `feedback_override`.
+  Invariant enforced at construction: `is_attack == (zone in {uncertain_block, clear_block})`.
+- `ScanResult.models`: per role, `loaded`, `version`, 16-hex `digest` of the loaded file,
+  `threshold`, `backend`.
+- `degraded_layers` includes unavailable layers. `schema_version = 2`. `to_dict()` on
+  `ScanResult`, `LiteScanResult`, `GuardResult`.
+- An allowed result may have partial coverage (W3-4). Policy on that is not decided here.
+
+### 11.5 Results
+
+| Item | Result |
+| --- | --- |
+| Tests | 785 passed, 0 failed, 0 skipped: 87 existing + 239 harness + 318 security + 141 contract. All 635 earlier test names still pass |
+| Verdicts | Unchanged. 56 literal comparisons captured from `550226d` (classifier loaded and missing, uncertain band, lite, pre-flight); golden file unmodified |
+| Canonical profile | Ten record files (8,032 records) byte-identical to `BL-0001`; eight counts equal |
+| Lite profile | 1,848 records identical in every field except `degraded`, which is `["pair_classifier"]` in all of them. False full coverage: 1,848 → **0 of 1,848** |
+| `python -m evals baseline` | Exit 6 by design: differs from `BL-0001` in `lite.std.jsonl` only |
+| `verify-determinism --all` | Exit 0: 13 gated files identical across two runs; 0 differences under a random hash seed |
+| Network | 0 guard violations; no dependency and no network or ML import added |
+| `/health/deep` | Returns a fixed state code instead of the loader's text; response schema unchanged |
+| Mutation checks | 8 of 9 deliberate faults failed tests; the ninth is absorbed by validation |
+| Cost | About 23 µs per scan; about 0.26 s once per process at cold start (hashing the 90 MB encoder) |
+
+### 11.6 Deviations
+
+Eleven, DV-1 to DV-11, in the execution report. The ones the owner should know: **DV-5**
+(`BL-0002` not pinned: `evals pin` refuses an uncommitted tree under D-013, and the guard was
+not bypassed); DV-1 (the classifier's state travels on a tagged tuple, not an exception, so
+`_layer_pair` keeps its return contract for two scripts outside the package); DV-3 (`bypassed`
+is also the meta-classifier's optional state in a bypassed result); DV-4 (`timeout` covers a
+scan that arrives during another thread's first model load); DV-6 (three to four times the
+estimated size); DV-8 (`to_dict()` output is canonical, not only fixed-order); DV-10 (the
+`/health/deep` code replaces the text for admins too).
+
+### 11.7 New findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| NF-10 | The loader marks its load attempted when it starts, so a scan arriving during the first load runs without the classifier | Pre-existing. Now reported as `timeout` instead of `ok`. Not fixed: fixing it changes that scan's verdict |
+| NF-11 | A failed Tier 2.5 translation with language confidence below 0.90 leaves no trace; reported `translation: not_needed` | Needs `fie/multilingual.py` |
+| NF-12 | `layers_fired` and `evidence` key order follow thread completion order | Pre-existing. `to_dict()` sorts |
+| NF-13 | CI's placeholder `GROQ_API_KEY` makes pre-existing uncertain-band SDK tests attempt a real call to the tiebreaker provider | Pre-existing, not fixed |
+
+### 11.8 Owner actions
+
+1. Review and commit (command below).
+2. Pin `BL-0002`: `python -m evals baseline` (exit 6 expected), `python -m evals
+   verify-determinism --all`, `python -m evals pin <run> --canonical --determinism-proof
+   <DETERMINISM.json>`, then `python -m evals baseline` (exit 0). The baseline should be named
+   `BL-0002_pair-v6.3b_fie-70de7053`.
+3. Decide DV-3 if the default is not wanted.
+
+### 11.9 Deferred
+
+`risk_score`; the `decision` field; the inert `threshold=` warning; persisting the zone in
+server records or returning it from `/monitor`; any policy on partial coverage (WP-004,
+WP-007); NF-10 to NF-13.
+
+### 11.10 Recommended manual commit command
+
+Not executed by the assistant.
+
+```text
+git add -- fie/adversarial.py fie/layers/pair.py fie/onnx_encoder.py fie/_lite.py fie/preflight.py fie/__main__.py fie/__init__.py evals/subject.py app/main.py tests/test_scan_result_contract.py tests/evals/test_subject_contract.py docs/fie_rebuild_2026/EXECUTION_REPORTS/EXECUTION_003_truthful-scan-result.md docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md && git commit -m "fie: report scan coverage, zone and model identity truthfully (WP-003)"
 ```
