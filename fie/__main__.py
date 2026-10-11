@@ -61,6 +61,51 @@ def _coverage_note(result) -> str | None:
     return f"{coverage.status} ({', '.join(reduced)})"
 
 
+# ── Runtime policy (fie.policy) ───────────────────────────────────────────────
+# These commands DISPLAY the policy outcome; they do not enforce it. The exit
+# code is the detector's verdict (1 = attack, 0 = safe) under every policy
+# configuration. A script that needs the policy outcome reads `policy.action`
+# from the JSON output.
+_POLICY_NOTICE = (
+    "fie: policy configuration is invalid (FIE_POLICY is not a known policy name); "
+    "no policy was applied"
+)
+_DETECTOR_REASONS = frozenset({
+    "detector_block", "detector_uncertain", "tiebreaker_confirmed", "labelled_attack",
+    "labelled_safe", "tiebreaker_cleared", "uncertain_allowed_by_config", "detector_allow",
+})
+
+
+def _resolve_policy():
+    """
+    The process policy, resolved before the scan. None when the configuration is
+    invalid: a fixed notice goes to stderr (in every output mode, including
+    --quiet) and the scan still runs, because this command reports what the
+    detector found and exits on it. The offending value is never printed.
+    """
+    from fie import policy as _policy
+    try:
+        return _policy.active_policy()
+    except _policy.PolicyConfigError:
+        print(_POLICY_NOTICE, file=sys.stderr)
+        return None
+
+
+def _policy_decision(result, policy):
+    from fie import policy as _policy
+    if policy is None:
+        return _policy.invalid_config_decision(result)
+    return _policy.decide(result, policy)
+
+
+def _policy_note(result, decision) -> str | None:
+    """One line for the text output, only when the policy adds something to the verdict."""
+    implied = "block" if result.is_attack else "allow"
+    if decision.action == implied and all(reason in _DETECTOR_REASONS for reason in decision.reasons):
+        return None
+    return f"{decision.action} ({', '.join(decision.reasons)})"
+
+
 def _cmd_detect(args: argparse.Namespace) -> int:
     from fie.adversarial import scan_prompt
 
@@ -68,7 +113,9 @@ def _cmd_detect(args: argparse.Namespace) -> int:
     if prompt == "-":
         prompt = sys.stdin.read()
 
+    policy = _resolve_policy()
     result = scan_prompt(prompt.strip())
+    decision = _policy_decision(result, policy)
 
     if args.output == "json":
         print(json.dumps({
@@ -81,6 +128,7 @@ def _cmd_detect(args: argparse.Namespace) -> int:
             "mitigation":   result.mitigation,
             "evidence":     result.evidence,
             **_schema_2_fields(result),
+            "policy":       decision.to_dict(),
         }, indent=2))
         return 1 if result.is_attack else 0
 
@@ -102,6 +150,9 @@ def _cmd_detect(args: argparse.Namespace) -> int:
     note = _coverage_note(result)
     if note:
         print(f"  Coverage   : {_yellow(note)}")
+    note = _policy_note(result, decision)
+    if note:
+        print(f"  Policy     : {_yellow(note)}")
 
     if result.is_attack:
         print(f"  Attack type: {_yellow(result.attack_type or '')}")
@@ -133,7 +184,9 @@ def _cmd_explain(args: argparse.Namespace) -> int:
     if prompt == "-":
         prompt = sys.stdin.read()
 
+    policy = _resolve_policy()
     result = scan_prompt(prompt.strip())
+    decision = _policy_decision(result, policy)
 
     if args.output == "json":
         print(json.dumps({
@@ -145,6 +198,7 @@ def _cmd_explain(args: argparse.Namespace) -> int:
             "evidence":     result.evidence,
             "mitigation":   result.mitigation,
             **_schema_2_fields(result),
+            "policy":       decision.to_dict(),
         }, indent=2))
         return 1 if result.is_attack else 0
 
@@ -157,6 +211,9 @@ def _cmd_explain(args: argparse.Namespace) -> int:
     note = _coverage_note(result)
     if note:
         print(f"  Coverage : {_yellow(note)}")
+    note = _policy_note(result, decision)
+    if note:
+        print(f"  Policy   : {_yellow(note)}")
     print()
 
     # Sort layers: fired first (by confidence desc), then silent

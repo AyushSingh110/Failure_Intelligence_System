@@ -1055,7 +1055,8 @@ def test_guard_result_carries_zone_and_coverage(loaded):
     for g in (legacy, safe, clear, uncertain, empty):
         d = g.to_dict()
         assert tuple(d) == ("blocked", "attack_type", "confidence", "layers_fired", "refusal_message",
-                            "scan_failed", "zone", "coverage_status", "schema_version")
+                            "scan_failed", "zone", "coverage_status", "schema_version",
+                            "action", "policy", "reasons")
         assert json.loads(json.dumps(d)) == d and d["schema_version"] == 2
 
 
@@ -1118,7 +1119,7 @@ def test_cli_json_keeps_every_old_key_and_adds_the_new_ones(loaded, capsys, comm
         data = json.loads(out)
         r = loaded.scan_prompt(PROMPTS[name])            # cached: the object the CLI printed
         assert tuple(data)[:len(old_keys)] == old_keys, "an existing key moved or disappeared"
-        assert tuple(data)[len(old_keys):] == NEW_KEYS
+        assert tuple(data)[len(old_keys):] == NEW_KEYS + ("policy",)
         for key in old_keys:
             assert data[key] == json.loads(json.dumps(getattr(r, key))), key
         full = r.to_dict()

@@ -207,6 +207,9 @@ says white-box evasion is expected. The reason is ordering, not secrecy.
 | 4 | 2026-10-08 | Implementation | WP-002, approved with the recommendations of plan §31 (W2-1 to W2-22) | **Implemented, awaiting review. Not committed.** One principal, one policy per route, scoped data access. Every in-scope attack reproduced on the unmodified code and is closed. 635 tests pass (87 existing + 230 harness + 318 security). `fie/` untouched. See §10 | [EXECUTION_002](EXECUTION_REPORTS/EXECUTION_002_server-isolation.md) |
 | 5 | 2026-10-10 | Planning gate | One planning document for WP-003 | [PLAN_003_TRUTHFUL_SCAN_RESULT.md](IMPLEMENTATION_PLANS/PLAN_003_TRUTHFUL_SCAN_RESULT.md) written; committed by the owner as `550226d` | The plan |
 | 6 | 2026-10-10 | Implementation | WP-003, approved with decisions W3-1 to W3-18 and the `bypassed` clarification | **Implemented, awaiting review. Not committed.** Results report coverage, zone, decision source and model identity. No verdict moved: ten canonical record files byte-identical to `BL-0001`; lite false-full-coverage 1,848 → 0 of 1,848. 785 tests pass. `BL-0002` not pinned (needs the owner's commit). See §11 | [EXECUTION_003](EXECUTION_REPORTS/EXECUTION_003_truthful-scan-result.md) |
+| 7 | 2026-10-10 | Baseline | Post-commit verification and pin for WP-003 | WP-003 committed by the owner as `a9db959`. `evals baseline` exit 6 (only `lite.std.jsonl` differs), `verify-determinism --all` exit 0, `BL-0002_pair-v6.3b_fie-70de7053` pinned and made canonical, `evals baseline` exit 0. Committed by the owner as `924c70d` | §11.8 |
+| 8 | 2026-10-10 | Planning gate | One planning document for WP-004, three revisions | [PLAN_004_RUNTIME_POLICY.md](IMPLEMENTATION_PLANS/PLAN_004_RUNTIME_POLICY.md), revision 3. Owner decisions W4-1 to W4-16 and Q1 to Q7 | The plan, §14 |
+| 9 | 2026-10-10/11 | Implementation | WP-004, approved revision 3 plus one amendment | **Implemented, awaiting review. Not committed.** A pure policy layer (`fie/policy.py`) applied in `preflight_check` and shown by the CLI; default `compat@1` reproduces previous behaviour. 942 tests pass; all 11 record files byte-identical to `BL-0002`; determinism verified. **Not universal enforcement** (§12.5). See §12 | [EXECUTION_004](EXECUTION_REPORTS/EXECUTION_004_runtime-policy.md) |
 
 ---
 
@@ -839,4 +842,134 @@ Not executed by the assistant.
 
 ```text
 git add -- fie/adversarial.py fie/layers/pair.py fie/onnx_encoder.py fie/_lite.py fie/preflight.py fie/__main__.py fie/__init__.py evals/subject.py app/main.py tests/test_scan_result_contract.py tests/evals/test_subject_contract.py docs/fie_rebuild_2026/EXECUTION_REPORTS/EXECUTION_003_truthful-scan-result.md docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md && git commit -m "fie: report scan coverage, zone and model identity truthfully (WP-003)"
+```
+
+---
+
+## 12. WP-004 implementation record
+
+Detail and evidence are in
+[EXECUTION_004_runtime-policy.md](EXECUTION_REPORTS/EXECUTION_004_runtime-policy.md).
+
+### 12.1 Numbering
+
+**D-024 — this package is WP-004, although the roadmap calls the policy engine WP-007.**
+*Status: approved by the owner (W4-1).* [ROADMAP.md](ROADMAP.md) uses WP-004 for "install
+truth" (E51), WP-005 for the hermetic default and WP-007 for the policy engine. Runtime policy
+was pulled ahead and took the number WP-004. The roadmap was not edited. Its install-truth and
+hermetic-default topics are not done and need new numbers when scheduled; its WP-007 sketch
+(policy documents, per-category thresholds, per-tenant revisions, `risk.score`) is future work
+that this package is the first step toward.
+
+D-003 (detection and policy are separate; the default reproduces today's verdicts) moves from
+*proposed* to **implemented in part**: the separation exists and the default preset is exact.
+The three-way `allow` / `review` / `block` surface exists as policy actions; nothing was
+re-calibrated.
+
+### 12.2 Approval
+
+Approved for implementation on 2026-10-10 on revision 3 of
+[PLAN_004](IMPLEMENTATION_PLANS/PLAN_004_RUNTIME_POLICY.md), with decisions W4-1 to W4-16 and
+Q1 to Q7 (plan §14). Standing rule unchanged: the assistant makes no commit, stage, push,
+merge, deploy or branch change.
+
+Two things were decided during execution:
+
+- **The plan file stayed untracked.** The tree was not strictly clean at the start because the
+  approved plan had not been committed. The owner authorized proceeding with it untracked.
+- **D-025 — a second existing assertion may be edited.** *Status: approved by the owner.* The
+  plan authorized one edit in `tests/test_scan_result_contract.py` (the
+  `GuardResult.to_dict()` key tuple). The approved CLI `policy` key also breaks a second
+  pinned tuple, missed in planning. Raised as a stop condition before any file was changed;
+  the owner authorized exactly that second edit and no other.
+
+### 12.3 State
+
+| Item | Value |
+| --- | --- |
+| Implementation date | 2026-10-10 to 2026-10-11 |
+| Branch | `rebuild/wp-001-eval-harness` |
+| HEAD before and after | `924c70d2b707b9a60ab4c7053bd50dbcf2ce02f9` |
+| Commit status | **NOT COMMITTED — owner will review and manually commit** |
+| Canonical baseline | `BL-0002_pair-v6.3b_fie-70de7053`, unchanged. No `BL-0003` |
+| Deployed | No |
+| Status | Complete; all required gates passed; no blocked gate |
+
+### 12.4 What exists now
+
+- `fie/policy.py` (new): `Policy`, `PolicyDecision`, `decide(result, policy, *,
+  scan_failed=False)` (pure), `invalid_config_decision`, presets `compat@1` (default, two
+  forms told apart by digest), `strict@1`, `review@1`; separately `active_policy`,
+  `set_policy`, `reset_policy`, `PolicyConfigError`.
+- Actions `allow`, `review`, `block`, `error`; fifteen fixed reason codes; every decision
+  names its policy id and digest and repeats the detector's verdict and zone beside the
+  action.
+- `preflight_check` resolves the policy once before scanning (per-call `policy=` >
+  `set_policy` > cached `FIE_POLICY` > `compat@1`), applies it, and reports `action`,
+  `policy`, `reasons` on `GuardResult`. An invalid `FIE_POLICY` gives a blocking `error`
+  (`invalid_policy_config`) without scanning; there is no fallback.
+- `FIE_SCAN_FAILURE_MODE` keeps its single reader in `fie/preflight.py`; the `compat` form
+  follows that flag at each call.
+- Warn-only waives detector-origin blocks only.
+- CLI: `policy` appended to both JSON outputs; exit code is still the detector's verdict.
+- Modified: `fie/preflight.py`, `fie/__main__.py`, `fie/__init__.py`; two assertions in
+  `tests/test_scan_result_contract.py`. New: `fie/policy.py`, `tests/test_runtime_policy.py`
+  (157 tests). Not touched: `fie/adversarial.py`, layers, integrations, `fie/monitor.py`,
+  `app/`, `engine/`, `storage/`, `evals/`, baselines.
+
+### 12.5 Enforcement limits — read before relying on a preset
+
+**WP-004 is not enforcement across every entry point.** Policy is applied in
+`preflight_check` only.
+
+| Gap | Consequence |
+| --- | --- |
+| OpenAI and Anthropic integrations call `scan_prompt` directly and fail open at DEBUG | No policy, under any preset |
+| `FIEMiddleware` local mode fails open; server mode posts to a route that does not exist | No policy; server mode protects nothing |
+| Server routes read `GuardResult.blocked` only, and allow if the guard raises | A selected preset is enforced there through `preflight_check`, but `action` and `reasons` are dropped |
+| Shipped images set no `FIE_POLICY`; the server does not refuse to start on an invalid one | Hosted service stays on `compat@1` |
+| CLI exit code | Detector verdict, never a policy gate |
+
+A test asserts the first gap as current behaviour so that the follow-up must change it on
+purpose. Recommended next package: migrate the three integrations (follow-up F3), which
+changes failure behaviour for existing users and needs its own review. Then the server
+(F4). Token revocation and key hashing (WP-017) should precede any reliance on
+admin-controlled policy.
+
+### 12.6 Results
+
+| Item | Result |
+| --- | --- |
+| Tests | 942 passed, 0 failed, 0 skipped: 785 existing (all by name) + 157 new |
+| `python -m evals baseline` | Exit 0; eight counts equal; all 11 record files byte-identical to `BL-0002`. Run flagged `canonical=False` only because the change is uncommitted (D-013) |
+| `verify-determinism --all` | Exit 0; 13 gated files, 0 differing; 0 differences under a random hash seed |
+| `compat@1` versus previous behaviour | 36 comparisons with values captured before the change, including warn-only and both scanner-failure modes: identical |
+| Mutation checks | 18 of 18 caught; files restored, SHA-256 verified |
+| Cost | About 5 µs per decision; no cold-start cost |
+| Baseline replay | `strict@1` on a base install blocks all 1,848 prompts (500 of 500 benign); `review@1` moves 294 of 2,016 canonical records from block to review |
+
+### 12.7 Deviations and risks
+
+Eleven deviations, DV-1 to DV-11, in the execution report. The ones to know: DV-2 (the second
+assertion, D-025); DV-4 (`decide` first measured at 14.9 µs against a 5 µs budget; fixed by
+computing the policy digest once at construction; final 4.98 µs, a thin margin); DV-5 (a
+blocked scanner failure reports the existing fail-secure marker under every policy); DV-9
+(larger than estimated again).
+
+Risks noted: one INFO audit line per allowed scan on a base install under the default;
+`FIE_POLICY=strict` is easy to over-read given §12.5; `FIE_SCAN_FAILURE_MODE=open` with
+`FIE_POLICY=strict` blocks scanner failures by design; NF-10 means `strict@1` blocks requests
+that arrive during the first model load, so `warmup()` before serving matters more.
+
+### 12.8 Deferred
+
+Integrations (F3); server and deployment (F4); per-tenant policy; required model digests;
+`risk_score`, the `decision` field, the inert `threshold=` warning; NF-10, NF-11, NF-13.
+
+### 12.9 Recommended manual commit command
+
+Not executed by the assistant.
+
+```text
+git add -- fie/policy.py fie/preflight.py fie/__main__.py fie/__init__.py tests/test_runtime_policy.py tests/test_scan_result_contract.py docs/fie_rebuild_2026/IMPLEMENTATION_PLANS/PLAN_004_RUNTIME_POLICY.md docs/fie_rebuild_2026/EXECUTION_REPORTS/EXECUTION_004_runtime-policy.md docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md && git commit -m "fie: add runtime policy layer applied in preflight_check (WP-004)"
 ```

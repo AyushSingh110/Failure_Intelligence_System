@@ -6,6 +6,7 @@ from fie.adversarial import (
     ScanResult, ScanCoverage, ModelIdentity, LayerEvidence,
 )
 from fie.preflight import preflight_check, GuardedResponse
+from fie.policy import Policy, PolicyDecision, decide
 from fie.output_scanner import scan_output, scan_output_async, OutputScanResult
 from fie.stream_guard import stream_guard, astream_guard
 from fie import integrations
@@ -30,6 +31,9 @@ __all__      = [
     "LayerEvidence",
     "preflight_check",
     "GuardedResponse",
+    "Policy",
+    "PolicyDecision",
+    "decide",
     "scan_output",
     "scan_output_async",
     "OutputScanResult",
