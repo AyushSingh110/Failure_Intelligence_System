@@ -1,0 +1,74 @@
+{
+ "archive_file_suffixes": [
+  ".9",
+  ".cfg",
+  ".egg-info",
+  ".in",
+  ".md",
+  ".properties",
+  ".py",
+  ".txt"
+ ],
+ "archive_links_or_special_members": [],
+ "archive_member_count": 88,
+ "archive_unsafe_paths": [],
+ "build_files": {
+  "MANIFEST.in": "include README.md\ninclude LICENSE\ninclude NOTICE\ninclude MANIFEST.in\ninclude requirements.txt\ninclude langdetect/utils/messages.properties\nrecursive-include langdetect/profiles *\n",
+  "PKG-INFO": "Metadata-Version: 2.1\nName: langdetect\nVersion: 1.0.9\nSummary: Language detection library ported from Google's language-detection.\nHome-page: https://github.com/Mimino666/langdetect\nAuthor: Michal Mimino Danilak\nAuthor-email: michal.danilak@gmail.com\nLicense: MIT\nDescription: langdetect\n        ==========\n        \n        [![Build Status](https://travis-ci.org/Mimino666/langdetect.svg?branch=master)](https://travis-ci.org/Mimino666/langdetect)\n        \n        Port of Nakatani Shuyo's [language-detection](https://github.com/shuyo/language-detection) library (version from 03/03/2014) to Python.\n        \n        \n        Installation\n        ============\n        \n            $ pip install langdetect\n        \n        Supported Python versions 2.7, 3.4+.\n        \n        \n        Languages\n        =========\n        \n        ``langdetect`` supports 55 languages out of the box ([ISO 639-1 codes](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)):\n        \n            af, ar, bg, bn, ca, cs, cy, da, de, el, en, es, et, fa, fi, fr, gu, he,\n            hi, hr, hu, id, it, ja, kn, ko, lt, lv, mk, ml, mr, ne, nl, no, pa, pl,\n            pt, ro, ru, sk, sl, so, sq, sv, sw, ta, te, th, tl, tr, uk, ur, vi, zh-cn, zh-tw\n        \n        \n        Basic usage\n        ===========\n        \n        To detect the language of the text:\n        \n        ```python\n        >>> from langdetect import detect\n        >>> detect(\"War doesn't show who's right, just who's left.\")\n        'en'\n        >>> detect(\"Ein, zwei, drei, vier\")\n        'de'\n        ```\n        \n        To find out the probabilities for the top languages:\n        \n        ```python\n        >>> from langdetect import detect_langs\n        >>> detect_langs(\"Otec matka syn.\")\n        [sk:0.572770823327, pl:0.292872522702, cs:0.134356653968]\n        ```\n        \n        **NOTE**\n        \n        Language detection algorithm is non-deterministic, which means that if you try to run it on a text which is either too short or too ambiguous, you might get different results everytime you run it.\n        \n        To enforce consistent results, call following code before the first language detection:\n        \n        ```python\n        from langdetect import DetectorFactory\n        DetectorFactory.seed = 0\n        ```\n        \n        How to add new language?\n        ========================\n        \n        You need to create a new language profile. The easiest way to do it is to use the [langdetect.jar](https://github.com/shuyo/language-detection/raw/master/lib/langdetect.jar) tool, which can generate language profiles from Wikipedia abstract database files or plain text.\n        \n        Wikipedia abstract database files can be retrieved from \"Wikipedia Downloads\" ([http://download.wikimedia.org/](http://download.wikimedia.org/)). They form '(language code)wiki-(version)-abstract.xml' (e.g. 'enwiki-20101004-abstract.xml' ).\n        \n        usage: ``java -jar langdetect.jar --genprofile -d [directory path] [language codes]``\n        \n        - Specify the directory which has abstract databases by -d option.\n        - This tool can handle gzip compressed file.\n        \n        Remark: The database filename in Chinese is like 'zhwiki-(version)-abstract-zh-cn.xml' or zhwiki-(version)-abstract-zh-tw.xml', so that it must be modified 'zh-cnwiki-(version)-abstract.xml' or 'zh-twwiki-(version)-abstract.xml'.\n        \n        To generate language profile from a plain text, use the genprofile-text command.\n        \n        usage: ``java -jar langdetect.jar --genprofile-text -l [language code] [text file path]``\n        \n        For more details see [language-detection Wiki](https://code.google.com/archive/p/language-detection/wikis/Tools.wiki).\n        \n        \n        Original project\n        ================\n        \n        This library is a direct port of Google's [language-detection](https://code.google.com/p/language-detection/) library from Java to Python. All the classes and methods are unchanged, so for more information see the project's website or wiki.\n        \n        Presentation of the language detection algorithm: [http://www.slideshare.net/shuyo/language-detection-library-for-java](http://www.slideshare.net/shuyo/language-detection-library-for-java).\n        \nKeywords: language detection library\nPlatform: UNKNOWN\nClassifier: Development Status :: 5 - Production/Stable\nClassifier: Intended Audience :: Developers\nClassifier: License :: OSI Approved :: Apache Software License\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 2\nClassifier: Programming Language :: Python :: 2.7\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.4\nClassifier: Programming Language :: Python :: 3.5\nClassifier: Programming Language :: Python :: 3.6\nClassifier: Programming Language :: Python :: 3.7\nClassifier: Programming Language :: Python :: 3.8\nDescription-Content-Type: text/markdown\n",
+  "requirements.txt": "six\n",
+  "setup.cfg": "[egg_info]\ntag_build = \ntag_date = 0\n\n",
+  "setup.py": "try:\n    from setuptools import setup\nexcept ImportError:\n    from distutils.core import setup\n\n\nwith open('README.md') as f:\n    readme = f.read()\n\n\nsetup(\n    name='langdetect',\n    version='1.0.9',\n    description='Language detection library ported from Google\\'s language-detection.',\n    long_description=readme,\n    long_description_content_type='text/markdown',\n    author='Michal Mimino Danilak',\n    author_email='michal.danilak@gmail.com',\n    url='https://github.com/Mimino666/langdetect',\n    keywords='language detection library',\n    packages=['langdetect', 'langdetect.utils', 'langdetect.tests'],\n    include_package_data=True,\n    install_requires=['six'],\n    license='MIT',\n    classifiers=[\n        'Development Status :: 5 - Production/Stable',\n        'Intended Audience :: Developers',\n        'License :: OSI Approved :: Apache Software License',\n        'Operating System :: OS Independent',\n        'Programming Language :: Python :: 2',\n        'Programming Language :: Python :: 2.7',\n        'Programming Language :: Python :: 3',\n        'Programming Language :: Python :: 3.4',\n        'Programming Language :: Python :: 3.5',\n        'Programming Language :: Python :: 3.6',\n        'Programming Language :: Python :: 3.7',\n        'Programming Language :: Python :: 3.8',\n    ]\n)\n"
+ },
+ "compiled_or_binary_members": [],
+ "files_published": [
+  {
+   "filename": "langdetect-1.0.9-py2-none-any.whl",
+   "packagetype": "bdist_wheel",
+   "python_version": "py2",
+   "sha256": "7cbc0746252f19e76f77c0b1690aadf01963be835ef0cd4b56dddf2a8f1dfc2a",
+   "size": 993221,
+   "upload_time": "2021-05-07T07:54:10.843555Z",
+   "url": "https://files.pythonhosted.org/packages/d0/04/31f2f175c475c0274a7fb20552e18c4f5b1ef04b211dd4d7301ca6bf4534/langdetect-1.0.9-py2-none-any.whl",
+   "yanked": false
+  },
+  {
+   "filename": "langdetect-1.0.9.tar.gz",
+   "packagetype": "sdist",
+   "python_version": "source",
+   "sha256": "cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0",
+   "size": 981474,
+   "upload_time": "2021-05-07T07:54:13.562344Z",
+   "url": "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2569554f7c70f4a3c27712f40e3284d483e88094cc0e/langdetect-1.0.9.tar.gz",
+   "yanked": false
+  }
+ ],
+ "has_pyproject_toml": false,
+ "has_setup_cfg": true,
+ "has_setup_py": true,
+ "project": "langdetect",
+ "release_info": {
+  "author": "Michal Mimino Danilak",
+  "home_page": "https://github.com/Mimino666/langdetect",
+  "license": "MIT",
+  "name": "langdetect",
+  "requires_dist": [
+   "six"
+  ],
+  "requires_python": "",
+  "version": "1.0.9"
+ },
+ "source_archive": {
+  "bytes_downloaded": 981474,
+  "filename": "langdetect-1.0.9.tar.gz",
+  "matches_pypi_digest_and_size": true,
+  "packagetype": "sdist",
+  "python_version": "source",
+  "sha256": "cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0",
+  "sha256_downloaded": "cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0",
+  "size": 981474,
+  "upload_time": "2021-05-07T07:54:13.562344Z",
+  "url": "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2569554f7c70f4a3c27712f40e3284d483e88094cc0e/langdetect-1.0.9.tar.gz",
+  "yanked": false
+ },
+ "version": "1.0.9"
+}

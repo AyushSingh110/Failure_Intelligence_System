@@ -1,0 +1,189 @@
+{
+ "base_interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+ "cells": {
+  "modeA-pypi-base-r1": {
+   "artifact": "A-pypi-1.18.0",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": true,
+   "bundled_pip_version": "23.0.1",
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\pypi\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-A",
+    "<HOME>\\fie-e51-scratch\\wheels\\pypi"
+   ],
+   "importable_before_install": [
+    "pip",
+    "setuptools"
+   ],
+   "install_mode": "A-source-build",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "packages_before_install": [
+    {
+     "name": "pip",
+     "version": "23.0.1"
+    },
+    {
+     "name": "setuptools",
+     "version": "79.0.1"
+    }
+   ],
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-A-modeA-pypi-base-r1.txt",
+   "python": "3.10.19"
+  },
+  "modeA-pypi-base-r2": {
+   "artifact": "A-pypi-1.18.0",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": true,
+   "bundled_pip_version": "23.0.1",
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r2",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\pypi\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-A",
+    "<HOME>\\fie-e51-scratch\\wheels\\pypi"
+   ],
+   "importable_before_install": [
+    "pip",
+    "setuptools"
+   ],
+   "install_mode": "A-source-build",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r2\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "packages_before_install": [
+    {
+     "name": "pip",
+     "version": "23.0.1"
+    },
+    {
+     "name": "setuptools",
+     "version": "79.0.1"
+    }
+   ],
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-A-modeA-pypi-base-r2.txt",
+   "python": "3.10.19"
+  },
+  "modeB-clean-base": {
+   "artifact": "A-clean",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": false,
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\clean-build1\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-B",
+    "<HOME>\\fie-e51-scratch\\wheels\\clean-build1"
+   ],
+   "importable_before_install": [],
+   "install_mode": "B-prebuilt-local-wheel",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-clean-base.txt",
+   "python": "3.10.19"
+  },
+  "modeB-pypi-base": {
+   "artifact": "A-pypi-1.18.0",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": false,
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\pypi\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-B",
+    "<HOME>\\fie-e51-scratch\\wheels\\pypi"
+   ],
+   "importable_before_install": [],
+   "install_mode": "B-prebuilt-local-wheel",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-pypi-base.txt",
+   "python": "3.10.19"
+  },
+  "modeB-release-base": {
+   "artifact": "A-release",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": false,
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\release-build1\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-B",
+    "<HOME>\\fie-e51-scratch\\wheels\\release-build1"
+   ],
+   "importable_before_install": [],
+   "install_mode": "B-prebuilt-local-wheel",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-release-base.txt",
+   "python": "3.10.19"
+  }
+ },
+ "commit": "2f62ecd9e3c9cbc3355edff256ff19a90a45a6d7",
+ "inputs_pc": "<HOME>\\fie-e51-scratch\\inputs\\inputs_pc.jsonl",
+ "inputs_s": "<HOME>\\fie-e51-scratch\\inputs\\inputs_s.jsonl",
+ "launchers": {
+  "base-interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+  "modeA-pypi-base-r1": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe",
+  "modeA-pypi-base-r2": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r2\\Scripts\\python.exe",
+  "modeB-clean-base": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base\\Scripts\\python.exe",
+  "modeB-pypi-base": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base\\Scripts\\python.exe",
+  "modeB-release-base": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base\\Scripts\\python.exe"
+ },
+ "manifest": "<HOME>\\Desktop\\Failure_Intelligence_System\\scripts\\model_manifest.json",
+ "not_provisioned": {
+  "A-clean [ml]": "not provisioned: awaiting explicit owner approval (O-21)",
+  "A-pypi-1.18.0 [ml]": "not provisioned: awaiting explicit owner approval (O-22)",
+  "A-release [ml]": "not provisioned: awaiting explicit owner approval (O-21)"
+ },
+ "repo": "<HOME>\\Desktop\\Failure_Intelligence_System",
+ "scratch": "<HOME>\\fie-e51-scratch",
+ "targets": [
+  "151.101.0.223:443",
+  "167.82.48.223:443"
+ ],
+ "verified_models": "<HOME>\\fie-e51-scratch\\verified_model_sha256.json",
+ "wheel_inspection": {
+  "A-clean": {
+   "default_classifier": null,
+   "default_load_set_all_verified": false,
+   "model_counts": {
+    "hash_mismatch": 0,
+    "unmanifested": 0,
+    "verified": 0
+   },
+   "sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99"
+  },
+  "A-dist": {
+   "default_classifier": "pair_intent_classifier.pkl",
+   "default_load_set_all_verified": false,
+   "model_counts": {
+    "hash_mismatch": 1,
+    "unmanifested": 4,
+    "verified": 9
+   },
+   "sha256": "e0b415d4063b78f411d5ffc760dc9e0e54c6999c07450a49943b7d0047cea945"
+  },
+  "A-pypi-1.18.0": {
+   "default_classifier": "pair_intent_classifier.pkl",
+   "default_load_set_all_verified": false,
+   "model_counts": {
+    "hash_mismatch": 1,
+    "unmanifested": 0,
+    "verified": 9
+   },
+   "sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d"
+  },
+  "A-release": {
+   "default_classifier": "pair_intent_classifier.pkl",
+   "default_load_set_all_verified": true,
+   "model_counts": {
+    "hash_mismatch": 0,
+    "unmanifested": 0,
+    "verified": 10
+   },
+   "sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c"
+  }
+ }
+}

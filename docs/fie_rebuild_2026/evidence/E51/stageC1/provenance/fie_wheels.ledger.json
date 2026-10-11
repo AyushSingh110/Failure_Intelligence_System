@@ -1,0 +1,17 @@
+{
+ "A-clean": {
+  "origin": "local-build from git archive 2f62ecd",
+  "sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99",
+  "size": 151936
+ },
+ "A-pypi-1.18.0": {
+  "origin": "pypi-wheel",
+  "sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+  "size": 270149
+ },
+ "A-release": {
+  "origin": "local-build from git archive 2f62ecd",
+  "sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c",
+  "size": 314838
+ }
+}
