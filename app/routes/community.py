@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.auth_guard import require_admin
+from app.auth_guard import Principal, public, require_platform_admin
 from app.limiter import rate_limit
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class FeedbackResponse(BaseModel):
     message: str
 
 
-@router.post("/community/feedback", response_model=FeedbackResponse)
+@router.post("/community/feedback", response_model=FeedbackResponse, dependencies=[Depends(public)])
 @rate_limit("20/hour")
 def submit_feedback(request: Request, body: FeedbackRequest) -> FeedbackResponse:
     """
@@ -71,7 +71,7 @@ def submit_feedback(request: Request, body: FeedbackRequest) -> FeedbackResponse
     return FeedbackResponse(**result)
 
 
-@router.get("/community/stats")
+@router.get("/community/stats", dependencies=[Depends(public)])
 def feedback_stats() -> dict:
     """
     Public counts of community reports.
@@ -86,8 +86,7 @@ def feedback_stats() -> dict:
 
 @router.get("/community/export")
 def export_feedback(
-    authorization: str | None = Header(None),
-    x_api_key:     str | None = Header(None, alias="X-API-Key"),
+    principal: Principal = Depends(require_platform_admin),
 ) -> dict:
     """
     Full report dataset, for building the public HuggingFace release.
@@ -96,7 +95,6 @@ def export_feedback(
     unreviewed, and mistaken submissions must be removable before anything is
     published. Review first, then release.
     """
-    require_admin(authorization, x_api_key)
     from engine.demo_feedback import export_all
 
     records = export_all()

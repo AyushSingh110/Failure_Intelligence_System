@@ -1,0 +1,155 @@
+{
+  "cold_start": {
+    "reference-v6.2": {
+      "first_scan_s": 0.0126,
+      "import_s": 0.321,
+      "warmup_s": 1.831,
+      "worker_wall_s": 81.341
+    }
+  },
+  "per_suite": {
+    "std.advbench": {
+      "max_ms": 48.81,
+      "mean_chars": 74,
+      "mean_ms": 30.79,
+      "n": 168,
+      "p50_ms": 31.25,
+      "p95_ms": 43.58,
+      "p99_ms": 46.61,
+      "profile": "reference-v6.2",
+      "scan_time_s": 5.17,
+      "scans_per_s": 32.5
+    },
+    "std.harmbench": {
+      "max_ms": 56.92,
+      "mean_chars": 89,
+      "mean_ms": 29.83,
+      "n": 387,
+      "p50_ms": 28.8,
+      "p95_ms": 46.62,
+      "p99_ms": 53.46,
+      "profile": "reference-v6.2",
+      "scan_time_s": 11.55,
+      "scans_per_s": 33.5
+    },
+    "std.jailbreakbench": {
+      "max_ms": 191.34,
+      "mean_chars": 1421,
+      "mean_ms": 120.91,
+      "n": 134,
+      "p50_ms": 139.0,
+      "p95_ms": 156.66,
+      "p99_ms": 176.17,
+      "profile": "reference-v6.2",
+      "scan_time_s": 16.2,
+      "scans_per_s": 8.3
+    },
+    "std.orbench_hard": {
+      "max_ms": 50.46,
+      "mean_chars": 116,
+      "mean_ms": 31.77,
+      "n": 250,
+      "p50_ms": 32.46,
+      "p95_ms": 42.61,
+      "p99_ms": 46.85,
+      "profile": "reference-v6.2",
+      "scan_time_s": 7.94,
+      "scans_per_s": 31.5
+    },
+    "std.sorrybench": {
+      "max_ms": 175.2,
+      "mean_chars": 138,
+      "mean_ms": 42.51,
+      "n": 387,
+      "p50_ms": 39.57,
+      "p95_ms": 76.11,
+      "p99_ms": 98.58,
+      "profile": "reference-v6.2",
+      "scan_time_s": 16.45,
+      "scans_per_s": 23.5
+    },
+    "std.strongreject": {
+      "max_ms": 142.81,
+      "mean_chars": 167,
+      "mean_ms": 47.89,
+      "n": 242,
+      "p50_ms": 43.96,
+      "p95_ms": 82.03,
+      "p99_ms": 97.18,
+      "profile": "reference-v6.2",
+      "scan_time_s": 11.59,
+      "scans_per_s": 20.9
+    },
+    "std.xstest": {
+      "max_ms": 365.22,
+      "mean_chars": 44,
+      "mean_ms": 21.12,
+      "n": 448,
+      "p50_ms": 20.89,
+      "p95_ms": 30.28,
+      "p99_ms": 34.34,
+      "profile": "reference-v6.2",
+      "scan_time_s": 9.46,
+      "scans_per_s": 47.3
+    }
+  },
+  "stability": null,
+  "warm_latency": null,
+  "workers": {
+    "reference-v6.2": {
+      "audit_events_seen": 153231,
+      "blocked_import_hits": [
+        "engine",
+        "storage"
+      ],
+      "exit_code": 0,
+      "pickle_classes_observed": [
+        [
+          "builtins",
+          "bytearray"
+        ],
+        [
+          "joblib.numpy_pickle",
+          "NumpyArrayWrapper"
+        ],
+        [
+          "numpy",
+          "dtype"
+        ],
+        [
+          "numpy",
+          "ndarray"
+        ],
+        [
+          "numpy._core.multiarray",
+          "scalar"
+        ],
+        [
+          "sklearn.calibration",
+          "CalibratedClassifierCV"
+        ],
+        [
+          "sklearn.calibration",
+          "_CalibratedClassifier"
+        ],
+        [
+          "sklearn.calibration",
+          "_SigmoidCalibration"
+        ],
+        [
+          "sklearn.svm._classes",
+          "LinearSVC"
+        ],
+        [
+          "xgboost.core",
+          "Booster"
+        ],
+        [
+          "xgboost.sklearn",
+          "XGBClassifier"
+        ]
+      ],
+      "wall_s": 81.93
+    }
+  }
+}

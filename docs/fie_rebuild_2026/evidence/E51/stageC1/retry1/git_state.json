@@ -1,0 +1,12 @@
+{
+ "branch": "rebuild/wp-001-eval-harness",
+ "canonical": "BL-0002_pair-v6.3b_fie-70de7053",
+ "head": "3f823adaa80682e8638910517accaadf79483a40",
+ "staged": [],
+ "status": [
+  " M docs/fie_rebuild_2026/experiments/E51/offline_runner.py",
+  "?? docs/fie_rebuild_2026/evidence/E51/stageC1/diagnostic_pip_inspect_utf8_attempt4/",
+  "?? docs/fie_rebuild_2026/experiments/E51/prepare_retry.py",
+  "?? docs/fie_rebuild_2026/experiments/E51/test_offline_runner.py"
+ ]
+}

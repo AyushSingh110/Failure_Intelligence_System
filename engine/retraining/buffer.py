@@ -33,9 +33,11 @@ def add_to_buffer(
     request_id:     str,
     is_failure:     bool,
     correct_answer: str = "",
+    *,
+    tenant_id:      str = "",
 ) -> int:
     """
-    Records one newly-labeled example in the retraining buffer.
+    Records one newly-labeled example in the retraining buffer, with its tenant.
     Returns the current buffer count.
     """
     col = _get_buffer_collection()
@@ -44,6 +46,7 @@ def add_to_buffer(
 
     try:
         col.insert_one({
+            "tenant_id":      tenant_id,
             "log_id":         log_id,
             "request_id":     request_id,
             "is_failure":     is_failure,
@@ -93,6 +96,12 @@ def maybe_trigger_retrain(buffer_count: int) -> None:
     Idempotent — only one retrain runs at a time.
     """
     global _is_retraining
+
+    # Off unless FIE_AUTO_RETRAIN is set. A model retrained from every tenant's
+    # labels must not be started as a side effect of one tenant's request.
+    import os
+    if os.environ.get("FIE_AUTO_RETRAIN", "").strip().lower() not in ("1", "true", "yes"):
+        return
 
     if buffer_count < RETRAIN_THRESHOLD:
         return

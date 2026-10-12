@@ -37,9 +37,14 @@ def run_ground_truth_pipeline(
     use_wikidata:     bool = True,
     use_serper:       bool = True,
     question_type:    str  = "UNKNOWN",
+    scope=None,
 ) -> GroundTruthPipelineResult:
     """
     Main entry point. Called from the /monitor route after jury verdict.
+
+    scope is the caller's TenantScope. It bounds the answer cache: lookups see
+    only this tenant's entries and write-through stores under this tenant. With
+    no scope the pipeline runs without the cache.
 
     question_type controls routing:
       FACTUAL/UNKNOWN → Wikidata + Serper external verification
@@ -94,6 +99,7 @@ def run_ground_truth_pipeline(
                     _cache_if_confident(
                         prompt, sc.best_answer,
                         f"self_consistency_{qt.lower()}", sc.consistency_score,
+                        scope=scope,
                     )
                     return result
                 else:
@@ -139,23 +145,23 @@ def run_ground_truth_pipeline(
     # Cache lookup
     try:
         from engine.ground_truth_cache import lookup_cache
-        cache_hit = lookup_cache(prompt)
+        cache_hit = lookup_cache(prompt, scope=scope) if scope is not None else None
         if cache_hit:
             result.verified_answer  = cache_hit.verified_answer
             result.confidence       = cache_hit.confidence
             result.source           = f"GT Cache ({cache_hit.source})"
             result.from_cache       = True
             result.provenance_label = "FULLY_PROVENANCED"
+            # No identity and no usage count in the trace: it is returned to the caller.
             result.pipeline_trace.append(
-                f"Cache HIT — '{cache_hit.verified_answer[:60]}' "
-                f"(verified by {cache_hit.verified_by}, used {cache_hit.use_count} times)"
+                f"Cache HIT — '{cache_hit.verified_answer[:60]}' (source: {cache_hit.source})"
             )
             logger.info("GT pipeline: CACHE HIT — returning verified answer")
             return result
         result.pipeline_trace.append("Cache MISS — no verified answer stored for this question")
     except Exception as exc:
-        logger.warning("GT cache lookup failed: %s", exc)
-        result.pipeline_trace.append(f"Cache lookup error: {exc}")
+        logger.warning("GT cache lookup failed: %s", type(exc).__name__)
+        result.pipeline_trace.append("Cache lookup unavailable")
 
     #Claim extraction
     claim = None
@@ -213,7 +219,7 @@ def run_ground_truth_pipeline(
                         f"Serper OVERRIDE — model output contradicted by search "
                         f"(confidence={serper.confidence:.2f}). Using search answer."
                     )
-                    _cache_if_confident(prompt, result.verified_answer, "serper", serper.confidence)
+                    _cache_if_confident(prompt, result.verified_answer, "serper", serper.confidence, scope=scope)
                     return result
                 else:
                     # Search result confirms model output
@@ -285,7 +291,7 @@ def run_ground_truth_pipeline(
                         f"(confidence={wiki.confidence:.2f}). "
                         f"Correct value: {correct[:80]}"
                     )
-                    _cache_if_confident(prompt, result.verified_answer, "wikidata", wiki.confidence)
+                    _cache_if_confident(prompt, result.verified_answer, "wikidata", wiki.confidence, scope=scope)
                     return result
 
                 elif wiki.matches_claim and wiki.confidence >= 0.60:
@@ -429,8 +435,13 @@ def _cache_if_confident(
     answer:   str,
     source:   str,
     confidence: float,
+    scope=None,
 ) -> None:
-    """Write-through: cache externally verified answers >= 0.90 confidence."""
+    """
+    Write-through: cache externally verified answers >= 0.90 confidence, under
+    the tenant whose request produced them. The answer is derived from that
+    tenant's prompt and model output, so it is not shared.
+    """
     if confidence < 0.90:
         return
     try:
@@ -441,6 +452,8 @@ def _cache_if_confident(
             source          = source,
             confidence      = confidence,
             verified_by     = "system",
+            scope           = scope,
+            source_class    = "system",
         )
     except Exception as exc:
         logger.debug("Write-through cache failed: %s", exc)

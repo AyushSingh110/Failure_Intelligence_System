@@ -44,18 +44,3 @@ def build_failure_signal(model_outputs: list[str]) -> FailureSignalVector:
         ensemble_similarity  = ensemble["similarity_score"],
         high_failure_risk    = high_failure_risk,
     )
-
-
-def get_signal_logs_collection():
-    """Returns the signal_logs MongoDB collection or None when unavailable."""
-    try:
-        from storage.database import _db, _fallback_mode
-        if _fallback_mode or _db is None:
-            return None
-        return _db["signal_logs"]
-    except Exception as exc:
-        logger.warning(
-            "degraded capability=get_signal_logs_collection impact='this optional step was skipped' "
-            "reason=%s: %s", type(exc).__name__, exc,
-        )
-        return None

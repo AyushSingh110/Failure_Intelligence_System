@@ -1,0 +1,103 @@
+{
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe -I -X utf8 -m pip inspect --disable-pip-version-check",
+ "distributions": {
+  "attempt4_successfully_installed_line": {
+   "agrees": true,
+   "count": 12
+  },
+  "count": 14,
+  "extra_beyond_pins_and_preexisting": [],
+  "metadata_directories_on_disk": 14,
+  "names_versions": {
+   "beautifulsoup4": "4.15.0",
+   "certifi": "2026.7.22",
+   "charset-normalizer": "3.5.2",
+   "deep-translator": "1.11.4",
+   "fie-sdk": "1.18.0",
+   "idna": "3.20",
+   "langdetect": "1.0.9",
+   "pip": "23.0.1",
+   "requests": "2.34.2",
+   "setuptools": "79.0.1",
+   "six": "1.17.0",
+   "soupsieve": "2.10",
+   "typing-extensions": "4.16.0",
+   "urllib3": "2.8.0"
+  },
+  "pins": {
+   "count": 12,
+   "missing": [],
+   "wrong_version": []
+  },
+  "preexisting_before_install": {
+   "packages": {
+    "pip": "23.0.1",
+    "setuptools": "79.0.1"
+   },
+   "unchanged": true
+  }
+ },
+ "ended_utc": "2026-10-12T04:07:18Z",
+ "environment_tree": {
+  "files_after": 2403,
+  "files_before": 2403,
+  "identical": true
+ },
+ "environment_variable_names": [
+  "APPDATA",
+  "COMSPEC",
+  "HOME",
+  "LOCALAPPDATA",
+  "NUMBER_OF_PROCESSORS",
+  "OS",
+  "PATH",
+  "PATHEXT",
+  "PIP_CONFIG_FILE",
+  "PROCESSOR_ARCHITECTURE",
+  "PYTHONNOUSERSITE",
+  "PYTHONUTF8",
+  "SystemDrive",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "windir"
+ ],
+ "exit_code": 0,
+ "fie_sdk_as_reported": {
+  "installer": "pip",
+  "requested": true
+ },
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe",
+ "interpreter_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+ "invocations": 1,
+ "kind": "CONNECTED diagnostic, outside the offline measurement window. Not an offline test and not evidence of network isolation. Not a pass of the Mode A gates: those are decided by a full offline run.",
+ "langdetect_as_reported": {
+  "has_direct_url": false,
+  "installer": null,
+  "metadata_location_kind": "egg-info",
+  "requested": null
+ },
+ "pip_version_reported_in_output": "23.0.1",
+ "started_utc": "2026-10-12T04:07:17Z",
+ "stderr": {
+  "raw_bytes": 0,
+  "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ },
+ "stdout": {
+  "complete_parseable_json": true,
+  "raw_bytes": 158698,
+  "raw_sha256": "72fd3923fb8cec74a878d7fa75f6c7137076e671dc0e690793ad347346284ea7",
+  "stored_as": "stdout.json: the complete output with only the home-path prefix replaced by <HOME>; the byte-exact file is kept in the scratch directory and identified by raw_sha256",
+  "top_level_keys": [
+   "environment",
+   "installed",
+   "pip_version",
+   "version"
+  ],
+  "valid_utf8": true
+ },
+ "subject": "pip inspect with -X utf8 in the existing attempt 4 environment, cell modeA-pypi-base-r1",
+ "working_directory": "<HOME>\\Desktop\\Failure_Intelligence_System",
+ "wrapper": "PowerShell -> cmd /d /c with 1> and 2> to separate files; exit code read from $LASTEXITCODE"
+}

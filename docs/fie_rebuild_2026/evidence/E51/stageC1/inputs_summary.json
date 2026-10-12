@@ -1,0 +1,14 @@
+{
+ "baseline": "BL-0002_pair-v6.3b_fie-70de7053",
+ "inputs_pc": {
+  "count": 1848,
+  "every_input_sha256_equals_baseline_record": true,
+  "file": "inputs_pc.jsonl",
+  "sha256": "d19a56071f5b7263120cd188f203e6f73166b9de58d2d8027ca1769e1d7a2eb1"
+ },
+ "inputs_s": {
+  "count": 48,
+  "file": "inputs_s.jsonl",
+  "sha256": "f6bd1c759cf28da664377a69d8d044f667317a0ffb6f6701d953bed860fd0abb"
+ }
+}

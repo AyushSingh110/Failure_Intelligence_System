@@ -197,6 +197,46 @@ jobs:
                         '(docs/OPERATIONS.md) so CI can bundle them.')
           "
 
+      # The release gate. It installs the wheel built above — that exact file,
+      # never the checkout — into two fresh virtual environments and tests what
+      # was installed:
+      #
+      #   T-base     the wheel alone: installs, `import fie` works, the CLI
+      #              starts, Starlette/FastAPI are neither installed nor imported,
+      #              and asking for the FastAPI integration fails by name.
+      #   T-fastapi  the wheel with [fastapi]: the middleware imports, blocks a
+      #              known injection and passes a benign request.
+      #
+      # This exists because the test job above cannot see packaging defects: it
+      # imports the checkout, in an environment that has every optional package.
+      # fie-sdk 1.18.0 shipped unable to be imported after a plain
+      # `pip install fie-sdk` and every test here was green (E51, WP-021).
+      #
+      # Both targets must pass. The log names the target and the criterion that
+      # failed; the full report is uploaded below even when the step fails.
+      # A pass is about installation and import. It says nothing about
+      # detection quality and is not a security review of the middleware.
+      - name: Release check (installed wheel — T-base and T-fastapi)
+        run: |
+          wheels=(dist/*.whl)
+          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ]; then
+            echo "expected exactly one wheel in dist/, found: ${wheels[*]}"
+            exit 2
+          fi
+          sha256sum "${wheels[0]}"
+          python scripts/release_check.py \
+            --wheel "${wheels[0]}" \
+            --out "$RUNNER_TEMP/release-check" \
+            --workdir "$RUNNER_TEMP"
+
+      - name: Upload release-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-check
+          path: ${{ runner.temp }}/release-check
+          if-no-files-found: warn
+
   # ── Health-check smoke test (against built server) ────────────────────
   health-check:
     runs-on: ubuntu-latest

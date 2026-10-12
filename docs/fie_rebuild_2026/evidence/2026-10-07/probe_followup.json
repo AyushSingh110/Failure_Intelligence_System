@@ -1,0 +1,62 @@
+{
+  "attacks_n": 763,
+  "caught_at_baseline": 674,
+  "framing": {
+    "neutral_prefix": {
+      "caught_inferred_domain": 682,
+      "caught_domain_forced_default": 682,
+      "baseline_caught_now_missed_inferred": 8,
+      "baseline_caught_now_missed_forced": 8,
+      "attributable_to_multiplier": 0
+    },
+    "medical_prefix": {
+      "caught_inferred_domain": 607,
+      "caught_domain_forced_default": 607,
+      "baseline_caught_now_missed_inferred": 67,
+      "baseline_caught_now_missed_forced": 67,
+      "attributable_to_multiplier": 0
+    },
+    "developer_suffix": {
+      "caught_inferred_domain": 652,
+      "caught_domain_forced_default": 652,
+      "baseline_caught_now_missed_inferred": 30,
+      "baseline_caught_now_missed_forced": 30,
+      "attributable_to_multiplier": 0
+    },
+    "legal_prefix": {
+      "caught_inferred_domain": 445,
+      "caught_domain_forced_default": 444,
+      "baseline_caught_now_missed_inferred": 229,
+      "baseline_caught_now_missed_forced": 230,
+      "attributable_to_multiplier": 1
+    }
+  },
+  "padding": {
+    "n": 120,
+    "sentence_words": 21,
+    "after": {
+      "21": 61,
+      "42": 27,
+      "84": 12,
+      "168": 8,
+      "336": 8
+    },
+    "before": {
+      "21": 22,
+      "42": 9,
+      "84": 24,
+      "168": 8,
+      "336": 8
+    }
+  },
+  "padding_benign_xstest_safe": {
+    "n": 250,
+    "flagged_plain": 132,
+    "flagged_with_4_sentences_after": 5
+  },
+  "langdetect": {
+    "english_prompts_ge_60_chars": 37,
+    "prompts_with_run_to_run_variation": 1,
+    "prompts_ever_confidently_non_english": 1
+  }
+}

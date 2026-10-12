@@ -1,0 +1,244 @@
+{
+ "modeA-pypi-base-r3": {
+  "artifact": "A-pypi-1.18.0",
+  "build_path": [
+   "legacy: setup.py install (no wheel built)"
+  ],
+  "cli_all_fail_on_same_module": true,
+  "cli_exit_codes": {
+   "cli-detect-benign_capital": 1,
+   "cli-detect-injection": 1,
+   "cli-explain-benign_capital": 1,
+   "cli-explain-injection": 1
+  },
+  "evidence": "offline_attempt5",
+  "failures": [],
+  "fie_files_checked": 53,
+  "fie_files_differing_from_wheel": 0,
+  "gates_verdict": "PASS",
+  "import_PC_same_error": true,
+  "import_S": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": null,
+   "import_chain": null,
+   "import_ok": false,
+   "missing_module": null
+  },
+  "install_mode": "A-source-build",
+  "install_seconds": 10.13,
+  "installer": "pip 23.0.1 bundled with the venv",
+  "model_counts": {
+   "hash_mismatch": 1,
+   "unmanifested": 0,
+   "verified": 9
+  },
+  "model_files_not_verified": [
+   "fie/models/meta_clf.pkl"
+  ],
+  "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED (classified after the run; the attempt 5 runner predates outcome.json)",
+  "pip_check": "pass",
+  "pip_exit": 0,
+  "pip_inspect": {
+   "distributions": 14,
+   "langdetect_installer": null,
+   "langdetect_metadata": "egg-info",
+   "status": "match"
+  },
+  "scan_records": 0,
+  "startup_code": [
+   "distutils-precedence.pth"
+  ],
+  "tool_failures": []
+ },
+ "modeB-clean-base-m1": {
+  "artifact": "A-clean",
+  "build_path": [
+   "none: no source build"
+  ],
+  "cli_all_fail_on_same_module": true,
+  "cli_exit_codes": {
+   "cli-detect-benign_capital": 1,
+   "cli-detect-injection": 1,
+   "cli-explain-benign_capital": 1,
+   "cli-explain-injection": 1
+  },
+  "evidence": "offline_attempt7",
+  "failures": [],
+  "fie_files_checked": 37,
+  "fie_files_differing_from_wheel": 0,
+  "gates_verdict": "PASS",
+  "import_PC_same_error": true,
+  "import_S": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": "No module named 'starlette'",
+   "import_chain": [
+    {
+     "file": "<ENV>/lib/site-packages/fie/__init__.py",
+     "in": "<module>",
+     "line": 12
+    },
+    {
+     "file": "<ENV>/lib/site-packages/fie/integrations/__init__.py",
+     "in": "<module>",
+     "line": 25
+    },
+    {
+     "file": "<ENV>/lib/site-packages/fie/integrations/fastapi.py",
+     "in": "<module>",
+     "line": 28
+    }
+   ],
+   "import_ok": false,
+   "missing_module": "starlette"
+  },
+  "install_mode": "B-prebuilt-local-wheel",
+  "install_seconds": 7.3,
+  "installer": "repository pip via --python",
+  "model_counts": {
+   "hash_mismatch": 0,
+   "unmanifested": 0,
+   "verified": 0
+  },
+  "model_files_not_verified": [],
+  "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+  "pip_check": "pass",
+  "pip_exit": 0,
+  "pip_inspect": {
+   "distributions": 12,
+   "langdetect_installer": "pip",
+   "langdetect_metadata": "dist-info",
+   "status": "match"
+  },
+  "scan_records": 0,
+  "startup_code": [],
+  "tool_failures": []
+ },
+ "modeB-pypi-base-m1": {
+  "artifact": "A-pypi-1.18.0",
+  "build_path": [
+   "none: no source build"
+  ],
+  "cli_all_fail_on_same_module": true,
+  "cli_exit_codes": {
+   "cli-detect-benign_capital": 1,
+   "cli-detect-injection": 1,
+   "cli-explain-benign_capital": 1,
+   "cli-explain-injection": 1
+  },
+  "evidence": "offline_attempt7",
+  "failures": [],
+  "fie_files_checked": 53,
+  "fie_files_differing_from_wheel": 0,
+  "gates_verdict": "PASS",
+  "import_PC_same_error": true,
+  "import_S": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": "No module named 'starlette'",
+   "import_chain": [
+    {
+     "file": "<ENV>/lib/site-packages/fie/__init__.py",
+     "in": "<module>",
+     "line": 8
+    },
+    {
+     "file": "<ENV>/lib/site-packages/fie/integrations/__init__.py",
+     "in": "<module>",
+     "line": 25
+    },
+    {
+     "file": "<ENV>/lib/site-packages/fie/integrations/fastapi.py",
+     "in": "<module>",
+     "line": 28
+    }
+   ],
+   "import_ok": false,
+   "missing_module": "starlette"
+  },
+  "install_mode": "B-prebuilt-local-wheel",
+  "install_seconds": 5.59,
+  "installer": "repository pip via --python",
+  "model_counts": {
+   "hash_mismatch": 1,
+   "unmanifested": 0,
+   "verified": 9
+  },
+  "model_files_not_verified": [
+   "fie/models/meta_clf.pkl"
+  ],
+  "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+  "pip_check": "pass",
+  "pip_exit": 0,
+  "pip_inspect": {
+   "distributions": 12,
+   "langdetect_installer": "pip",
+   "langdetect_metadata": "dist-info",
+   "status": "match"
+  },
+  "scan_records": 0,
+  "startup_code": [],
+  "tool_failures": []
+ },
+ "modeB-release-base-m1": {
+  "artifact": "A-release",
+  "build_path": [
+   "none: no source build"
+  ],
+  "cli_all_fail_on_same_module": true,
+  "cli_exit_codes": {
+   "cli-detect-benign_capital": 1,
+   "cli-detect-injection": 1,
+   "cli-explain-benign_capital": 1,
+   "cli-explain-injection": 1
+  },
+  "evidence": "offline_attempt7",
+  "failures": [],
+  "fie_files_checked": 55,
+  "fie_files_differing_from_wheel": 0,
+  "gates_verdict": "PASS",
+  "import_PC_same_error": true,
+  "import_S": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": "No module named 'starlette'",
+   "import_chain": [
+    {
+     "file": "<ENV>/lib/site-packages/fie/__init__.py",
+     "in": "<module>",
+     "line": 12
+    },
+    {
+     "file": "<ENV>/lib/site-packages/fie/integrations/__init__.py",
+     "in": "<module>",
+     "line": 25
+    },
+    {
+     "file": "<ENV>/lib/site-packages/fie/integrations/fastapi.py",
+     "in": "<module>",
+     "line": 28
+    }
+   ],
+   "import_ok": false,
+   "missing_module": "starlette"
+  },
+  "install_mode": "B-prebuilt-local-wheel",
+  "install_seconds": 5.11,
+  "installer": "repository pip via --python",
+  "model_counts": {
+   "hash_mismatch": 0,
+   "unmanifested": 0,
+   "verified": 10
+  },
+  "model_files_not_verified": [],
+  "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+  "pip_check": "pass",
+  "pip_exit": 0,
+  "pip_inspect": {
+   "distributions": 12,
+   "langdetect_installer": "pip",
+   "langdetect_metadata": "dist-info",
+   "status": "match"
+  },
+  "scan_records": 0,
+  "startup_code": [],
+  "tool_failures": []
+ }
+}

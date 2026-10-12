@@ -1,0 +1,30 @@
+{"message": "plan loaded; 3 environments; adapters up now: ['Wi-Fi']", "step": "0", "utc": "2026-10-12T06:07:59Z"}
+{"message": "offline verified: no adapter up, no usable default route (1 stale on disconnected interfaces), TCP refused through 4 executables", "step": "2", "utc": "2026-10-12T06:08:25Z"}
+{"message": "installing (B-prebuilt-local-wheel, repository pip via --python)", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:25Z"}
+{"message": "install exit 0 in 7.3s; path: ['none: no source build']; gates: PASS; tool failures []; findings []", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:36Z"}
+{"message": "probe S-run1: import_blocked (exit 3), 0 scan records, 0.5s, ModuleNotFoundError: missing module 'starlette'", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:37Z"}
+{"message": "probe S-run1 produced no measurement; the repeat run of mode S is not attempted", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:37Z"}
+{"message": "probe PC-run1: import_blocked (exit 3), 0 scan records, 0.49s, ModuleNotFoundError: missing module 'starlette'", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:37Z"}
+{"message": "probe PC-run1 produced no measurement; the repeat run of mode PC is not attempted", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:37Z"}
+{"message": "CLI: cli-detect-benign_capital=1, cli-detect-injection=1, cli-explain-benign_capital=1, cli-explain-injection=1", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:39Z"}
+{"message": "outcome: IMPORT_BLOCKED_NO_SCAN_COMPLETED; scan records 0", "step": "modeB-clean-base-m1", "utc": "2026-10-12T06:08:39Z"}
+{"message": "installing (B-prebuilt-local-wheel, repository pip via --python)", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:39Z"}
+{"message": "install exit 0 in 5.59s; path: ['none: no source build']; gates: PASS; tool failures []; findings []", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:49Z"}
+{"message": "probe S-run1: import_blocked (exit 3), 0 scan records, 0.52s, ModuleNotFoundError: missing module 'starlette'", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:49Z"}
+{"message": "probe S-run1 produced no measurement; the repeat run of mode S is not attempted", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:49Z"}
+{"message": "probe PC-run1: import_blocked (exit 3), 0 scan records, 0.47s, ModuleNotFoundError: missing module 'starlette'", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:50Z"}
+{"message": "probe PC-run1 produced no measurement; the repeat run of mode PC is not attempted", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:50Z"}
+{"message": "CLI: cli-detect-benign_capital=1, cli-detect-injection=1, cli-explain-benign_capital=1, cli-explain-injection=1", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:52Z"}
+{"message": "outcome: IMPORT_BLOCKED_NO_SCAN_COMPLETED; scan records 0", "step": "modeB-pypi-base-m1", "utc": "2026-10-12T06:08:52Z"}
+{"message": "installing (B-prebuilt-local-wheel, repository pip via --python)", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:08:52Z"}
+{"message": "install exit 0 in 5.11s; path: ['none: no source build']; gates: PASS; tool failures []; findings []", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:01Z"}
+{"message": "probe S-run1: import_blocked (exit 3), 0 scan records, 0.48s, ModuleNotFoundError: missing module 'starlette'", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:01Z"}
+{"message": "probe S-run1 produced no measurement; the repeat run of mode S is not attempted", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:01Z"}
+{"message": "probe PC-run1: import_blocked (exit 3), 0 scan records, 0.48s, ModuleNotFoundError: missing module 'starlette'", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:02Z"}
+{"message": "probe PC-run1 produced no measurement; the repeat run of mode PC is not attempted", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:02Z"}
+{"message": "CLI: cli-detect-benign_capital=1, cli-detect-injection=1, cli-explain-benign_capital=1, cli-explain-injection=1", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:04Z"}
+{"message": "outcome: IMPORT_BLOCKED_NO_SCAN_COMPLETED; scan records 0", "step": "modeB-release-base-m1", "utc": "2026-10-12T06:09:04Z"}
+{"message": "installed langdetect files hashed for C9", "step": "5", "utc": "2026-10-12T06:09:04Z"}
+{"message": "closing controls: offline held to the end = True", "step": "6", "utc": "2026-10-12T06:09:09Z"}
+{"message": "connectivity restored = True", "step": "7", "utc": "2026-10-12T06:11:05Z"}
+{"message": "FINISHED, MEASUREMENT NOT COMPLETE - modeB-clean-base-m1: IMPORT_BLOCKED_NO_SCAN_COMPLETED; modeB-pypi-base-m1: IMPORT_BLOCKED_NO_SCAN_COMPLETED; modeB-release-base-m1: IMPORT_BLOCKED_NO_SCAN_COMPLETED", "step": "RESULT", "utc": "2026-10-12T06:11:05Z"}

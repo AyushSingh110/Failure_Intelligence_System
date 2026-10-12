@@ -1,0 +1,6 @@
+# Deterministic artifacts are compared byte for byte. Do not let git convert
+# line endings in them: with core.autocrlf=true a checkout would otherwise turn
+# LF into CRLF and every pinned hash would stop matching.
+baselines/** -text
+fixtures/** -text
+registry/** -text

@@ -1,0 +1,65 @@
+{
+ "base_interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+ "cells": {
+  "modeA-pypi-base-r3": {
+   "artifact": "A-pypi-1.18.0",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": true,
+   "bundled_pip_version": "23.0.1",
+   "created_utc": "2026-10-12T04:29:20Z",
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\pypi\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-A",
+    "<HOME>\\fie-e51-scratch\\wheels\\pypi"
+   ],
+   "importable_before_install": [
+    "pip",
+    "setuptools"
+   ],
+   "install_mode": "A-source-build",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "packages_before_install": [
+    {
+     "name": "pip",
+     "version": "23.0.1"
+    },
+    {
+     "name": "setuptools",
+     "version": "79.0.1"
+    }
+   ],
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-A-modeA-pypi-base-r3.txt",
+   "python": "3.10.19"
+  }
+ },
+ "commit": "3f823adaa80682e8638910517accaadf79483a40",
+ "free_gb_at_preparation": 34.2,
+ "inputs_pc": "<HOME>\\fie-e51-scratch\\inputs\\inputs_pc.jsonl",
+ "inputs_s": "<HOME>\\fie-e51-scratch\\inputs\\inputs_s.jsonl",
+ "launchers": {
+  "base-interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+  "modeA-pypi-base-r3": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe"
+ },
+ "manifest": "<HOME>\\Desktop\\Failure_Intelligence_System\\scripts\\model_manifest.json",
+ "not_in_this_retry": {
+  "mode B base cells": "not authorized for this retry",
+  "modeA-pypi-base-r1": "installed in attempt 4; kept, not reused",
+  "modeA-pypi-base-r2": "not used"
+ },
+ "not_provisioned": {
+  "A-clean [ml]": "not provisioned: awaiting explicit owner approval (O-21)",
+  "A-pypi-1.18.0 [ml]": "not provisioned: awaiting explicit owner approval (O-22)",
+  "A-release [ml]": "not provisioned: awaiting explicit owner approval (O-21)"
+ },
+ "repo": "<HOME>\\Desktop\\Failure_Intelligence_System",
+ "retry_of": "offline_attempt4 (modeA-pypi-base-r1: verification tool failed)",
+ "scratch": "<HOME>\\fie-e51-scratch",
+ "targets": [
+  "151.101.0.223:443",
+  "167.82.24.223:443"
+ ],
+ "verified_models": "<HOME>\\fie-e51-scratch\\verified_model_sha256.json"
+}

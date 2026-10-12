@@ -1,0 +1,335 @@
+{
+ "cell_outcomes": {
+  "modeB-clean-base-m1": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+  "modeB-pypi-base-m1": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+  "modeB-release-base-m1": "IMPORT_BLOCKED_NO_SCAN_COMPLETED"
+ },
+ "cells": {
+  "modeB-clean-base-m1": {
+   "install": {
+    "artifact": "A-clean",
+    "cell": "modeB-clean-base-m1",
+    "command": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe -I -m pip --python <HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\Scripts\\python.exe install --isolated --no-index --find-links <HOME>\\fie-e51-scratch\\wheelhouse-B --find-links <HOME>\\fie-e51-scratch\\wheels\\clean-build1 --only-binary :all: --no-deps --require-hashes -r <HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-clean-base-m1.txt --no-cache-dir --disable-pip-version-check -vv",
+    "gates_failures": [],
+    "gates_tool_failures": [],
+    "gates_verdict": "PASS",
+    "install_mode": "B-prebuilt-local-wheel",
+    "installer": "repository pip via --python",
+    "log": {
+     "build_path": [
+      "none: no source build"
+     ],
+     "deprecation_lines": [],
+     "isolated_build_environment": false,
+     "langdetect_wheel_file_mentioned": true,
+     "packages_built_as_wheel": [],
+     "packages_installed_by_setup_py": [],
+     "source_archive_used": false,
+     "successfully_installed_line": "Successfully installed beautifulsoup4-4.15.0 certifi-2026.7.22 charset-normalizer-3.5.2 deep-translator-1.11.4 fie-sdk-1.18.0 idna-3.20 langdetect-1.0.9 requests-2.34.2 six-1.17.0 soupsieve-2.10 typing_extensions-4.16.0 urllib3-2.8.0",
+     "urls_in_log": [
+      "https://pypi.org"
+     ]
+    },
+    "pip_exit": 0,
+    "seconds": 7.3,
+    "window": "inside the airplane-mode window"
+   },
+   "runs": {
+    "PC-run1": {
+     "classification": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "exit": 3,
+      "import_completed": false,
+      "missing_module": "starlette",
+      "scan_records": 0,
+      "status": "import_blocked"
+     },
+     "egress_attempts_python_level": null,
+     "errors": null,
+     "exit": 3,
+     "files_left_in_home": [
+      "header.json (383 bytes)"
+     ],
+     "flagged": null,
+     "records": null,
+     "records_sha256": null,
+     "seconds": 0.49,
+     "stderr_lines": 10,
+     "unverified_model_opened": null
+    },
+    "PC_repeat_identical": null,
+    "S-run1": {
+     "classification": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "exit": 3,
+      "import_completed": false,
+      "missing_module": "starlette",
+      "scan_records": 0,
+      "status": "import_blocked"
+     },
+     "egress_attempts_python_level": null,
+     "errors": null,
+     "exit": 3,
+     "files_left_in_home": [
+      "header.json (383 bytes)"
+     ],
+     "flagged": null,
+     "records": null,
+     "records_sha256": null,
+     "seconds": 0.5,
+     "stderr_lines": 10,
+     "unverified_model_opened": null
+    },
+    "S_repeat_identical": null,
+    "outcome": {
+     "cli_exit_codes": {
+      "cli-detect-benign_capital": 1,
+      "cli-detect-injection": 1,
+      "cli-explain-benign_capital": 1,
+      "cli-explain-injection": 1
+     },
+     "import_error": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "missing_module": "starlette"
+     },
+     "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+     "runs_completed": [],
+     "runs_expected": [
+      "S-run1",
+      "S-run2",
+      "PC-run1",
+      "PC-run2"
+     ],
+     "runs_import_blocked": [
+      "S-run1",
+      "PC-run1"
+     ],
+     "scan_records_total": 0
+    }
+   }
+  },
+  "modeB-pypi-base-m1": {
+   "install": {
+    "artifact": "A-pypi-1.18.0",
+    "cell": "modeB-pypi-base-m1",
+    "command": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe -I -m pip --python <HOME>\\fie-e51-scratch\\env\\modeB-pypi-base-m1\\Scripts\\python.exe install --isolated --no-index --find-links <HOME>\\fie-e51-scratch\\wheelhouse-B --find-links <HOME>\\fie-e51-scratch\\wheels\\pypi --only-binary :all: --no-deps --require-hashes -r <HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-pypi-base-m1.txt --no-cache-dir --disable-pip-version-check -vv",
+    "gates_failures": [],
+    "gates_tool_failures": [],
+    "gates_verdict": "PASS",
+    "install_mode": "B-prebuilt-local-wheel",
+    "installer": "repository pip via --python",
+    "log": {
+     "build_path": [
+      "none: no source build"
+     ],
+     "deprecation_lines": [],
+     "isolated_build_environment": false,
+     "langdetect_wheel_file_mentioned": true,
+     "packages_built_as_wheel": [],
+     "packages_installed_by_setup_py": [],
+     "source_archive_used": false,
+     "successfully_installed_line": "Successfully installed beautifulsoup4-4.15.0 certifi-2026.7.22 charset-normalizer-3.5.2 deep-translator-1.11.4 fie-sdk-1.18.0 idna-3.20 langdetect-1.0.9 requests-2.34.2 six-1.17.0 soupsieve-2.10 typing_extensions-4.16.0 urllib3-2.8.0",
+     "urls_in_log": [
+      "https://pypi.org"
+     ]
+    },
+    "pip_exit": 0,
+    "seconds": 5.59,
+    "window": "inside the airplane-mode window"
+   },
+   "runs": {
+    "PC-run1": {
+     "classification": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "exit": 3,
+      "import_completed": false,
+      "missing_module": "starlette",
+      "scan_records": 0,
+      "status": "import_blocked"
+     },
+     "egress_attempts_python_level": null,
+     "errors": null,
+     "exit": 3,
+     "files_left_in_home": [
+      "header.json (388 bytes)"
+     ],
+     "flagged": null,
+     "records": null,
+     "records_sha256": null,
+     "seconds": 0.47,
+     "stderr_lines": 10,
+     "unverified_model_opened": null
+    },
+    "PC_repeat_identical": null,
+    "S-run1": {
+     "classification": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "exit": 3,
+      "import_completed": false,
+      "missing_module": "starlette",
+      "scan_records": 0,
+      "status": "import_blocked"
+     },
+     "egress_attempts_python_level": null,
+     "errors": null,
+     "exit": 3,
+     "files_left_in_home": [
+      "header.json (388 bytes)"
+     ],
+     "flagged": null,
+     "records": null,
+     "records_sha256": null,
+     "seconds": 0.52,
+     "stderr_lines": 10,
+     "unverified_model_opened": null
+    },
+    "S_repeat_identical": null,
+    "outcome": {
+     "cli_exit_codes": {
+      "cli-detect-benign_capital": 1,
+      "cli-detect-injection": 1,
+      "cli-explain-benign_capital": 1,
+      "cli-explain-injection": 1
+     },
+     "import_error": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "missing_module": "starlette"
+     },
+     "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+     "runs_completed": [],
+     "runs_expected": [
+      "S-run1",
+      "S-run2",
+      "PC-run1",
+      "PC-run2"
+     ],
+     "runs_import_blocked": [
+      "S-run1",
+      "PC-run1"
+     ],
+     "scan_records_total": 0
+    }
+   }
+  },
+  "modeB-release-base-m1": {
+   "install": {
+    "artifact": "A-release",
+    "cell": "modeB-release-base-m1",
+    "command": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe -I -m pip --python <HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe install --isolated --no-index --find-links <HOME>\\fie-e51-scratch\\wheelhouse-B --find-links <HOME>\\fie-e51-scratch\\wheels\\release-build1 --only-binary :all: --no-deps --require-hashes -r <HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-release-base-m1.txt --no-cache-dir --disable-pip-version-check -vv",
+    "gates_failures": [],
+    "gates_tool_failures": [],
+    "gates_verdict": "PASS",
+    "install_mode": "B-prebuilt-local-wheel",
+    "installer": "repository pip via --python",
+    "log": {
+     "build_path": [
+      "none: no source build"
+     ],
+     "deprecation_lines": [],
+     "isolated_build_environment": false,
+     "langdetect_wheel_file_mentioned": true,
+     "packages_built_as_wheel": [],
+     "packages_installed_by_setup_py": [],
+     "source_archive_used": false,
+     "successfully_installed_line": "Successfully installed beautifulsoup4-4.15.0 certifi-2026.7.22 charset-normalizer-3.5.2 deep-translator-1.11.4 fie-sdk-1.18.0 idna-3.20 langdetect-1.0.9 requests-2.34.2 six-1.17.0 soupsieve-2.10 typing_extensions-4.16.0 urllib3-2.8.0",
+     "urls_in_log": [
+      "https://pypi.org"
+     ]
+    },
+    "pip_exit": 0,
+    "seconds": 5.11,
+    "window": "inside the airplane-mode window"
+   },
+   "runs": {
+    "PC-run1": {
+     "classification": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "exit": 3,
+      "import_completed": false,
+      "missing_module": "starlette",
+      "scan_records": 0,
+      "status": "import_blocked"
+     },
+     "egress_attempts_python_level": null,
+     "errors": null,
+     "exit": 3,
+     "files_left_in_home": [
+      "header.json (387 bytes)"
+     ],
+     "flagged": null,
+     "records": null,
+     "records_sha256": null,
+     "seconds": 0.48,
+     "stderr_lines": 10,
+     "unverified_model_opened": null
+    },
+    "PC_repeat_identical": null,
+    "S-run1": {
+     "classification": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "exit": 3,
+      "import_completed": false,
+      "missing_module": "starlette",
+      "scan_records": 0,
+      "status": "import_blocked"
+     },
+     "egress_attempts_python_level": null,
+     "errors": null,
+     "exit": 3,
+     "files_left_in_home": [
+      "header.json (387 bytes)"
+     ],
+     "flagged": null,
+     "records": null,
+     "records_sha256": null,
+     "seconds": 0.48,
+     "stderr_lines": 10,
+     "unverified_model_opened": null
+    },
+    "S_repeat_identical": null,
+    "outcome": {
+     "cli_exit_codes": {
+      "cli-detect-benign_capital": 1,
+      "cli-detect-injection": 1,
+      "cli-explain-benign_capital": 1,
+      "cli-explain-injection": 1
+     },
+     "import_error": {
+      "exception": "ModuleNotFoundError",
+      "exception_message": "No module named 'starlette'",
+      "missing_module": "starlette"
+     },
+     "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+     "runs_completed": [],
+     "runs_expected": [
+      "S-run1",
+      "S-run2",
+      "PC-run1",
+      "PC-run2"
+     ],
+     "runs_import_blocked": [
+      "S-run1",
+      "PC-run1"
+     ],
+     "scan_records_total": 0
+    }
+   }
+  }
+ },
+ "connectivity_restored": true,
+ "finished_utc": "2026-10-12T06:11:05Z",
+ "launchers_changed_during_window": [],
+ "offline_at_end": true,
+ "offline_window_closed_utc": "2026-10-12T06:09:09Z",
+ "offline_window_opened_utc": "2026-10-12T06:08:25Z",
+ "result": "FINISHED, MEASUREMENT NOT COMPLETE - modeB-clean-base-m1: IMPORT_BLOCKED_NO_SCAN_COMPLETED; modeB-pypi-base-m1: IMPORT_BLOCKED_NO_SCAN_COMPLETED; modeB-release-base-m1: IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+ "stopped": null
+}

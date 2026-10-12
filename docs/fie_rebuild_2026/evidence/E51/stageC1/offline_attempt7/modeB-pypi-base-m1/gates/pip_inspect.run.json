@@ -1,0 +1,10 @@
+{
+ "command": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe -I -X utf8 -m pip --python <HOME>\\fie-e51-scratch\\env\\modeB-pypi-base-m1\\Scripts\\python.exe inspect --disable-pip-version-check",
+ "exit_code": 0,
+ "gate": "pip_inspect",
+ "interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+ "seconds": 1.15,
+ "started_utc": "2026-10-12T06:08:45Z",
+ "stderr_chars": 0,
+ "stdout_chars": 146686
+}

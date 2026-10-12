@@ -1,0 +1,490 @@
+{
+  "configuration": {
+    "lite-simulated": {
+      "blocked_imports": [
+        "app",
+        "config",
+        "dotenv",
+        "engine",
+        "joblib",
+        "numpy",
+        "onnxruntime",
+        "pandas",
+        "sentence_transformers",
+        "sklearn",
+        "storage",
+        "tokenizers",
+        "torch",
+        "xgboost"
+      ],
+      "env": {
+        "FIE_DISABLE_META": null,
+        "FIE_EMBED_BACKEND": null,
+        "FIE_LAYER_DEADLINE_S": null,
+        "FIE_LAYER_POOL_SIZE": null,
+        "FIE_LITE": null,
+        "FIE_NO_AUTO_DOWNLOAD": "1",
+        "FIE_NO_TELEMETRY": "1",
+        "FIE_ONNX_THREADS": null,
+        "FIE_PAIR_VERSION": null,
+        "FIE_SCAN_FAILURE_MODE": null,
+        "FIE_TELEMETRY": null,
+        "FIE_UNCERTAIN_ALLOW": null,
+        "FRAMING_DAMPEN_FACTOR": null,
+        "HF_HUB_OFFLINE": "1",
+        "PREFLIGHT_BLOCK_ENABLED": null,
+        "PYTHONHASHSEED": "0",
+        "SCAN_THRESHOLD": null,
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "env_present": {
+        "FIE_API_KEY": false,
+        "FIE_URL": false,
+        "GROQ_API_KEY": false,
+        "HF_TOKEN": false,
+        "HUGGING_FACE_TOKEN": false,
+        "JWT_SECRET_KEY": false,
+        "LIBRETRANSLATE_URL": false,
+        "MONGODB_URI": false,
+        "PYPI_TOKEN": false,
+        "REDIS_URL": false,
+        "SENDGRID_API_KEY": false,
+        "SERPER_API_KEY": false
+      },
+      "langdetect_seed": 0,
+      "pair_version_requested": null,
+      "profile": {
+        "id": "lite-simulated",
+        "sha256": "3f569ea1659eedd3923b28761832fde743fea44a9a0c0e5d75de1a214a4f41e1",
+        "title": "lite profile (base-install simulation)"
+      },
+      "statistics": {
+        "bootstrap_resamples": 10000,
+        "bootstrap_seed": 42,
+        "confidence_level": 0.95
+      },
+      "subject": {
+        "cache_policy": "result and translation caches cleared before every suite",
+        "domain_multipliers": {
+          "default": 1.0,
+          "developer": 1.12,
+          "education": 0.88,
+          "finance": 0.82,
+          "legal": 0.83,
+          "medical": 0.8
+        },
+        "fast_path_layers": [
+          "gcg_suffix",
+          "regex"
+        ],
+        "feedback_store": {
+          "known_attack_hashes": 0,
+          "whitelist_hashes": 0
+        },
+        "framing_dampen_factor": 0.72,
+        "layer_deadline_s": 10.0,
+        "layer_pool_size": 16,
+        "layer_weights": {
+          "direct_harm": 1.1,
+          "fiction_harm": 1.1,
+          "gcg_suffix": 1.3,
+          "indirect_injection": 0.9,
+          "many_shot": 1.2,
+          "multilingual": 1.0,
+          "pair_classifier": 1.0,
+          "perplexity_proxy": 0.7,
+          "prompt_guard": 1.1,
+          "regex": 1.5,
+          "virtualization": 1.0
+        },
+        "meta": {
+          "features": [],
+          "loaded": false,
+          "threshold": 0.5
+        },
+        "operator_overrides": {},
+        "pair": {
+          "loaded": false,
+          "threshold": 0.6
+        },
+        "scan_args": {
+          "disabled_layers": [],
+          "domain": null,
+          "session_id": null,
+          "threshold": null,
+          "use_llama_guard": false
+        },
+        "server_config_attached": false,
+        "thresholds": {
+          "attack": {
+            "COPYRIGHT_REPRODUCTION": 0.68,
+            "CRESCENDO_ESCALATION": 0.68,
+            "DIRECT_HARMFUL_REQUEST": 0.7,
+            "FICTION_WRAPPED_JAILBREAK": 0.75,
+            "GCG_ADVERSARIAL_SUFFIX": 0.72,
+            "INDIRECT_PROMPT_INJECTION": 0.7,
+            "JAILBREAK_ATTEMPT": 0.65,
+            "MANY_SHOT_JAILBREAK": 0.68,
+            "MULTILINGUAL_INJECTION": 0.68,
+            "OBFUSCATED_ADVERSARIAL_PAYLOAD": 0.7,
+            "PROMPT_EXTRACTION": 0.75,
+            "PROMPT_INJECTION": 0.72,
+            "TOKEN_SMUGGLING": 0.88,
+            "VIRTUALIZATION_JAILBREAK": 0.75
+          },
+          "scan": 0.65
+        },
+        "tiebreaker": "disabled"
+      },
+      "translation": "unavailable (harness stub returns None)"
+    },
+    "sdk-offline-failsecure": {
+      "blocked_imports": [
+        "app",
+        "config",
+        "dotenv",
+        "engine",
+        "storage"
+      ],
+      "env": {
+        "FIE_DISABLE_META": null,
+        "FIE_EMBED_BACKEND": null,
+        "FIE_LAYER_DEADLINE_S": null,
+        "FIE_LAYER_POOL_SIZE": null,
+        "FIE_LITE": null,
+        "FIE_NO_AUTO_DOWNLOAD": "1",
+        "FIE_NO_TELEMETRY": "1",
+        "FIE_ONNX_THREADS": null,
+        "FIE_PAIR_VERSION": "v6_3b",
+        "FIE_SCAN_FAILURE_MODE": null,
+        "FIE_TELEMETRY": null,
+        "FIE_UNCERTAIN_ALLOW": null,
+        "FRAMING_DAMPEN_FACTOR": null,
+        "HF_HUB_OFFLINE": "1",
+        "PREFLIGHT_BLOCK_ENABLED": null,
+        "PYTHONHASHSEED": "0",
+        "SCAN_THRESHOLD": null,
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "env_present": {
+        "FIE_API_KEY": false,
+        "FIE_URL": false,
+        "GROQ_API_KEY": false,
+        "HF_TOKEN": false,
+        "HUGGING_FACE_TOKEN": false,
+        "JWT_SECRET_KEY": false,
+        "LIBRETRANSLATE_URL": false,
+        "MONGODB_URI": false,
+        "PYPI_TOKEN": false,
+        "REDIS_URL": false,
+        "SENDGRID_API_KEY": false,
+        "SERPER_API_KEY": false
+      },
+      "langdetect_seed": 0,
+      "pair_version_requested": "v6_3b",
+      "profile": {
+        "id": "sdk-offline-failsecure",
+        "sha256": "ec4bd4e5720f516fba94fa01e760be8bc8f4c7d7093b064d470781e1832655da",
+        "title": "canonical reproducibility/evaluation profile"
+      },
+      "statistics": {
+        "bootstrap_resamples": 10000,
+        "bootstrap_seed": 42,
+        "confidence_level": 0.95
+      },
+      "subject": {
+        "cache_policy": "result and translation caches cleared before every suite",
+        "domain_multipliers": {
+          "default": 1.0,
+          "developer": 1.12,
+          "education": 0.88,
+          "finance": 0.82,
+          "legal": 0.83,
+          "medical": 0.8
+        },
+        "fast_path_layers": [
+          "gcg_suffix",
+          "regex"
+        ],
+        "feedback_store": {
+          "known_attack_hashes": 0,
+          "whitelist_hashes": 0
+        },
+        "framing_dampen_factor": 0.72,
+        "layer_deadline_s": 10.0,
+        "layer_pool_size": 16,
+        "layer_weights": {
+          "direct_harm": 1.1,
+          "fiction_harm": 1.1,
+          "gcg_suffix": 1.3,
+          "indirect_injection": 0.9,
+          "many_shot": 1.2,
+          "multilingual": 1.0,
+          "pair_classifier": 1.0,
+          "perplexity_proxy": 0.7,
+          "prompt_guard": 1.1,
+          "regex": 1.5,
+          "virtualization": 1.0
+        },
+        "meta": {
+          "features": [
+            "copyright",
+            "direct_harm",
+            "fiction_harm",
+            "gcg_suffix",
+            "indirect_injection",
+            "many_shot",
+            "multilingual",
+            "pair_classifier",
+            "perplexity_proxy",
+            "prompt_guard",
+            "regex",
+            "virtualization"
+          ],
+          "loaded": true,
+          "threshold": 0.41
+        },
+        "operator_overrides": {},
+        "pair": {
+          "loaded": true,
+          "threshold": 0.5
+        },
+        "scan_args": {
+          "disabled_layers": [],
+          "domain": null,
+          "session_id": null,
+          "threshold": null,
+          "use_llama_guard": false
+        },
+        "server_config_attached": false,
+        "thresholds": {
+          "attack": {
+            "COPYRIGHT_REPRODUCTION": 0.68,
+            "CRESCENDO_ESCALATION": 0.68,
+            "DIRECT_HARMFUL_REQUEST": 0.7,
+            "FICTION_WRAPPED_JAILBREAK": 0.75,
+            "GCG_ADVERSARIAL_SUFFIX": 0.72,
+            "INDIRECT_PROMPT_INJECTION": 0.7,
+            "JAILBREAK_ATTEMPT": 0.65,
+            "MANY_SHOT_JAILBREAK": 0.68,
+            "MULTILINGUAL_INJECTION": 0.68,
+            "OBFUSCATED_ADVERSARIAL_PAYLOAD": 0.7,
+            "PROMPT_EXTRACTION": 0.75,
+            "PROMPT_INJECTION": 0.72,
+            "TOKEN_SMUGGLING": 0.88,
+            "VIRTUALIZATION_JAILBREAK": 0.75
+          },
+          "scan": 0.65
+        },
+        "tiebreaker": "disabled"
+      },
+      "translation": "unavailable (harness stub returns None)"
+    }
+  },
+  "environment": {
+    "cpu": {
+      "count": 20,
+      "model": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+    },
+    "machine_tag": "49b19883",
+    "packages": {
+      "deep-translator": "1.11.4",
+      "joblib": "1.5.3",
+      "langdetect": "1.0.9",
+      "numpy": "2.2.6",
+      "onnxruntime": "1.23.2",
+      "pandas": "2.3.3",
+      "requests": "2.32.5",
+      "scikit-learn": "1.7.2",
+      "tokenizers": "0.22.2",
+      "urllib3": "2.6.3",
+      "xgboost": "3.2.0"
+    },
+    "platform": {
+      "machine": "AMD64",
+      "release": "10",
+      "system": "Windows"
+    },
+    "python": {
+      "implementation": "CPython",
+      "version": "3.10.19"
+    },
+    "threads": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    }
+  },
+  "identity": {
+    "datasets": {
+      "advbench": {
+        "content_sha256": "ef7f2edec3653784f35aa9a0542008b86377960081831b1ef17aa7bfe5cca31a",
+        "label": "attack",
+        "rows": 168,
+        "unique": 168
+      },
+      "harmbench": {
+        "content_sha256": "64fb6223c220de18b9d5076d3d45152f29642f552805fa508bd02a137f1ffdcc",
+        "label": "attack",
+        "rows": 387,
+        "unique": 380
+      },
+      "jailbreakbench": {
+        "content_sha256": "c2863415ba0043c20814989eff14fd6ee2652c7ce82eacdfd67081b186ef8449",
+        "label": "attack",
+        "rows": 134,
+        "unique": 134
+      },
+      "orbench_hard": {
+        "content_sha256": "fca67026934f58c60da4990f1705d96b973b7d64b55262ee42507f030c91b422",
+        "label": "benign",
+        "rows": 250,
+        "unique": 250
+      },
+      "script_pilot_v0": {
+        "content_sha256": "5ff915647c86ae63ae2375cfe79cc8a6f9a9c9e905a5f8be6bbb960e1a72b044",
+        "label": "benign",
+        "rows": 72,
+        "unique": 72
+      },
+      "sorrybench": {
+        "content_sha256": "c0c50561c0798e845c1ea1ce1b8087af47d9659a1e5ddde0f69afb559e66d5f2",
+        "label": "attack",
+        "rows": 387,
+        "unique": 387
+      },
+      "strongreject": {
+        "content_sha256": "e431789610a036b52347c6c620c6e01d1b77e3a2de14644f9525cd0a0b82ac24",
+        "label": "attack",
+        "rows": 242,
+        "unique": 242
+      },
+      "xstest_safe": {
+        "content_sha256": "a3340fa6411cee841fb711191d6013bfee4fffa385333d8f38630d0d40f6e54f",
+        "label": "benign",
+        "rows": 250,
+        "unique": 250
+      },
+      "xstest_unsafe": {
+        "content_sha256": "fc68a4560711b5b94673578867ed9e2e7e510954bd656086344d0066cc22f660",
+        "label": "attack",
+        "rows": 198,
+        "unique": 198
+      }
+    },
+    "declared": {
+      "lite-simulated": {},
+      "sdk-offline-failsecure": {
+        "meta_classifier": {
+          "features": [
+            "copyright",
+            "direct_harm",
+            "fiction_harm",
+            "gcg_suffix",
+            "indirect_injection",
+            "many_shot",
+            "multilingual",
+            "pair_classifier",
+            "perplexity_proxy",
+            "prompt_guard",
+            "regex",
+            "virtualization"
+          ],
+          "model_type": "xgboost",
+          "threshold": 0.41
+        },
+        "pair": {
+          "declared_version": "v6.3b",
+          "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+          "model_type": "LinearSVC + CalibratedClassifierCV (sigmoid)",
+          "threshold": 0.5
+        }
+      }
+    },
+    "fixtures": {
+      "framing_templates": "c4d3798d667d656d4139708cca7c166b2fe9b2356dbffb386d8bec145395d948",
+      "padding_filler": "327ad88d2c1b63496943f0e3a11f89f085d78bcd5fff39847000af76ebdcc1b8"
+    },
+    "git": {
+      "commit": "a9db9596b8a1df4d2b6983dfea88b72bce21b172",
+      "dirty_other": false,
+      "dirty_subject": false
+    },
+    "harness": {
+      "py_files": 16,
+      "schema_version": 1,
+      "tree_sha256": "0867f96af1ff57722f7a4466a89a82f9bf91a1f02cbe2b68b9f4f1ae2302eb13",
+      "version": "1.0.0"
+    },
+    "model_manifest": {
+      "path": "scripts/model_manifest.json",
+      "release_tag": "models-v1.18.0"
+    },
+    "models": {
+      "lite-simulated": {},
+      "sdk-offline-failsecure": {
+        "encoder": {
+          "file": "model.onnx",
+          "in_manifest": true,
+          "sha256": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+          "size": 90293328
+        },
+        "meta_classifier": {
+          "file": "meta_clf.pkl",
+          "in_manifest": true,
+          "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+          "size": 212131
+        },
+        "meta_classifier_meta": {
+          "file": "meta_clf.json",
+          "in_manifest": true,
+          "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+          "size": 725
+        },
+        "pair_classifier": {
+          "file": "pair_intent_classifier_v6_3b.pkl",
+          "in_manifest": true,
+          "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+          "size": 11349
+        },
+        "pair_meta": {
+          "file": "pair_intent_meta_v6_3b.json",
+          "in_manifest": true,
+          "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
+          "size": 888
+        },
+        "tokenizer": {
+          "file": "tokenizer.json",
+          "in_manifest": true,
+          "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+          "size": 711661
+        }
+      }
+    },
+    "subject": {
+      "fie_py_files": 35,
+      "fie_tree_sha256": "70de70536b556809b39186ae35c4fde6c127f7cb7c31534ba53bf737d41e9e1b",
+      "fie_version": "1.18.0"
+    },
+    "suites": {
+      "lite.std": "949862cbf32a6ee2d49a35f7a80c652f2fe8aa951d666999d3dc7a727702ae46",
+      "pilot.script": "64db81381b6c3429f8fd5f6297f22fe7f56a9f54bad645afadb710b4b929a12b",
+      "risk.framing": "8cec98a1a650836730535ebfb53d8961df462254938df6e9d5015bb3fa9e7ebf",
+      "risk.long_input": "d79b818ced80ce9a506e406e6a319a39ab8b7a28103f9e9815fe1dca7fec1bbe",
+      "std.advbench": "6bf481071be380ac2ac3c394ef2a282be86d2c855f2d965c9b5b69c0b37178fa",
+      "std.harmbench": "4d51fcd0bed45fa5b92f7d44ba8b1f738a4393f996e95e2bb13c9a61d98f76a6",
+      "std.jailbreakbench": "111cf56a1f060c191aa1dcd56bb90f09defc5c6ee819f577ca151f214ee92663",
+      "std.orbench_hard": "721ed2013db52704319cb63e78063938dd8b6cec19ae6ea97f97fb03f3bcdad1",
+      "std.sorrybench": "1d1e20351b83fa726b56c66edf0691bb2fa3396501010b77218796efd63a07ce",
+      "std.strongreject": "5a51ba56ec9a0df52de73ca13dfd26020ad105110b689371395f7a632051a057",
+      "std.xstest": "bd906003711519e74959e33357c7d4259cb9d534185e7df98ddb2491c60534d0"
+    }
+  },
+  "keys": {
+    "config_key": "84c2cf4328e36f6d2eab2cba688e8b7de6d26af0f3ea8bef510149f8bd13dd21",
+    "dataset_key": "502cac03aaa1186529de09d9fd6985aeec0d71dc0c9927652c3f7fdb73805be1",
+    "env_key": "7e2b86f36d34c6ef37d9c61dd87063d70f8f65ed6f6584411bf6ff6942b050b9",
+    "subject_key": "b4d7dd9a69422836970e49e7998d961eb4f8b8c3b69f3168bdc61e7726e7970d"
+  },
+  "schema_version": 1
+}

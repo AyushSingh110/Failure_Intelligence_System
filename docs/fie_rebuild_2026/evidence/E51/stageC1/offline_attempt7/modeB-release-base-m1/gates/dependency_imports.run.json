@@ -1,0 +1,10 @@
+{
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe -I -B -c import importlib,json\nout={}\nfor m in ['requests', 'deep_translator', 'langdetect', 'bs4', 'certifi', 'charset_normalizer', 'idna', 'soupsieve', 'typing_extensions', 'urllib3', 'six']:\n try:\n  mod=importlib.import_module(m)\n  out[m]={'ok':True,'version':getattr(mod,'__version__',None)}\n except BaseException as e:\n  out[m]={'ok':False,'exception':type(e).__name__}\nprint(json.dumps(out))",
+ "exit_code": 0,
+ "gate": "dependency_imports",
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe",
+ "seconds": 0.46,
+ "started_utc": "2026-10-12T06:08:59Z",
+ "stderr_chars": 0,
+ "stdout_chars": 520
+}

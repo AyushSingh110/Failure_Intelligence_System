@@ -1,0 +1,1 @@
+JSON {"starlette_imported_by_import_fie": false, "starlette_version": "0.52.1", "is_middleware": true, "same_object": true, "injection": {"status": 400, "body": {"error": "adversarial_input_blocked", "attack_type": "PROMPT_EXTRACTION", "confidence": 0.82, "message": "Request blocked by FIE adversarial scan."}}, "benign": {"status": 200, "body": {"reached": "handler"}}}

@@ -69,7 +69,9 @@ def _get_db_collection():
         # Ensure TTL index exists (auto-delete docs after 2 hours)
         try:
             col.create_index("timestamp", expireAfterSeconds=7200, background=True)
-            col.create_index("conversation_id", background=True)
+            col.create_index(
+                [("tenant_id", 1), ("conversation_id", 1), ("timestamp", -1)], background=True,
+            )
         except Exception as exc:
             logger.warning(
                 "degraded capability=multi_turn_store impact='multi-turn escalation state is per-process only' "
@@ -87,13 +89,22 @@ def check_multi_turn_escalation(
     question_type: str,
     is_adversarial: bool,
     adversarial_confidence: float,
+    *,
+    tenant_id: str | None = None,
 ) -> MultiTurnResult:
     """
-    Store this turn and check if the conversation trajectory is escalating.
+    Store this turn and check if the tenant's conversation trajectory is escalating.
+
+    A conversation belongs to one tenant: turns are stored and read by
+    (tenant_id, conversation_id). The conversation id is chosen by the client and
+    is never enough on its own. Without a tenant nothing is stored or read.
 
     Returns MultiTurnResult. If DB is unavailable, returns a safe no-op result
     so the rest of the pipeline is never blocked.
     """
+    if not isinstance(tenant_id, str) or tenant_id.strip() in ("", "anonymous"):
+        return MultiTurnResult(False, 0.0, "NONE", 1, {})
+
     col = _get_db_collection()
     if col is None:
         return MultiTurnResult(False, 0.0, "NONE", 1, {})
@@ -104,6 +115,7 @@ def check_multi_turn_escalation(
     # Store this turn
     try:
         col.insert_one({
+            "tenant_id":            tenant_id,
             "conversation_id":      conversation_id,
             "prompt":               prompt[:500],
             "timestamp":            now,
@@ -120,7 +132,7 @@ def check_multi_turn_escalation(
     cutoff = now - timedelta(hours=2)
     try:
         history = list(col.find(
-            {"conversation_id": conversation_id, "timestamp": {"$gte": cutoff}},
+            {"tenant_id": tenant_id, "conversation_id": conversation_id, "timestamp": {"$gte": cutoff}},
             sort=[("timestamp", -1)],
             limit=8,
         ))

@@ -1,0 +1,32 @@
+{
+ "PC-run1": {
+  "egress_attempts_python_level": null,
+  "errors": null,
+  "exit": 3,
+  "files_left_in_home": [
+   "header.json (393 bytes)"
+  ],
+  "flagged": null,
+  "records": null,
+  "records_sha256": null,
+  "seconds": 0.48,
+  "stderr_lines": 0,
+  "unverified_model_opened": null
+ },
+ "PC_repeat_identical": null,
+ "S-run1": {
+  "egress_attempts_python_level": null,
+  "errors": null,
+  "exit": 3,
+  "files_left_in_home": [
+   "header.json (393 bytes)"
+  ],
+  "flagged": null,
+  "records": null,
+  "records_sha256": null,
+  "seconds": 0.59,
+  "stderr_lines": 0,
+  "unverified_model_opened": null
+ },
+ "S_repeat_identical": null
+}

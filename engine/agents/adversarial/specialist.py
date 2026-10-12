@@ -311,8 +311,12 @@ class AdversarialSpecialist(BaseJuryAgent):
 
         if faiss_hit:
             evidence["detection_layers_fired"].append("faiss")
+            # The matched prompt's text is returned only for the built-in seed
+            # corpus. A learned entry is some caller's prompt and is never shown
+            # to another caller; its label and category are enough.
+            _from_seed = bool(faiss_hit.record) and faiss_hit.record.source == "seed"
             evidence["faiss_result"] = {
-                "nearest_prompt":   faiss_hit.record.prompt[:120] if faiss_hit.record else "",
+                "nearest_prompt":   faiss_hit.record.prompt[:120] if _from_seed else "",
                 "label":            faiss_hit.record.label        if faiss_hit.record else "UNKNOWN",
                 "category":         faiss_hit.record.category     if faiss_hit.record else "UNKNOWN",
                 "similarity":       faiss_hit.similarity,

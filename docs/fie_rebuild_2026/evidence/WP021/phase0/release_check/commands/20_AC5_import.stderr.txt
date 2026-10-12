@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+  File "<WORK>\env\lib\site-packages\fie\__init__.py", line 12, in <module>
+    from fie import integrations
+  File "<WORK>\env\lib\site-packages\fie\integrations\__init__.py", line 25, in <module>
+    from fie.integrations import openai, anthropic, fastapi
+  File "<WORK>\env\lib\site-packages\fie\integrations\fastapi.py", line 28, in <module>
+    from starlette.middleware.base import BaseHTTPMiddleware
+ModuleNotFoundError: No module named 'starlette'

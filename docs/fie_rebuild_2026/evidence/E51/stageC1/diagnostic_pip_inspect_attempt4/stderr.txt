@@ -1,0 +1,27 @@
+ERROR: Exception:
+Traceback (most recent call last):
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_internal\cli\base_command.py", line 160, in exc_logging_wrapper
+    status = run_func(*args)
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_internal\commands\inspect.py", line 62, in run
+    print_json(data=output)
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\__init__.py", line 106, in print_json
+    get_console().print_json(
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\console.py", line 1776, in print_json
+    self.print(json_renderable, soft_wrap=True)
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\console.py", line 1667, in print
+    with self:
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\console.py", line 869, in __exit__
+    self._exit_buffer()
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\console.py", line 827, in _exit_buffer
+    self._check_buffer()
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\console.py", line 2024, in _check_buffer
+    legacy_windows_render(buffer, LegacyWindowsTerm(self.file))
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\_windows_renderer.py", line 17, in legacy_windows_render
+    term.write_styled(text, style)
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\_win32_console.py", line 442, in write_styled
+    self.write_text(text)
+  File "<HOME>\fie-e51-scratch\env\modeA-pypi-base-r1\lib\site-packages\pip\_vendor\rich\_win32_console.py", line 403, in write_text
+    self.write(text)
+  File "<HOME>\anaconda3\envs\failure-engine\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f44b' in position 3304: character maps to <undefined>

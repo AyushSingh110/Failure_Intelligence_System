@@ -1,0 +1,23 @@
+{
+ "build_command": "python -m build --wheel --no-isolation --outdir <scratch>/wheel <scratch>/src",
+ "build_exit_code": 0,
+ "build_tail": "Successfully built fie_sdk-1.18.0-py3-none-any.whl\n* Getting build dependencies for wheel...\n* Building wheel...\n",
+ "compared_with_reference_wheel": {
+  "note": "built from a different commit time (SOURCE_DATE_EPOCH), so archive timestamps may differ",
+  "package_files": 37,
+  "package_files_identical": true,
+  "reference_sha256": "cfdf18598463f36956e5b765b3209ed05a20f20b7385297a3b3586e9dceaf4e4",
+  "whole_wheel_identical": true
+ },
+ "export_fie_models_directory": [
+  ".gitkeep"
+ ],
+ "model_files_in_wheel": [],
+ "source": "git archive becc2c746df205e7cf39e90ed1e4c985ba705355 (clean export; no working-tree file)",
+ "source_commit": "becc2c746df205e7cf39e90ed1e4c985ba705355",
+ "source_date_epoch": "1791785731",
+ "wheel_filename": "fie_sdk-1.18.0-py3-none-any.whl",
+ "wheel_files": 42,
+ "wheel_sha256": "cfdf18598463f36956e5b765b3209ed05a20f20b7385297a3b3586e9dceaf4e4",
+ "wheel_size": 151936
+}

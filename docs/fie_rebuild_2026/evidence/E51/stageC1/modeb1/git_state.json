@@ -1,0 +1,20 @@
+{
+ "branch": "rebuild/wp-001-eval-harness",
+ "canonical": "BL-0002_pair-v6.3b_fie-70de7053",
+ "head": "3f823adaa80682e8638910517accaadf79483a40",
+ "packaged_paths_changed_since_build_commit": [],
+ "staged": [],
+ "status": [
+  " M docs/fie_rebuild_2026/IMPLEMENTATION_PLANS/PLAN_020_INSTALL_TRUTH.md",
+  " M docs/fie_rebuild_2026/experiments/E51/README.md",
+  " M docs/fie_rebuild_2026/experiments/E51/offline_runner.py",
+  " M docs/fie_rebuild_2026/experiments/E51/probe.py",
+  "?? docs/fie_rebuild_2026/evidence/E51/stageC1/diagnostic_pip_inspect_modeB_command/",
+  "?? docs/fie_rebuild_2026/evidence/E51/stageC1/diagnostic_pip_inspect_utf8_attempt4/",
+  "?? docs/fie_rebuild_2026/evidence/E51/stageC1/offline_attempt5/",
+  "?? docs/fie_rebuild_2026/evidence/E51/stageC1/retry1/",
+  "?? docs/fie_rebuild_2026/experiments/E51/prepare_modeb.py",
+  "?? docs/fie_rebuild_2026/experiments/E51/prepare_retry.py",
+  "?? docs/fie_rebuild_2026/experiments/E51/test_offline_runner.py"
+ ]
+}

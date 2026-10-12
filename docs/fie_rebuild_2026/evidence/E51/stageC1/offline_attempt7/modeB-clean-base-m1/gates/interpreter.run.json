@@ -1,0 +1,10 @@
+{
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\Scripts\\python.exe -I -c import sys;print(sys.version.split()[0]);print(sys.prefix)",
+ "exit_code": 0,
+ "gate": "interpreter",
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\Scripts\\python.exe",
+ "seconds": 0.06,
+ "started_utc": "2026-10-12T06:08:32Z",
+ "stderr_chars": 0,
+ "stdout_chars": 62
+}

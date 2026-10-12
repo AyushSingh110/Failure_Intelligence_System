@@ -1,0 +1,7 @@
+{"message": "plan loaded; 5 environments; adapters up now: ['Wi-Fi']", "step": "0", "utc": "2026-10-12T03:59:25Z"}
+{"message": "offline verified: no adapter up, no usable default route (1 stale on disconnected interfaces), TCP refused through 6 executables", "step": "2", "utc": "2026-10-12T04:00:02Z"}
+{"message": "installing (A-source-build, pip 23.0.1 bundled with the venv)", "step": "modeA-pypi-base-r1", "utc": "2026-10-12T04:00:02Z"}
+{"message": "install exit 0 in 10.6s; path: ['legacy: setup.py install (no wheel built)']; gates: installed but not verified ['installed set differs from the pins']", "step": "modeA-pypi-base-r1", "utc": "2026-10-12T04:00:17Z"}
+{"message": "MODE A NOT VERIFIED (modeA-pypi-base-r1: post-install gates failed). Owner decision O-23 is needed.", "step": "STOP", "utc": "2026-10-12T04:00:17Z"}
+{"message": "closing controls: offline held to the end = True", "step": "6", "utc": "2026-10-12T04:00:22Z"}
+{"message": "connectivity restored = True", "step": "7", "utc": "2026-10-12T04:01:08Z"}

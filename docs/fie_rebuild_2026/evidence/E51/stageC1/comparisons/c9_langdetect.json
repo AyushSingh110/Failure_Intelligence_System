@@ -1,0 +1,112 @@
+{
+ "against": {
+  "modeB-clean-base-m1": {
+   "different_content": [],
+   "generated_or_metadata_mode_A": [
+    "langdetect-1.0.9-py3.10.egg-info",
+    "langdetect/**/__pycache__"
+   ],
+   "generated_or_metadata_mode_B": [
+    "langdetect-1.0.9.dist-info",
+    "langdetect/**/__pycache__"
+   ],
+   "metadata_files_mode_A": [
+    "langdetect-1.0.9-py3.10.egg-info/PKG-INFO",
+    "langdetect-1.0.9-py3.10.egg-info/SOURCES.txt",
+    "langdetect-1.0.9-py3.10.egg-info/dependency_links.txt",
+    "langdetect-1.0.9-py3.10.egg-info/installed-files.txt",
+    "langdetect-1.0.9-py3.10.egg-info/requires.txt",
+    "langdetect-1.0.9-py3.10.egg-info/top_level.txt"
+   ],
+   "metadata_files_mode_B": [
+    "langdetect-1.0.9.dist-info/INSTALLER",
+    "langdetect-1.0.9.dist-info/METADATA",
+    "langdetect-1.0.9.dist-info/RECORD",
+    "langdetect-1.0.9.dist-info/REQUESTED",
+    "langdetect-1.0.9.dist-info/WHEEL",
+    "langdetect-1.0.9.dist-info/licenses/LICENSE",
+    "langdetect-1.0.9.dist-info/licenses/NOTICE",
+    "langdetect-1.0.9.dist-info/top_level.txt"
+   ],
+   "only_in_mode_A": [],
+   "only_in_mode_B": [],
+   "payload_files": 69,
+   "payload_identical": true
+  },
+  "modeB-pypi-base-m1": {
+   "different_content": [],
+   "generated_or_metadata_mode_A": [
+    "langdetect-1.0.9-py3.10.egg-info",
+    "langdetect/**/__pycache__"
+   ],
+   "generated_or_metadata_mode_B": [
+    "langdetect-1.0.9.dist-info",
+    "langdetect/**/__pycache__"
+   ],
+   "metadata_files_mode_A": [
+    "langdetect-1.0.9-py3.10.egg-info/PKG-INFO",
+    "langdetect-1.0.9-py3.10.egg-info/SOURCES.txt",
+    "langdetect-1.0.9-py3.10.egg-info/dependency_links.txt",
+    "langdetect-1.0.9-py3.10.egg-info/installed-files.txt",
+    "langdetect-1.0.9-py3.10.egg-info/requires.txt",
+    "langdetect-1.0.9-py3.10.egg-info/top_level.txt"
+   ],
+   "metadata_files_mode_B": [
+    "langdetect-1.0.9.dist-info/INSTALLER",
+    "langdetect-1.0.9.dist-info/METADATA",
+    "langdetect-1.0.9.dist-info/RECORD",
+    "langdetect-1.0.9.dist-info/REQUESTED",
+    "langdetect-1.0.9.dist-info/WHEEL",
+    "langdetect-1.0.9.dist-info/licenses/LICENSE",
+    "langdetect-1.0.9.dist-info/licenses/NOTICE",
+    "langdetect-1.0.9.dist-info/top_level.txt"
+   ],
+   "only_in_mode_A": [],
+   "only_in_mode_B": [],
+   "payload_files": 69,
+   "payload_identical": true
+  },
+  "modeB-release-base-m1": {
+   "different_content": [],
+   "generated_or_metadata_mode_A": [
+    "langdetect-1.0.9-py3.10.egg-info",
+    "langdetect/**/__pycache__"
+   ],
+   "generated_or_metadata_mode_B": [
+    "langdetect-1.0.9.dist-info",
+    "langdetect/**/__pycache__"
+   ],
+   "metadata_files_mode_A": [
+    "langdetect-1.0.9-py3.10.egg-info/PKG-INFO",
+    "langdetect-1.0.9-py3.10.egg-info/SOURCES.txt",
+    "langdetect-1.0.9-py3.10.egg-info/dependency_links.txt",
+    "langdetect-1.0.9-py3.10.egg-info/installed-files.txt",
+    "langdetect-1.0.9-py3.10.egg-info/requires.txt",
+    "langdetect-1.0.9-py3.10.egg-info/top_level.txt"
+   ],
+   "metadata_files_mode_B": [
+    "langdetect-1.0.9.dist-info/INSTALLER",
+    "langdetect-1.0.9.dist-info/METADATA",
+    "langdetect-1.0.9.dist-info/RECORD",
+    "langdetect-1.0.9.dist-info/REQUESTED",
+    "langdetect-1.0.9.dist-info/WHEEL",
+    "langdetect-1.0.9.dist-info/licenses/LICENSE",
+    "langdetect-1.0.9.dist-info/licenses/NOTICE",
+    "langdetect-1.0.9.dist-info/top_level.txt"
+   ],
+   "only_in_mode_A": [],
+   "only_in_mode_B": [],
+   "payload_files": 69,
+   "payload_identical": true
+  }
+ },
+ "comparison": "C9",
+ "conclusion": "H11 holds for the payload: the langdetect package files are byte-identical in both install modes. The generated metadata differs (egg-info from the legacy setup.py install; dist-info from the wheel) and is listed separately.",
+ "limit": "No scan ran in any cell, so C9 licenses no runtime statement yet; it only removes langdetect's files as a difference.",
+ "mode_A_cell": "modeA-pypi-base-r3",
+ "mode_A_payload_digest": "577b2706f5be394d3e1d8ca7038e9ea07392981428391656060f5f53509626ee",
+ "mode_A_payload_files": 69,
+ "payload_definition": "files under site-packages/langdetect/, excluding __pycache__",
+ "payload_identical_in_all": true,
+ "question": "H11: are the installed langdetect package files the same in a source-built (mode A) and a pre-built-local-wheel (mode B) environment?"
+}

@@ -13,9 +13,15 @@ import requests
 logger = logging.getLogger(__name__)
 
 # ── Response cache ────────────────────────────────────────────────────────────
-# Caches Groq responses by (model, prompt_hash) for 1 hour.
-# Avoids redundant API calls for duplicate/near-duplicate prompts
-# and reduces TPD burn rate significantly in production.
+# Caches Groq responses for 1 hour, per tenant.
+#
+# The key covers the tenant, the model, the system message and the prompt. An
+# entry is therefore never served to another tenant, and never served for a
+# request that sent a different system message — the monitor path puts a fresh
+# canary token there, and an answer generated under another canary cannot answer
+# this request's canary check.
+#
+# A call that passes no TenantScope is not cached at all: no read, no write.
 
 _CACHE_TTL_SECONDS = 3600  # 1 hour
 
@@ -23,13 +29,31 @@ _response_cache: dict[str, tuple[GroqModelResponse, float]] = {}  # key → (res
 _cache_lock = threading.Lock()
 
 
-def _cache_key(model_name: str, prompt: str) -> str:
-    digest = hashlib.sha256(f"{model_name}:{prompt}".encode()).hexdigest()[:24]
-    return digest
+def _cache_key(model_name: str, prompt: str, tenant_id: str, system_message: Optional[str] = None) -> str:
+    digest = hashlib.sha256()
+    for part in (tenant_id, model_name, hashlib.sha256((system_message or "").encode()).hexdigest(), prompt):
+        digest.update(part.encode("utf-8", errors="replace"))
+        digest.update(b"\x00")
+    return digest.hexdigest()
 
 
-def _get_cached(model_name: str, prompt: str) -> Optional["GroqModelResponse"]:
-    key = _cache_key(model_name, prompt)
+def _scope_tenant(cache_scope) -> Optional[str]:
+    """The tenant of a TenantScope, or None — in which case the call is not cached."""
+    if cache_scope is None:
+        return None
+    try:
+        from app.tenancy import tenant_of
+        return tenant_of(cache_scope)
+    except Exception:   # pragma: no cover - defensive
+        return None
+
+
+def _get_cached(
+    model_name: str, prompt: str, tenant_id: Optional[str], system_message: Optional[str] = None,
+) -> Optional["GroqModelResponse"]:
+    if not tenant_id:
+        return None
+    key = _cache_key(model_name, prompt, tenant_id, system_message)
     with _cache_lock:
         entry = _response_cache.get(key)
         if entry and (time.time() - entry[1]) < _CACHE_TTL_SECONDS:
@@ -39,8 +63,13 @@ def _get_cached(model_name: str, prompt: str) -> Optional["GroqModelResponse"]:
     return None
 
 
-def _set_cached(model_name: str, prompt: str, response: "GroqModelResponse") -> None:
-    key = _cache_key(model_name, prompt)
+def _set_cached(
+    model_name: str, prompt: str, response: "GroqModelResponse",
+    tenant_id: Optional[str], system_message: Optional[str] = None,
+) -> None:
+    if not tenant_id:
+        return
+    key = _cache_key(model_name, prompt, tenant_id, system_message)
     with _cache_lock:
         _response_cache[key] = (response, time.time())
         # Evict entries older than TTL to keep memory bounded (max ~500 entries)
@@ -150,15 +179,18 @@ class GroqService:
         max_tokens:     int           = 500,
         temperature:    float         = 0.1,
         _retries:       int           = 2,
+        cache_scope                   = None,
     ) -> GroqModelResponse:
         """
         Calls one Groq model with retry + response cache.
         - Checks cache first (1-hour TTL) to avoid redundant API calls.
         - Retries up to _retries times on 429 with exponential backoff.
         - system_message is injected as system role (canary exfiltration detection).
+        - cache_scope is the caller's TenantScope. Without it nothing is cached.
         """
+        cache_tenant = _scope_tenant(cache_scope)
         # Cache hit — skip API call entirely
-        cached = _get_cached(model_name, prompt)
+        cached = _get_cached(model_name, prompt, cache_tenant, system_message)
         if cached:
             logger.debug("Groq %s: cache hit", model_name)
             try:
@@ -217,7 +249,7 @@ class GroqService:
                     input_tokens  = in_tok,
                     output_tokens = out_tok,
                 )
-                _set_cached(model_name, prompt, result)
+                _set_cached(model_name, prompt, result, cache_tenant, system_message)
                 try:
                     from engine import instrumentation as _instr
                     _instr.record_groq_call(
@@ -293,6 +325,7 @@ class GroqService:
         self,
         prompt:         str,
         system_message: Optional[str] = None,
+        cache_scope                   = None,
     ) -> list[GroqModelResponse]:
         """
         Returns list of GroqModelResponse sorted by model name.
@@ -304,6 +337,7 @@ class GroqService:
                 executor.submit(
                     self._call_single_model, model, prompt,
                     system_message=system_message,
+                    cache_scope=cache_scope,
                 ): model
                 for model in self._models
             }
@@ -337,6 +371,7 @@ class GroqService:
         model_name: Optional[str] = None,
         max_tokens: int = 300,
         temperature: float = 0.1,
+        cache_scope=None,
     ) -> GroqModelResponse:
         """
         Run a single grounded completion through one Groq model.
@@ -348,6 +383,7 @@ class GroqService:
             prompt,
             max_tokens=max_tokens,
             temperature=temperature,
+            cache_scope=cache_scope,
         )
 
     # Confidence-signal helpers
@@ -384,6 +420,7 @@ class GroqService:
         self,
         prompt:         str,
         system_message: Optional[str] = None,
+        cache_scope                   = None,
     ) -> list[GroqModelResponse]:
         """
         Appends a confidence-request suffix to the prompt so each shadow model
@@ -391,7 +428,9 @@ class GroqService:
         into the shadow models' system prompt for exfiltration detection.
         """
         confidenced_prompt = prompt + _CONFIDENCE_SUFFIX
-        raw_results = self.fan_out(confidenced_prompt, system_message=system_message)
+        raw_results = self.fan_out(
+            confidenced_prompt, system_message=system_message, cache_scope=cache_scope,
+        )
 
         enriched: list[GroqModelResponse] = []
         for r in raw_results:

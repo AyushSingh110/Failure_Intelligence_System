@@ -1,0 +1,161 @@
+{
+ "controls": {
+  "base-interpreter": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "expect": "open",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": true,
+     "error": null,
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": true,
+     "error": null,
+     "target": "167.82.48.223:443"
+    }
+   ],
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe"
+  },
+  "modeA-pypi-base-r1": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "expect": "open",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": true,
+     "error": null,
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": true,
+     "error": null,
+     "target": "167.82.48.223:443"
+    }
+   ],
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe"
+  },
+  "modeA-pypi-base-r2": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "expect": "open",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": true,
+     "error": null,
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": true,
+     "error": null,
+     "target": "167.82.48.223:443"
+    }
+   ],
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r2\\Scripts\\python.exe"
+  },
+  "modeB-clean-base": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "expect": "open",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": true,
+     "error": null,
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": true,
+     "error": null,
+     "target": "167.82.48.223:443"
+    }
+   ],
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base\\Scripts\\python.exe"
+  },
+  "modeB-pypi-base": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "expect": "open",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": true,
+     "error": null,
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": true,
+     "error": null,
+     "target": "167.82.48.223:443"
+    }
+   ],
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base\\Scripts\\python.exe"
+  },
+  "modeB-release-base": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "expect": "open",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": true,
+     "error": null,
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": true,
+     "error": null,
+     "target": "167.82.48.223:443"
+    }
+   ],
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base\\Scripts\\python.exe"
+  }
+ },
+ "flags": "-I -S -B",
+ "taken_utc": "2026-10-11T11:36:36Z",
+ "target_note": "IPv4 addresses that pypi.org and files.pythonhosted.org resolved to at this time",
+ "targets": [
+  "151.101.0.223:443",
+  "167.82.48.223:443"
+ ]
+}

@@ -19,8 +19,6 @@ from engine.archetypes.labeling import (
     label_failure_archetype,
     label_failure_archetype_detailed,
 )
-from engine.archetypes.clustering import archetype_registry
-from engine.evolution.tracker import evolution_tracker
 from engine.agents.base_agent import BaseJuryAgent, DiagnosticContext
 from engine.agents.linguistic_auditor import linguistic_auditor
 from engine.agents.adversarial_specialist import adversarial_specialist
@@ -205,8 +203,16 @@ class FailureAgent:
         model_outputs: list[str],
         primary_output: Optional[str] = None,
         secondary_output: Optional[str] = None,
+        *,
+        registry=None,
+        tracker=None,
     ) -> dict:
-        """Phase 2: extract signal, assign to cluster, update tracker."""
+        """
+        Phase 2: extract signal, assign to cluster, update tracker.
+
+        `registry` and `tracker` are the caller's own (one tenant's clusters and
+        trend). There is no shared default: with none given, nothing is recorded.
+        """
         primary_output = primary_output or model_outputs[0]
         secondary_output = secondary_output or (
             model_outputs[1] if len(model_outputs) > 1 else model_outputs[0]
@@ -215,10 +221,16 @@ class FailureAgent:
         signal    = self._build_signal(model_outputs)
         embedding = compute_embedding_distance(primary_output, secondary_output)
 
-        assignment:   ClusterAssignment = archetype_registry.assign(signal)
         label_detail: LabelResult       = label_failure_archetype_detailed(signal)
-        evolution_tracker.record(signal)
-        trend = evolution_tracker.trend_summary()
+        if registry is not None:
+            assignment = registry.assign(signal)
+        else:
+            assignment = {"cluster_id": None, "status": "NOT_TRACKED", "similarity_score": 0.0,
+                          "archetype": label_detail["archetype"]}
+        trend = None
+        if tracker is not None:
+            tracker.record(signal)
+            trend = tracker.trend_summary()
 
         return {
             "failure_signal_vector": signal.model_dump(),
@@ -230,8 +242,13 @@ class FailureAgent:
 
     # Phase 3
 
-    def run_diagnostic(self, request: DiagnosticRequest) -> DiagnosticResponse:
-        """Phase 3: full Phase 1 + Phase 2 + DiagnosticJury reasoning."""
+    def run_diagnostic(self, request: DiagnosticRequest, *, registry=None, tracker=None) -> DiagnosticResponse:
+        """
+        Phase 3: full Phase 1 + Phase 2 + DiagnosticJury reasoning.
+
+        `registry` and `tracker` are the caller's own (one tenant's). With none
+        given, the signal is diagnosed but not recorded anywhere.
+        """
         # Derive primary and secondary from model_outputs list.
         # model_outputs[0] = primary (model under test)
         # model_outputs[1] = secondary/reference model (if present)
@@ -248,8 +265,10 @@ class FailureAgent:
         embedding = compute_embedding_distance(primary_output, secondary_output)
 
         #  Phase 2
-        archetype_registry.assign(signal)
-        evolution_tracker.record(signal)
+        if registry is not None:
+            registry.assign(signal)
+        if tracker is not None:
+            tracker.record(signal)
 
         #  Phase 3
         context = DiagnosticContext.build(

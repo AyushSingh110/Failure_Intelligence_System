@@ -1,0 +1,27 @@
+{
+ "artifact": "A-pypi-1.18.0",
+ "artifact_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+ "blocked": {
+  "exception": "ModuleNotFoundError",
+  "exception_message": "No module named 'starlette'",
+  "missing_module": "starlette",
+  "modes": [
+   "S",
+   "PC"
+  ],
+  "reason": "import fie raised; no scan could run"
+ },
+ "cell": "modeB-pypi-base-m1",
+ "note": "An observed result of the installed artifact. Not a detector pass or failure. Not filled in from any other mode, cell or artifact.",
+ "scan_records": 0,
+ "unanswered": [
+  "RQ4 coverage and self-report",
+  "RQ5 default verdicts",
+  "RQ9 default-mode warnings",
+  "RQ10 / H1 agreement with BL-0002 (comparison C1)",
+  "RQ11 published versus release behaviour (comparison C4)",
+  "H5",
+  "H8 policy actions (comparison C5)",
+  "attempted egress at scan time"
+ ]
+}

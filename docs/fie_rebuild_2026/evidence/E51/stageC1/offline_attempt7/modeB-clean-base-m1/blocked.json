@@ -1,0 +1,27 @@
+{
+ "artifact": "A-clean",
+ "artifact_sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99",
+ "blocked": {
+  "exception": "ModuleNotFoundError",
+  "exception_message": "No module named 'starlette'",
+  "missing_module": "starlette",
+  "modes": [
+   "S",
+   "PC"
+  ],
+  "reason": "import fie raised; no scan could run"
+ },
+ "cell": "modeB-clean-base-m1",
+ "note": "An observed result of the installed artifact. Not a detector pass or failure. Not filled in from any other mode, cell or artifact.",
+ "scan_records": 0,
+ "unanswered": [
+  "RQ4 coverage and self-report",
+  "RQ5 default verdicts",
+  "RQ9 default-mode warnings",
+  "RQ10 / H1 agreement with BL-0002 (comparison C1)",
+  "RQ11 published versus release behaviour (comparison C4)",
+  "H5",
+  "H8 policy actions (comparison C5)",
+  "attempted egress at scan time"
+ ]
+}

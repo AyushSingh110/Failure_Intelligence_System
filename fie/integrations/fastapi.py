@@ -25,10 +25,22 @@ from __future__ import annotations
 import json
 from typing import Callable, Sequence
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
-from starlette.types import ASGIApp
+try:
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse, Response
+    from starlette.types import ASGIApp
+except ModuleNotFoundError as exc:
+    # Only "Starlette itself is not installed" is explained here. Any other
+    # failure (a broken Starlette, a missing dependency of it) is a real defect
+    # and propagates unchanged.
+    if exc.name != "starlette":
+        raise
+    raise ModuleNotFoundError(
+        "fie.integrations.fastapi needs Starlette, which is not installed. "
+        'Install it with: pip install "fie-sdk[fastapi]"',
+        name="starlette",
+    ) from exc
 import logging
 logger = logging.getLogger(__name__)
 

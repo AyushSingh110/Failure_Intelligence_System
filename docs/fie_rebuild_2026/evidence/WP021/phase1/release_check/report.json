@@ -1,0 +1,366 @@
+{
+ "cleanup": {
+  "kept_on_request": false,
+  "temporary_environment_removed": true
+ },
+ "commands": [
+  {
+   "command": "<BASE_PYTHON>\\python.exe -m venv <WORK>\\env",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "00_create_venv",
+   "seconds": 25.13,
+   "started_utc": "2026-10-12T14:31:13Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -X utf8 -m pip list --format=json --disable-pip-version-check",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "01_preinstall_list",
+   "seconds": 1.49,
+   "started_utc": "2026-10-12T14:31:38Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -c import sys;print(sys.version.split()[0]);print(sys.prefix)",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "02_interpreter",
+   "seconds": 0.14,
+   "started_utc": "2026-10-12T14:31:40Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -m pip install --isolated --disable-pip-version-check --no-cache-dir --no-index --find-links <WHEELHOUSE> <WHEEL_DIR>\\fie_sdk-1.18.0-py3-none-any.whl",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "10_AC1_install",
+   "seconds": 10.76,
+   "started_utc": "2026-10-12T14:31:40Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -m pip check --disable-pip-version-check",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "11_AC2_pip_check",
+   "seconds": 2.39,
+   "started_utc": "2026-10-12T14:31:51Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -X utf8 -m pip inspect --disable-pip-version-check",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "12_AC3_pip_inspect",
+   "seconds": 2.02,
+   "started_utc": "2026-10-12T14:31:53Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -c \nimport json, os, sys\nout = {\"cwd\": os.getcwd(), \"prefix\": sys.prefix, \"isolated\": bool(sys.flags.isolated)}\ntry:\n    import fie\nexcept BaseException as exc:\n    out.update({\"import_ok\": False, \"exception\": type(exc).__name__,\n                \"missing_module\": getattr(exc, \"name\", None) if isinstance(exc, ModuleNotFoundError) else None,\n                \"message\": str(exc)})\n    print(\"RELEASE_CHECK_JSON \" + json.dumps(out))\n    raise\nsite = os.path.normcase(os.path.join(sys.prefix, \"Lib\", \"site-packages\")) if os.name == \"nt\" else None\nfie_file = os.path.normcase(os.path.abspath(fie.__file__))\nout.update({\"import_ok\": True, \"fie_file\": fie.__file__, \"fie_version\": getattr(fie, \"__version__\", None),\n            \"fie_under_prefix\": fie_file.startswith(os.path.normcase(os.path.abspath(sys.prefix))),\n            \"fie_in_site_packages\": \"site-packages\" in fie_file,\n            \"optional_modules_imported\": sorted(m for m in ['starlette', 'fastapi', 'openai', 'anthropic', 'joblib', 'sklearn', 'xgboost', 'onnxruntime'] if m in sys.modules),\n            \"all_names\": list(getattr(fie, \"__all__\", [])), \"unresolved_names\": []})\nfor name in out[\"all_names\"]:\n    try:\n        getattr(fie, name)\n    except BaseException as exc:\n        out[\"unresolved_names\"].append([name, type(exc).__name__])\nprint(\"RELEASE_CHECK_JSON \" + json.dumps(out))\n",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "20_AC5_import",
+   "seconds": 1.1,
+   "started_utc": "2026-10-12T14:31:55Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -m fie --help",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "21_AC7_cli_help",
+   "seconds": 0.98,
+   "started_utc": "2026-10-12T14:31:56Z"
+  },
+  {
+   "command": "<WORK>\\env\\Scripts\\python.exe -I -m fie detect What is the capital of France? --output json",
+   "cwd": "<WORK>\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "22_AC7_cli_detect",
+   "seconds": 1.07,
+   "started_utc": "2026-10-12T14:31:57Z"
+  }
+ ],
+ "criteria": {
+  "AC-1 wheel installs": {
+   "detail": "pip install exited 0",
+   "exit_code": 0,
+   "status": "PASS"
+  },
+  "AC-2 pip check": {
+   "detail": "No broken requirements found.",
+   "exit_code": 0,
+   "status": "PASS"
+  },
+  "AC-3 installed set equals declared": {
+   "detail": "installed set equals the declared base closure",
+   "distributions": {
+    "beautifulsoup4": "4.15.0",
+    "certifi": "2026.7.22",
+    "charset-normalizer": "3.5.2",
+    "deep-translator": "1.11.4",
+    "fie-sdk": "1.18.0",
+    "idna": "3.20",
+    "langdetect": "1.0.9",
+    "pip": "23.0.1",
+    "requests": "2.34.2",
+    "setuptools": "79.0.1",
+    "six": "1.17.0",
+    "soupsieve": "2.10",
+    "typing-extensions": "4.16.0",
+    "urllib3": "2.8.0"
+   },
+   "exit_code": 0,
+   "missing": [],
+   "status": "PASS",
+   "undeclared": []
+  },
+  "AC-4 installed files equal the wheel": {
+   "detail": "37 files compared, 0 differ",
+   "files_checked": 37,
+   "files_differing": [],
+   "status": "PASS"
+  },
+  "AC-5 import fie": {
+   "detail": "import fie succeeded from the environment's site-packages",
+   "exit_code": 0,
+   "fie_version": "1.18.0",
+   "status": "PASS"
+  },
+  "AC-6 every name in fie.__all__ resolves": {
+   "detail": "22 names, 0 unresolved",
+   "names": 22,
+   "status": "PASS",
+   "unresolved": []
+  },
+  "AC-7 command line starts": {
+   "detail": "help and detect exited 0 with JSON output",
+   "detect_exit_code": 0,
+   "detect_stdout_is_json": true,
+   "help_exit_code": 0,
+   "status": "PASS"
+  },
+  "AC-8 no optional package imported by import fie": {
+   "detail": "none imported",
+   "imported": [],
+   "status": "PASS"
+  }
+ },
+ "dependency_source": "local wheelhouse only (--no-index)",
+ "environment": {
+  "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+  "preinstalled": {
+   "pip": "23.0.1",
+   "setuptools": "79.0.1"
+  },
+  "python": "3.10.19"
+ },
+ "exit_code": 0,
+ "fie_controls": {
+  "FIE_NO_AUTO_DOWNLOAD": "1",
+  "FIE_NO_TELEMETRY": "1"
+ },
+ "finished_utc": "2026-10-12T14:31:59Z",
+ "host_python": "3.10.19",
+ "import": {
+  "exception": null,
+  "fie_in_site_packages": true,
+  "fie_under_prefix": true,
+  "fie_version": "1.18.0",
+  "import_ok": true,
+  "isolated": true,
+  "message": null,
+  "missing_module": null
+ },
+ "not_implemented": [
+  "AC-9 (repository test)",
+  "Level 3: AC-10 to AC-12",
+  "Level 4: AC-13 to AC-18",
+  "Level 5: AC-19, AC-20",
+  "release hygiene: AC-21 to AC-24"
+ ],
+ "repository_on_path": false,
+ "scope": "PLAN_021 section 5.2: Level 1 (AC-1 to AC-4) and Level 2 (AC-5 to AC-8)",
+ "started_utc": "2026-10-12T14:31:13Z",
+ "target": "T-base: the wheel with no extra",
+ "tool": "scripts/release_check.py",
+ "verdict": "PASSED: every implemented criterion (Levels 1 and 2 only)",
+ "wheel": {
+  "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+  "files": 42,
+  "name": "fie-sdk",
+  "requires_dist_base": [
+   "deep-translator>=1.11.4",
+   "langdetect>=1.0.9",
+   "requests>=2.28.0"
+  ],
+  "sha256": "24962aae3e8bace898115d03c5f9f93ba6bb75c2588f58c53518e9c656c85018",
+  "size": 152701,
+  "version": "1.18.0"
+ },
+ "working_directory_for_checks": "an empty directory outside the repository"
+}

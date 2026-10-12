@@ -1,0 +1,19 @@
+{
+ "errors": [
+  "ERROR: Could not find a version that satisfies the requirement langdetect>=1.0.9 (from versions: none)",
+  "ERROR: No matching distribution found for langdetect>=1.0.9"
+ ],
+ "full_wheel_downloads_during_dry_run": [],
+ "hosts_in_log": [
+  "files.pythonhosted.org",
+  "pypi.org"
+ ],
+ "name": "base",
+ "pip_exit": 1,
+ "requirements": [
+  "requests>=2.28.0",
+  "deep-translator>=1.11.4",
+  "langdetect>=1.0.9"
+ ],
+ "unapproved_hosts": []
+}

@@ -1,0 +1,38 @@
+{
+ "artifact": "A-pypi-1.18.0",
+ "artifact_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+ "base_executable": "python.exe",
+ "cell": "modeB-pypi-base-m1",
+ "encoder_variant": "as_installed",
+ "env_overrides": {
+  "FIE_FEEDBACK_PATH": "<HOME>\\fie-e51-scratch\\home\\modeB-pypi-base-m1\\PC-run1\\pc_feedback.jsonl",
+  "FIE_NO_AUTO_DOWNLOAD": "1",
+  "FIE_NO_TELEMETRY": "1",
+  "HF_HUB_OFFLINE": "1",
+  "TRANSFORMERS_OFFLINE": "1"
+ },
+ "experiment": "E51",
+ "extra": "base",
+ "in_process_changes": [],
+ "inputs": 1848,
+ "inputs_sha256": "d19a56071f5b7263120cd188f203e6f73166b9de58d2d8027ca1769e1d7a2eb1",
+ "install_mode": "B-prebuilt-local-wheel",
+ "installer": "repository pip via --python",
+ "instrumentation": [
+  "socket_recorder",
+  "pickle_tripwire",
+  "process_recorder"
+ ],
+ "isolated_flag": true,
+ "isolation": "owner_network_off",
+ "langdetect_origin": "local wheel built in provisioning",
+ "mode": "PC",
+ "observations": [],
+ "prearmed": [
+  "platform.uname"
+ ],
+ "python": "3.10.19",
+ "run": 1,
+ "stage": "C1",
+ "sys_executable": "<ENV>/Scripts/python.exe"
+}

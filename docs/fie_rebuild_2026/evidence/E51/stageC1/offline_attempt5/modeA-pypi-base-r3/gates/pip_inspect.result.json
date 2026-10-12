@@ -1,0 +1,20 @@
+{
+ "classification": {
+  "distribution_count": 14,
+  "exit": 0,
+  "extra_beyond_pins_and_preexisting": [],
+  "missing": [],
+  "parse_error": null,
+  "preexisting_changed": [],
+  "status": "match",
+  "wrong_version": []
+ },
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe -I -X utf8 -m pip inspect --disable-pip-version-check",
+ "exit_code": 0,
+ "gate": "pip_inspect",
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe",
+ "seconds": 1.04,
+ "started_utc": "2026-10-12T05:07:17Z",
+ "stderr_chars": 0,
+ "stdout_chars": 157542
+}

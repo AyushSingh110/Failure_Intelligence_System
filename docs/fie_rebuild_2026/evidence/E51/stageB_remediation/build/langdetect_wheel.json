@@ -1,0 +1,29 @@
+{
+ "wheel": "langdetect-1.0.9-py3-none-any.whl",
+ "wheel_sha256": "9acdfda7ee22ffdaaaf87f993cec0eb186d772fe0f3b93469832d83be6e9c8a4",
+ "wheel_size": 993364,
+ "source_archive": "langdetect-1.0.9.tar.gz",
+ "source_sha256": "cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0",
+ "payload_files": 69,
+ "payload_files_identical_to_source": 69,
+ "payload_files_differing": 0,
+ "payload_files_not_in_source": 0,
+ "odd": [],
+ "requires_dist": [
+  "Requires-Dist: six"
+ ],
+ "wheel_tags": [
+  "Generator: setuptools (84.0.0)",
+  "Root-Is-Purelib: true",
+  "Tag: py3-none-any"
+ ],
+ "two_independent_builds_identical": true,
+ "source_date_epoch": 1620374053,
+ "build_environment": {
+  "python": "3.10.19",
+  "setuptools": "84.0.0",
+  "wheel": "0.48.0",
+  "packaging": "26.3"
+ },
+ "origin_statement": "Locally built during provisioning from the digest-verified PyPI source archive. NOT a PyPI-published wheel."
+}

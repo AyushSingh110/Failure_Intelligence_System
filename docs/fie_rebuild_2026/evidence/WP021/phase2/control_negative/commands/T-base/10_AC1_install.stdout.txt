@@ -1,0 +1,15 @@
+Looking in links: <WHEELHOUSE1>, <WHEELHOUSE2>
+Processing <WHEEL_DIR>\fie_sdk-1.18.0-py3-none-any.whl
+Processing <WHEELHOUSE1>\langdetect-1.0.9-py3-none-any.whl
+Processing <WHEELHOUSE1>\requests-2.34.2-py3-none-any.whl
+Processing <WHEELHOUSE1>\deep_translator-1.11.4-py3-none-any.whl
+Processing <WHEELHOUSE1>\beautifulsoup4-4.15.0-py3-none-any.whl
+Processing <WHEELHOUSE1>\six-1.17.0-py2.py3-none-any.whl
+Processing <WHEELHOUSE1>\idna-3.20-py3-none-any.whl
+Processing <WHEELHOUSE1>\certifi-2026.7.22-py3-none-any.whl
+Processing <WHEELHOUSE1>\charset_normalizer-3.5.2-cp310-cp310-win_amd64.whl
+Processing <WHEELHOUSE1>\urllib3-2.8.0-py3-none-any.whl
+Processing <WHEELHOUSE1>\soupsieve-2.10-py3-none-any.whl
+Processing <WHEELHOUSE1>\typing_extensions-4.16.0-py3-none-any.whl
+Installing collected packages: urllib3, typing-extensions, soupsieve, six, idna, charset_normalizer, certifi, requests, langdetect, beautifulsoup4, deep-translator, fie-sdk
+Successfully installed beautifulsoup4-4.15.0 certifi-2026.7.22 charset_normalizer-3.5.2 deep-translator-1.11.4 fie-sdk-1.18.0 idna-3.20 langdetect-1.0.9 requests-2.34.2 six-1.17.0 soupsieve-2.10 typing-extensions-4.16.0 urllib3-2.8.0

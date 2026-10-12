@@ -1,0 +1,16 @@
+{
+ "classification": {
+  "exit": 0,
+  "launcher_sha256_unchanged": true,
+  "prefix_is_cell_env": true,
+  "version": "3.10.19"
+ },
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe -I -c import sys;print(sys.version.split()[0]);print(sys.prefix)",
+ "exit_code": 0,
+ "gate": "interpreter",
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe",
+ "seconds": 0.06,
+ "started_utc": "2026-10-12T06:08:57Z",
+ "stderr_chars": 0,
+ "stdout_chars": 64
+}

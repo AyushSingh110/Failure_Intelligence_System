@@ -1,0 +1,38 @@
+{
+ "invoked_as": "Scripts\\python.exe -I -B cli_guard.py -- <command> <prompt> --output json",
+ "mode": "S",
+ "runs": {
+  "cli-detect-benign_capital": {
+   "exit": 1,
+   "seconds": 0.49,
+   "stderr_tail": "26\\experiments\\E51\\cli_guard.py\", line 70, in <module>\n    sys.exit(main())\n  File \"<HOME>\\Desktop\\Failure_Intelligence_System\\docs\\fie_rebuild_2026\\experiments\\E51\\cli_guard.py\", line 45, in main\n    import fie\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\__init__.py\", line 8, in <module>\n    from fie import integrations\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\__init__.py\", line 25, in <module>\n    from fie.integrations import openai, anthropic, fastapi\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\fastapi.py\", line 28, in <module>\n    from starlette.middleware.base import BaseHTTPMiddleware\nModuleNotFoundError: No module named 'starlette'\n",
+   "stdout": "",
+   "stdout_is_json": false,
+   "stdout_keys": null
+  },
+  "cli-detect-injection": {
+   "exit": 1,
+   "seconds": 0.48,
+   "stderr_tail": "26\\experiments\\E51\\cli_guard.py\", line 70, in <module>\n    sys.exit(main())\n  File \"<HOME>\\Desktop\\Failure_Intelligence_System\\docs\\fie_rebuild_2026\\experiments\\E51\\cli_guard.py\", line 45, in main\n    import fie\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\__init__.py\", line 8, in <module>\n    from fie import integrations\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\__init__.py\", line 25, in <module>\n    from fie.integrations import openai, anthropic, fastapi\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\fastapi.py\", line 28, in <module>\n    from starlette.middleware.base import BaseHTTPMiddleware\nModuleNotFoundError: No module named 'starlette'\n",
+   "stdout": "",
+   "stdout_is_json": false,
+   "stdout_keys": null
+  },
+  "cli-explain-benign_capital": {
+   "exit": 1,
+   "seconds": 0.48,
+   "stderr_tail": "26\\experiments\\E51\\cli_guard.py\", line 70, in <module>\n    sys.exit(main())\n  File \"<HOME>\\Desktop\\Failure_Intelligence_System\\docs\\fie_rebuild_2026\\experiments\\E51\\cli_guard.py\", line 45, in main\n    import fie\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\__init__.py\", line 8, in <module>\n    from fie import integrations\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\__init__.py\", line 25, in <module>\n    from fie.integrations import openai, anthropic, fastapi\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\fastapi.py\", line 28, in <module>\n    from starlette.middleware.base import BaseHTTPMiddleware\nModuleNotFoundError: No module named 'starlette'\n",
+   "stdout": "",
+   "stdout_is_json": false,
+   "stdout_keys": null
+  },
+  "cli-explain-injection": {
+   "exit": 1,
+   "seconds": 0.46,
+   "stderr_tail": "26\\experiments\\E51\\cli_guard.py\", line 70, in <module>\n    sys.exit(main())\n  File \"<HOME>\\Desktop\\Failure_Intelligence_System\\docs\\fie_rebuild_2026\\experiments\\E51\\cli_guard.py\", line 45, in main\n    import fie\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\__init__.py\", line 8, in <module>\n    from fie import integrations\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\__init__.py\", line 25, in <module>\n    from fie.integrations import openai, anthropic, fastapi\n  File \"<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\lib\\site-packages\\fie\\integrations\\fastapi.py\", line 28, in <module>\n    from starlette.middleware.base import BaseHTTPMiddleware\nModuleNotFoundError: No module named 'starlette'\n",
+   "stdout": "",
+   "stdout_is_json": false,
+   "stdout_keys": null
+  }
+ }
+}

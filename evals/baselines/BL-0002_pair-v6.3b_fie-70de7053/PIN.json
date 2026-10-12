@@ -1,0 +1,57 @@
+{
+  "artifact_digest": "c6dd511d9e2feb20bfd939e5b773d92ddb96b0f7665c128f048948dbc3bb9876",
+  "baseline_id": "BL-0002_pair-v6.3b_fie-70de7053",
+  "determinism_proof": {
+    "artifact_digest": "c6dd511d9e2feb20bfd939e5b773d92ddb96b0f7665c128f048948dbc3bb9876",
+    "artifact_digest_second_run": "c6dd511d9e2feb20bfd939e5b773d92ddb96b0f7665c128f048948dbc3bb9876",
+    "evidence_or_report_files_differing": [],
+    "gated_files_compared": 13,
+    "gated_files_differing": [],
+    "harness_tree_sha256": "0867f96af1ff57722f7a4466a89a82f9bf91a1f02cbe2b68b9f4f1ae2302eb13",
+    "hash_seed_experiment": {
+      "plan_kind": "standard",
+      "pythonhashseed": "random",
+      "record_differences": [],
+      "records_identical_to_first_run": true,
+      "run": "20261010T170042Z_70de7053_8dfa0885"
+    },
+    "keys": {
+      "config_key": "84c2cf4328e36f6d2eab2cba688e8b7de6d26af0f3ea8bef510149f8bd13dd21",
+      "dataset_key": "502cac03aaa1186529de09d9fd6985aeec0d71dc0c9927652c3f7fdb73805be1",
+      "env_key": "7e2b86f36d34c6ef37d9c61dd87063d70f8f65ed6f6584411bf6ff6942b050b9",
+      "subject_key": "b4d7dd9a69422836970e49e7998d961eb4f8b8c3b69f3168bdc61e7726e7970d"
+    },
+    "keys_equal": true,
+    "plan_kind": "deterministic",
+    "profile": "sdk-offline-failsecure",
+    "record_differences": [],
+    "runs": [
+      "20261010T163043Z_70de7053_ff86f5e8",
+      "20261010T164545Z_70de7053_ff86f5e8"
+    ],
+    "scope": "all",
+    "verified": true,
+    "verified_utc": "2026-10-10T17:03:20+00:00"
+  },
+  "git": {
+    "commit": "a9db9596b8a1df4d2b6983dfea88b72bce21b172",
+    "dirty_other": false,
+    "dirty_subject": false,
+    "subject_paths_changed": []
+  },
+  "keys": {
+    "config_key": "84c2cf4328e36f6d2eab2cba688e8b7de6d26af0f3ea8bef510149f8bd13dd21",
+    "dataset_key": "502cac03aaa1186529de09d9fd6985aeec0d71dc0c9927652c3f7fdb73805be1",
+    "env_key": "7e2b86f36d34c6ef37d9c61dd87063d70f8f65ed6f6584411bf6ff6942b050b9",
+    "subject_key": "b4d7dd9a69422836970e49e7998d961eb4f8b8c3b69f3168bdc61e7726e7970d"
+  },
+  "kind": "canonical baseline",
+  "metadata_files": [
+    "RUN_NOTES.md",
+    "known_unstable.json",
+    "latency.json"
+  ],
+  "note": "fingerprint.json, summary.json, REPORT.md, MANIFEST.sha256 and records/ are the deterministic artifact. Everything else in this directory is run metadata and is not byte-compared. MANIFEST.sha256 also lists the run's evidence files, which are not copied here.",
+  "pinned_utc": "2026-10-10T17:03:53+00:00",
+  "source_run": "20261010T161030Z_70de7053_090da7e3"
+}

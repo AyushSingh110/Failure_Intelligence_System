@@ -1,0 +1,93 @@
+{
+ "base_commit": "bed8fb85418d489cf71db7ee8e6ad358b772149c",
+ "build_command": "python -m build --wheel --no-isolation --outdir <scratch>/wheel <scratch>/src",
+ "builds": [
+  {
+   "exit_code": 0,
+   "sha256": "24962aae3e8bace898115d03c5f9f93ba6bb75c2588f58c53518e9c656c85018"
+  },
+  {
+   "exit_code": 0,
+   "sha256": "24962aae3e8bace898115d03c5f9f93ba6bb75c2588f58c53518e9c656c85018"
+  }
+ ],
+ "export_fie_models_directory": [
+  ".gitkeep"
+ ],
+ "model_files_in_wheel": [],
+ "overlay": [
+  {
+   "path": "fie/integrations/__init__.py",
+   "sha256_at_head": "3497b719e926bacdd0eda6e67882986cecc051a5737a130986d92f277804edc0",
+   "sha256_phase1": "4dcaa0fdf6977ed4a3992ebd77bab753ce7e007b34bc556227326e95b3fe0e51"
+  },
+  {
+   "path": "fie/integrations/fastapi.py",
+   "sha256_at_head": "85d10a2f4c834db40a6ba35ab47654484cbd70209ea13de97c3b2189c2130231",
+   "sha256_phase1": "4b5e8a1318478d52b215567602598bc70a13a156f9597c7066422ccd11ea1349"
+  },
+  {
+   "path": "pyproject.toml",
+   "sha256_at_head": "48da0b92f38cb2d6c10e5641eb026fe56593e53a1c0fa9fcc055cc5b47d35482",
+   "sha256_phase1": "17580752795ab44b204a8b8938fd2dafa711c72ada79b0c7a3df3e4758a88d8c"
+  }
+ ],
+ "provides_extra": [
+  "all",
+  "anthropic",
+  "dev",
+  "fastapi",
+  "lite",
+  "ml",
+  "openai",
+  "server",
+  "torch"
+ ],
+ "requires_dist": [
+  "anthropic>=0.25; extra == 'all'",
+  "anthropic>=0.25; extra == 'anthropic'",
+  "deep-translator>=1.11.4",
+  "deep-translator>=1.11.4; extra == 'lite'",
+  "fastapi>=0.100; extra == 'dev'",
+  "fastapi>=0.100; extra == 'server'",
+  "httpx>=0.24.0; extra == 'dev'",
+  "joblib>=1.3; extra == 'all'",
+  "joblib>=1.3; extra == 'ml'",
+  "langdetect>=1.0.9",
+  "langdetect>=1.0.9; extra == 'lite'",
+  "langgraph>=0.2.0; extra == 'server'",
+  "onnxruntime>=1.17; extra == 'all'",
+  "onnxruntime>=1.17; extra == 'ml'",
+  "openai>=1.0; extra == 'all'",
+  "openai>=1.0; extra == 'openai'",
+  "pandas>=2.0; extra == 'all'",
+  "pandas>=2.0; extra == 'ml'",
+  "pymongo>=4.6; extra == 'server'",
+  "pytest>=7.0; extra == 'dev'",
+  "python-dotenv>=1.0; extra == 'server'",
+  "requests>=2.28.0",
+  "ruff>=0.4; extra == 'dev'",
+  "scikit-learn>=1.3; extra == 'all'",
+  "scikit-learn>=1.3; extra == 'ml'",
+  "sentence-transformers>=2.7; extra == 'torch'",
+  "slowapi>=0.1.9; extra == 'server'",
+  "starlette>=0.52.1; extra == 'fastapi'",
+  "tokenizers>=0.20; extra == 'all'",
+  "tokenizers>=0.20; extra == 'ml'",
+  "uvicorn>=0.20; extra == 'dev'",
+  "uvicorn>=0.20; extra == 'server'",
+  "xgboost>=2.0; extra == 'all'",
+  "xgboost>=2.0; extra == 'ml'"
+ ],
+ "source": "git archive bed8fb85418d489cf71db7ee8e6ad358b772149c (clean export), with the three authorized Phase 1 files copied over it from the working tree",
+ "source_date_epoch": "1791789594",
+ "two_builds_identical": true,
+ "wheel_file_hashes_of_overlay": {
+  "fie/integrations/__init__.py": "4dcaa0fdf6977ed4a3992ebd77bab753ce7e007b34bc556227326e95b3fe0e51",
+  "fie/integrations/fastapi.py": "4b5e8a1318478d52b215567602598bc70a13a156f9597c7066422ccd11ea1349"
+ },
+ "wheel_filename": "fie_sdk-1.18.0-py3-none-any.whl",
+ "wheel_files": 42,
+ "wheel_sha256": "24962aae3e8bace898115d03c5f9f93ba6bb75c2588f58c53518e9c656c85018",
+ "wheel_size": 152701
+}
