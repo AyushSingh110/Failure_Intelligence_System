@@ -1,0 +1,1 @@
+[{"name": "pip", "version": "23.0.1"}, {"name": "setuptools", "version": "79.0.1"}]

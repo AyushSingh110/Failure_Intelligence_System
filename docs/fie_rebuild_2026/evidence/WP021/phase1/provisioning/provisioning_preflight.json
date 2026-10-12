@@ -1,0 +1,29 @@
+{
+ "hosts_file_pypi_entries": [],
+ "internet_settings": {
+  "AutoConfigURL": null,
+  "ProxyEnable": "0",
+  "ProxyServer": null
+ },
+ "pip_config_debug": "env_var:\nenv:\nglobal:\n  C:\\ProgramData\\pip\\pip.ini, exists: False\nsite:\n  <HOME>\\anaconda3\\envs\\failure-engine\\pip.ini, exists: False\nuser:\n  <HOME>\\pip\\pip.ini, exists: False\n  <HOME>\\AppData\\Roaming\\pip\\pip.ini, exists: False\n",
+ "pip_config_files_existing": [],
+ "pip_config_list_after_neutralization": "",
+ "pip_config_list_inherited": "",
+ "pip_flags_used_everywhere": [
+  "--isolated",
+  "--index-url",
+  "https://pypi.org/simple",
+  "--no-cache-dir",
+  "--only-binary",
+  ":all:",
+  "--disable-pip-version-check",
+  "-vv"
+ ],
+ "pip_version": "pip 26.0.1 from <HOME>\\anaconda3\\envs\\failure-engine\\lib\\site-packages\\pip (python 3.10)",
+ "problems": [],
+ "python": "3.10.19",
+ "redirecting_variables_set": [],
+ "stdlib_proxies": {},
+ "verdict": "PASS",
+ "winhttp_proxy": "Current WinHTTP proxy settings:\n\n    Direct access (no proxy server)."
+}

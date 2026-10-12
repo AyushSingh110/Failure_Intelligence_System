@@ -1,0 +1,12 @@
+usage: fie [-h] {detect,explain,benchmark} ...
+
+FIE � Failure Intelligence Engine CLI
+
+positional arguments:
+  {detect,explain,benchmark}
+    detect              Scan a prompt for adversarial attacks
+    explain             Layer-by-layer breakdown of why a prompt was flagged
+    benchmark           Run a standard benchmark evaluation
+
+options:
+  -h, --help            show this help message and exit

@@ -83,6 +83,11 @@ openai = [
 anthropic = [
     "anthropic>=0.25",
 ]
+# FIEMiddleware (fie.integrations.fastapi). Starlette only: the middleware does
+# not import fastapi itself. 0.52.1 is the version it is tested against.
+fastapi = [
+    "starlette>=0.52.1",
+]
 all = [
     "scikit-learn>=1.3",
     "xgboost>=2.0",

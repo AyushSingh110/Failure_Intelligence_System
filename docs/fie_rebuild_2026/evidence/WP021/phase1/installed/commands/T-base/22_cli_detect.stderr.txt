@@ -1,0 +1,3 @@
+layer=pair_classifier status=unavailable reason=missing dependency: No module named 'joblib' action='pip install fie-sdk[ml]'
+scan coverage=partial reason=classifier_unavailable state=unavailable_dependency impact='the PAIR classifier does not run; results come from the remaining layers and report coverage.status=partial' action='pip install fie-sdk[ml] and fetch the model files' note='logged once per process'
+degraded capability=_load_meta_classifier impact='this optional step was skipped' reason=ModuleNotFoundError: No module named 'joblib'

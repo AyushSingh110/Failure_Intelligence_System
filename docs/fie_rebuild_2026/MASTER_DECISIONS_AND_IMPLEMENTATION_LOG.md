@@ -1109,3 +1109,54 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add -f scripts/release_check.py && git add docs/fie_rebuild_2026 && git commit -m "scripts: add installed-wheel release check; reproduces base-import failure (WP-021 phase 0)"
 ```
+
+### 14.2 Phase 1 (2026-10-12): base import correctness
+
+Detail and evidence:
+[EXECUTION_021_phase1-base-import.md](EXECUTION_REPORTS/EXECUTION_021_phase1-base-import.md),
+`evidence/WP021/phase1/`.
+
+**Decisions, approved by the owner for this phase:**
+
+- **D-031 (W21-1) — the FastAPI integration is loaded on request.** `import fie` no longer
+  imports `fie.integrations.fastapi`. Starlette is not made a base dependency.
+- **D-032 (W21-2) — `fie.integrations.__all__` is `["openai", "anthropic"]`.** The documented
+  import `from fie.integrations.fastapi import FIEMiddleware` is unchanged.
+- **D-033 (W21-3) — a `fastapi` extra, `starlette>=0.52.1`.** 0.52.1 is the only version the
+  middleware has been tested against; the bound states that and nothing more.
+
+**Result:**
+
+- Changed: `fie/integrations/__init__.py`, `fie/integrations/fastapi.py`, `pyproject.toml`
+  (one extra added); new `tests/test_base_import.py` (21 tests) and
+  `tests/test_fastapi_integration.py` (11 tests). `fie/__init__.py` and every other source file
+  are untouched.
+- A wheel built from a clean export with these changes (`24962aae…c656c85018`, version still
+  `1.18.0`, a local test artifact) **installs and imports in a base environment**:
+  `scripts/release_check.py` exits 0 with all eight criteria passing, where the Phase 0 wheel
+  exits 1.
+- Two fresh environments. T-base: no Starlette installed; `import fie`, all 22 public names
+  and the command line work; an explicit FastAPI request raises `ModuleNotFoundError` with
+  `name == "starlette"` and the install command. T-fastapi (`[fastapi]`, Starlette 0.52.1):
+  the middleware imports, blocks a known injection with the documented 400 response and passes
+  a benign request.
+- The new tests fail on the unfixed commit (14 failed, 7 errors) and pass on the fix.
+- `python -m evals baseline`: exit 0, byte-identical to `BL-0002`. `CANONICAL` unchanged.
+- **Full suite: 973 passed, 1 failed.** The failure is
+  `tests/test_runtime_policy.py::test_detector_source_files_are_untouched`, a WP-004 test that
+  asserts `git status --porcelain` is empty for a list of paths including `fie/integrations`.
+  It fails because the authorized edits are uncommitted, and is predicted to pass once they are
+  committed. The test was not edited.
+
+**Not established:** detection quality on any artifact. The published `1.18.0` is unchanged
+and still cannot be imported in a base install. Nothing was released; no version was changed.
+
+**Open:** the failing guard test (commit and rerun; consider narrowing it as a separate
+change); `scripts/release_check.py` is still git-ignored and untracked; Phases 2 to 5 are not
+authorized; W21-4 to W21-14 are undecided; the remaining E51 `[ml]` cells stay unrun.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add -f scripts/release_check.py && git add fie/integrations/__init__.py fie/integrations/fastapi.py pyproject.toml tests/test_base_import.py tests/test_fastapi_integration.py docs/fie_rebuild_2026 && git commit -m "fie: load the FastAPI integration lazily so a base install imports (WP-021 phase 1)"
+```
