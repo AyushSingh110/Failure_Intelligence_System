@@ -1,0 +1,771 @@
+{
+ "cleanup": {
+  "kept_on_request": false,
+  "targets": {
+   "T-base": {
+    "kept_on_request": false,
+    "removed": true
+   },
+   "T-fastapi": {
+    "kept_on_request": false,
+    "removed": true
+   }
+  },
+  "work_directory_removed": true
+ },
+ "commands": [
+  {
+   "command": "<BASE_PYTHON>\\python.exe -m venv <WORK>\\T-base\\env",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-base/00_create_venv",
+   "seconds": 44.14,
+   "started_utc": "2026-10-12T16:28:50Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -X utf8 -m pip list --format=json --disable-pip-version-check",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-base/01_preinstall_list",
+   "seconds": 0.89,
+   "started_utc": "2026-10-12T16:29:34Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -c import sys;print(sys.version.split()[0])",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-base/02_interpreter",
+   "seconds": 0.07,
+   "started_utc": "2026-10-12T16:29:35Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -m pip install --isolated --disable-pip-version-check --no-cache-dir --no-index --find-links <WHEELHOUSE1> --find-links <WHEELHOUSE2> <WHEEL_DIR>\\fie_sdk-1.18.0-py3-none-any.whl",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-base/10_AC1_install",
+   "seconds": 7.93,
+   "started_utc": "2026-10-12T16:29:35Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -m pip check --disable-pip-version-check",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-base/11_AC2_pip_check",
+   "seconds": 1.47,
+   "started_utc": "2026-10-12T16:29:43Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -X utf8 -m pip inspect --disable-pip-version-check",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-base/12_AC3_pip_inspect",
+   "seconds": 1.57,
+   "started_utc": "2026-10-12T16:29:44Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -c \nimport json, os, sys\nout = {\"cwd\": os.getcwd(), \"prefix\": sys.prefix, \"isolated\": bool(sys.flags.isolated)}\ntry:\n    import fie\nexcept BaseException as exc:\n    out.update({\"import_ok\": False, \"exception\": type(exc).__name__,\n                \"missing_module\": getattr(exc, \"name\", None) if isinstance(exc, ModuleNotFoundError) else None,\n                \"message\": str(exc)})\n    print(\"RELEASE_CHECK_JSON \" + json.dumps(out))\n    raise\nfie_file = os.path.normcase(os.path.realpath(fie.__file__))\nout.update({\"import_ok\": True, \"fie_file\": fie.__file__, \"fie_version\": getattr(fie, \"__version__\", None),\n            \"fie_under_prefix\": fie_file.startswith(os.path.normcase(os.path.realpath(sys.prefix))),\n            \"fie_in_site_packages\": \"site-packages\" in fie_file,\n            \"optional_modules_imported\": sorted(m for m in ['starlette', 'fastapi', 'anyio', 'openai', 'anthropic', 'joblib', 'sklearn', 'xgboost', 'onnxruntime'] if m in sys.modules),\n            \"all_names\": list(getattr(fie, \"__all__\", [])), \"unresolved_names\": []})\nfor name in out[\"all_names\"]:\n    try:\n        getattr(fie, name)\n    except BaseException as exc:\n        out[\"unresolved_names\"].append([name, type(exc).__name__])\nprint(\"RELEASE_CHECK_JSON \" + json.dumps(out))\n",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 1,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "T-base/20_AC5_import",
+   "seconds": 0.86,
+   "started_utc": "2026-10-12T16:29:46Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -m fie --help",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 1,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "T-base/21_AC7_cli_help",
+   "seconds": 0.68,
+   "started_utc": "2026-10-12T16:29:47Z"
+  },
+  {
+   "command": "<WORK>\\T-base\\env\\Scripts\\python.exe -I -m fie detect What is the capital of France? --output json",
+   "cwd": "<WORK>\\T-base\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 1,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "T-base/22_AC7_cli_detect",
+   "seconds": 0.7,
+   "started_utc": "2026-10-12T16:29:48Z"
+  },
+  {
+   "command": "<BASE_PYTHON>\\python.exe -m venv <WORK>\\T-fastapi\\env",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-fastapi/00_create_venv",
+   "seconds": 30.01,
+   "started_utc": "2026-10-12T16:29:50Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -X utf8 -m pip list --format=json --disable-pip-version-check",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-fastapi/01_preinstall_list",
+   "seconds": 0.88,
+   "started_utc": "2026-10-12T16:30:20Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -c import sys;print(sys.version.split()[0])",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-fastapi/02_interpreter",
+   "seconds": 0.08,
+   "started_utc": "2026-10-12T16:30:21Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -m pip install --isolated --disable-pip-version-check --no-cache-dir --no-index --find-links <WHEELHOUSE1> --find-links <WHEELHOUSE2> <WHEEL_DIR>\\fie_sdk-1.18.0-py3-none-any.whl[fastapi]",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-fastapi/10_AC1_install",
+   "seconds": 7.58,
+   "started_utc": "2026-10-12T16:30:21Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -m pip check --disable-pip-version-check",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-fastapi/11_AC2_pip_check",
+   "seconds": 1.14,
+   "started_utc": "2026-10-12T16:30:29Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -X utf8 -m pip inspect --disable-pip-version-check",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 0,
+   "fie_controls": {},
+   "label": "T-fastapi/12_AC3_pip_inspect",
+   "seconds": 1.26,
+   "started_utc": "2026-10-12T16:30:30Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -c \nimport json, os, sys\nout = {\"cwd\": os.getcwd(), \"prefix\": sys.prefix, \"isolated\": bool(sys.flags.isolated)}\ntry:\n    import fie\nexcept BaseException as exc:\n    out.update({\"import_ok\": False, \"exception\": type(exc).__name__,\n                \"missing_module\": getattr(exc, \"name\", None) if isinstance(exc, ModuleNotFoundError) else None,\n                \"message\": str(exc)})\n    print(\"RELEASE_CHECK_JSON \" + json.dumps(out))\n    raise\nfie_file = os.path.normcase(os.path.realpath(fie.__file__))\nout.update({\"import_ok\": True, \"fie_file\": fie.__file__, \"fie_version\": getattr(fie, \"__version__\", None),\n            \"fie_under_prefix\": fie_file.startswith(os.path.normcase(os.path.realpath(sys.prefix))),\n            \"fie_in_site_packages\": \"site-packages\" in fie_file,\n            \"optional_modules_imported\": sorted(m for m in ['starlette', 'fastapi', 'anyio', 'openai', 'anthropic', 'joblib', 'sklearn', 'xgboost', 'onnxruntime'] if m in sys.modules),\n            \"all_names\": list(getattr(fie, \"__all__\", [])), \"unresolved_names\": []})\nfor name in out[\"all_names\"]:\n    try:\n        getattr(fie, name)\n    except BaseException as exc:\n        out[\"unresolved_names\"].append([name, type(exc).__name__])\nprint(\"RELEASE_CHECK_JSON \" + json.dumps(out))\n",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 1,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "T-fastapi/20_AC5_import",
+   "seconds": 0.91,
+   "started_utc": "2026-10-12T16:30:31Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -m fie --help",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 1,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "T-fastapi/21_AC7_cli_help",
+   "seconds": 0.83,
+   "started_utc": "2026-10-12T16:30:32Z"
+  },
+  {
+   "command": "<WORK>\\T-fastapi\\env\\Scripts\\python.exe -I -m fie detect What is the capital of France? --output json",
+   "cwd": "<WORK>\\T-fastapi\\empty",
+   "environment_variables": [
+    "APPDATA",
+    "COMSPEC",
+    "FIE_NO_AUTO_DOWNLOAD",
+    "FIE_NO_TELEMETRY",
+    "HOME",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PIP_CONFIG_FILE",
+    "PYTHONNOUSERSITE",
+    "SystemDrive",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "USERPROFILE",
+    "windir"
+   ],
+   "exit_code": 1,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "label": "T-fastapi/22_AC7_cli_detect",
+   "seconds": 0.95,
+   "started_utc": "2026-10-12T16:30:33Z"
+  }
+ ],
+ "dependency_source": "2 local wheelhouse(s) only (--no-index)",
+ "exit_code": 1,
+ "fie_controls": {
+  "FIE_NO_AUTO_DOWNLOAD": "1",
+  "FIE_NO_TELEMETRY": "1"
+ },
+ "finished_utc": "2026-10-12T16:30:36Z",
+ "host_python": "3.10.19",
+ "not_implemented": [
+  "AC-9 (repository test)",
+  "Level 4: AC-13 to AC-18",
+  "Level 5: AC-19, AC-20",
+  "release hygiene: AC-21 to AC-24"
+ ],
+ "note": "A pass is about installation, import and the integration's two fixed requests. It is not evidence of detection quality and not a security review.",
+ "platform": "win32",
+ "scope": "PLAN_021 section 5.2: Level 1 (AC-1 to AC-4), Level 2 (AC-5 to AC-8), Level 3 (AC-10 to AC-12)",
+ "started_utc": "2026-10-12T16:28:50Z",
+ "target_exit_codes": {
+  "T-base": 1,
+  "T-fastapi": 1
+ },
+ "targets": {
+  "T-base": {
+   "criteria": {
+    "AC-1 wheel installs": {
+     "detail": "pip install exited 0",
+     "exit_code": 0,
+     "status": "PASS"
+    },
+    "AC-10 FastAPI request without the extra fails clearly": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "AC-12 SDK wrappers import without their SDKs": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "AC-2 pip check": {
+     "detail": "No broken requirements found.",
+     "exit_code": 0,
+     "status": "PASS"
+    },
+    "AC-3 installed set equals declared": {
+     "detail": "installed set equals the declared closure",
+     "distributions": {
+      "beautifulsoup4": "4.15.0",
+      "certifi": "2026.7.22",
+      "charset-normalizer": "3.5.2",
+      "deep-translator": "1.11.4",
+      "fie-sdk": "1.18.0",
+      "idna": "3.20",
+      "langdetect": "1.0.9",
+      "pip": "23.0.1",
+      "requests": "2.34.2",
+      "setuptools": "79.0.1",
+      "six": "1.17.0",
+      "soupsieve": "2.10",
+      "typing-extensions": "4.16.0",
+      "urllib3": "2.8.0"
+     },
+     "exit_code": 0,
+     "missing": [],
+     "status": "PASS",
+     "undeclared": []
+    },
+    "AC-4 installed files equal the wheel": {
+     "detail": "37 files compared, 0 differ",
+     "files_checked": 37,
+     "files_differing": [],
+     "status": "PASS"
+    },
+    "AC-5 import fie": {
+     "detail": "import fie raised ModuleNotFoundError: missing module 'starlette'",
+     "exception": "ModuleNotFoundError",
+     "exit_code": 1,
+     "message": "No module named 'starlette'",
+     "missing_module": "starlette",
+     "status": "FAIL"
+    },
+    "AC-6 every name in fie.__all__ resolves": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "AC-7 command line starts": {
+     "detail": "command line failed: ModuleNotFoundError: No module named 'starlette'",
+     "detect_exit_code": 1,
+     "detect_stdout_is_json": false,
+     "help_exit_code": 1,
+     "status": "FAIL"
+    },
+    "AC-8 no optional package imported by import fie": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "T-base: starlette and fastapi not installed": {
+     "detail": "neither starlette nor fastapi is installed",
+     "installed": [],
+     "status": "PASS"
+    }
+   },
+   "environment": {
+    "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+    "preinstalled": {
+     "pip": "23.0.1",
+     "setuptools": "79.0.1"
+    },
+    "python": "3.10.19"
+   },
+   "environment_directory": "<WORK>\\T-base\\env",
+   "exit_code": 1,
+   "import": {
+    "exception": "ModuleNotFoundError",
+    "fie_in_site_packages": null,
+    "fie_under_prefix": null,
+    "fie_version": null,
+    "import_ok": false,
+    "isolated": true,
+    "message": "No module named 'starlette'",
+    "missing_module": "starlette"
+   },
+   "requirement": "fie_sdk-1.18.0-py3-none-any.whl",
+   "target": "T-base",
+   "verdict": "FAILED: AC-5 import fie, AC-7 command line starts; not evaluated: AC-10 FastAPI request without the extra fails clearly, AC-12 SDK wrappers import without their SDKs, AC-6 every name in fie.__all__ resolves, AC-8 no optional package imported by import fie"
+  },
+  "T-fastapi": {
+   "criteria": {
+    "AC-1 wheel installs": {
+     "detail": "the wheel does not provide the extra 'fastapi'",
+     "exit_code": 0,
+     "status": "FAIL"
+    },
+    "AC-11 FastAPI integration imports with the extra": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "AC-11 middleware blocks an injection, passes a benign request": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "AC-2 pip check": {
+     "detail": "No broken requirements found.",
+     "exit_code": 0,
+     "status": "PASS"
+    },
+    "AC-3 installed set equals declared": {
+     "detail": "installed set equals the declared closure",
+     "distributions": {
+      "beautifulsoup4": "4.15.0",
+      "certifi": "2026.7.22",
+      "charset-normalizer": "3.5.2",
+      "deep-translator": "1.11.4",
+      "fie-sdk": "1.18.0",
+      "idna": "3.20",
+      "langdetect": "1.0.9",
+      "pip": "23.0.1",
+      "requests": "2.34.2",
+      "setuptools": "79.0.1",
+      "six": "1.17.0",
+      "soupsieve": "2.10",
+      "typing-extensions": "4.16.0",
+      "urllib3": "2.8.0"
+     },
+     "exit_code": 0,
+     "missing": [],
+     "status": "PASS",
+     "undeclared": []
+    },
+    "AC-4 installed files equal the wheel": {
+     "detail": "37 files compared, 0 differ",
+     "files_checked": 37,
+     "files_differing": [],
+     "status": "PASS"
+    },
+    "AC-5 import fie": {
+     "detail": "import fie raised ModuleNotFoundError: missing module 'starlette'",
+     "exception": "ModuleNotFoundError",
+     "exit_code": 1,
+     "message": "No module named 'starlette'",
+     "missing_module": "starlette",
+     "status": "FAIL"
+    },
+    "AC-6 every name in fie.__all__ resolves": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    },
+    "AC-7 command line starts": {
+     "detail": "command line failed: ModuleNotFoundError: No module named 'starlette'",
+     "detect_exit_code": 1,
+     "detect_stdout_is_json": false,
+     "help_exit_code": 1,
+     "status": "FAIL"
+    },
+    "AC-8 no optional package imported by import fie": {
+     "detail": "import fie did not complete, so this could not be evaluated",
+     "status": "NOT_EVALUATED"
+    }
+   },
+   "environment": {
+    "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+    "preinstalled": {
+     "pip": "23.0.1",
+     "setuptools": "79.0.1"
+    },
+    "python": "3.10.19"
+   },
+   "environment_directory": "<WORK>\\T-fastapi\\env",
+   "exit_code": 1,
+   "import": {
+    "exception": "ModuleNotFoundError",
+    "fie_in_site_packages": null,
+    "fie_under_prefix": null,
+    "fie_version": null,
+    "import_ok": false,
+    "isolated": true,
+    "message": "No module named 'starlette'",
+    "missing_module": "starlette"
+   },
+   "requirement": "fie_sdk-1.18.0-py3-none-any.whl[fastapi]",
+   "target": "T-fastapi",
+   "verdict": "FAILED: AC-1 wheel installs, AC-5 import fie, AC-7 command line starts; not evaluated: AC-11 FastAPI integration imports with the extra, AC-11 middleware blocks an injection, passes a benign request, AC-6 every name in fie.__all__ resolves, AC-8 no optional package imported by import fie"
+  }
+ },
+ "targets_requested": [
+  "T-base",
+  "T-fastapi"
+ ],
+ "tool": "scripts/release_check.py",
+ "verdict": "T-base: FAILED: AC-5 import fie, AC-7 command line starts; not evaluated: AC-10 FastAPI request without the extra fails clearly, AC-12 SDK wrappers import without their SDKs, AC-6 every name in fie.__all__ resolves, AC-8 no optional package imported by import fie; T-fastapi: FAILED: AC-1 wheel installs, AC-5 import fie, AC-7 command line starts; not evaluated: AC-11 FastAPI integration imports with the extra, AC-11 middleware blocks an injection, passes a benign request, AC-6 every name in fie.__all__ resolves, AC-8 no optional package imported by import fie",
+ "wheel": {
+  "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+  "files": 42,
+  "name": "fie-sdk",
+  "provides_extra": [
+   "all",
+   "anthropic",
+   "dev",
+   "lite",
+   "ml",
+   "openai",
+   "server",
+   "torch"
+  ],
+  "requires_dist_base": [
+   "deep-translator>=1.11.4",
+   "langdetect>=1.0.9",
+   "requests>=2.28.0"
+  ],
+  "requires_dist_fastapi": [],
+  "sha256": "cfdf18598463f36956e5b765b3209ed05a20f20b7385297a3b3586e9dceaf4e4",
+  "size": 151936,
+  "version": "1.18.0"
+ },
+ "work_directory": "<WORK>",
+ "working_directory_for_checks": "an empty directory outside the repository"
+}

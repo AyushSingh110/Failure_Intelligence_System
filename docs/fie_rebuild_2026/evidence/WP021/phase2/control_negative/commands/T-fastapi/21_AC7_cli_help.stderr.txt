@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "<BASE_PYTHON>\lib\runpy.py", line 187, in _run_module_as_main
+    mod_name, mod_spec, code = _get_module_details(mod_name, _Error)
+  File "<BASE_PYTHON>\lib\runpy.py", line 146, in _get_module_details
+    return _get_module_details(pkg_main_name, error)
+  File "<BASE_PYTHON>\lib\runpy.py", line 110, in _get_module_details
+    __import__(pkg_name)
+  File "<WORK>\T-fastapi\env\lib\site-packages\fie\__init__.py", line 12, in <module>
+    from fie import integrations
+  File "<WORK>\T-fastapi\env\lib\site-packages\fie\integrations\__init__.py", line 25, in <module>
+    from fie.integrations import openai, anthropic, fastapi
+  File "<WORK>\T-fastapi\env\lib\site-packages\fie\integrations\fastapi.py", line 28, in <module>
+    from starlette.middleware.base import BaseHTTPMiddleware
+ModuleNotFoundError: No module named 'starlette'

@@ -1160,3 +1160,55 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add -f scripts/release_check.py && git add fie/integrations/__init__.py fie/integrations/fastapi.py pyproject.toml tests/test_base_import.py tests/test_fastapi_integration.py docs/fie_rebuild_2026 && git commit -m "fie: load the FastAPI integration lazily so a base install imports (WP-021 phase 1)"
 ```
+
+### 14.3 Phase 2 (2026-10-12): the release gate in CI
+
+Detail and evidence:
+[EXECUTION_021_phase2-ci-release-gate.md](EXECUTION_REPORTS/EXECUTION_021_phase2-ci-release-gate.md),
+`evidence/WP021/phase2/`.
+
+- **Phase 1 after commit:** the owner committed Phase 1 as `0fa17a9` and the release-check
+  script as `630e75f` (it had been left out by the ignore rule `scripts/*`). At that state the
+  WP-004 guard test passes, 974 tests pass and `python -m evals baseline` is byte-identical to
+  `BL-0002`.
+- **Changed:** `scripts/release_check.py` (two targets, Level 3 criteria, per-target exit
+  codes, POSIX handling); `.github/workflows/ci.yml` (`package` job runs the gate on the wheel
+  it built and uploads the report); new `tests/test_release_check.py` (23 tests).
+- **The gate.** T-base: the wheel alone installs, imports, starts its CLI, has neither
+  Starlette nor FastAPI installed or imported, and an explicit FastAPI request fails by name.
+  T-fastapi: the wheel with `[fastapi]` imports the middleware from the installed copy, which
+  answers a known injection with the documented 400 and passes a benign request. One
+  environment at a time; `NOT_EVALUATED` and `TOOL_FAILED` are never a pass.
+- **Controls, local, Windows.** Wheel from `630e75f` (`eb251ccb…14b3e37d`): exit 0, both
+  targets pass. Wheel from `becc2c7` (`cfdf1859…dceaf4e4`, byte-identical to the Phase 0
+  wheel): exit 1, `import fie` fails in both targets with `ModuleNotFoundError: No module named
+  'starlette'`.
+- Regression after the change: 997 tests pass; baseline exit 0, byte-identical to `BL-0002`.
+  `CANONICAL` unchanged.
+
+**Not established.**
+
+- **The workflow change has not run on a CI runner.** CI triggers on `main` only and nothing
+  was pushed. The plan's condition "the CI job fails on a broken branch and passes on the fix"
+  is met locally only. The script's POSIX path is untested.
+- Detection quality, on any artifact.
+- Cross-platform build identity: this checkout exports CRLF, a Linux build would have LF.
+
+**Security findings recorded, not fixed** (execution report, section J):
+
+- SF-1: `FIEMiddleware` forwards the request when the scan itself raises.
+- SF-2: `FIEMiddleware` calls `scan_prompt` directly; the WP-004 runtime policy, coverage and
+  zone do not apply to it.
+- SF-3: it inspects only POST/PUT/PATCH JSON bodies with recognised fields on non-exempt paths.
+
+A passing release gate does not cover these and is not a statement that the integration is
+safe to rely on in production.
+
+**Open:** the first CI run; Phases 3 to 5 not authorized; W21-4 to W21-14 undecided; the
+remaining E51 `[ml]` cells unrun.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add scripts/release_check.py .github/workflows/ci.yml tests/test_release_check.py docs/fie_rebuild_2026 && git commit -m "ci: run the installed-wheel release gate on T-base and T-fastapi (WP-021 phase 2)"
+```

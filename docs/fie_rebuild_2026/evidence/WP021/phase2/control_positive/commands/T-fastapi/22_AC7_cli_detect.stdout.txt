@@ -1,0 +1,79 @@
+{
+  "is_attack": false,
+  "attack_type": null,
+  "category": null,
+  "confidence": 0.0,
+  "layers_fired": [],
+  "matched_text": null,
+  "mitigation": "",
+  "evidence": {},
+  "zone": "allow",
+  "decided_by": "pipeline",
+  "coverage": {
+    "status": "partial",
+    "layers": {
+      "regex": "ok",
+      "prompt_guard": "ok",
+      "many_shot": "ok",
+      "indirect_injection": "ok",
+      "gcg_suffix": "ok",
+      "perplexity_proxy": "ok",
+      "pair_classifier": "unavailable_dependency",
+      "direct_harm": "ok",
+      "virtualization": "ok",
+      "fiction_harm": "ok",
+      "multilingual": "ok",
+      "copyright": "ok"
+    },
+    "classifier": "unavailable_dependency",
+    "optional": {
+      "meta_classifier": "unavailable",
+      "tiebreaker": "not_needed",
+      "translation": "not_needed"
+    }
+  },
+  "models": {
+    "pair_classifier": {
+      "loaded": false,
+      "version": null,
+      "digest": null,
+      "threshold": null,
+      "backend": null
+    },
+    "meta_classifier": {
+      "loaded": false,
+      "version": null,
+      "digest": null,
+      "threshold": null,
+      "backend": null
+    },
+    "encoder": {
+      "loaded": false,
+      "version": null,
+      "digest": null,
+      "threshold": null,
+      "backend": null
+    }
+  },
+  "degraded_layers": [
+    "pair_classifier"
+  ],
+  "schema_version": 2,
+  "policy": {
+    "action": "allow",
+    "blocked": false,
+    "reasons": [
+      "missing_required_layer",
+      "detector_allow"
+    ],
+    "policy": "compat@1",
+    "policy_digest": "989f7491",
+    "detector_is_attack": false,
+    "zone": "allow",
+    "coverage_status": "partial",
+    "missing_required": [
+      "pair_classifier"
+    ],
+    "schema_version": 1
+  }
+}
