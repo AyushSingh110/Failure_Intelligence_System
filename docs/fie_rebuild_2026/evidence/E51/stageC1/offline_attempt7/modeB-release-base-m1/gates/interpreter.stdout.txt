@@ -1,0 +1,2 @@
+3.10.19
+<HOME>\fie-e51-scratch\env\modeB-release-base-m1

@@ -1,0 +1,38 @@
+{
+ "artifact": "A-pypi-1.18.0",
+ "artifact_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+ "base_executable": "python.exe",
+ "cell": "modeA-pypi-base-r3",
+ "encoder_variant": "as_installed",
+ "env_overrides": {
+  "FIE_FEEDBACK_PATH": "<HOME>\\fie-e51-scratch\\home\\modeA-pypi-base-r3\\PC-run1\\pc_feedback.jsonl",
+  "FIE_NO_AUTO_DOWNLOAD": "1",
+  "FIE_NO_TELEMETRY": "1",
+  "HF_HUB_OFFLINE": "1",
+  "TRANSFORMERS_OFFLINE": "1"
+ },
+ "experiment": "E51",
+ "extra": "base",
+ "in_process_changes": [],
+ "inputs": 1848,
+ "inputs_sha256": "d19a56071f5b7263120cd188f203e6f73166b9de58d2d8027ca1769e1d7a2eb1",
+ "install_mode": "A-source-build",
+ "installer": "pip 23.0.1 bundled with the venv",
+ "instrumentation": [
+  "socket_recorder",
+  "pickle_tripwire",
+  "process_recorder"
+ ],
+ "isolated_flag": true,
+ "isolation": "owner_network_off",
+ "langdetect_origin": "built by pip from the PyPI source archive",
+ "mode": "PC",
+ "observations": [],
+ "prearmed": [
+  "platform.uname"
+ ],
+ "python": "3.10.19",
+ "run": 1,
+ "stage": "C1",
+ "sys_executable": "<ENV>/Scripts/python.exe"
+}

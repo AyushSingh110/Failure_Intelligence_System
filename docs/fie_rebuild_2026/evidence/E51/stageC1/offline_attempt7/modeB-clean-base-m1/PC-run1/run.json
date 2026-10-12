@@ -1,0 +1,24 @@
+{
+ "classification": {
+  "exception": "ModuleNotFoundError",
+  "exception_message": "No module named 'starlette'",
+  "exit": 3,
+  "import_completed": false,
+  "missing_module": "starlette",
+  "scan_records": 0,
+  "status": "import_blocked"
+ },
+ "egress_attempts_python_level": null,
+ "errors": null,
+ "exit": 3,
+ "files_left_in_home": [
+  "header.json (383 bytes)"
+ ],
+ "flagged": null,
+ "records": null,
+ "records_sha256": null,
+ "seconds": 0.49,
+ "stderr_lines": 10,
+ "stderr_tail": "Traceback (most recent call last):\n  File \"<HOME>\\Desktop\\Failure_Intelligence_System\\docs\\fie_rebuild_2026\\experiments\\E51\\probe.py\", line 249, in main\n    import fie\n  File \"<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\lib\\site-packages\\fie\\__init__.py\", line 12, in <module>\n    from fie import integrations\n  File \"<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\lib\\site-packages\\fie\\integrations\\__init__.py\", line 25, in <module>\n    from fie.integrations import openai, anthropic, fastapi\n  File \"<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\lib\\site-packages\\fie\\integrations\\fastapi.py\", line 28, in <module>\n    from starlette.middleware.base import BaseHTTPMiddleware\nModuleNotFoundError: No module named 'starlette'\n",
+ "unverified_model_opened": null
+}

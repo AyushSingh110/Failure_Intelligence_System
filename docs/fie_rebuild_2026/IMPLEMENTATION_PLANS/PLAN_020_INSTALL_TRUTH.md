@@ -1,7 +1,7 @@
 # PLAN_020 — Clean-Environment Installation Truth (experiment E51)
 
 > **PROPOSED — EXECUTED IN OWNER-AUTHORIZED STAGES ONLY.**
-> Revision 5. This is a plan for a measurement. Stage A (read-only preflight) and Stage B
+> Revision 6. This is a plan for a measurement. Stage A (read-only preflight) and Stage B
 > (release and provisioning checks, with one remediation) have been carried out under separate
 > owner authorizations and are summarised in §0.1. **Stage C1 (base cells only) is authorized
 > and its execution instructions are §0.2. Nothing beyond Stage C1 is authorized**: no `[ml]`
@@ -823,6 +823,33 @@ handling is the same pip mechanism on the same `langdetect` requirement.
 
 ### 7.3 Command outline
 
+> **Superseded for execution (revision 6).** The outline below is the original design: a
+> private interpreter copy (`$X/py310`) and per-program firewall rules applied by elevated
+> owner scripts (`e51_block.ps1`, `e51_unblock.ps1`). **Neither is used.** By owner decision
+> (§0.1, §0.2) the experiment runs on the existing Python 3.10.19 interpreter, with airplane
+> mode switched on and off by the owner by hand, and no script changes a network setting. Steps
+> 0 to 2 below still describe the provisioning and builds. Steps 3 to 6 are replaced by the
+> outline that follows. The original text is kept as the record of the design that was
+> considered.
+>
+> ```text
+> # As executed (Stage C1). $X = C:\Users\ASUS\fie-e51-scratch. Runnable form: experiments/E51/README.md
+> # CONNECTED
+> python prepare_c1.py          # resolve = approved pins; verify; build; inspect; create EMPTY venvs of the
+>                               # existing interpreter; positive TCP control through every launcher + base
+> python offline_runner.py --selftest                      # read-only
+> # OFFLINE  (owner switches airplane mode ON by hand; the runner verifies, never sets)
+> python -I -B offline_runner.py [--plan <plan>] [--cells …]
+>     negative TCP control through every launcher + base interpreter; adapters; usable routes
+>     per cell: pip install --no-index --require-hashes …      (mode A: bundled pip, --no-binary langdetect)
+>               gates: interpreter, python -I -X utf8 -m pip inspect, pip check, imports, start-up code,
+>                      installed fie vs wheel, model files vs manifest
+>               probe.py --mode S / --mode PC, twice each; cli_guard.py
+>     langdetect file hashes (C9); closing negative controls
+> # CONNECTED AGAIN  (owner switches airplane mode OFF by hand; the runner verifies recovery)
+> compare, report; python -m evals baseline                # still exit 0
+> ```
+
 `$X` is the scratch directory. Steps marked **[owner, elevated]** are run by the owner.
 
 ```text
@@ -1254,6 +1281,7 @@ be byte-reproducible. The matrix's duration is unknown.
 | 3 | **DNS**: the claim that a lookup can expose only a host name was wrong and is removed; DNS is described as an open, data-capable channel that native code can use without passing the Python instrumentation; reduced consequence (public inputs, no credentials) is distinguished from a guarantee; network-off is named the preferred form for the A-pypi cells, unverified models and `fie.exe` (O-18). **Executables**: a full executable inventory with one rule per path; positive and negative controls run through every cell's launcher and the base interpreter, reading the true process image; no cell inherits another path's result; console-script launchers are not run under the firewall design; UDP verification limited to the firewall log. **Provisioning**: inherited pip configuration, indexes, mirrors, caches and proxies recorded and neutralized; one explicit index on every command; resolve, pin by hash, download with hashes required; hosts and digests verified independently; stop conditions including a system proxy (O-19). Evidence schema, criteria (P4, P4b, AC-10, AC-10b, AC-10c), stop conditions and feasibility list (F3, F4, F8 to F11) updated |
 | 4 | Written after Stages A and B. **Record** of what was executed and of owner decisions that supersede earlier text (§0.1): airplane-mode isolation for the whole measure phase, no private interpreter, scratch directory, per-set `[ml]` approval, the `langdetect` exception. **Installation modes** (§6.4): mode A, the source-build path, proposed with its commands, its eight items of required evidence and its open feasibility points; mode B, the pre-built local wheel, with what it can and cannot support; recommendation of one mode A cell plus the mode B matrix, tied by comparison C9. **Dependency gates** G0 to G8 (§7.5), including that a dry run is not proof of installation. **Sequential environments** and disk estimate (§7.6). New finding E-16, hypotheses H10 and H11, RQ14, criteria P10 to P13, AC-18 to AC-22, decisions O-20 to O-24 |
 | 5 | Stage C1 execution instructions only (§0.2, one note in §7.6): existing interpreter, owner-switched airplane mode, all base-cell launchers created before the offline window with a positive control through each and negative controls at the start and end, and the boundary between connected provisioning and offline measurement. No change to hypotheses, matrix, criteria or modes. `[ml]` remains unapproved |
+| 6 | Documentation correction only, after offline attempt 4. §7.3: the private-interpreter and firewall command outline is marked superseded for execution and the as-executed outline (existing interpreter, owner-switched airplane mode, `pip inspect` in UTF-8 mode) is placed above it; the original outline is kept. No change to hypotheses, matrix, modes, gates or criteria; G7 is unchanged. Gate-failure categories and the mode A retry procedure are in `experiments/E51/README.md` |
 
 ---
 

@@ -1,0 +1,76 @@
+{
+ "PC-run1": {
+  "classification": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": "No module named 'starlette'",
+   "exit": 3,
+   "import_completed": false,
+   "missing_module": "starlette",
+   "scan_records": 0,
+   "status": "import_blocked"
+  },
+  "egress_attempts_python_level": null,
+  "errors": null,
+  "exit": 3,
+  "files_left_in_home": [
+   "header.json (388 bytes)"
+  ],
+  "flagged": null,
+  "records": null,
+  "records_sha256": null,
+  "seconds": 0.47,
+  "stderr_lines": 10,
+  "unverified_model_opened": null
+ },
+ "PC_repeat_identical": null,
+ "S-run1": {
+  "classification": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": "No module named 'starlette'",
+   "exit": 3,
+   "import_completed": false,
+   "missing_module": "starlette",
+   "scan_records": 0,
+   "status": "import_blocked"
+  },
+  "egress_attempts_python_level": null,
+  "errors": null,
+  "exit": 3,
+  "files_left_in_home": [
+   "header.json (388 bytes)"
+  ],
+  "flagged": null,
+  "records": null,
+  "records_sha256": null,
+  "seconds": 0.52,
+  "stderr_lines": 10,
+  "unverified_model_opened": null
+ },
+ "S_repeat_identical": null,
+ "outcome": {
+  "cli_exit_codes": {
+   "cli-detect-benign_capital": 1,
+   "cli-detect-injection": 1,
+   "cli-explain-benign_capital": 1,
+   "cli-explain-injection": 1
+  },
+  "import_error": {
+   "exception": "ModuleNotFoundError",
+   "exception_message": "No module named 'starlette'",
+   "missing_module": "starlette"
+  },
+  "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+  "runs_completed": [],
+  "runs_expected": [
+   "S-run1",
+   "S-run2",
+   "PC-run1",
+   "PC-run2"
+  ],
+  "runs_import_blocked": [
+   "S-run1",
+   "PC-run1"
+  ],
+  "scan_records_total": 0
+ }
+}

@@ -1,0 +1,36 @@
+{
+ "artifact": "A-pypi-1.18.0",
+ "artifact_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+ "base_executable": "python.exe",
+ "cell": "modeA-pypi-base-r3",
+ "cwd_is_repo": false,
+ "encoder_variant": "as_installed",
+ "env_overrides": {},
+ "exception": "ModuleNotFoundError",
+ "experiment": "E51",
+ "extra": "base",
+ "import_ok": false,
+ "import_s": 0.312,
+ "in_process_changes": [],
+ "inputs": 48,
+ "inputs_sha256": "f6bd1c759cf28da664377a69d8d044f667317a0ffb6f6701d953bed860fd0abb",
+ "install_mode": "A-source-build",
+ "installer": "pip 23.0.1 bundled with the venv",
+ "instrumentation": [
+  "socket_recorder",
+  "pickle_tripwire",
+  "process_recorder"
+ ],
+ "isolated_flag": true,
+ "isolation": "owner_network_off",
+ "langdetect_origin": "built by pip from the PyPI source archive",
+ "mode": "S",
+ "prearmed": [
+  "platform.uname"
+ ],
+ "python": "3.10.19",
+ "repo_on_sys_path": false,
+ "run": 1,
+ "stage": "C1",
+ "sys_executable": "<ENV>/Scripts/python.exe"
+}

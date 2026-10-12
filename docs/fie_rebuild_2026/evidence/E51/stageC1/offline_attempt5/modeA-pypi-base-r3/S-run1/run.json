@@ -1,0 +1,15 @@
+{
+ "egress_attempts_python_level": null,
+ "errors": null,
+ "exit": 3,
+ "files_left_in_home": [
+  "header.json (393 bytes)"
+ ],
+ "flagged": null,
+ "records": null,
+ "records_sha256": null,
+ "seconds": 0.59,
+ "stderr_lines": 0,
+ "stderr_tail": "",
+ "unverified_model_opened": null
+}

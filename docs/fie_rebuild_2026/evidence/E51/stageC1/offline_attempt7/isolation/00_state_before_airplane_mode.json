@@ -1,0 +1,83 @@
+{
+ "all_adapters": [
+  {
+   "InterfaceDescription": "Bluetooth Device (Personal Area Network)",
+   "MediaConnectionState": 2,
+   "Name": "Bluetooth Network Connection",
+   "Status": "Disconnected"
+  },
+  {
+   "InterfaceDescription": "Intel(R) Wi-Fi 6E AX211 160MHz",
+   "MediaConnectionState": 1,
+   "Name": "Wi-Fi",
+   "Status": "Up"
+  }
+ ],
+ "default_route_count": 1,
+ "default_routes": [
+  {
+   "DestinationPrefix": "0.0.0.0/0",
+   "InterfaceAlias": "Wi-Fi",
+   "usable": true
+  }
+ ],
+ "errors": [],
+ "ip_interfaces": [
+  {
+   "ConnectionState": 0,
+   "InterfaceAlias": "Local Area Connection* 2"
+  },
+  {
+   "ConnectionState": 0,
+   "InterfaceAlias": "Local Area Connection* 1"
+  },
+  {
+   "ConnectionState": 1,
+   "InterfaceAlias": "Wi-Fi"
+  },
+  {
+   "ConnectionState": 0,
+   "InterfaceAlias": "Bluetooth Network Connection"
+  },
+  {
+   "ConnectionState": 1,
+   "InterfaceAlias": "Loopback Pseudo-Interface 1"
+  },
+  {
+   "ConnectionState": 0,
+   "InterfaceAlias": "Local Area Connection* 2"
+  },
+  {
+   "ConnectionState": 0,
+   "InterfaceAlias": "Local Area Connection* 1"
+  },
+  {
+   "ConnectionState": 1,
+   "InterfaceAlias": "Wi-Fi"
+  },
+  {
+   "ConnectionState": 0,
+   "InterfaceAlias": "Bluetooth Network Connection"
+  },
+  {
+   "ConnectionState": 1,
+   "InterfaceAlias": "Loopback Pseudo-Interface 1"
+  }
+ ],
+ "offline": false,
+ "physical_adapters": [
+  {
+   "InterfaceDescription": "Intel(R) Wi-Fi 6E AX211 160MHz",
+   "MediaConnectionState": 1,
+   "Name": "Wi-Fi",
+   "Status": "Up"
+  }
+ ],
+ "physical_adapters_up": [
+  "Wi-Fi"
+ ],
+ "readable": true,
+ "stale_default_route_count": 0,
+ "usable_default_route_count": 1,
+ "utc": "2026-10-12T06:07:59Z"
+}

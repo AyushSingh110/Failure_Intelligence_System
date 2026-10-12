@@ -86,11 +86,13 @@ class Evidence:
         root.mkdir(parents=True, exist_ok=False)
         self.progress = root / "progress.jsonl"
 
-    def save(self, rel: str, obj) -> Path:
+    def save(self, rel: str, obj, exclusive: bool = False) -> Path:
+        """exclusive=True refuses to replace an existing file (FileExistsError): gate evidence is written once."""
         path = self.root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         text = obj if isinstance(obj, str) else json.dumps(obj, indent=1, sort_keys=True)
-        path.write_text(redact(text), encoding="utf-8", newline="\n")
+        with open(path, "x" if exclusive else "w", encoding="utf-8", newline="\n") as f:
+            f.write(redact(text))
         return path
 
     def log(self, step: str, message: str, **fields) -> None:
@@ -133,6 +135,8 @@ def run(cmd: list, env: dict | None = None, cwd: Path | None = None, timeout: in
         return p.returncode, p.stdout, p.stderr, round(time.perf_counter() - t0, 2)
     except subprocess.TimeoutExpired as exc:
         return -9, str(exc.stdout or ""), f"TIMEOUT after {timeout}s", round(time.perf_counter() - t0, 2)
+    except OSError as exc:                                     # the command could not be started
+        return -8, "", f"EXECUTION ERROR: {type(exc).__name__}: {exc}", round(time.perf_counter() - t0, 2)
 
 
 def norm(name: str) -> str:
@@ -334,6 +338,169 @@ def langdetect_files(info: dict) -> dict:
             "metadata_directories": sorted({r.split("/")[0] for r in generated if not r.startswith("langdetect/")})}
 
 
+# ── gate classification (pure functions; covered by test_offline_runner.py) ──
+
+NOT_EVALUATED = "not evaluated"
+VERDICT_PASS = "PASS"
+VERDICT_TOOL_FAILED = "verification tool failed"
+VERDICT_NOT_VERIFIED = "installed but not verified"
+
+
+def classify_inspect(exit_code: int, stdout: str, wanted: dict, preexisting: dict) -> dict:
+    """
+    Classify one `pip inspect` run. Exactly one status:
+
+        tool_failed          the command did not exit 0 (includes a timeout or a failure to start)
+        output_unparseable   exit 0, but stdout is empty, is not JSON, or is not a complete report
+        match                parsed; every pin present at its version, nothing extra, nothing pre-existing changed
+        mismatch             parsed; a real difference exists
+
+    The difference lists are computed only from a parsed report. Otherwise they are
+    NOT_EVALUATED: a tool that failed has said nothing about which packages are installed.
+    """
+    blank = {"missing": NOT_EVALUATED, "wrong_version": NOT_EVALUATED,
+             "extra_beyond_pins_and_preexisting": NOT_EVALUATED, "preexisting_changed": NOT_EVALUATED,
+             "installed": NOT_EVALUATED, "distribution_count": NOT_EVALUATED}
+    if exit_code != 0:
+        return {"status": "tool_failed", "exit": exit_code, "parse_error": None, **blank}
+    try:
+        report = json.loads(stdout)
+    except ValueError as exc:
+        return {"status": "output_unparseable", "exit": exit_code,
+                "parse_error": f"{type(exc).__name__}: {str(exc)[:160]}", **blank}
+    entries = report.get("installed") if isinstance(report, dict) else None
+    if not isinstance(entries, list) or not entries:
+        return {"status": "output_unparseable", "exit": exit_code,
+                "parse_error": "no non-empty 'installed' list in the report", **blank}
+    installed = {}
+    for d in entries:
+        meta = d.get("metadata") if isinstance(d, dict) else None
+        if not isinstance(meta, dict) or not meta.get("name") or not meta.get("version"):
+            return {"status": "output_unparseable", "exit": exit_code,
+                    "parse_error": "an 'installed' entry has no metadata name and version", **blank}
+        installed[norm(meta["name"])] = {
+            "version": meta["version"], "installer": d.get("installer"),
+            "metadata_kind": "egg-info" if str(d.get("metadata_location", "")).endswith(".egg-info") else "dist-info",
+            "requested": d.get("requested")}
+    wanted = {norm(k): v for k, v in wanted.items()}
+    preexisting = {norm(k): v for k, v in preexisting.items()}
+    diff = {
+        "missing": sorted(n for n in wanted if n not in installed),
+        "wrong_version": sorted(n for n, v in wanted.items() if n in installed and installed[n]["version"] != v),
+        "extra_beyond_pins_and_preexisting": sorted(n for n in installed if n not in wanted and n not in preexisting),
+        "preexisting_changed": sorted(n for n, v in preexisting.items()
+                                      if n not in wanted and (n not in installed or installed[n]["version"] != v))}
+    return {"status": "mismatch" if any(diff.values()) else "match", "exit": exit_code, "parse_error": None,
+            "installed": installed, "distribution_count": len(installed), **diff}
+
+
+def classify_pip_check(exit_code: int) -> dict:
+    """pip check: 0 = no broken requirements, 1 = broken requirements found, anything else = the tool failed."""
+    status = {0: "pass", 1: "broken_requirements"}.get(exit_code, "tool_failed")
+    return {"status": status, "exit": exit_code}
+
+
+def gate_verdict(inspect_status: str, tool_failures: list, failures: list) -> str:
+    """G7 is unchanged: only a parsed report that matches the pins, with every other gate clean, passes."""
+    if inspect_status == "match" and not tool_failures and not failures:
+        return VERDICT_PASS
+    return VERDICT_TOOL_FAILED if tool_failures else VERDICT_NOT_VERIFIED
+
+
+EXPECTED_RUNS = ("S-run1", "S-run2", "PC-run1", "PC-run2")
+OUTCOME_SCANS = "SCANS_COMPLETED"
+OUTCOME_IMPORT_BLOCKED = "IMPORT_BLOCKED_NO_SCAN_COMPLETED"
+OUTCOME_NO_SCAN = "NO_SCAN_COMPLETED"
+OUTCOME_PARTIAL = "PARTIAL_SCANS_COMPLETED"
+OUTCOME_NOT_MEASURED = "NOT_MEASURED_GATES_NOT_PASSED"
+UNANSWERED_WHEN_IMPORT_BLOCKED = [
+    "RQ4 coverage and self-report", "RQ5 default verdicts", "RQ9 default-mode warnings",
+    "RQ10 / H1 agreement with BL-0002 (comparison C1)", "RQ11 published versus release behaviour (comparison C4)",
+    "H5", "H8 policy actions (comparison C5)", "attempted egress at scan time"]
+
+
+def classify_probe_run(exit_code: int, import_info: dict | None, records) -> dict:
+    """
+    One probe process. `scan_completed` needs exit 0, a completed import and at least one scan
+    record. A run whose import raised is `import_blocked`; it produced no measurement.
+    """
+    info = import_info or {}
+    n = records if isinstance(records, int) else 0
+    if info.get("import_ok") is False or exit_code == 3:
+        status = "import_blocked"
+    elif exit_code == 0 and info.get("import_ok") is True and n > 0:
+        status = "scan_completed"
+    elif exit_code == 0:
+        status = "no_scan_records"
+    else:
+        status = "probe_failed"
+    return {"status": status, "exit": exit_code, "scan_records": n if status == "scan_completed" else 0,
+            "import_completed": info.get("import_ok") is True,
+            "exception": info.get("exception"), "missing_module": info.get("missing_module"),
+            "exception_message": info.get("exception_message")}
+
+
+def classify_cell(run_results: dict) -> dict:
+    """
+    The cell's outcome from its probe runs ({tag: classify_probe_run result}). A cell is
+    SCANS_COMPLETED only when every expected run completed scans. Zero scan records is never
+    a completed measurement, whatever the exit codes were.
+    """
+    total = sum(r["scan_records"] for r in run_results.values())
+    done = [t for t in EXPECTED_RUNS if run_results.get(t, {}).get("status") == "scan_completed"]
+    blocked = [t for t, r in run_results.items() if r["status"] == "import_blocked"]
+    if len(done) == len(EXPECTED_RUNS):
+        outcome = OUTCOME_SCANS
+    elif total == 0:
+        outcome = OUTCOME_IMPORT_BLOCKED if blocked else OUTCOME_NO_SCAN
+    else:
+        outcome = OUTCOME_PARTIAL
+    first = run_results[blocked[0]] if blocked else {}
+    return {"outcome": outcome, "scan_records_total": total, "runs_completed": done,
+            "runs_expected": list(EXPECTED_RUNS), "runs_import_blocked": blocked,
+            "import_error": ({"exception": first.get("exception"), "missing_module": first.get("missing_module"),
+                              "exception_message": first.get("exception_message")} if blocked else None)}
+
+
+def overall_result(stopped: str | None, cell_outcomes: dict, cells_planned: list) -> str:
+    """The runner's last line. COMPLETED is reserved for a run in which every planned cell completed its scans."""
+    if stopped:
+        return "STOPPED - " + stopped
+    missing = [c for c in cells_planned if c not in cell_outcomes]
+    if not missing and cell_outcomes and all(o == OUTCOME_SCANS for o in cell_outcomes.values()):
+        return "COMPLETED - every cell completed its scans"
+    parts = [f"{c}: {o}" for c, o in sorted(cell_outcomes.items())] + [f"{c}: NOT_RUN" for c in missing]
+    return "FINISHED, MEASUREMENT NOT COMPLETE - " + "; ".join(parts)
+
+
+def inspect_command(plan: dict, info: dict) -> list:
+    """
+    `pip inspect` with Python's UTF-8 mode. pip prints package descriptions, which hold characters
+    cp1252 cannot encode; with redirected output the command then dies (attempt 4). -I makes
+    Python ignore PYTHONUTF8, so the mode is given on the command line, which -I does not ignore.
+    """
+    pip = pip_for(plan, info)
+    return [pip[0], "-I", "-X", "utf8", *pip[2:], "inspect", "--disable-pip-version-check"]
+
+
+def gate_run(ev: Evidence, cell: str, gate: str, cmd: list, env: dict | None = None, cwd: Path | None = None,
+             timeout: int = 300) -> tuple:
+    """Run one gate command; write its stdout, stderr and invocation record before anything reads them."""
+    started = now()
+    code, out, err, secs = run(cmd, env=env, cwd=cwd, timeout=timeout)
+    ev.save(f"{cell}/gates/{gate}.stdout.txt", out, exclusive=True)
+    ev.save(f"{cell}/gates/{gate}.stderr.txt", err, exclusive=True)
+    record = {"gate": gate, "command": " ".join(map(str, cmd)), "interpreter": str(cmd[0]), "exit_code": code,
+              "seconds": secs, "started_utc": started, "stdout_chars": len(out), "stderr_chars": len(err)}
+    ev.save(f"{cell}/gates/{gate}.run.json", record, exclusive=True)
+    return code, out, err, record
+
+
+def gate_result(ev: Evidence, cell: str, gate: str, record: dict, outcome: dict) -> None:
+    brief = {k: v for k, v in outcome.items() if k not in ("installed", "modules", "output")}
+    ev.save(f"{cell}/gates/{gate}.result.json", {**record, "classification": brief}, exclusive=True)
+
+
 def install_cell(ev: Evidence, plan: dict, cell: str, info: dict, manifest: dict, scratch: Path) -> dict:
     home = scratch / "home" / cell
     cmd, installer = install_command(plan, info)
@@ -341,12 +508,13 @@ def install_cell(ev: Evidence, plan: dict, cell: str, info: dict, manifest: dict
     env = base_env(home / "install", {"PIP_CONFIG_FILE": os.devnull})
     code, out, err, secs = run(cmd, env=env, cwd=home / "install", timeout=1800)
     log = out + "\n--- stderr ---\n" + err
-    ev.save(f"{cell}/install.pip.log", "COMMAND: " + " ".join(map(str, cmd)) + f"\nEXIT: {code}\nSECONDS: {secs}\n\n" + log)
+    ev.save(f"{cell}/install.pip.log", "COMMAND: " + " ".join(map(str, cmd)) + f"\nEXIT: {code}\nSECONDS: {secs}\n\n" + log,
+            exclusive=True)
     facts = read_install_log(log)
     result = {"cell": cell, "artifact": info["artifact"], "install_mode": info["install_mode"], "installer": installer,
               "command": " ".join(map(str, cmd)), "pip_exit": code, "seconds": secs, "log": facts,
               "window": "inside the airplane-mode window"}
-    ev.save(f"{cell}/install.json", result)
+    ev.save(f"{cell}/install.json", result, exclusive=True)
     if code != 0:
         raise Stop(f"{cell}: pip install exited {code}")
     built = set(facts["packages_built_as_wheel"]) | set(facts["packages_installed_by_setup_py"])
@@ -359,69 +527,81 @@ def install_cell(ev: Evidence, plan: dict, cell: str, info: dict, manifest: dict
         raise Stop(f"{cell}: a mode B install built from source: {sorted(built)}")
 
     # ── post-install gates ───────────────────────────────────────────────────
-    pip = pip_for(plan, info)
+    # Every gate command goes through gate_run, which writes stdout, stderr and the invocation
+    # record before anything is parsed. A tool that fails is reported as a tool failure, never
+    # as a finding about the environment.
     gates: dict = {}
-    code, out, _, _ = run([info["launcher"], "-I", "-c", "import sys;print(sys.version.split()[0]);print(sys.prefix)"])
+    tool_failures, failures = [], []
+
+    code, out, err, rec = gate_run(ev, cell, "interpreter", [
+        info["launcher"], "-I", "-c", "import sys;print(sys.version.split()[0]);print(sys.prefix)"])
     lines = out.split()
-    gates["interpreter"] = {"version": lines[0] if lines else None,
+    gates["interpreter"] = {"exit": code, "version": lines[0] if lines else None,
                             "prefix_is_cell_env": len(lines) > 1 and os.path.normcase(lines[1]) == os.path.normcase(info["env"]),
                             "launcher_sha256_unchanged": sha256(Path(info["launcher"])) == info["launcher_sha256"]}
-    code, out, err, _ = run([*pip, "inspect", "--disable-pip-version-check"], env=env, timeout=300)
-    installed = {}
-    if code == 0:
-        report = json.loads(out)
-        ev.save(f"{cell}/pip_inspect.json", report)
-        for d in report.get("installed", []):
-            meta = d.get("metadata", {})
-            installed[norm(meta.get("name", "?"))] = {
-                "version": meta.get("version"), "installer": d.get("installer"),
-                "metadata_kind": "egg-info" if str(d.get("metadata_location", "")).endswith(".egg-info") else "dist-info",
-                "requested": d.get("requested")}
-    wanted = expected_set(info)
-    preexisting = {norm(p["name"]): p["version"] for p in info.get("packages_before_install", [])}
-    gates["pip_inspect"] = {
-        "exit": code, "installed": installed,
-        "missing": sorted(n for n in wanted if n not in installed),
-        "wrong_version": sorted(n for n, v in wanted.items() if n in installed and installed[n]["version"] != v),
-        "extra_beyond_pins_and_preexisting": sorted(n for n in installed if n not in wanted and n not in preexisting),
-        "preexisting_changed": sorted(n for n, v in preexisting.items()
-                                      if n not in installed or installed[n]["version"] != v)}
-    code, out, err, _ = run([*pip, "check", "--disable-pip-version-check"], env=env, timeout=300)
-    gates["pip_check"] = {"exit": code, "output": (out + err).strip()[:600]}
-    static = static_environment_checks(plan, info, manifest)
-    gates["static"] = static
-    check = ("import importlib,json\nout={}\nfor m in %r:\n try:\n  mod=importlib.import_module(m)\n"
-             "  out[m]={'ok':True,'version':getattr(mod,'__version__',None)}\n except BaseException as e:\n"
-             "  out[m]={'ok':False,'exception':type(e).__name__}\nprint(json.dumps(out))" % DEPENDENCY_MODULES)
-    code, out, err, _ = run([info["launcher"], "-I", "-B", "-c", check], env=base_env(home / "imports"),
-                            cwd=home / "imports", timeout=300)
-    try:
-        gates["dependency_imports"] = json.loads(out)
-    except ValueError:
-        gates["dependency_imports"] = {"_error": {"ok": False, "exit": code}}
-    gates["fie_import"] = "checked by the probe, under the pickle tripwire (import.json)"
-    gates["langdetect_files"] = langdetect_files(info)
-    pi = gates["pip_inspect"]
-    failures = []
-    if gates["interpreter"]["version"] != "3.10.19" or not gates["interpreter"]["prefix_is_cell_env"] \
+    if code != 0 or len(lines) < 2:
+        tool_failures.append("interpreter identity command")
+    elif gates["interpreter"]["version"] != "3.10.19" or not gates["interpreter"]["prefix_is_cell_env"] \
             or not gates["interpreter"]["launcher_sha256_unchanged"]:
         failures.append("interpreter identity")
-    if pi["exit"] != 0 or pi["missing"] or pi["wrong_version"] or pi["extra_beyond_pins_and_preexisting"] \
-            or pi["preexisting_changed"]:
+    gate_result(ev, cell, "interpreter", rec, gates["interpreter"])
+
+    wanted = expected_set(info)
+    preexisting = {norm(p["name"]): p["version"] for p in info.get("packages_before_install", [])}
+    code, out, err, rec = gate_run(ev, cell, "pip_inspect", inspect_command(plan, info), env=env)
+    gates["pip_inspect"] = classify_inspect(code, out, wanted, preexisting)
+    gate_result(ev, cell, "pip_inspect", rec, gates["pip_inspect"])
+    if gates["pip_inspect"]["status"] in ("tool_failed", "output_unparseable"):
+        tool_failures.append(f"pip inspect ({gates['pip_inspect']['status']})")
+    elif gates["pip_inspect"]["status"] == "mismatch":
         failures.append("installed set differs from the pins")
-    if gates["pip_check"]["exit"] != 0:
+
+    code, out, err, rec = gate_run(ev, cell, "pip_check", [*pip_for(plan, info), "check", "--disable-pip-version-check"],
+                                   env=env)
+    gates["pip_check"] = classify_pip_check(code)
+    gates["pip_check"]["output"] = (out + err).strip()[:600]
+    gate_result(ev, cell, "pip_check", rec, gates["pip_check"])
+    if gates["pip_check"]["status"] == "tool_failed":
+        tool_failures.append("pip check (tool_failed)")
+    elif gates["pip_check"]["status"] == "broken_requirements":
         failures.append("pip check")
+
+    static = static_environment_checks(plan, info, manifest)
+    gates["static"] = static
     if static["unexpected_startup_code"]:
         failures.append("unexpected start-up code")
     if static["fie_payload_files_differing_from_wheel"] or not static["fie_wheel_sha256_matches_plan"]:
         failures.append("installed fie differs from its wheel")
-    if not all(v.get("ok") for v in gates["dependency_imports"].values()):
-        failures.append("a dependency does not import")
+
+    check = ("import importlib,json\nout={}\nfor m in %r:\n try:\n  mod=importlib.import_module(m)\n"
+             "  out[m]={'ok':True,'version':getattr(mod,'__version__',None)}\n except BaseException as e:\n"
+             "  out[m]={'ok':False,'exception':type(e).__name__}\nprint(json.dumps(out))" % DEPENDENCY_MODULES)
+    code, out, err, rec = gate_run(ev, cell, "dependency_imports", [info["launcher"], "-I", "-B", "-c", check],
+                                   env=base_env(home / "imports"), cwd=home / "imports")
+    try:
+        imports = json.loads(out) if code == 0 else None
+    except ValueError:
+        imports = None
+    if not isinstance(imports, dict) or set(imports) != set(DEPENDENCY_MODULES):
+        gates["dependency_imports"] = {"status": "tool_failed", "exit": code, "modules": NOT_EVALUATED}
+        tool_failures.append("dependency import command")
+    else:
+        gates["dependency_imports"] = {"status": "evaluated", "exit": code, "modules": imports}
+        if not all(v.get("ok") for v in imports.values()):
+            failures.append("a dependency does not import")
+    gate_result(ev, cell, "dependency_imports", rec, gates["dependency_imports"])
+
+    gates["fie_import"] = "checked by the probe, under the pickle tripwire (import.json)"
+    gates["langdetect_files"] = langdetect_files(info)
+    gates["tool_failures"] = tool_failures
     gates["failures"] = failures
-    gates["verdict"] = "PASS" if not failures else "installed but not verified"
-    ev.save(f"{cell}/gates.json", gates)
-    ev.log(cell, f"install exit 0 in {secs}s; path: {facts['build_path']}; gates: {gates['verdict']} {failures}")
+    gates["verdict"] = gate_verdict(gates["pip_inspect"]["status"], tool_failures, failures)
+    ev.save(f"{cell}/gates.json", gates, exclusive=True)
+    ev.log(cell, f"install exit 0 in {secs}s; path: {facts['build_path']}; gates: {gates['verdict']}; "
+                 f"tool failures {tool_failures}; findings {failures}")
     result["gates_verdict"] = gates["verdict"]
+    result["gates_tool_failures"] = tool_failures
+    result["gates_failures"] = failures
     return result
 
 
@@ -433,7 +613,7 @@ def home_listing(home: Path) -> list:
 
 
 def probe_cell(ev: Evidence, plan: dict, cell: str, info: dict, installer: str, scratch: Path) -> dict:
-    runs = {}
+    runs, results = {}, {}
     langdetect_origin = ("built by pip from the PyPI source archive" if info["install_mode"] == "A-source-build"
                          else "local wheel built in provisioning")
     for mode, inputs in (("S", plan["inputs_s"]), ("PC", plan["inputs_pc"])):
@@ -463,13 +643,19 @@ def probe_cell(ev: Evidence, plan: dict, cell: str, info: dict, installer: str, 
                              summary.get("egress_attempts_python_level"),
                          "unverified_model_opened": summary.get("unverified_model_opened"),
                          "stderr_lines": len(err.splitlines()), "files_left_in_home": home_listing(home)}
-            ev.save(f"{cell}/{tag}/run.json", {**runs[tag], "stderr_tail": err[-1500:]})
-            ev.log(cell, f"probe {tag}: exit {code}, {summary.get('records')} records, "
-                         f"{summary.get('flagged')} flagged, {secs}s")
+            import_path = out_dir / "import.json"
+            import_info = json.loads(import_path.read_text(encoding="utf-8")) if import_path.is_file() else None
+            results[tag] = classify_probe_run(code, import_info, summary.get("records"))
+            runs[tag]["classification"] = results[tag]
+            ev.save(f"{cell}/{tag}/run.json", {**runs[tag], "stderr_tail": err[-4000:]}, exclusive=True)
+            ev.log(cell, f"probe {tag}: {results[tag]['status']} (exit {code}), "
+                         f"{results[tag]['scan_records']} scan records, {secs}s"
+                         + (f", {results[tag]['exception']}: missing module {results[tag]['missing_module']!r}"
+                            if results[tag]["status"] == "import_blocked" else ""))
             if code in FATAL_PROBE_EXITS:
                 raise Stop(f"{cell} {tag}: {FATAL_PROBE_EXITS[code]}")
-            if code != 0:
-                ev.log(cell, f"probe {tag} did not complete; remaining runs of this mode skipped")
+            if results[tag]["status"] != "scan_completed":
+                ev.log(cell, f"probe {tag} produced no measurement; the repeat run of mode {mode} is not attempted")
                 break
         pair = [runs.get(f"{mode}-run{n}", {}).get("records_sha256") for n in (1, 2)]
         runs[f"{mode}_repeat_identical"] = None if None in pair else pair[0] == pair[1]
@@ -500,7 +686,21 @@ def probe_cell(ev: Evidence, plan: dict, cell: str, info: dict, installer: str, 
     if (ev.root / cell / "cli").is_dir():
         ev.redact_tree(f"{cell}/cli")
     ev.log(cell, "CLI: " + ", ".join(f"{k}={v['exit']}" for k, v in cli.items()))
-    ev.save(f"{cell}/runs.json", runs)
+    outcome = classify_cell(results)
+    outcome["cli_exit_codes"] = {k: v["exit"] for k, v in cli.items()}
+    runs["outcome"] = outcome
+    ev.save(f"{cell}/outcome.json", {"cell": cell, "artifact": info["artifact"], "install_mode": info["install_mode"],
+                                     **outcome}, exclusive=True)
+    if outcome["outcome"] == OUTCOME_IMPORT_BLOCKED:
+        ev.save(f"{cell}/blocked.json", {
+            "cell": cell, "artifact": info["artifact"], "artifact_sha256": info["fie_wheel_sha256"],
+            "blocked": {"modes": ["S", "PC"], "reason": "import fie raised; no scan could run",
+                        **(outcome["import_error"] or {})},
+            "scan_records": 0, "unanswered": UNANSWERED_WHEN_IMPORT_BLOCKED,
+            "note": "An observed result of the installed artifact. Not a detector pass or failure. Not filled in "
+                    "from any other mode, cell or artifact."}, exclusive=True)
+    ev.log(cell, f"outcome: {outcome['outcome']}; scan records {outcome['scan_records_total']}")
+    ev.save(f"{cell}/runs.json", runs, exclusive=True)
     return runs
 
 
@@ -521,8 +721,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--plan", default=str(DEFAULT_PLAN))
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--cells", default=None, help="comma-separated cell names from the plan; default: all of them")
     args = ap.parse_args()
     plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
+    if args.cells:
+        chosen = [c.strip() for c in args.cells.split(",") if c.strip()]
+        unknown = [c for c in chosen if c not in plan["cells"]]
+        if unknown:
+            print("unknown cells:", unknown)
+            return 2
+        plan["cells"] = {c: plan["cells"][c] for c in chosen}
+        plan["launchers"] = {k: v for k, v in plan["launchers"].items() if k == "base-interpreter" or k in chosen}
     scratch, repo = Path(plan["scratch"]), Path(plan["repo"])
     manifest = json.loads(Path(plan["manifest"]).read_text(encoding="utf-8"))
     interp = Path(plan["base_interpreter"]).parent
@@ -533,6 +742,7 @@ def main() -> int:
                   "tcp_open": tcp_controls(plan, "open"),
                   "inputs_present": all(Path(plan[k]).is_file() for k in ("inputs_s", "inputs_pc", "verified_models")),
                   "install_commands": {c: " ".join(map(str, install_command(plan, i)[0])) for c, i in plan["cells"].items()},
+                  "inspect_commands": {c: " ".join(map(str, inspect_command(plan, i))) for c, i in plan["cells"].items()},
                   "pins_and_links_present": all(Path(i["pins"]).is_file() and all(Path(f).is_dir() for f in i["find_links"])
                                                 for i in plan["cells"].values()),
                   "allowlist_environment_imports": {
@@ -558,6 +768,7 @@ def main() -> int:
                          "network_settings_changed_by_this_script": False})
     status = {"stopped": None, "cells": {}}
 
+    outcomes: dict = {}
     try:
         changed = launchers_unchanged(plan)
         if changed:
@@ -600,14 +811,29 @@ def main() -> int:
                 if info["install_mode"] == "A-source-build":
                     raise Stop(f"MODE A NOT ACHIEVED ({exc}). Owner decision O-23 is needed. "
                                "Mode B was not substituted and was not run.")
-                raise
+                # mode B cells are independent: this cell stops, the next one still runs
+                status["cells"][cell] = {"stopped": str(exc)}
+                outcomes[cell] = "INSTALL_STOPPED"
+                ev.save(f"{cell}/STOPPED.json", {"utc": now(), "reason": str(exc)})
+                ev.log(cell, f"cell stopped: {exc}")
+                ev.save("status.json", status)
+                continue
             status["cells"][cell] = {"install": result}
-            if result["gates_verdict"] != "PASS":
+            if result["gates_verdict"] != VERDICT_PASS:
+                ev.save("status.json", status)
+                if result["gates_verdict"] == VERDICT_TOOL_FAILED:
+                    what = (f"VERIFICATION TOOL FAILED ({cell}: {result['gates_tool_failures']}). The installed set "
+                            "was not evaluated by the failed tool; see the gates directory for its output.")
+                else:
+                    what = f"INSTALLED BUT NOT VERIFIED ({cell}: {result['gates_failures']})."
                 if info["install_mode"] == "A-source-build":
-                    raise Stop(f"MODE A NOT VERIFIED ({cell}: post-install gates failed). Owner decision O-23 is needed.")
-                ev.log(cell, "post-install gates failed: installed but not verified; this cell is NOT measured")
+                    raise Stop(f"MODE A: {what} Owner decision is needed. Mode B was not substituted.")
+                ev.log(cell, f"{what} This cell is NOT measured")
+                outcomes[cell] = OUTCOME_NOT_MEASURED
                 continue
             status["cells"][cell]["runs"] = probe_cell(ev, plan, cell, info, result["installer"], scratch)
+            outcomes[cell] = status["cells"][cell]["runs"]["outcome"]["outcome"]
+            status["cell_outcomes"] = dict(outcomes)
             ev.save("status.json", status)
 
         # ── 5. C9 inputs ─────────────────────────────────────────────────────
@@ -618,9 +844,11 @@ def main() -> int:
         status["stopped"] = str(exc)
         ev.save("STOPPED.json", {"utc": now(), "reason": str(exc)})
         ev.log("STOP", str(exc))
-    except Exception as exc:                                   # keep the evidence; report the class only
+    except (Exception, KeyboardInterrupt) as exc:              # keep the evidence; closing controls still run
+        import traceback
         status["stopped"] = f"runner error: {type(exc).__name__}"
-        ev.save("STOPPED.json", {"utc": now(), "reason": status["stopped"], "detail": redact(str(exc))[:400]})
+        ev.save("STOPPED.json", {"utc": now(), "reason": status["stopped"], "detail": redact(str(exc))[:400],
+                                 "traceback": redact(traceback.format_exc())[-3000:]})
         ev.log("STOP", status["stopped"])
 
     # ── 6. closing controls (only meaningful if the window was opened) ───────
@@ -636,7 +864,7 @@ def main() -> int:
     ev.save("status.json", status)
 
     # ── 7. recovery ──────────────────────────────────────────────────────────
-    pause("STEP 7.  Measurement is finished. Switch AIRPLANE MODE OFF now and wait for Wi-Fi to reconnect.")
+    pause("STEP 7.  The offline phase has ended. Switch AIRPLANE MODE OFF now and wait for Wi-Fi to reconnect.")
     recovered = False
     for attempt in range(1, 4):
         for _ in range(12):
@@ -653,10 +881,13 @@ def main() -> int:
                                            "state": network_state(), "control": controls})
     status["connectivity_restored"] = recovered
     status["finished_utc"] = now()
+    status["cell_outcomes"] = dict(outcomes)
+    status["result"] = overall_result(status["stopped"], outcomes, sorted(plan["cells"]))
     ev.save("status.json", status)
     ev.log("7", f"connectivity restored = {recovered}")
+    ev.log("RESULT", status["result"])
     checksum_tree(ev)
-    print("\nRESULT:", "STOPPED - " + status["stopped"] if status["stopped"] else "COMPLETED")
+    print("\nRESULT:", status["result"])
     print("Evidence:", redact(str(ev.root)))
     if not recovered:
         print("WARNING: connectivity was not verified as restored. Check airplane mode and Wi-Fi.")

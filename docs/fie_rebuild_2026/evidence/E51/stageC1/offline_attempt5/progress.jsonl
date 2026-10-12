@@ -1,0 +1,12 @@
+{"message": "plan loaded; 1 environments; adapters up now: ['Wi-Fi']", "step": "0", "utc": "2026-10-12T05:05:15Z"}
+{"message": "offline verified: no adapter up, no usable default route (1 stale on disconnected interfaces), TCP refused through 2 executables", "step": "2", "utc": "2026-10-12T05:07:06Z"}
+{"message": "installing (A-source-build, pip 23.0.1 bundled with the venv)", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:06Z"}
+{"message": "install exit 0 in 10.13s; path: ['legacy: setup.py install (no wheel built)']; gates: PASS; tool failures []; findings []", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:21Z"}
+{"message": "probe S-run1: exit 3, None records, None flagged, 0.59s", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:21Z"}
+{"message": "probe S-run1 did not complete; remaining runs of this mode skipped", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:21Z"}
+{"message": "probe PC-run1: exit 3, None records, None flagged, 0.48s", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:22Z"}
+{"message": "probe PC-run1 did not complete; remaining runs of this mode skipped", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:22Z"}
+{"message": "CLI: cli-detect-benign_capital=1, cli-detect-injection=1, cli-explain-benign_capital=1, cli-explain-injection=1", "step": "modeA-pypi-base-r3", "utc": "2026-10-12T05:07:24Z"}
+{"message": "installed langdetect files hashed for C9", "step": "5", "utc": "2026-10-12T05:07:24Z"}
+{"message": "closing controls: offline held to the end = True", "step": "6", "utc": "2026-10-12T05:07:29Z"}
+{"message": "connectivity restored = True", "step": "7", "utc": "2026-10-12T05:07:51Z"}

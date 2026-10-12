@@ -1,0 +1,517 @@
+{
+ "A-clean": {
+  "encoder_files_present": [],
+  "entry_points": "[console_scripts]\nfie = fie.__main__:main\n",
+  "fie_modules": [
+   "fie/__init__.py",
+   "fie/__main__.py",
+   "fie/_degrade.py",
+   "fie/_lite.py",
+   "fie/_telemetry.py",
+   "fie/adversarial.py",
+   "fie/client.py",
+   "fie/config.py",
+   "fie/feedback_store.py",
+   "fie/fiction_harm.py",
+   "fie/framing_filter.py",
+   "fie/integrations/__init__.py",
+   "fie/integrations/anthropic.py",
+   "fie/integrations/fastapi.py",
+   "fie/integrations/openai.py",
+   "fie/layers/__init__.py",
+   "fie/layers/copyright.py",
+   "fie/layers/direct_harm.py",
+   "fie/layers/gcg.py",
+   "fie/layers/indirect.py",
+   "fie/layers/many_shot.py",
+   "fie/layers/pair.py",
+   "fie/layers/patterns.py",
+   "fie/layers/perplexity.py",
+   "fie/layers/prompt_guard.py",
+   "fie/llama_guard.py",
+   "fie/local_predictor.py",
+   "fie/monitor.py",
+   "fie/multilingual.py",
+   "fie/onnx_encoder.py",
+   "fie/output_scanner.py",
+   "fie/policy.py",
+   "fie/preflight.py",
+   "fie/session_tracker.py",
+   "fie/stream_guard.py",
+   "fie/virtualization.py"
+  ],
+  "file_count": 42,
+  "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+  "has": {
+   "fie._lite": true,
+   "fie.layers.pair": true,
+   "fie.onnx_encoder": true,
+   "fie.policy": true
+  },
+  "label": "A-clean",
+  "loader": {
+   "default_classifier": null,
+   "default_load_set": [],
+   "default_load_set_all_verified": false,
+   "determined_statically": true,
+   "honours_FIE_PAIR_VERSION": true,
+   "preference_order": [
+    "pair_intent_classifier.pkl",
+    "pair_intent_classifier_v6_3b.pkl",
+    "pair_intent_classifier_v6.pkl",
+    "pair_intent_classifier_v6_3.pkl",
+    "pair_intent_classifier_v5.pkl",
+    "pair_intent_classifier_v4.pkl",
+    "pair_intent_classifier_v3.pkl",
+    "pair_intent_classifier_v2.pkl"
+   ],
+   "source_file": "fie/layers/pair.py"
+  },
+  "metadata": {
+   "provides_extra": [
+    "all",
+    "anthropic",
+    "dev",
+    "lite",
+    "ml",
+    "openai",
+    "server",
+    "torch"
+   ],
+   "requires_dist": [
+    "deep-translator>=1.11.4",
+    "langdetect>=1.0.9",
+    "requests>=2.28.0",
+    "anthropic>=0.25; extra == 'all'",
+    "joblib>=1.3; extra == 'all'",
+    "onnxruntime>=1.17; extra == 'all'",
+    "openai>=1.0; extra == 'all'",
+    "pandas>=2.0; extra == 'all'",
+    "scikit-learn>=1.3; extra == 'all'",
+    "tokenizers>=0.20; extra == 'all'",
+    "xgboost>=2.0; extra == 'all'",
+    "anthropic>=0.25; extra == 'anthropic'",
+    "fastapi>=0.100; extra == 'dev'",
+    "httpx>=0.24.0; extra == 'dev'",
+    "pytest>=7.0; extra == 'dev'",
+    "ruff>=0.4; extra == 'dev'",
+    "uvicorn>=0.20; extra == 'dev'",
+    "deep-translator>=1.11.4; extra == 'lite'",
+    "langdetect>=1.0.9; extra == 'lite'",
+    "joblib>=1.3; extra == 'ml'",
+    "onnxruntime>=1.17; extra == 'ml'",
+    "pandas>=2.0; extra == 'ml'",
+    "scikit-learn>=1.3; extra == 'ml'",
+    "tokenizers>=0.20; extra == 'ml'",
+    "xgboost>=2.0; extra == 'ml'",
+    "openai>=1.0; extra == 'openai'",
+    "fastapi>=0.100; extra == 'server'",
+    "langgraph>=0.2.0; extra == 'server'",
+    "pymongo>=4.6; extra == 'server'",
+    "python-dotenv>=1.0; extra == 'server'",
+    "slowapi>=0.1.9; extra == 'server'",
+    "uvicorn>=0.20; extra == 'server'",
+    "sentence-transformers>=2.7; extra == 'torch'"
+   ],
+   "requires_python": ">=3.9",
+   "version": "1.18.0"
+  },
+  "model_counts": {
+   "hash_mismatch": 0,
+   "unmanifested": 0,
+   "verified": 0
+  },
+  "model_files": [],
+  "sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99",
+  "size": 151936,
+  "startup_code": []
+ },
+ "A-pypi-1.18.0": {
+  "encoder_files_present": [],
+  "entry_points": "[console_scripts]\nfie = fie.__main__:main\n",
+  "fie_modules": [
+   "fie/__init__.py",
+   "fie/__main__.py",
+   "fie/_degrade.py",
+   "fie/_lite.py",
+   "fie/_telemetry.py",
+   "fie/adversarial.py",
+   "fie/client.py",
+   "fie/config.py",
+   "fie/feedback_store.py",
+   "fie/fiction_harm.py",
+   "fie/framing_filter.py",
+   "fie/integrations/__init__.py",
+   "fie/integrations/anthropic.py",
+   "fie/integrations/fastapi.py",
+   "fie/integrations/openai.py",
+   "fie/layers/__init__.py",
+   "fie/layers/copyright.py",
+   "fie/layers/direct_harm.py",
+   "fie/layers/gcg.py",
+   "fie/layers/indirect.py",
+   "fie/layers/many_shot.py",
+   "fie/layers/pair.py",
+   "fie/layers/patterns.py",
+   "fie/layers/perplexity.py",
+   "fie/layers/prompt_guard.py",
+   "fie/llama_guard.py",
+   "fie/local_predictor.py",
+   "fie/monitor.py",
+   "fie/multilingual.py",
+   "fie/output_scanner.py",
+   "fie/preflight.py",
+   "fie/session_tracker.py",
+   "fie/stream_guard.py",
+   "fie/virtualization.py"
+  ],
+  "file_count": 58,
+  "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+  "has": {
+   "fie._lite": true,
+   "fie.layers.pair": true,
+   "fie.onnx_encoder": false,
+   "fie.policy": false
+  },
+  "label": "A-pypi-1.18.0",
+  "loader": {
+   "default_classifier": "pair_intent_classifier.pkl",
+   "default_load_set": [
+    {
+     "manifest_status": "verified",
+     "path": "fie/models/pair_intent_classifier.pkl"
+    },
+    {
+     "manifest_status": "hash_mismatch",
+     "path": "fie/models/meta_clf.pkl"
+    }
+   ],
+   "default_load_set_all_verified": false,
+   "determined_statically": true,
+   "honours_FIE_PAIR_VERSION": true,
+   "preference_order": [
+    "pair_intent_classifier.pkl",
+    "pair_intent_classifier_v6_3b.pkl",
+    "pair_intent_classifier_v6.pkl",
+    "pair_intent_classifier_v6_3.pkl",
+    "pair_intent_classifier_v5.pkl",
+    "pair_intent_classifier_v4.pkl",
+    "pair_intent_classifier_v3.pkl",
+    "pair_intent_classifier_v2.pkl"
+   ],
+   "source_file": "fie/layers/pair.py"
+  },
+  "metadata": {
+   "provides_extra": [
+    "all",
+    "anthropic",
+    "dev",
+    "lite",
+    "ml",
+    "openai",
+    "server"
+   ],
+   "requires_dist": [
+    "deep-translator>=1.11.4",
+    "langdetect>=1.0.9",
+    "requests>=2.28.0",
+    "anthropic>=0.25; extra == 'all'",
+    "joblib>=1.3; extra == 'all'",
+    "openai>=1.0; extra == 'all'",
+    "pandas>=2.0; extra == 'all'",
+    "scikit-learn>=1.3; extra == 'all'",
+    "sentence-transformers>=2.7; extra == 'all'",
+    "xgboost>=2.0; extra == 'all'",
+    "anthropic>=0.25; extra == 'anthropic'",
+    "fastapi>=0.100; extra == 'dev'",
+    "httpx>=0.24.0; extra == 'dev'",
+    "pytest>=7.0; extra == 'dev'",
+    "ruff>=0.4; extra == 'dev'",
+    "uvicorn>=0.20; extra == 'dev'",
+    "deep-translator>=1.11.4; extra == 'lite'",
+    "langdetect>=1.0.9; extra == 'lite'",
+    "joblib>=1.3; extra == 'ml'",
+    "pandas>=2.0; extra == 'ml'",
+    "scikit-learn>=1.3; extra == 'ml'",
+    "sentence-transformers>=2.7; extra == 'ml'",
+    "xgboost>=2.0; extra == 'ml'",
+    "openai>=1.0; extra == 'openai'",
+    "fastapi>=0.100; extra == 'server'",
+    "langgraph>=0.2.0; extra == 'server'",
+    "pymongo>=4.6; extra == 'server'",
+    "python-dotenv>=1.0; extra == 'server'",
+    "slowapi>=0.1.9; extra == 'server'",
+    "uvicorn>=0.20; extra == 'server'"
+   ],
+   "requires_python": ">=3.9",
+   "version": "1.18.0"
+  },
+  "model_counts": {
+   "hash_mismatch": 1,
+   "unmanifested": 0,
+   "verified": 9
+  },
+  "model_files": [
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/failure_classifier_v4.pkl",
+    "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
+    "size": 190524
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/feature_columns_v4.pkl",
+    "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
+    "size": 24207
+   },
+   {
+    "manifest_status": "hash_mismatch",
+    "path": "fie/models/meta_clf.pkl",
+    "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+    "size": 179675
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier.pkl",
+    "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+    "size": 18325
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v3.pkl",
+    "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v4.pkl",
+    "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v5.pkl",
+    "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6.pkl",
+    "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6_3.pkl",
+    "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
+    "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "size": 11349
+   }
+  ],
+  "sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+  "size": 270149,
+  "startup_code": []
+ },
+ "A-release": {
+  "encoder_files_present": [],
+  "entry_points": "[console_scripts]\nfie = fie.__main__:main\n",
+  "fie_modules": [
+   "fie/__init__.py",
+   "fie/__main__.py",
+   "fie/_degrade.py",
+   "fie/_lite.py",
+   "fie/_telemetry.py",
+   "fie/adversarial.py",
+   "fie/client.py",
+   "fie/config.py",
+   "fie/feedback_store.py",
+   "fie/fiction_harm.py",
+   "fie/framing_filter.py",
+   "fie/integrations/__init__.py",
+   "fie/integrations/anthropic.py",
+   "fie/integrations/fastapi.py",
+   "fie/integrations/openai.py",
+   "fie/layers/__init__.py",
+   "fie/layers/copyright.py",
+   "fie/layers/direct_harm.py",
+   "fie/layers/gcg.py",
+   "fie/layers/indirect.py",
+   "fie/layers/many_shot.py",
+   "fie/layers/pair.py",
+   "fie/layers/patterns.py",
+   "fie/layers/perplexity.py",
+   "fie/layers/prompt_guard.py",
+   "fie/llama_guard.py",
+   "fie/local_predictor.py",
+   "fie/monitor.py",
+   "fie/multilingual.py",
+   "fie/onnx_encoder.py",
+   "fie/output_scanner.py",
+   "fie/policy.py",
+   "fie/preflight.py",
+   "fie/session_tracker.py",
+   "fie/stream_guard.py",
+   "fie/virtualization.py"
+  ],
+  "file_count": 60,
+  "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+  "has": {
+   "fie._lite": true,
+   "fie.layers.pair": true,
+   "fie.onnx_encoder": true,
+   "fie.policy": true
+  },
+  "label": "A-release",
+  "loader": {
+   "default_classifier": "pair_intent_classifier.pkl",
+   "default_load_set": [
+    {
+     "manifest_status": "verified",
+     "path": "fie/models/pair_intent_classifier.pkl"
+    },
+    {
+     "manifest_status": "verified",
+     "path": "fie/models/meta_clf.pkl"
+    }
+   ],
+   "default_load_set_all_verified": true,
+   "determined_statically": true,
+   "honours_FIE_PAIR_VERSION": true,
+   "preference_order": [
+    "pair_intent_classifier.pkl",
+    "pair_intent_classifier_v6_3b.pkl",
+    "pair_intent_classifier_v6.pkl",
+    "pair_intent_classifier_v6_3.pkl",
+    "pair_intent_classifier_v5.pkl",
+    "pair_intent_classifier_v4.pkl",
+    "pair_intent_classifier_v3.pkl",
+    "pair_intent_classifier_v2.pkl"
+   ],
+   "source_file": "fie/layers/pair.py"
+  },
+  "metadata": {
+   "provides_extra": [
+    "all",
+    "anthropic",
+    "dev",
+    "lite",
+    "ml",
+    "openai",
+    "server",
+    "torch"
+   ],
+   "requires_dist": [
+    "deep-translator>=1.11.4",
+    "langdetect>=1.0.9",
+    "requests>=2.28.0",
+    "anthropic>=0.25; extra == 'all'",
+    "joblib>=1.3; extra == 'all'",
+    "onnxruntime>=1.17; extra == 'all'",
+    "openai>=1.0; extra == 'all'",
+    "pandas>=2.0; extra == 'all'",
+    "scikit-learn>=1.3; extra == 'all'",
+    "tokenizers>=0.20; extra == 'all'",
+    "xgboost>=2.0; extra == 'all'",
+    "anthropic>=0.25; extra == 'anthropic'",
+    "fastapi>=0.100; extra == 'dev'",
+    "httpx>=0.24.0; extra == 'dev'",
+    "pytest>=7.0; extra == 'dev'",
+    "ruff>=0.4; extra == 'dev'",
+    "uvicorn>=0.20; extra == 'dev'",
+    "deep-translator>=1.11.4; extra == 'lite'",
+    "langdetect>=1.0.9; extra == 'lite'",
+    "joblib>=1.3; extra == 'ml'",
+    "onnxruntime>=1.17; extra == 'ml'",
+    "pandas>=2.0; extra == 'ml'",
+    "scikit-learn>=1.3; extra == 'ml'",
+    "tokenizers>=0.20; extra == 'ml'",
+    "xgboost>=2.0; extra == 'ml'",
+    "openai>=1.0; extra == 'openai'",
+    "fastapi>=0.100; extra == 'server'",
+    "langgraph>=0.2.0; extra == 'server'",
+    "pymongo>=4.6; extra == 'server'",
+    "python-dotenv>=1.0; extra == 'server'",
+    "slowapi>=0.1.9; extra == 'server'",
+    "uvicorn>=0.20; extra == 'server'",
+    "sentence-transformers>=2.7; extra == 'torch'"
+   ],
+   "requires_python": ">=3.9",
+   "version": "1.18.0"
+  },
+  "model_counts": {
+   "hash_mismatch": 0,
+   "unmanifested": 0,
+   "verified": 10
+  },
+  "model_files": [
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/failure_classifier_v4.pkl",
+    "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
+    "size": 190524
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/feature_columns_v4.pkl",
+    "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
+    "size": 24207
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/meta_clf.pkl",
+    "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+    "size": 212131
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier.pkl",
+    "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+    "size": 18325
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v3.pkl",
+    "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v4.pkl",
+    "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v5.pkl",
+    "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6.pkl",
+    "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6_3.pkl",
+    "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
+    "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "size": 11349
+   }
+  ],
+  "sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c",
+  "size": 314838,
+  "startup_code": []
+ }
+}

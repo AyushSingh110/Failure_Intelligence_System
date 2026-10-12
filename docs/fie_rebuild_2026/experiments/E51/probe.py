@@ -32,6 +32,7 @@ import time
 import warnings
 from pathlib import Path
 
+EXIT_IMPORT_FAILED = 3
 EXIT_NOT_INSTALLED_COPY = 90
 EXIT_TRIPWIRE = 97
 EXIT_PROCESS = 98
@@ -120,6 +121,41 @@ def install_instrumentation() -> None:
             os._exit(EXIT_PROCESS)
 
     sys.addaudithook(audit)
+
+
+def _sanitize(text: str, limit: int = 300) -> str:
+    """An exception message for the evidence: environment and home paths replaced, length bounded."""
+    out = str(text)
+    for root, tag in ((_env_root, "<ENV>"), (str(Path.home()), "<HOME>")):
+        for form in (root, root.replace("\\", "/"), root.replace("\\", "\\\\")):
+            if form:
+                low, start = out.lower(), 0
+                while True:
+                    at = low.find(form.lower(), start)
+                    if at < 0:
+                        break
+                    out = out[:at] + tag + out[at + len(form):]
+                    low, start = out.lower(), at + len(tag)
+    user = os.environ.get("USERNAME")
+    if user:
+        out = out.replace(user, "<USER>")
+    return out[:limit]
+
+
+def import_failure_record(exc: BaseException, seconds: float) -> dict:
+    """
+    What is known when `import fie` raises. The failure is the observed result for this cell;
+    it is recorded, never repaired: no scan ran, so `scan_records` is 0.
+    """
+    import traceback
+    frames = [{"file": _rel(f.filename), "line": f.lineno, "in": f.name}
+              for f in traceback.extract_tb(exc.__traceback__) if f.filename != __file__]
+    return {
+        "import_ok": False, "import_completed": False, "exception": type(exc).__name__,
+        "missing_module": getattr(exc, "name", None) if isinstance(exc, ModuleNotFoundError) else None,
+        "exception_message": _sanitize(exc), "import_chain": frames[-8:],
+        "import_s": round(seconds, 3), "scan_records": 0,
+    }
 
 
 def derive_zone(is_attack: bool, evidence) -> str:
@@ -211,12 +247,16 @@ def main() -> int:
     t0 = time.perf_counter()
     try:
         import fie
-        info.update({"import_ok": True, "import_s": round(time.perf_counter() - t0, 3)})
+        info.update({"import_ok": True, "import_completed": True, "import_s": round(time.perf_counter() - t0, 3)})
     except BaseException as exc:                                   # the result, not a crash
-        info.update({"import_ok": False, "exception": type(exc).__name__, "import_s": round(time.perf_counter() - t0, 3)})
+        info.update(import_failure_record(exc, time.perf_counter() - t0))
         _flush("import.json", {**header, **info})
         _flush("egress_python.json", {**header, "observations": _egress})
-        return 3
+        import traceback
+        traceback.print_exc()                                      # the full traceback, for the runner's log
+        print(json.dumps({"mode": args.mode, "import_ok": False, "exception": info["exception"],
+                          "missing_module": info["missing_module"], "records": 0}))
+        return EXIT_IMPORT_FAILED
     fie_file = os.path.normcase(os.path.abspath(fie.__file__))
     site = os.path.normcase(os.path.join(sys.prefix, "Lib", "site-packages"))
     info.update({

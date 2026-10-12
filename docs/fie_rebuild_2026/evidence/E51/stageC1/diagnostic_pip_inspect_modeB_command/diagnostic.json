@@ -1,0 +1,82 @@
+{
+ "agrees_with_offline_attempt5_inspection": {
+  "offline_distribution_count": 14,
+  "same_names_and_versions": true
+ },
+ "classification_by_the_runner_function": {
+  "distribution_count": 14,
+  "exit": 0,
+  "extra_beyond_pins_and_preexisting": [],
+  "missing": [],
+  "parse_error": null,
+  "preexisting_changed": [],
+  "status": "match",
+  "wrong_version": []
+ },
+ "command": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe -I -X utf8 -m pip --python <HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe inspect --disable-pip-version-check",
+ "ended_utc": "2026-10-12T05:45:44Z",
+ "environment_tree": {
+  "files_after": 2403,
+  "files_before": 2403,
+  "identical": true
+ },
+ "environment_variable_names": [
+  "APPDATA",
+  "COMSPEC",
+  "HOME",
+  "LOCALAPPDATA",
+  "NUMBER_OF_PROCESSORS",
+  "OS",
+  "PATH",
+  "PATHEXT",
+  "PIP_CONFIG_FILE",
+  "PROCESSOR_ARCHITECTURE",
+  "PYTHONNOUSERSITE",
+  "PYTHONUTF8",
+  "SystemDrive",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "windir"
+ ],
+ "exit_code": 0,
+ "invocations": 1,
+ "kind": "CONNECTED diagnostic of the Mode B inspection COMMAND, outside the offline measurement window. Not an offline test, not evidence of isolation, and not a gate result for any Mode B cell.",
+ "names_versions": {
+  "beautifulsoup4": "4.15.0",
+  "certifi": "2026.7.22",
+  "charset-normalizer": "3.5.2",
+  "deep-translator": "1.11.4",
+  "fie-sdk": "1.18.0",
+  "idna": "3.20",
+  "langdetect": "1.0.9",
+  "pip": "23.0.1",
+  "requests": "2.34.2",
+  "setuptools": "79.0.1",
+  "six": "1.17.0",
+  "soupsieve": "2.10",
+  "typing-extensions": "4.16.0",
+  "urllib3": "2.8.0"
+ },
+ "outer_interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+ "outer_interpreter_sha256": "8ace8ea8dc812a1caddca03534aa95e8bcba8fd146564a70aa678b09687ad429",
+ "pip_version_reported_in_output": "26.0.1",
+ "started_utc": "2026-10-12T05:45:43Z",
+ "stderr": {
+  "raw_bytes": 0,
+  "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ },
+ "stdout": {
+  "complete_parseable_json": true,
+  "raw_bytes": 159721,
+  "raw_sha256": "43c6c57d8eb6cf23c6ce2af9d9f5e016b3c2dd66ea18b4c5bb136c7962595131",
+  "stored_as": "stdout.json: complete output with only the home-path prefix replaced by <HOME>; byte-exact file kept in the scratch directory, identified by raw_sha256",
+  "valid_utf8": true
+ },
+ "subject": "repository pip 26.0.1 via --python, UTF-8 mode on the command line; target: the existing modeA-pypi-base-r3 environment, used only as a target",
+ "target_interpreter": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe",
+ "target_interpreter_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+ "working_directory": "<HOME>\\Desktop\\Failure_Intelligence_System",
+ "wrapper": "PowerShell -> cmd /d /c with 1> and 2> to separate files; exit code read from $LASTEXITCODE"
+}

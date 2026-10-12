@@ -973,3 +973,97 @@ Not executed by the assistant.
 ```text
 git add -- fie/policy.py fie/preflight.py fie/__main__.py fie/__init__.py tests/test_runtime_policy.py tests/test_scan_result_contract.py docs/fie_rebuild_2026/IMPLEMENTATION_PLANS/PLAN_004_RUNTIME_POLICY.md docs/fie_rebuild_2026/EXECUTION_REPORTS/EXECUTION_004_runtime-policy.md docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md && git commit -m "fie: add runtime policy layer applied in preflight_check (WP-004)"
 ```
+
+---
+
+## 13. WP-020 / E51 record: installation truth, Stages A to C1
+
+Detail and evidence are in
+[EXECUTION_020_install-truth-stageC1.md](EXECUTION_REPORTS/EXECUTION_020_install-truth-stageC1.md)
+and under `evidence/E51/`. The plan is
+[PLAN_020_INSTALL_TRUTH.md](IMPLEMENTATION_PLANS/PLAN_020_INSTALL_TRUTH.md), revision 6.
+This is a measurement package: nothing in `fie/`, `tests/`, packaging, dependencies, models,
+workflows, `dist/` or the baselines was changed.
+
+### 13.1 Scope actually approved and executed
+
+| Stage | Approved scope | Executed |
+| --- | --- | --- |
+| A | Read-only preflight | Yes |
+| B, B remediation | Release and provisioning checks; a controlled source build of `langdetect` as a recorded exception | Yes |
+| C1 | **Base installs only**: one mode A cell, three mode B cells | Yes, 2026-10-11 to 2026-10-12 |
+| `[ml]`, current tree (O-21) | **Not approved** | Not provisioned |
+| `[ml]`, PyPI (O-22) | **Not approved** | Not provisioned |
+
+### 13.2 Decisions
+
+- **D-026 — the package is WP-020.** *Status: approved by the owner (O-1).* The roadmap's
+  "install truth" topic (its WP-004) runs under this number; see D-024.
+- **D-027 — isolation is airplane mode, switched by the owner by hand, on the existing Python
+  3.10.19 interpreter.** *Status: approved by the owner.* No script changes a network setting.
+  The per-program firewall and private-interpreter design in the plan is superseded and was
+  not executed.
+- **D-028 — two install modes, kept apart.** *Status: approved by the owner (O-24).* Mode A:
+  pip builds `langdetect` from PyPI's source archive (one cell). Mode B: a pre-built local
+  `langdetect` wheel (the matrix). Mode B is never described as what `pip install fie-sdk` does.
+- **D-029 — neither `[ml]` set is downloaded or installed without its own approval.**
+  *Status: owner decision; O-21 and O-22 not approved.*
+- **D-030 — a failed verification tool is not a package finding, and a blocked probe is not a
+  completed measurement.** *Status: approved by the owner after offline attempts 4 and 5.* The
+  runner classifies `pip inspect` as `tool_failed`, `output_unparseable`, `match` or
+  `mismatch`, and each cell as `SCANS_COMPLETED`, `IMPORT_BLOCKED_NO_SCAN_COMPLETED` and so on.
+  Gate G7 is unchanged.
+
+### 13.3 Evidence (measured, offline, gated)
+
+- **A base install of `fie-sdk` cannot be imported.** `import fie` raises
+  `ModuleNotFoundError: No module named 'starlette'` in all four base cells: the published
+  wheel `1.18.0` (`be504dc7…579e963d`) in both install modes, and A-clean and A-release built
+  from `2f62ecd`. Chain: `fie/__init__.py` → `fie/integrations/__init__.py:25` →
+  `fie/integrations/fastapi.py:28`. The command line fails the same way.
+- **Scan records produced: 0 in every cell.** Every runtime question for base installs is
+  blocked. No comparison with `BL-0002` was possible. This is not evidence about detection
+  quality in either direction.
+- Installation works in both modes and every post-install gate passed in all four cells.
+- With bundled pip 23.0.1, `langdetect` is installed from source by the legacy
+  `setup.py install` path (E-16 confirmed by measurement).
+- C9: the 69 installed `langdetect` package files are byte-identical in mode A and in all
+  three mode B cells; only installer-generated metadata differs.
+- No pickle or model file was opened. The published wheel ships a `meta_clf.pkl` that does not
+  match the manifest (static).
+- Isolation: in both measuring runs no adapter was up, no usable default route existed and TCP
+  was refused through every launcher and the base interpreter, at the start and the end;
+  recovery was verified. Not a packet capture.
+- Regression state: 942 tests pass and `python -m evals baseline` exits 0 against `BL-0002`,
+  at the start and after each harness change. `CANONICAL` unchanged.
+
+### 13.4 Not established
+
+- Anything about what the installed package does once imported.
+- Whether an install with an extra that brings `starlette` imports. Predicted, not measured.
+- Mode A with a pip newer than 23.0.1.
+- Any `[ml]` cell. Static reading: neither resolved `[ml]` set contains `starlette`, so the
+  same import failure is predicted there.
+
+### 13.5 Deviations
+
+Ten, all in the execution report, section J. Three were defects in the experiment harness,
+found by running it and corrected with the owner's knowledge: a route check that was too strict
+(DV-2), a `pip inspect` encoding failure misread as missing packages (DV-3), and a run with
+zero scans labelled completed (DV-6).
+
+### 13.6 Open for the owner
+
+1. The consequence of the import failure for the published `1.18.0` release.
+2. The fix, which belongs to WP-021 (packaging): lazy or guarded integration imports, or a
+   declared dependency; and a clean-environment `import fie` test for base installs.
+3. Whether E51's `[ml]` cells run before or after that fix.
+4. Removal of the experiment's scratch environments. Nothing was deleted.
+
+### 13.7 Recommended manual commit command
+
+Not executed by the assistant.
+
+```text
+git add docs/fie_rebuild_2026 && git commit -m "docs: E51 Stage C1 base-install results - fie-sdk base install cannot be imported (WP-020)"
+```

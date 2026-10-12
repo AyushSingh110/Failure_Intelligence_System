@@ -1,0 +1,602 @@
+{
+ "dependency_imports": {
+  "exit": 0,
+  "modules": {
+   "bs4": {
+    "ok": true,
+    "version": "4.15.0"
+   },
+   "certifi": {
+    "ok": true,
+    "version": "2026.07.22"
+   },
+   "charset_normalizer": {
+    "ok": true,
+    "version": "3.5.2"
+   },
+   "deep_translator": {
+    "ok": true,
+    "version": "1.9.1"
+   },
+   "idna": {
+    "ok": true,
+    "version": "3.20"
+   },
+   "langdetect": {
+    "ok": true,
+    "version": null
+   },
+   "requests": {
+    "ok": true,
+    "version": "2.34.2"
+   },
+   "six": {
+    "ok": true,
+    "version": "1.17.0"
+   },
+   "soupsieve": {
+    "ok": true,
+    "version": "2.10"
+   },
+   "typing_extensions": {
+    "ok": true,
+    "version": null
+   },
+   "urllib3": {
+    "ok": true,
+    "version": "2.8.0"
+   }
+  },
+  "status": "evaluated"
+ },
+ "failures": [],
+ "fie_import": "checked by the probe, under the pickle tripwire (import.json)",
+ "interpreter": {
+  "exit": 0,
+  "launcher_sha256_unchanged": true,
+  "prefix_is_cell_env": true,
+  "version": "3.10.19"
+ },
+ "langdetect_files": {
+  "generated_or_metadata": {
+   "langdetect-1.0.9.dist-info/INSTALLER": {
+    "sha256": "ceebae7b8927a3227e5303cf5e0f1f7b34bb542ad7250ac03fbcde36ec2f1508",
+    "size": 4
+   },
+   "langdetect-1.0.9.dist-info/METADATA": {
+    "sha256": "4da2c8caf281b4112edbe67427c037019c0707cc052455e1811c08e676297cf9",
+    "size": 4686
+   },
+   "langdetect-1.0.9.dist-info/RECORD": {
+    "sha256": "027c11ed69a6df0014dfa1ac55749c697ea91802a807c2bac5ce5cf615110991",
+    "size": 7116
+   },
+   "langdetect-1.0.9.dist-info/REQUESTED": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+   },
+   "langdetect-1.0.9.dist-info/WHEEL": {
+    "sha256": "61532836a2b3111b7ec23519c09df7c41180c27165fb872a6d8913b566b88ad1",
+    "size": 91
+   },
+   "langdetect-1.0.9.dist-info/licenses/LICENSE": {
+    "sha256": "9c539fdc47fa4e195b88efaa6495f11463de271f59c8de96feb8bc9c8abab1ab",
+    "size": 599
+   },
+   "langdetect-1.0.9.dist-info/licenses/NOTICE": {
+    "sha256": "bc22bad5907339e12834d91f7809ec35c3c44fa4b812f274ebfefa38de080869",
+    "size": 655
+   },
+   "langdetect-1.0.9.dist-info/top_level.txt": {
+    "sha256": "2efacb9c4cc94af05cbc7e8dfc4c96059876aaa3fb5efa67550133652a455abf",
+    "size": 11
+   },
+   "langdetect/__pycache__/__init__.cpython-310.pyc": {
+    "sha256": "f9f6187ace24cf9bf415b3acde498a2568f12c5901c04eccb9513a4fe091cd49",
+    "size": 379
+   },
+   "langdetect/__pycache__/detector.cpython-310.pyc": {
+    "sha256": "12222f2430312e484b002f1141e1c630854d86552431e96698c6493b01eb7d63",
+    "size": 8468
+   },
+   "langdetect/__pycache__/detector_factory.cpython-310.pyc": {
+    "sha256": "c85ca6a9f24ecbf08c269ad89cc61ab926620c7f19557170997a1cb01d2a8759",
+    "size": 4477
+   },
+   "langdetect/__pycache__/lang_detect_exception.cpython-310.pyc": {
+    "sha256": "5d55738f8a9be8b639074b9bad75da225dc3a1c8b5ea67dc964521295af87c47",
+    "size": 1034
+   },
+   "langdetect/__pycache__/language.cpython-310.pyc": {
+    "sha256": "97a0292fb776726800a06ca6345b62b2ed76e2560c0f9e47d28482b908e5770c",
+    "size": 926
+   },
+   "langdetect/tests/__pycache__/__init__.cpython-310.pyc": {
+    "sha256": "3371164259d92e9fe78a473aba2bd7ff0dc5bda24e6b0dabe4ac31c8e4c7713e",
+    "size": 195
+   },
+   "langdetect/tests/__pycache__/test_detector.cpython-310.pyc": {
+    "sha256": "d7f19b6d5cd1b1e28b2a098880a2362d485e9d82b57a4ff9300c51e69c333918",
+    "size": 2738
+   },
+   "langdetect/tests/__pycache__/test_language.cpython-310.pyc": {
+    "sha256": "4a15a3a776d1b185d7f9bfe3c5ec2f302949266c73c0e06e02eb03ad043f68cc",
+    "size": 1063
+   },
+   "langdetect/utils/__pycache__/__init__.cpython-310.pyc": {
+    "sha256": "56a2720b810760669750dbb646e3d180aa44fef95d62d2c882a119b8e5d65e61",
+    "size": 195
+   },
+   "langdetect/utils/__pycache__/lang_profile.cpython-310.pyc": {
+    "sha256": "9c4ed70f6ab84b4bd2113b0bde419d78f991a1616ff327b86b485ee7532274ef",
+    "size": 2236
+   },
+   "langdetect/utils/__pycache__/messages.cpython-310.pyc": {
+    "sha256": "39b19c633f4bdd94c0d2908915752debfe32bf6e7fc7102ac22b6c3fe81f6916",
+    "size": 1121
+   },
+   "langdetect/utils/__pycache__/ngram.cpython-310.pyc": {
+    "sha256": "812bf875d281537319d27aef645e640e8b3d8b169f3d4ed27e927bf3b19ffbb3",
+    "size": 7686
+   },
+   "langdetect/utils/__pycache__/unicode_block.cpython-310.pyc": {
+    "sha256": "3e6bb32730bee89313b37c7409e03b7dffd4f8143cf8abfa83efa436ed517cde",
+    "size": 15233
+   }
+  },
+  "metadata_directories": [
+   "langdetect-1.0.9.dist-info"
+  ],
+  "payload": {
+   "langdetect/__init__.py": {
+    "sha256": "f8f59dfca3807c33856e0d15be145796c2140508681ee884fe3b38cda4933bc9",
+    "size": 143
+   },
+   "langdetect/detector.py": {
+    "sha256": "5c4dfb2e39b54284fb34c6edf8bd6c6a24f5c85f851f5a415ab050b3b1e7ff12",
+    "size": 8658
+   },
+   "langdetect/detector_factory.py": {
+    "sha256": "b42df21f2d8ba69046ea4da089dd3603be80d4a524749ce4f2d50e03c4b89ce2",
+    "size": 4368
+   },
+   "langdetect/lang_detect_exception.py": {
+    "sha256": "35fea6e12b5946e6d111dc77843171b64c0d84cd7fdc957c470a2930ea0afe5e",
+    "size": 519
+   },
+   "langdetect/language.py": {
+    "sha256": "6cc85892d2096507beb13db1c0fd6799d5dd3696a507a3c699b35953d11ff60b",
+    "size": 430
+   },
+   "langdetect/profiles/af": {
+    "sha256": "47f2a164f29db022c23ac92cb23e5edc0858a0ed5cda361a6320333ffc2ca0e7",
+    "size": 21532
+   },
+   "langdetect/profiles/ar": {
+    "sha256": "f83b92d67a7f8afa6878901896692e966e88247bf2f78b4175c8c821c51c724a",
+    "size": 35182
+   },
+   "langdetect/profiles/bg": {
+    "sha256": "b230a31f60e8072d7014095d414ac04e5e7be6d8f536110ef5354ad5f4f1111a",
+    "size": 33520
+   },
+   "langdetect/profiles/bn": {
+    "sha256": "5d1d54f78055e59bfb33208a5e6e98a95242f74a899514379f5b936fdd6af229",
+    "size": 40800
+   },
+   "langdetect/profiles/ca": {
+    "sha256": "bb77179dddf169028c739efb679fec94072ceb236cbc4e2fc9762a8fef10a86c",
+    "size": 69365
+   },
+   "langdetect/profiles/cs": {
+    "sha256": "c86ea4168cfb30d1fa6a09892ecf23f07a5b36ce2bb66cab29b5e8cad0c4db41",
+    "size": 33176
+   },
+   "langdetect/profiles/cy": {
+    "sha256": "a826a2699b146b80009426c09714f5ee8a6d5ea9a6b3b91f21b3e5c117d348c3",
+    "size": 55195
+   },
+   "langdetect/profiles/da": {
+    "sha256": "c6559daf8f325aeb6c0078512d49303db78eeb5081858b06cbf1a5bbe1517924",
+    "size": 25478
+   },
+   "langdetect/profiles/de": {
+    "sha256": "9b9cfe1686c4ce3a487b9845a16cbd1c31fbefdf768434b95854c350fb1c72aa",
+    "size": 27502
+   },
+   "langdetect/profiles/el": {
+    "sha256": "82f2281acf5e77708238a68a2c7b14ed6d864fb261b59c9e6e1a3fcbc20a3000",
+    "size": 35031
+   },
+   "langdetect/profiles/en": {
+    "sha256": "857dccae51493923ddfdcddbf757175dc03d7ccab512b9bd21c5bd8191016ba4",
+    "size": 28154
+   },
+   "langdetect/profiles/es": {
+    "sha256": "1735a22b08a7948feb01dfce6b7e5c34bc008d5f687b40ab77467adf8f7a667f",
+    "size": 25211
+   },
+   "langdetect/profiles/et": {
+    "sha256": "90ea8b331b50214cd09763d0822d9b3d2ef30c93071bce7795675e4ecf9c3ee2",
+    "size": 70548
+   },
+   "langdetect/profiles/fa": {
+    "sha256": "57f49cb1b20ec1dc7220820fdb9582e1bfcda67a62c926cad0bc0122782f270d",
+    "size": 28603
+   },
+   "langdetect/profiles/fi": {
+    "sha256": "929d2a603e238a40934e3bdbc47cbb7e41bac785cd7d24fdb35a0d674fd6505e",
+    "size": 25539
+   },
+   "langdetect/profiles/fr": {
+    "sha256": "64fb165f4c54b29f608aadc6262ad08ba6ac09c8ff82272258891c1f7785c102",
+    "size": 26303
+   },
+   "langdetect/profiles/gu": {
+    "sha256": "5fa6fe6728944eecd480d912592af63593ddea4ab9ab81044cde05fe7ca97cfb",
+    "size": 21484
+   },
+   "langdetect/profiles/he": {
+    "sha256": "c42f0fe8348cc13f243d987b5da983045a4f9009c2d8844be612f5bf87523045",
+    "size": 36134
+   },
+   "langdetect/profiles/hi": {
+    "sha256": "c78d62a31d8f8f85245a35f54a28ddbffaee7c32c625b2d6044df95fab624ac8",
+    "size": 35727
+   },
+   "langdetect/profiles/hr": {
+    "sha256": "b239fb6c8b202629737e8d34a38b077c6b66a495be2e7a073aebaec39c82d692",
+    "size": 25807
+   },
+   "langdetect/profiles/hu": {
+    "sha256": "941d200eaa81ccb4e3d7ae3c92da4cef2d474ce04d9f8dc68205b4f7001ce032",
+    "size": 31466
+   },
+   "langdetect/profiles/id": {
+    "sha256": "6dade69d3d7187b4cf6463d793f39fa6c3879c308570f90531f1da6a33655204",
+    "size": 21559
+   },
+   "langdetect/profiles/it": {
+    "sha256": "ef107d808c0f99b43a37a6a8a7bc42d51a36a4ea133a2224229ded5e097c8c77",
+    "size": 22799
+   },
+   "langdetect/profiles/ja": {
+    "sha256": "0a8cca8eb3a1d8e70f3493d4749618adbe5189549d03bf8196f1a14f2453eb50",
+    "size": 25792
+   },
+   "langdetect/profiles/kn": {
+    "sha256": "a04d53a8d8286a3e2cc43d71ffa313fc6687893cdc5f01891cc2e23aeebe4a03",
+    "size": 39903
+   },
+   "langdetect/profiles/ko": {
+    "sha256": "75ab62622c73d589bd03491d913bef42de2d934091bf9dbe033e1d40217d6dee",
+    "size": 307193
+   },
+   "langdetect/profiles/lt": {
+    "sha256": "4c36959f1c98c4d4e608d02fb425bad2c6b84d831a552816d7080d61f72d41f3",
+    "size": 67770
+   },
+   "langdetect/profiles/lv": {
+    "sha256": "b51f11b8d1bd8d6324e340d4a0817f892a7fec314a3ef2b994581aae2b4d3226",
+    "size": 74760
+   },
+   "langdetect/profiles/mk": {
+    "sha256": "9ea3cd8c6b8130fd426e9619e39fef5ae444761d9a91d5e4234dc217ea951a1b",
+    "size": 30026
+   },
+   "langdetect/profiles/ml": {
+    "sha256": "7ff3d7f13482c744e6f4fa97c879af74ae38fbd7c526e9f2764d51ce0efb1546",
+    "size": 39692
+   },
+   "langdetect/profiles/mr": {
+    "sha256": "2dd075e28d7ffa544c388b807a842b73d5f2c4293128754f8887480e0234c550",
+    "size": 36522
+   },
+   "langdetect/profiles/ne": {
+    "sha256": "2f4349f1e3ba9262af66bb187f4a8c676a40d1d376a6b4cb4b5c078789042cb7",
+    "size": 33856
+   },
+   "langdetect/profiles/nl": {
+    "sha256": "b650ed6b63a8e255fdc88ee80093131819894f38e52a69b82f7b7a5cf2e733bf",
+    "size": 25049
+   },
+   "langdetect/profiles/no": {
+    "sha256": "476bb996e7d1e20afe5e8f60f2f161cdd70cc8c013d5302e676c19357e2fef0e",
+    "size": 25502
+   },
+   "langdetect/profiles/pa": {
+    "sha256": "0eb753ce80999faa6c3f72aaf2f8a6e83750df051f800298407aaea9df55dcfc",
+    "size": 29336
+   },
+   "langdetect/profiles/pl": {
+    "sha256": "7b3dec394064131d2314c8e53a472d00812ca98a63229e8c1e1ac23928e823f1",
+    "size": 30392
+   },
+   "langdetect/profiles/pt": {
+    "sha256": "8d512db59512a9c3e3982b1d720ab203915440e0609fb76524e188e32f39bfe9",
+    "size": 25054
+   },
+   "langdetect/profiles/ro": {
+    "sha256": "a9cc86d880176dc1208f5b08f33881697f1c9bf8896613f7fa6420f94e3ccb51",
+    "size": 62779
+   },
+   "langdetect/profiles/ru": {
+    "sha256": "41eb3d39c12e902250dac83dd70671119cd15c82929bf72fbf9da7d9c19a435f",
+    "size": 37609
+   },
+   "langdetect/profiles/sk": {
+    "sha256": "9e19b7f669a2a2b5e5b3960b6352a233ada98a742efd0885626eb85e7c6ef66e",
+    "size": 30756
+   },
+   "langdetect/profiles/sl": {
+    "sha256": "64e7d77a53f4370bef2151373ece9f4a61179dd30d0c573d5f8d000ea4f5853a",
+    "size": 64837
+   },
+   "langdetect/profiles/so": {
+    "sha256": "ac1e6e701faedb4ed92c27bf07f84ab418e7ba08b9482c15a72c8a8d27c8faee",
+    "size": 16786
+   },
+   "langdetect/profiles/sq": {
+    "sha256": "a5c865b8da137801508b1b83a46b14ae7827ad934b06013b9d951d39359f828e",
+    "size": 23469
+   },
+   "langdetect/profiles/sv": {
+    "sha256": "03c379d06e1bd7225c94111282908e1d3aff236debbf7e16bb561a38231bb1e5",
+    "size": 27347
+   },
+   "langdetect/profiles/sw": {
+    "sha256": "742d6fc04b84731e0e83a56d64a150bbb4c7adbac30032974d14a53eb6e0bc75",
+    "size": 17714
+   },
+   "langdetect/profiles/ta": {
+    "sha256": "2f7c24c0fa23ecfc90dfd3b8ed3ae4236dc139a82a36f73c93079118b6eeffcb",
+    "size": 33182
+   },
+   "langdetect/profiles/te": {
+    "sha256": "c025d74e08af4a52413dec40add085950c7e602b1aa99e539b7751709a1cecf5",
+    "size": 39696
+   },
+   "langdetect/profiles/th": {
+    "sha256": "8a2b42b7c4d398718c4fcee8c2d34a476dda2acac9bb9583bd30f508abe57647",
+    "size": 51598
+   },
+   "langdetect/profiles/tl": {
+    "sha256": "a93ee90b0f35fd14c35050cdd98d9ec5dfc03fcb0553937e09ad9380060806cd",
+    "size": 19009
+   },
+   "langdetect/profiles/tr": {
+    "sha256": "218f3328b20e359f31f5d40bff3c0e80876fa1ef48fea881245ee4ce1025b8d6",
+    "size": 28752
+   },
+   "langdetect/profiles/uk": {
+    "sha256": "ca9858ae860d6c35900f37b246cfe23fc1d2cd50af5d544ae73397693f0d782e",
+    "size": 33663
+   },
+   "langdetect/profiles/ur": {
+    "sha256": "31a1fc80209b35b7564b9013805e7220c60bae6a0c96cb3e465497103eba78ac",
+    "size": 28532
+   },
+   "langdetect/profiles/vi": {
+    "sha256": "5374f337f60a2804e33c7117ccd9e76ef7d7296c0113ba3f612f112928df2990",
+    "size": 67736
+   },
+   "langdetect/profiles/zh-cn": {
+    "sha256": "da146d02fa2237666819e76ea5f99f1b6f0d5b6588f9c5f8752ca79805486b87",
+    "size": 27340
+   },
+   "langdetect/profiles/zh-tw": {
+    "sha256": "3b2a5422e84ea5d51cff01624b084fbf4a40f5c651c55078c2213cdae1b9d71a",
+    "size": 27184
+   },
+   "langdetect/tests/__init__.py": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+   },
+   "langdetect/tests/test_detector.py": {
+    "sha256": "1fe9695d699f66bda77450002cab663cc9e1c6aeecead7cf46f9ce763fce6fc4",
+    "size": 2359
+   },
+   "langdetect/tests/test_language.py": {
+    "sha256": "763ff446b291ffe09b42f2a054493985d0a70e488e818daedec456f2a488206b",
+    "size": 680
+   },
+   "langdetect/utils/__init__.py": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+   },
+   "langdetect/utils/lang_profile.py": {
+    "sha256": "155f5f7db6e3cfe114b9831762c7e87fa96eb45ba78bd1d53537998b058a31c4",
+    "size": 2118
+   },
+   "langdetect/utils/messages.properties": {
+    "sha256": "0b21c8d7329e50acf3ddcb3906fa412cdc0f7dab6b44905a27716dfe086ef5ec",
+    "size": 43334
+   },
+   "langdetect/utils/messages.py": {
+    "sha256": "2b2cfba85cd58ced53b1c8dc1f12f447b0d6509327fdf3315ae9daf8cb483ea8",
+    "size": 635
+   },
+   "langdetect/utils/ngram.py": {
+    "sha256": "33d01e80dc680b307b9d1718f7ca81ecd0a2d73cea8220c4f939d8933aa7f466",
+    "size": 10431
+   },
+   "langdetect/utils/unicode_block.py": {
+    "sha256": "6f1a8c4fa9b145c6bfa90b192ebd2d2c61ecbc4f7d06dadf3b0bea602cb75158",
+    "size": 17954
+   }
+  },
+  "payload_count": 69,
+  "payload_digest": "577b2706f5be394d3e1d8ca7038e9ea07392981428391656060f5f53509626ee"
+ },
+ "pip_check": {
+  "exit": 0,
+  "output": "No broken requirements found.",
+  "status": "pass"
+ },
+ "pip_inspect": {
+  "distribution_count": 12,
+  "exit": 0,
+  "extra_beyond_pins_and_preexisting": [],
+  "installed": {
+   "beautifulsoup4": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "4.15.0"
+   },
+   "certifi": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "2026.7.22"
+   },
+   "charset-normalizer": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "3.5.2"
+   },
+   "deep-translator": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "1.11.4"
+   },
+   "fie-sdk": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "1.18.0"
+   },
+   "idna": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "3.20"
+   },
+   "langdetect": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "1.0.9"
+   },
+   "requests": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "2.34.2"
+   },
+   "six": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "1.17.0"
+   },
+   "soupsieve": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "2.10"
+   },
+   "typing-extensions": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "4.16.0"
+   },
+   "urllib3": {
+    "installer": "pip",
+    "metadata_kind": "dist-info",
+    "requested": true,
+    "version": "2.8.0"
+   }
+  },
+  "missing": [],
+  "parse_error": null,
+  "preexisting_changed": [],
+  "status": "match",
+  "wrong_version": []
+ },
+ "static": {
+  "console_script": {
+   "executed": false,
+   "present": true,
+   "reason": "not executed: no tripwire and no positive control through this launcher"
+  },
+  "fie_payload_files_checked": 55,
+  "fie_payload_files_differing_from_wheel": [],
+  "fie_wheel_sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c",
+  "fie_wheel_sha256_matches_plan": true,
+  "model_counts": {
+   "hash_mismatch": 0,
+   "unmanifested": 0,
+   "verified": 10
+  },
+  "model_files": [
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/failure_classifier_v4.pkl",
+    "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
+    "size": 190524
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/feature_columns_v4.pkl",
+    "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
+    "size": 24207
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/meta_clf.pkl",
+    "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+    "size": 212131
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier.pkl",
+    "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+    "size": 18325
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v3.pkl",
+    "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v4.pkl",
+    "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v5.pkl",
+    "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6.pkl",
+    "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6_3.pkl",
+    "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+    "size": 11349
+   },
+   {
+    "manifest_status": "verified",
+    "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
+    "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "size": 11349
+   }
+  ],
+  "startup_code": [],
+  "unexpected_startup_code": []
+ },
+ "tool_failures": [],
+ "verdict": "PASS"
+}

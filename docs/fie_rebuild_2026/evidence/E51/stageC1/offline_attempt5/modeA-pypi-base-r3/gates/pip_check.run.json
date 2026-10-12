@@ -1,0 +1,10 @@
+{
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe -I -m pip check --disable-pip-version-check",
+ "exit_code": 0,
+ "gate": "pip_check",
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe",
+ "seconds": 0.83,
+ "started_utc": "2026-10-12T05:07:18Z",
+ "stderr_chars": 0,
+ "stdout_chars": 30
+}

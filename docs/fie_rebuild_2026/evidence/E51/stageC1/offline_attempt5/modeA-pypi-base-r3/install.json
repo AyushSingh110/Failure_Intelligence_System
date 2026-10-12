@@ -1,0 +1,35 @@
+{
+ "artifact": "A-pypi-1.18.0",
+ "cell": "modeA-pypi-base-r3",
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r3\\Scripts\\python.exe -I -m pip install --isolated --no-index --find-links <HOME>\\fie-e51-scratch\\wheelhouse-A --find-links <HOME>\\fie-e51-scratch\\wheels\\pypi --only-binary :all: --no-binary langdetect --require-hashes -r <HOME>\\fie-e51-scratch\\pins\\pins-A-modeA-pypi-base-r3.txt --no-cache-dir --disable-pip-version-check -vv",
+ "install_mode": "A-source-build",
+ "installer": "pip 23.0.1 bundled with the venv",
+ "log": {
+  "build_path": [
+   "legacy: setup.py install (no wheel built)"
+  ],
+  "deprecation_lines": [
+   "DEPRECATION: --no-binary currently disables reading from the cache of locally built wheels. In the future --no-binary will not influence the wheel cache. pip 23.1 will enforce this behaviour change. A possible replacement is to use the --no",
+   "DEPRECATION: langdetect is being installed using the legacy 'setup.py install' method, because the '--no-binary' option was enabled for it and this currently disables local wheel building for projects that don't have a 'pyproject.toml' file"
+  ],
+  "isolated_build_environment": false,
+  "langdetect_wheel_file_mentioned": false,
+  "packages_built_as_wheel": [],
+  "packages_installed_by_setup_py": [
+   "langdetect",
+   "langdetect"
+  ],
+  "source_archive_used": true,
+  "successfully_installed_line": "Successfully installed beautifulsoup4-4.15.0 certifi-2026.7.22 charset-normalizer-3.5.2 deep-translator-1.11.4 fie-sdk-1.18.0 idna-3.20 langdetect-1.0.9 requests-2.34.2 six-1.17.0 soupsieve-2.10 typing_extensions-4.16.0 urllib3-2.8.0",
+  "urls_in_log": [
+   "https://blog.ganssle.io",
+   "https://github.com",
+   "https://packaging.python.org",
+   "https://pypi.org",
+   "https://setuptools.pypa.io"
+  ]
+ },
+ "pip_exit": 0,
+ "seconds": 10.13,
+ "window": "inside the airplane-mode window"
+}

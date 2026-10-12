@@ -105,6 +105,122 @@ code starts a process; or the probe cannot prove it measured the installed copy.
 A second attempt writes to `offline_attempt2/`; it refuses to reuse an environment that
 already has `fie` installed.
 
+## Post-install gates: tool failure is not a package finding
+
+*Added after offline attempt 4 (2026-10-12).* In attempt 4 the mode A install succeeded, but
+`pip inspect` exited 2 and the runner reported all 12 pinned distributions as missing. They
+were not missing. pip prints each package's description; several contain characters that
+cp1252 cannot encode; with output redirected, pip's console writer raised
+`UnicodeEncodeError`. The runner set `PYTHONUTF8=1`, but `-I` makes Python ignore that
+variable. Evidence: `offline_attempt4/`, `diagnostic_pip_inspect_attempt4/` (the traceback)
+and `diagnostic_pip_inspect_utf8_attempt4/` (the same command with `-X utf8`: exit 0, complete
+JSON). Both diagnostics were connected and are not gate results.
+
+**UTF-8 requirement.** `pip inspect` is run as `python -I -X utf8 -m pip inspect`. `-X utf8`
+is a command-line option, which `-I` does not ignore. pip itself is unchanged (bundled
+23.0.1). No other measurement command is given this flag. In particular the mode S command
+line (`python -m fie …`) runs without it: if the installed CLI cannot write to redirected
+cp1252 output, that is as-shipped behaviour and is recorded as a result.
+
+**Categories.** `pip inspect` is classified as exactly one of:
+
+| Status | Meaning | Cell outcome |
+| --- | --- | --- |
+| `tool_failed` | the command did not exit 0, timed out, or could not start | `verification tool failed` |
+| `output_unparseable` | exit 0, but stdout is empty, not JSON, or not a complete report | `verification tool failed` |
+| `match` | parsed; every pin present at its version, nothing extra, pre-existing packages unchanged | this gate passes |
+| `mismatch` | parsed; a real difference, listed by name | `installed but not verified` |
+
+In the first two cases the missing / wrong-version / extra lists are `not evaluated`. `pip
+check` is classified the same way: exit 0 passes, exit 1 is broken requirements, anything else
+is `tool_failed`. Gate G7 is unchanged: only `match`, with every other gate clean, passes.
+
+**Evidence per gate.** Written before the output is parsed, never overwritten (exclusive
+creation): `<cell>/gates/<gate>.stdout.txt`, `.stderr.txt`, `.run.json` (command, interpreter,
+exit code, seconds), then `.result.json` (the classification).
+
+Regression tests, outside `tests/` and run explicitly:
+
+```text
+python -m pytest docs\fie_rebuild_2026\experiments\E51\test_offline_runner.py -p no:cacheprovider
+```
+
+## Mode A retry (after attempt 4)
+
+Scope: **mode A only**, one fresh environment, `modeA-pypi-base-r3`. `modeA-pypi-base-r1` was
+installed in attempt 4; it is kept and not reused. Mode B and both `[ml]` sets are outside this
+retry.
+
+Connected, from the repository root:
+
+```text
+python docs\fie_rebuild_2026\experiments\E51\prepare_retry.py
+python -I -B docs\fie_rebuild_2026\experiments\E51\offline_runner.py --plan C:\Users\ASUS\fie-e51-scratch\c1_retry_plan.json --selftest
+```
+
+`prepare_retry.py` downloads no package. It re-checks the release, pip configuration, proxy
+and hosts; re-resolves the base set against the approved pins; re-hashes the mode A wheelhouse
+against its ledger; creates the one environment; and takes the positive control through its
+launcher and the base interpreter. Evidence: `stageC1/retry1/`.
+
+Offline, owner:
+
+```text
+python -I -B docs\fie_rebuild_2026\experiments\E51\offline_runner.py --plan C:\Users\ASUS\fie-e51-scratch\c1_retry_plan.json
+```
+
+`--cells a,b` restricts a run to named cells of a plan; without it every cell of the plan runs.
+On any stop the runner keeps what it has written, runs the closing controls if the offline
+window was opened, pauses for the owner to restore the network, and verifies recovery.
+
+## Cell outcomes: a blocked probe is not a completed measurement
+
+*Added after offline attempt 5 (2026-10-12).* In attempt 5 the mode A install passed every
+gate, but `import fie` raised `ModuleNotFoundError` (`starlette`), no scan ran, and the runner
+still printed `RESULT: COMPLETED`. The probe recorded the exception class but not the module.
+
+The probe's `import.json` now records, on failure: `exception`, `missing_module`
+(`ModuleNotFoundError.name`), a sanitized `exception_message`, `import_completed: false`,
+`scan_records: 0` and the import chain (file names relative to the environment). The full
+traceback goes to the probe's stderr, which the runner keeps, redacted, in `run.json`.
+
+Each probe process is classified `scan_completed` (exit 0, import completed, at least one
+record), `import_blocked`, `no_scan_records` or `probe_failed`. Each cell then gets one outcome:
+
+| Outcome | Meaning |
+| --- | --- |
+| `SCANS_COMPLETED` | all four runs (S ×2, PC ×2) completed scans |
+| `IMPORT_BLOCKED_NO_SCAN_COMPLETED` | `import fie` raised; zero scan records. `blocked.json` holds the error and the unanswered questions |
+| `NO_SCAN_COMPLETED` | zero scan records for another reason |
+| `PARTIAL_SCANS_COMPLETED` | some runs completed, not all |
+| `NOT_MEASURED_GATES_NOT_PASSED` | post-install gates did not pass; no probe was started |
+
+The runner's last line is `COMPLETED` only when every planned cell is `SCANS_COMPLETED`.
+Otherwise it is `FINISHED, MEASUREMENT NOT COMPLETE - <cell>: <outcome>; …` or `STOPPED - …`.
+An import failure is an observed result of the installed artifact. It is not repaired (no
+dependency is added to an environment), it is not a detector pass or failure, and a blocked
+mode is never filled in from another mode or cell.
+
+## Mode B base cells
+
+Three fresh environments, `modeB-pypi-base-m1`, `modeB-clean-base-m1`, `modeB-release-base-m1`,
+with no pip inside; the repository's pip installs through `--python`. The mode B inspection
+command (`python -I -X utf8 -m pip --python <env> inspect`) was checked once, connected, in
+`diagnostic_pip_inspect_modeB_command/`; that check is not a gate result.
+
+```text
+python docs\fie_rebuild_2026\experiments\E51\prepare_modeb.py                       # connected
+python -I -B docs\fie_rebuild_2026\experiments\E51\offline_runner.py --plan C:\Users\ASUS\fie-e51-scratch\c1_modeb_plan.json   # owner, offline
+```
+
+`prepare_modeb.py` downloads and builds nothing: it re-hashes the base wheelhouse and the three
+`fie` wheels against their ledgers, requires `fie/`, `pyproject.toml` and the manifest to be
+unchanged since the build commit, re-resolves the base set against the approved pins, inspects
+the wheels statically, creates the environments and takes a positive control through each
+launcher. Evidence: `stageC1/modeb1/`. Mode B cells are independent: an install that stops one
+cell does not stop the next. Mode B results are about pre-built-local-wheel environments and
+are never described as what `pip install fie-sdk` does.
+
 ## Modes measured
 
 | Mode | Base cells | Inputs |
@@ -126,4 +242,6 @@ performance.
 | `export_inputs.py` | repository env | Inputs as plain JSONL, verified against the baseline |
 | `egress_selftest.py` | every launcher | TCP control |
 | `offline_runner.py` | repository interpreter, offline | Phase 2 |
+| `prepare_retry.py` | repository env, connected | One fresh mode A environment for the retry |
+| `test_offline_runner.py` | repository env | Regression tests for the gate classification |
 | `probe.py`, `cli_guard.py` | each measurement environment | The installed `fie`, under tripwire and recorders |

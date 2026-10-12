@@ -1,0 +1,29 @@
+{
+ "artifact": "A-pypi-1.18.0",
+ "cell": "modeB-pypi-base-m1",
+ "cli_exit_codes": {
+  "cli-detect-benign_capital": 1,
+  "cli-detect-injection": 1,
+  "cli-explain-benign_capital": 1,
+  "cli-explain-injection": 1
+ },
+ "import_error": {
+  "exception": "ModuleNotFoundError",
+  "exception_message": "No module named 'starlette'",
+  "missing_module": "starlette"
+ },
+ "install_mode": "B-prebuilt-local-wheel",
+ "outcome": "IMPORT_BLOCKED_NO_SCAN_COMPLETED",
+ "runs_completed": [],
+ "runs_expected": [
+  "S-run1",
+  "S-run2",
+  "PC-run1",
+  "PC-run2"
+ ],
+ "runs_import_blocked": [
+  "S-run1",
+  "PC-run1"
+ ],
+ "scan_records_total": 0
+}

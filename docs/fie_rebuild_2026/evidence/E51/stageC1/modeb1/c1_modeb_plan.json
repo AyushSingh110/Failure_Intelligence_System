@@ -1,0 +1,163 @@
+{
+ "base_interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+ "cells": {
+  "modeB-clean-base-m1": {
+   "artifact": "A-clean",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": false,
+   "created_utc": "2026-10-12T05:47:32Z",
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\clean-build1\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-B",
+    "<HOME>\\fie-e51-scratch\\wheels\\clean-build1"
+   ],
+   "importable_before_install": [],
+   "install_mode": "B-prebuilt-local-wheel",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "packages_before_install": [],
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-clean-base-m1.txt",
+   "python": "3.10.19",
+   "site_packages_before_install": []
+  },
+  "modeB-pypi-base-m1": {
+   "artifact": "A-pypi-1.18.0",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": false,
+   "created_utc": "2026-10-12T05:47:31Z",
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base-m1",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\pypi\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-B",
+    "<HOME>\\fie-e51-scratch\\wheels\\pypi"
+   ],
+   "importable_before_install": [],
+   "install_mode": "B-prebuilt-local-wheel",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base-m1\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "packages_before_install": [],
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-pypi-base-m1.txt",
+   "python": "3.10.19",
+   "site_packages_before_install": []
+  },
+  "modeB-release-base-m1": {
+   "artifact": "A-release",
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "bundled_pip": false,
+   "created_utc": "2026-10-12T05:47:32Z",
+   "env": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1",
+   "fie_wheel": "<HOME>\\fie-e51-scratch\\wheels\\release-build1\\fie_sdk-1.18.0-py3-none-any.whl",
+   "fie_wheel_sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c",
+   "find_links": [
+    "<HOME>\\fie-e51-scratch\\wheelhouse-B",
+    "<HOME>\\fie-e51-scratch\\wheels\\release-build1"
+   ],
+   "importable_before_install": [],
+   "install_mode": "B-prebuilt-local-wheel",
+   "launcher": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe",
+   "launcher_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+   "packages_before_install": [],
+   "pins": "<HOME>\\fie-e51-scratch\\pins\\pins-B-modeB-release-base-m1.txt",
+   "python": "3.10.19",
+   "site_packages_before_install": []
+  }
+ },
+ "commit": "3f823adaa80682e8638910517accaadf79483a40",
+ "free_gb_at_preparation": 33.8,
+ "inputs_pc": "<HOME>\\fie-e51-scratch\\inputs\\inputs_pc.jsonl",
+ "inputs_s": "<HOME>\\fie-e51-scratch\\inputs\\inputs_s.jsonl",
+ "launchers": {
+  "base-interpreter": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+  "modeB-clean-base-m1": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\Scripts\\python.exe",
+  "modeB-pypi-base-m1": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base-m1\\Scripts\\python.exe",
+  "modeB-release-base-m1": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe"
+ },
+ "manifest": "<HOME>\\Desktop\\Failure_Intelligence_System\\scripts\\model_manifest.json",
+ "not_in_this_run": {
+  "[ml] cells": "not provisioned: awaiting explicit owner approval",
+  "modeA-pypi-base-r1, -r3": "measured earlier; kept, not reused",
+  "modeB-*-base (created 2026-10-11)": "never installed; not used"
+ },
+ "not_provisioned": {
+  "A-clean [ml]": "not provisioned: awaiting explicit owner approval (O-21)",
+  "A-pypi-1.18.0 [ml]": "not provisioned: awaiting explicit owner approval (O-22)",
+  "A-release [ml]": "not provisioned: awaiting explicit owner approval (O-21)"
+ },
+ "repo": "<HOME>\\Desktop\\Failure_Intelligence_System",
+ "scope": "mode B base cells only",
+ "scratch": "<HOME>\\fie-e51-scratch",
+ "targets": [
+  "151.101.0.223:443",
+  "167.82.24.223:443"
+ ],
+ "verified_models": "<HOME>\\fie-e51-scratch\\verified_model_sha256.json",
+ "wheel_inspection": {
+  "A-clean": {
+   "default_load_set": [],
+   "has": {
+    "fie._lite": true,
+    "fie.layers.pair": true,
+    "fie.onnx_encoder": true,
+    "fie.policy": true
+   },
+   "model_counts": {
+    "hash_mismatch": 0,
+    "unmanifested": 0,
+    "verified": 0
+   },
+   "sha256": "8710486706d5c243957e077de60e1e9906b3d0317ea8c9e870d278162b839e99"
+  },
+  "A-pypi-1.18.0": {
+   "default_load_set": [
+    {
+     "manifest_status": "verified",
+     "path": "fie/models/pair_intent_classifier.pkl"
+    },
+    {
+     "manifest_status": "hash_mismatch",
+     "path": "fie/models/meta_clf.pkl"
+    }
+   ],
+   "has": {
+    "fie._lite": true,
+    "fie.layers.pair": true,
+    "fie.onnx_encoder": false,
+    "fie.policy": false
+   },
+   "model_counts": {
+    "hash_mismatch": 1,
+    "unmanifested": 0,
+    "verified": 9
+   },
+   "sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d"
+  },
+  "A-release": {
+   "default_load_set": [
+    {
+     "manifest_status": "verified",
+     "path": "fie/models/pair_intent_classifier.pkl"
+    },
+    {
+     "manifest_status": "verified",
+     "path": "fie/models/meta_clf.pkl"
+    }
+   ],
+   "has": {
+    "fie._lite": true,
+    "fie.layers.pair": true,
+    "fie.onnx_encoder": true,
+    "fie.policy": true
+   },
+   "model_counts": {
+    "hash_mismatch": 0,
+    "unmanifested": 0,
+    "verified": 10
+   },
+   "sha256": "17b23a9e719591a349cc1baeb9efc4d79b8e336f6e38d18612df8a8a7ca6400c"
+  }
+ },
+ "wheels_built_from": "2f62ecd"
+}

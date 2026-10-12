@@ -1,0 +1,22 @@
+{
+ "attempt": 6,
+ "cells": [
+  "modeB-clean-base-m1",
+  "modeB-pypi-base-m1",
+  "modeB-release-base-m1"
+ ],
+ "commit": "3f823adaa80682e8638910517accaadf79483a40",
+ "network_settings_changed_by_this_script": false,
+ "not_provisioned": {
+  "A-clean [ml]": "not provisioned: awaiting explicit owner approval (O-21)",
+  "A-pypi-1.18.0 [ml]": "not provisioned: awaiting explicit owner approval (O-22)",
+  "A-release [ml]": "not provisioned: awaiting explicit owner approval (O-21)"
+ },
+ "probe_sha256": "ca4917ebd7293afee8272a5c0e6bfd6ea3f0f0f1db55536d906b56269d4c59b7",
+ "runner_sha256": "520d1814d471a69441d1ffd3f82ad12caa770b4959ef560195bcedd1f2f7743d",
+ "started_utc": "2026-10-12T06:07:31Z",
+ "targets": [
+  "151.101.0.223:443",
+  "167.82.24.223:443"
+ ]
+}

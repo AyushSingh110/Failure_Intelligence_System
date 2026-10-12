@@ -1,0 +1,119 @@
+{
+ "all_ok": true,
+ "controls": {
+  "base-interpreter": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "exit": 0,
+   "expect": "blocked",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "167.82.24.223:443"
+    }
+   ],
+   "seconds": 0.22,
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe"
+  },
+  "modeB-clean-base-m1": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "exit": 0,
+   "expect": "blocked",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "167.82.24.223:443"
+    }
+   ],
+   "seconds": 0.12,
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeB-clean-base-m1\\Scripts\\python.exe"
+  },
+  "modeB-pypi-base-m1": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "exit": 0,
+   "expect": "blocked",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "167.82.24.223:443"
+    }
+   ],
+   "seconds": 0.12,
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeB-pypi-base-m1\\Scripts\\python.exe"
+  },
+  "modeB-release-base-m1": {
+   "base_executable": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "exit": 0,
+   "expect": "blocked",
+   "flags": {
+    "isolated": 1,
+    "no_site": 1
+   },
+   "ok": true,
+   "process_image": "<HOME>\\anaconda3\\envs\\failure-engine\\python.exe",
+   "python": "3.10.19",
+   "results": [
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "151.101.0.223:443"
+    },
+    {
+     "connected": false,
+     "error": "OSError:10065",
+     "target": "167.82.24.223:443"
+    }
+   ],
+   "seconds": 0.11,
+   "site_packages_on_path": [],
+   "sys_executable": "<HOME>\\fie-e51-scratch\\env\\modeB-release-base-m1\\Scripts\\python.exe"
+  }
+ },
+ "expect": "blocked",
+ "targets": [
+  "151.101.0.223:443",
+  "167.82.24.223:443"
+ ],
+ "utc": "2026-10-12T06:08:25Z"
+}

@@ -1,0 +1,7 @@
+{
+ "C1": "not possible: no cell produced a scan record to compare with BL-0002 lite.std",
+ "C4": "not possible at runtime: no records. Import outcome is the same for A-pypi-1.18.0 and A-release (ModuleNotFoundError: starlette)",
+ "C7": "not applicable: mode P does not exist for base cells",
+ "C8": "not applicable: mode P does not exist for base cells",
+ "ml_cells": "not provisioned: awaiting explicit owner approval"
+}
