@@ -1067,3 +1067,45 @@ Not executed by the assistant.
 ```text
 git add docs/fie_rebuild_2026 && git commit -m "docs: E51 Stage C1 base-install results - fie-sdk base install cannot be imported (WP-020)"
 ```
+
+---
+
+## 14. WP-021 record: packaging and base-import correctness
+
+Plan: [PLAN_021_PACKAGING_BASE_IMPORT.md](IMPLEMENTATION_PLANS/PLAN_021_PACKAGING_BASE_IMPORT.md),
+revision 1, proposed. Each phase is authorized separately.
+
+### 14.1 Phase 0 (2026-10-12): the release check reproduces the defect
+
+Detail and evidence:
+[EXECUTION_021_phase0-release-check.md](EXECUTION_REPORTS/EXECUTION_021_phase0-release-check.md),
+`evidence/WP021/phase0/`.
+
+- **Authorized scope:** a new `scripts/release_check.py` implementing Level 1 (installation)
+  and Level 2 (SDK import) of the plan's §5, and one run of it on a wheel built from the
+  unmodified tree. No product fix.
+- **Result:** on a wheel built from a clean `git archive` of `becc2c7`
+  (`fie_sdk-1.18.0-py3-none-any.whl`, 151,936 bytes, SHA-256 `cfdf1859…dceaf4e4`), AC-1 to
+  AC-4 pass; **AC-5 `import fie` fails with `ModuleNotFoundError: No module named
+  'starlette'`**; AC-7 (command line) fails the same way; AC-6 and AC-8 are not evaluated
+  because the import did not complete. **The tool exits 1.** This is the plan's AC-24: the
+  gate fails on the known defect for the documented reason.
+- The wheel's 37 package files are byte-identical to E51's A-clean; the result is consistent
+  with E51 Stage C1 and was obtained with an independent tool.
+- Regression: 942 tests pass; `python -m evals baseline` exits 0, byte-identical to `BL-0002`.
+  `CANONICAL` unchanged.
+- Changed: only `scripts/release_check.py` (new), this section, the execution report and the
+  evidence. `fie/`, `pyproject.toml`, `tests/`, workflows, models and the manifest are
+  untouched.
+- Not established: anything about detection. The tool's passing path has not yet been
+  exercised by a real wheel.
+
+**Open:** Phase 1 (lazy integration import and the `fastapi` extra) is not authorized. The
+plan's owner decisions W21-1 to W21-14 are undecided. The remaining E51 `[ml]` cells stay
+unrun pending a separate owner decision.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add -f scripts/release_check.py && git add docs/fie_rebuild_2026 && git commit -m "scripts: add installed-wheel release check; reproduces base-import failure (WP-021 phase 0)"
+```
