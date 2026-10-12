@@ -1,0 +1,42 @@
+{
+ "all_adapters": [
+  {
+   "InterfaceDescription": "Bluetooth Device (Personal Area Network)",
+   "MediaConnectionState": 2,
+   "Name": "Bluetooth Network Connection",
+   "Status": "Disconnected"
+  },
+  {
+   "InterfaceDescription": "Intel(R) Wi-Fi 6E AX211 160MHz",
+   "MediaConnectionState": 1,
+   "Name": "Wi-Fi",
+   "Status": "Up"
+  }
+ ],
+ "default_route_count": 2,
+ "default_routes": [
+  {
+   "DestinationPrefix": "0.0.0.0/0",
+   "InterfaceAlias": "Wi-Fi"
+  },
+  {
+   "DestinationPrefix": "::/0",
+   "InterfaceAlias": "Wi-Fi"
+  }
+ ],
+ "errors": [],
+ "offline": false,
+ "physical_adapters": [
+  {
+   "InterfaceDescription": "Intel(R) Wi-Fi 6E AX211 160MHz",
+   "MediaConnectionState": 1,
+   "Name": "Wi-Fi",
+   "Status": "Up"
+  }
+ ],
+ "physical_adapters_up": [
+  "Wi-Fi"
+ ],
+ "readable": true,
+ "utc": "2026-10-11T15:39:00Z"
+}

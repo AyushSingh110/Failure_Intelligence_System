@@ -58,7 +58,18 @@ The launchers are created before the positive control and are not recreated, mov
 replaced afterwards; the runner checks each launcher's SHA-256 against the value recorded with
 its positive control, before the first install and again at the end. The runner also reads
 (never writes) adapter state and default routes and stops unless no physical adapter is up and
-no default route exists.
+no **usable** default route exists.
+
+*Correction after attempts 1 to 3 (2026-10-11/12).* Attempt 1 stopped correctly: Wi-Fi was
+still up. Attempts 2 and 3 stopped although airplane mode was on: every adapter reported
+`Disconnected`, but Windows still listed the two default routes on the disconnected Wi-Fi
+interface, and the runner required the list to be empty. That requirement was wrong: a listed
+route on a disconnected interface carries no traffic. The runner now counts a default route as
+usable unless its interface is positively known to be down (adapter status not `Up` **and**
+every IP interface of that name reporting `Disconnected`), and records listed, usable and stale
+counts. An interface it cannot classify counts as usable, so the check still fails closed. The
+TCP controls through all six executables are unchanged and remain the decisive test. Nothing
+was installed or measured in attempts 1 to 3; their evidence is kept.
 
 **What this supports:** no network interface was up, and these six executables could not open
 those connections, at the start and at the end of the window. **What it does not:** it is not

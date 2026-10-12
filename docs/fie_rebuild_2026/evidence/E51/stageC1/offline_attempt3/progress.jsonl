@@ -1,0 +1,3 @@
+{"message": "plan loaded; 5 environments; adapters up now: []", "step": "0", "utc": "2026-10-12T03:37:16Z"}
+{"message": "the machine does not look offline: adapters up [], default routes 2, readable True", "step": "STOP", "utc": "2026-10-12T03:52:55Z"}
+{"message": "connectivity restored = True", "step": "7", "utc": "2026-10-12T03:57:34Z"}

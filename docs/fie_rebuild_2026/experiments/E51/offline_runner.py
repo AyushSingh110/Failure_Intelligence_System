@@ -163,13 +163,32 @@ def network_state() -> dict:
         "@(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue) + "
         "@(Get-NetRoute -DestinationPrefix '::/0' -ErrorAction SilentlyContinue) | "
         "Select-Object DestinationPrefix,InterfaceAlias | ConvertTo-Json")
+    ip_ifs, e4 = powershell_json("Get-NetIPInterface | Select-Object InterfaceAlias,ConnectionState | ConvertTo-Json")
     state = {"utc": now(), "physical_adapters": physical, "all_adapters": every, "default_routes": routes,
-             "errors": [e for e in (e1, e2, e3) if e]}
-    readable = physical is not None and routes is not None
+             "ip_interfaces": ip_ifs, "errors": [e for e in (e1, e2, e3, e4) if e]}
+    readable = physical is not None and every is not None and routes is not None and ip_ifs is not None
     state["readable"] = readable
     state["physical_adapters_up"] = [a["Name"] for a in (physical or []) if str(a.get("Status")) == "Up"]
+    # Windows keeps a default route entry on an interface after that interface disconnects
+    # (observed in attempts 1-3: Wi-Fi "Disconnected", route still listed). Such an entry cannot
+    # carry traffic. A route is USABLE unless its interface is positively known to be down:
+    # adapter status not "Up" AND every IP interface of that name reporting Disconnected (0).
+    adapter_status = {a["Name"]: str(a.get("Status")) for a in (every or [])}
+    ip_state: dict = {}
+    for i in ip_ifs or []:
+        ip_state.setdefault(i["InterfaceAlias"], []).append(i.get("ConnectionState"))
+    usable = []
+    for r in routes or []:
+        alias = r.get("InterfaceAlias")
+        known_down = (alias in adapter_status and adapter_status[alias] != "Up"
+                      and alias in ip_state and all(s in (0, "Disconnected") for s in ip_state[alias]))
+        r["usable"] = not known_down
+        if not known_down:
+            usable.append(r)
     state["default_route_count"] = len(routes or [])
-    state["offline"] = readable and not state["physical_adapters_up"] and state["default_route_count"] == 0
+    state["usable_default_route_count"] = len(usable)
+    state["stale_default_route_count"] = len(routes or []) - len(usable)
+    state["offline"] = readable and not state["physical_adapters_up"] and not usable
     return state
 
 
@@ -559,13 +578,15 @@ def main() -> int:
         ev.save("isolation/01_state_offline_start.json", state)
         if not state["offline"]:
             raise Stop("the machine does not look offline: adapters up "
-                       f"{state['physical_adapters_up']}, default routes {state['default_route_count']}, "
+                       f"{state['physical_adapters_up']}, usable default routes "
+                       f"{state['usable_default_route_count']} (listed {state['default_route_count']}), "
                        f"readable {state['readable']}")
         controls = tcp_controls(plan, "blocked")
         ev.save("isolation/02_negative_controls_start.json", controls)
         if not controls["all_ok"]:
             raise Stop("a TCP connection succeeded, or a control did not run, with airplane mode on")
-        ev.log("2", f"offline verified: no adapter up, no default route, TCP refused through "
+        ev.log("2", f"offline verified: no adapter up, no usable default route "
+                    f"({state['stale_default_route_count']} stale on disconnected interfaces), TCP refused through "
                     f"{len(controls['controls'])} executables")
         status["offline_window_opened_utc"] = now()
 

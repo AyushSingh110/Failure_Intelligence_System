@@ -1,0 +1,70 @@
+{
+ "command": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe -I -m pip inspect --disable-pip-version-check",
+ "ended_utc": "2026-10-12T04:04:29Z",
+ "environment_tree": {
+  "files_after": 2403,
+  "files_before": 2403,
+  "identical": true
+ },
+ "environment_variable_names": [
+  "APPDATA",
+  "COMSPEC",
+  "HOME",
+  "LOCALAPPDATA",
+  "NUMBER_OF_PROCESSORS",
+  "OS",
+  "PATH",
+  "PATHEXT",
+  "PIP_CONFIG_FILE",
+  "PROCESSOR_ARCHITECTURE",
+  "PYTHONNOUSERSITE",
+  "PYTHONUTF8",
+  "SystemDrive",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "windir"
+ ],
+ "exit_code": 2,
+ "installed_metadata_files_containing_U+1F44B": [
+  "charset_normalizer-3.5.2.dist-info/METADATA",
+  "urllib3-2.8.0.dist-info/METADATA"
+ ],
+ "installed_metadata_non_cp1252_character_counts": {
+  "charset_normalizer-3.5.2.dist-info": 42,
+  "deep_translator-1.11.4.dist-info": 19,
+  "fie_sdk-1.18.0.dist-info": 7,
+  "idna-3.20.dist-info": 30,
+  "typing_extensions-4.16.0.dist-info": 1,
+  "urllib3-2.8.0.dist-info": 2
+ },
+ "interpreter": "<HOME>\\fie-e51-scratch\\env\\modeA-pypi-base-r1\\Scripts\\python.exe",
+ "interpreter_sha256": "f16db53db1687ca9ed088eaa4e10754b3242cb3e0f181b00c87b77a37626d232",
+ "invocations": 1,
+ "kind": "CONNECTED diagnostic, outside the offline measurement phase. Not evidence of network isolation.",
+ "note_on_python_flags": "-I makes Python ignore PYTHON* variables, so PYTHONUTF8=1 in the allowlist had no effect",
+ "pip_version": "23.0.1 (bundled with the venv)",
+ "redaction": "home path and user name replaced in stdout.txt and stderr.txt; raw files kept in the scratch directory",
+ "started_utc": "2026-10-12T04:04:29Z",
+ "stderr": {
+  "bytes": 2226,
+  "character": "U+1F44B",
+  "codec": "charmap (cp1252)",
+  "exception": "UnicodeEncodeError",
+  "raised_in": "pip/_vendor/rich/_win32_console.py write_text, via pip/_internal/commands/inspect.py print_json",
+  "raw_sha256": "9fb918b4701f911e18b0434d3e16bad48b9c6dc1096ca5ce64b3c2e9e5db0616"
+ },
+ "stdout": {
+  "bytes": 2728,
+  "distribution_names_emitted_before_the_failure": [
+   "urllib3"
+  ],
+  "ends_with": ".html\"\r\n        ],\r\n        \"provides_extra\": [\r\n          \"brotli\",\r\n          \"h2\",\r\n          \"socks\",\r\n          \"zstd\"\r\n        ],\r\n        \"description\": ",
+  "is_complete_json": false,
+  "raw_sha256": "05f602e981efe3f6f91781aa7cd9fba29fc1d877e35b6b7126e7f9fdc9522158"
+ },
+ "subject": "the pip inspect command that failed in offline_attempt4, cell modeA-pypi-base-r1",
+ "working_directory": "<HOME>\\Desktop\\Failure_Intelligence_System",
+ "wrapper": "PowerShell -> cmd /d /c with 1> and 2> to separate files; exit code read from $LASTEXITCODE"
+}
