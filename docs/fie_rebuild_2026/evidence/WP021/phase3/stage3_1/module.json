@@ -1,0 +1,53 @@
+{
+ "classes": {
+  "ArtifactMissing": [
+   "ModelIntegrityError"
+  ],
+  "Entry": [],
+  "IntegrityMismatch": [
+   "ModelIntegrityError"
+  ],
+  "Manifest": [],
+  "ManifestError": [
+   "ModelIntegrityError"
+  ],
+  "ModelIntegrityError": [
+   "Exception"
+  ],
+  "NotListed": [
+   "ModelIntegrityError"
+  ],
+  "PathViolation": [
+   "ModelIntegrityError"
+  ]
+ },
+ "deserializes": false,
+ "error_codes": {
+  "ArtifactMissing": "missing",
+  "IntegrityMismatch": "mismatch",
+  "ManifestError": "manifest_invalid",
+  "NotListed": "not_listed",
+  "PathViolation": "path_violation"
+ },
+ "file": "fie/_model_integrity.py",
+ "imports": [
+  "__future__",
+  "dataclasses",
+  "hashlib",
+  "json",
+  "os",
+  "pathlib",
+  "re"
+ ],
+ "lines": 308,
+ "public_functions": {
+  "default_entry": "The entry the manifest marks as the default for this role. Raises NotListed if none is marked.",
+  "parse_manifest": "Validate a manifest given as JSON text, bytes, or an already-decoded object.",
+  "read_verified": "Read the entry's file once and return its bytes, after checking them.",
+  "resolve_path": "Where the entry's file is, inside `models_dir`, with symbolic links resolved.",
+  "select_entry": "The entry for exactly this role and version. Raises NotListed if the manifest has none.",
+  "verify_bytes": "Raise IntegrityMismatch unless `data` has the entry's size and SHA-256."
+ },
+ "sha256_lf_normalised": "aaa8ca3b30c547334344c84058f92bc3810c08b4a440e8b72e89ff3c718fac56",
+ "used_by_the_package": []
+}

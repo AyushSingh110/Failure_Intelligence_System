@@ -1,0 +1,71 @@
+{
+ "baseline": {
+  "command": "python -m evals baseline",
+  "exit_code": 0,
+  "result": "standard counts match; 11 per-prompt record files byte-identical to BL-0002_pair-v6.3b_fie-70de7053"
+ },
+ "fixtures": "synthetic byte strings and injected filesystem failures; no model file read, nothing deserialized",
+ "focused": {
+  "command": "python -m pytest tests/test_model_integrity.py -p no:cacheprovider",
+  "exit_code": 0,
+  "failed": 0,
+  "passed": 180,
+  "skipped": [
+   "SKIPPED [1] tests\\test_model_integrity.py:251: symbolic links cannot be created here",
+   "SKIPPED [1] tests\\test_model_integrity.py:774: file modes do not deny reading on Windows; the injected cases above cover this path"
+  ]
+ },
+ "full_suite": {
+  "command": "python -m pytest tests/ -m \"not network\" -p no:cacheprovider --tb=short -q -rA",
+  "exit_code": 0,
+  "failed": 0,
+  "passed": 1177,
+  "skipped": [
+   "SKIPPED [1] tests\\test_model_integrity.py:251: symbolic links cannot be created here",
+   "SKIPPED [1] tests\\test_model_integrity.py:774: file modes do not deny reading on Windows; the injected cases above cover this path"
+  ]
+ },
+ "module_sha256_lf_normalised": "73aadde04b0ef673888a37a1dcef35d94a7b85175802a1d21bb5f1de1b9e12c0",
+ "stage_3_1_tests_count": 143,
+ "stage_3_1_tests_still_passing_unchanged": true,
+ "test_file_sha256_lf_normalised": "32b30b2f90a5786e134fdd68d47be63cc89c5b7134bb3e605698a73419541105",
+ "tests_new_in_this_follow_up": [
+  "tests/test_model_integrity.py::test_a_failure_during_path_resolution_is_read_failed[lstat-file]",
+  "tests/test_model_integrity.py::test_a_failure_during_path_resolution_is_read_failed[stat-directory]",
+  "tests/test_model_integrity.py::test_a_failure_during_path_resolution_is_read_failed[stat-file]",
+  "tests/test_model_integrity.py::test_a_failure_in_link_resolution_is_read_failed",
+  "tests/test_model_integrity.py::test_a_failure_while_measuring_an_oversized_file_is_read_failed",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[BlockingIOError-11]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[InterruptedError-4]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[IsADirectoryError-21]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[OSError-16]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[OSError-5]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[PermissionError-13]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[PermissionError-1]",
+  "tests/test_model_integrity.py::test_a_failure_while_opening_is_read_failed[TimeoutError-10060]",
+  "tests/test_model_integrity.py::test_a_failure_while_reading_bytes_is_read_failed_and_the_file_is_closed",
+  "tests/test_model_integrity.py::test_a_file_removed_between_the_check_and_the_open_is_missing_and_sanitized",
+  "tests/test_model_integrity.py::test_a_missing_file_is_missing_and_an_unreadable_file_is_read_failed",
+  "tests/test_model_integrity.py::test_a_programming_error_is_not_disguised_as_an_io_failure[exc0]",
+  "tests/test_model_integrity.py::test_a_programming_error_is_not_disguised_as_an_io_failure[exc1]",
+  "tests/test_model_integrity.py::test_a_programming_error_is_not_disguised_as_an_io_failure[exc2]",
+  "tests/test_model_integrity.py::test_a_programming_error_is_not_disguised_as_an_io_failure[exc3]",
+  "tests/test_model_integrity.py::test_a_programming_error_is_not_disguised_as_an_io_failure[exc4]",
+  "tests/test_model_integrity.py::test_a_programming_error_is_not_disguised_as_an_io_failure[exc5]",
+  "tests/test_model_integrity.py::test_a_programming_error_while_reading_propagates_unchanged[exc0]",
+  "tests/test_model_integrity.py::test_a_programming_error_while_reading_propagates_unchanged[exc1]",
+  "tests/test_model_integrity.py::test_a_readable_file_still_returns_the_exact_bytes_with_one_open",
+  "tests/test_model_integrity.py::test_a_wrong_argument_type_is_a_type_error_not_an_integrity_error[12]",
+  "tests/test_model_integrity.py::test_a_wrong_argument_type_is_a_type_error_not_an_integrity_error[3.5]",
+  "tests/test_model_integrity.py::test_a_wrong_argument_type_is_a_type_error_not_an_integrity_error[None]",
+  "tests/test_model_integrity.py::test_a_wrong_argument_type_is_a_type_error_not_an_integrity_error[bad3]",
+  "tests/test_model_integrity.py::test_absence_reported_by_the_operating_system_during_resolution_is_missing[FileNotFoundError-2]",
+  "tests/test_model_integrity.py::test_absence_reported_by_the_operating_system_during_resolution_is_missing[NotADirectoryError-20]",
+  "tests/test_model_integrity.py::test_an_invalid_manifest_is_still_a_manifest_error",
+  "tests/test_model_integrity.py::test_an_unreadable_model_directory_is_read_failed_and_an_absent_one_is_missing",
+  "tests/test_model_integrity.py::test_every_os_error_from_read_verified_is_classified",
+  "tests/test_model_integrity.py::test_mismatch_is_still_mismatch_not_read_failed",
+  "tests/test_model_integrity.py::test_path_violations_are_still_decided_before_any_file_is_opened",
+  "tests/test_model_integrity.py::test_six_error_classes_six_codes_none_a_kind_of_another"
+ ]
+}
