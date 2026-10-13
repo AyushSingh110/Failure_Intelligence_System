@@ -1309,3 +1309,36 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add fie/_model_integrity.py tests/test_model_integrity.py docs/fie_rebuild_2026 && git commit -m "fie: add standalone model-integrity primitives, not yet used by the loader (WP-021 phase 3 stage 3.1)"
 ```
+
+### 14.6 Phase 3, Stage 3.1 follow-up (2026-10-13): filesystem failures classified
+
+Detail and evidence:
+[EXECUTION_021_phase3-stage3_1-followup-io-errors.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_1-followup-io-errors.md),
+`evidence/WP021/phase3/stage3_1_followup/`.
+
+- **The gap, as found.** In `fie/_model_integrity.py` a `PermissionError` or other `OSError`
+  on open or read escaped raw, with the absolute path in its text. Inspection showed more: a
+  refusal while examining the file was silently reported as `missing` or as `path_violation`,
+  because `os.path.lexists`, `isfile` and `isdir` swallow every error.
+- **The change.** A sixth error class, `ReadFailed`, code `read_failed`, carrying the relative
+  path, the operation (`resolve`, `open`, `read`), the exception class name and the error
+  number. Every filesystem step now distinguishes absence (`missing`) from refusal
+  (`read_failed`). Only `OSError` is classified; other exceptions propagate unchanged. The
+  operating system's message is not copied and the new errors are raised `from None`, so no
+  absolute path reaches a message or a logged traceback.
+- **Unchanged.** One open, and the bytes returned are the bytes checked. The other five codes
+  keep their meaning. No layer-state or policy mapping (W21-9 open). The loader does not use
+  the module. No manifest, downloader, build or workflow change.
+- **Tests.** 38 added, none modified: 180 pass and 2 skip in the file (the symbolic-link case,
+  and a real unreadable file, neither producible on this Windows machine; both run on Linux).
+  Full suite 1177 passed, 0 failed, 2 skipped. `python -m evals baseline` exits 0,
+  byte-identical to `BL-0002`. `CANONICAL` unchanged.
+
+Stage 3.1 as a whole is still partially complete: the tracked manifest and the download script
+wait on W21-8, W21-15, W21-22, W21-23 and the meta-classifier's version name.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add fie/_model_integrity.py tests/test_model_integrity.py docs/fie_rebuild_2026 && git commit -m "fie: classify filesystem failures in the model-integrity primitives as read_failed (WP-021 phase 3 stage 3.1 follow-up)"
+```

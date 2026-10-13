@@ -570,3 +570,321 @@ def test_the_loader_does_not_use_the_module_yet():
     env = {**os.environ, "FIE_NO_TELEMETRY": "1", "FIE_NO_AUTO_DOWNLOAD": "1"}
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=str(REPO), env=env, timeout=300)
     assert proc.returncode == 0 and proc.stdout.strip().splitlines()[-1] == "False"
+
+
+# ── the operating system refuses: read_failed (stage 3.1 follow-up) ─────────
+# Before this, a PermissionError or an I/O error escaped as a raw OSError, outside the
+# module's error contract, with the absolute path in its text. These tests fail the
+# filesystem calls deliberately. The failures are injected, so the tests behave the same on
+# Windows and Linux; one extra test uses a real unreadable file where the platform allows it.
+
+import errno  # noqa: E402
+import traceback  # noqa: E402
+
+VICTIM = os.path.join("victim-home-dir", "private-user-name", "models", "clf_v1.pkl")
+
+
+def os_error(kind=PermissionError, code=errno.EACCES, text="Permission denied"):
+    """An OSError as the operating system raises it: errno, message, and the full path."""
+    return kind(code, text, VICTIM)
+
+
+def std_entry():
+    return mi.parse_manifest(standard()).by_path("clf_v1.pkl")
+
+
+def failing_open(monkeypatch, exc):
+    """Make the module's `open` raise. Returns the list of paths it was asked to open."""
+    asked = []
+
+    def fake(path, *args, **kwargs):
+        asked.append(path)
+        raise exc
+
+    monkeypatch.setattr(mi, "open", fake, raising=False)
+    return asked
+
+
+class BrokenFile:
+    """A file object whose read fails, as a failing disk or a dropped network share would."""
+
+    def __init__(self, exc):
+        self.exc, self.closed, self.reads = exc, False, 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        self.closed = True
+        return False
+
+    def read(self, n=-1):
+        self.reads += 1
+        raise self.exc
+
+    def fileno(self):
+        return 0
+
+
+def failing_stat(monkeypatch, name, target, exc):
+    """Make os.<name> raise for one path and behave normally for every other."""
+    real = getattr(os, name)
+    wanted = os.path.normcase(os.path.realpath(target))
+
+    def fake(path, *args, **kwargs):
+        try:
+            same = os.path.normcase(os.fspath(path)) == wanted
+        except TypeError:
+            same = False
+        if same:
+            raise exc
+        return real(path, *args, **kwargs)
+
+    monkeypatch.setattr(mi.os, name, fake)
+
+
+def assert_sanitized(err: BaseException, models) -> None:
+    """Nothing about the error, as shown or as logged, names an absolute or user-specific location."""
+    shown = "".join(traceback.format_exception(type(err), err, None)) + repr(err) + "".join(map(str, err.args))
+    for secret in ("victim-home-dir", "private-user-name", VICTIM, str(models), os.path.realpath(models),
+                   str(Path.home())):
+        assert secret not in shown, secret
+    assert err.__cause__ is None and err.__suppress_context__ is True
+
+
+@pytest.mark.parametrize("kind, code", [
+    (PermissionError, errno.EACCES), (PermissionError, errno.EPERM), (OSError, errno.EIO),
+    (OSError, errno.EBUSY), (IsADirectoryError, errno.EISDIR), (TimeoutError, errno.ETIMEDOUT),
+    (BlockingIOError, errno.EAGAIN), (InterruptedError, errno.EINTR),
+])
+def test_a_failure_while_opening_is_read_failed(models, monkeypatch, kind, code):
+    failing_open(monkeypatch, os_error(kind, code))
+    result = "not assigned"
+    with pytest.raises(mi.ReadFailed) as caught:
+        result = mi.read_verified(models, std_entry())
+    err = caught.value
+    assert result == "not assigned"
+    assert (err.code, err.operation, err.reason, err.errno, err.path) == ("read_failed", "open", kind.__name__, code, "clf_v1.pkl")
+    assert str(err) == f"clf_v1.pkl: could not open the artifact ({kind.__name__})"
+    assert_sanitized(err, models)
+
+
+def test_a_failure_while_reading_bytes_is_read_failed_and_the_file_is_closed(models, monkeypatch):
+    broken = BrokenFile(os_error(OSError, errno.EIO, "Input/output error"))
+    monkeypatch.setattr(mi, "open", lambda path, *a, **k: broken, raising=False)
+    result = "not assigned"
+    with pytest.raises(mi.ReadFailed) as caught:
+        result = mi.read_verified(models, std_entry())
+    err = caught.value
+    assert result == "not assigned" and broken.reads == 1 and broken.closed is True
+    assert (err.code, err.operation, err.reason, err.errno) == ("read_failed", "read", "OSError", errno.EIO)
+    assert_sanitized(err, models)
+
+
+def test_a_failure_while_measuring_an_oversized_file_is_read_failed(models, monkeypatch):
+    (models / "clf_v1.pkl").write_bytes(CLF_V1 * 3)
+
+    def fake_fstat(fd):
+        raise os_error(OSError, errno.EIO, "Input/output error")
+
+    monkeypatch.setattr(mi.os, "fstat", fake_fstat)
+    with pytest.raises(mi.ReadFailed) as caught:
+        mi.read_verified(models, std_entry())
+    assert (caught.value.operation, caught.value.errno) == ("read", errno.EIO)
+    assert_sanitized(caught.value, models)
+
+
+@pytest.mark.parametrize("call, where", [("stat", "directory"), ("lstat", "file"), ("stat", "file")])
+def test_a_failure_during_path_resolution_is_read_failed(models, monkeypatch, call, where):
+    target = models if where == "directory" else models / "clf_v1.pkl"
+    failing_stat(monkeypatch, call, target, os_error())
+    asked = []
+    monkeypatch.setattr(mi, "open", lambda path, *a, **k: asked.append(path), raising=False)
+    for function in (mi.resolve_path, mi.read_verified):
+        with pytest.raises(mi.ReadFailed) as caught:
+            function(models, std_entry())
+        err = caught.value
+        assert (err.code, err.operation, err.reason, err.errno) == ("read_failed", "resolve", "PermissionError", errno.EACCES)
+        assert not isinstance(err, (mi.ArtifactMissing, mi.PathViolation))    # neither "missing" nor "not a file"
+        assert_sanitized(err, models)
+    assert asked == []                                                        # never got as far as opening it
+
+
+def test_a_failure_in_link_resolution_is_read_failed(models, monkeypatch):
+    real = os.path.realpath
+
+    def fake(path, *args, **kwargs):
+        if os.fspath(path).endswith("clf_v1.pkl"):
+            raise os_error(OSError, errno.ELOOP, "Too many levels of symbolic links")
+        return real(path, *args, **kwargs)
+
+    monkeypatch.setattr(mi.os.path, "realpath", fake)
+    with pytest.raises(mi.ReadFailed) as caught:
+        mi.resolve_path(models, std_entry())
+    assert (caught.value.operation, caught.value.errno) == ("resolve", errno.ELOOP)
+    assert_sanitized(caught.value, models)
+
+
+# ── missing is not unreadable, and neither is the other ─────────────────────
+
+def test_a_missing_file_is_missing_and_an_unreadable_file_is_read_failed(models, monkeypatch):
+    entry = std_entry()
+    failing_open(monkeypatch, os_error())
+    with pytest.raises(mi.ReadFailed) as unreadable:
+        mi.read_verified(models, entry)
+    monkeypatch.undo()
+    (models / "clf_v1.pkl").unlink()
+    with pytest.raises(mi.ArtifactMissing) as missing:
+        mi.read_verified(models, entry)
+    assert (unreadable.value.code, missing.value.code) == ("read_failed", "missing")
+    assert not isinstance(unreadable.value, mi.ArtifactMissing)
+    assert not isinstance(missing.value, mi.ReadFailed)
+    assert not hasattr(missing.value, "operation")
+
+
+@pytest.mark.parametrize("kind, code", [(FileNotFoundError, errno.ENOENT), (NotADirectoryError, errno.ENOTDIR)])
+def test_absence_reported_by_the_operating_system_during_resolution_is_missing(models, monkeypatch, kind, code):
+    failing_stat(monkeypatch, "lstat", models / "clf_v1.pkl", os_error(kind, code, "No such file or directory"))
+    with pytest.raises(mi.ArtifactMissing) as caught:
+        mi.read_verified(models, std_entry())
+    assert caught.value.code == "missing"
+    assert_sanitized(caught.value, models)
+
+
+def test_a_file_removed_between_the_check_and_the_open_is_missing_and_sanitized(models, monkeypatch):
+    asked = failing_open(monkeypatch, os_error(FileNotFoundError, errno.ENOENT, "No such file or directory"))
+    with pytest.raises(mi.ArtifactMissing) as caught:
+        mi.read_verified(models, std_entry())
+    assert caught.value.code == "missing" and len(asked) == 1
+    assert_sanitized(caught.value, models)
+
+
+def test_an_unreadable_model_directory_is_read_failed_and_an_absent_one_is_missing(models, monkeypatch, tmp_path):
+    with pytest.raises(mi.ArtifactMissing):
+        mi.read_verified(tmp_path / "no-such-directory", std_entry())
+    failing_stat(monkeypatch, "stat", models, os_error())
+    with pytest.raises(mi.ReadFailed) as caught:
+        mi.read_verified(models, std_entry())
+    assert caught.value.operation == "resolve"
+
+
+def test_a_real_unreadable_file_is_read_failed(models):
+    """The same case without injection, where the platform can produce it."""
+    if os.name == "nt":
+        pytest.skip("file modes do not deny reading on Windows; the injected cases above cover this path")
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("the superuser can read any file")
+    target = models / "clf_v1.pkl"
+    target.chmod(0)
+    try:
+        with pytest.raises(mi.ReadFailed) as caught:
+            mi.read_verified(models, std_entry())
+    finally:
+        target.chmod(0o600)
+    assert (caught.value.code, caught.value.operation, caught.value.reason) == ("read_failed", "open", "PermissionError")
+    assert_sanitized(caught.value, models)
+
+
+# ── the classifications that already existed are unchanged ──────────────────
+
+def test_path_violations_are_still_decided_before_any_file_is_opened(models, monkeypatch, tmp_path):
+    asked = failing_open(monkeypatch, os_error())
+    outside = tmp_path / "secret.pkl"
+    outside.write_bytes(CLF_V1)
+    for path in ("../secret.pkl", "/etc/passwd", "C:/models/clf.pkl", "sub\\clf.pkl", "enc"):
+        entry = mi.Entry(path=path, sha256=sha(CLF_V1), size=len(CLF_V1), role="pair_classifier", in_wheel=True)
+        with pytest.raises(mi.PathViolation) as caught:
+            mi.read_verified(models, entry)
+        assert caught.value.code == "path_violation"
+    assert asked == []
+
+
+def test_mismatch_is_still_mismatch_not_read_failed(models):
+    entry = std_entry()
+    (models / "clf_v1.pkl").write_bytes(bytes([CLF_V1[0] ^ 0x01]) + CLF_V1[1:])
+    with pytest.raises(mi.IntegrityMismatch) as caught:
+        mi.read_verified(models, entry)
+    assert (caught.value.code, caught.value.what) == ("mismatch", "sha256")
+    assert not isinstance(caught.value, mi.ReadFailed)
+    (models / "clf_v1.pkl").write_bytes(CLF_V1 + b"x")
+    with pytest.raises(mi.IntegrityMismatch) as caught:
+        mi.read_verified(models, entry)
+    assert caught.value.what == "size"
+
+
+def test_an_invalid_manifest_is_still_a_manifest_error():
+    with pytest.raises(mi.ManifestError) as caught:
+        mi.parse_manifest("{not json")
+    assert caught.value.code == "manifest_invalid"
+
+
+def test_a_readable_file_still_returns_the_exact_bytes_with_one_open(models, monkeypatch):
+    opened = []
+    real_open = open
+
+    def counting(path, *args, **kwargs):
+        opened.append(path)
+        return real_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(mi, "open", counting, raising=False)
+    data = mi.read_verified(models, std_entry())
+    assert data == CLF_V1 and sha(data) == std_entry().sha256 and len(opened) == 1
+
+
+# ── only the operating system's refusals are reclassified ───────────────────
+
+@pytest.mark.parametrize("exc", [TypeError("bad argument"), ValueError("embedded null byte"),
+                                 RuntimeError("a bug"), MemoryError(), AttributeError("no such attribute"),
+                                 KeyboardInterrupt()])
+def test_a_programming_error_is_not_disguised_as_an_io_failure(models, monkeypatch, exc):
+    failing_open(monkeypatch, exc)
+    with pytest.raises(type(exc)) as caught:
+        mi.read_verified(models, std_entry())
+    assert caught.value is exc
+    assert not isinstance(caught.value, mi.ModelIntegrityError)
+
+
+@pytest.mark.parametrize("exc", [TypeError("bad argument"), RuntimeError("a bug")])
+def test_a_programming_error_while_reading_propagates_unchanged(models, monkeypatch, exc):
+    monkeypatch.setattr(mi, "open", lambda path, *a, **k: BrokenFile(exc), raising=False)
+    with pytest.raises(type(exc)) as caught:
+        mi.read_verified(models, std_entry())
+    assert caught.value is exc
+
+
+@pytest.mark.parametrize("bad", [None, 12, 3.5, ["models"]])
+def test_a_wrong_argument_type_is_a_type_error_not_an_integrity_error(bad):
+    with pytest.raises(TypeError):
+        mi.read_verified(bad, std_entry())
+
+
+# ── the contract as a whole ─────────────────────────────────────────────────
+
+def test_six_error_classes_six_codes_none_a_kind_of_another():
+    classes = [mi.ManifestError, mi.PathViolation, mi.NotListed, mi.ArtifactMissing, mi.IntegrityMismatch,
+               mi.ReadFailed]
+    assert sorted(c.code for c in classes) == ["manifest_invalid", "mismatch", "missing", "not_listed",
+                                               "path_violation", "read_failed"]
+    for cls in classes:
+        assert issubclass(cls, mi.ModelIntegrityError) and not issubclass(cls, OSError)
+        assert sum(issubclass(cls, other) for other in classes) == 1
+    assert "ReadFailed" in mi.__all__
+
+
+def test_every_os_error_from_read_verified_is_classified(models, monkeypatch):
+    """Whatever OSError subclass the system raises, at whichever step, none escapes raw."""
+    entry = std_entry()
+    kinds = [PermissionError, IsADirectoryError, ConnectionResetError, BrokenPipeError, TimeoutError,
+             ProcessLookupError, FileExistsError, OSError]
+    for kind in kinds:
+        with monkeypatch.context() as patch:
+            patch.setattr(mi, "open", lambda path, *a, _k=kind, **k: (_ for _ in ()).throw(_k(errno.EIO, "x", VICTIM)),
+                          raising=False)
+            with pytest.raises(mi.ModelIntegrityError) as caught:
+                mi.read_verified(models, entry)
+            assert caught.value.code == "read_failed" and caught.value.reason == kind.__name__
+        with monkeypatch.context() as patch:
+            patch.setattr(mi, "open", lambda path, *a, _k=kind, **k: BrokenFile(_k(errno.EIO, "x", VICTIM)), raising=False)
+            with pytest.raises(mi.ModelIntegrityError) as caught:
+                mi.read_verified(models, entry)
+            assert (caught.value.code, caught.value.operation) == ("read_failed", "read")

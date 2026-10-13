@@ -45,12 +45,14 @@ import hashlib
 import json
 import os
 import re
+import stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 __all__ = [
     "SCHEMA", "Entry", "Manifest",
     "ModelIntegrityError", "ManifestError", "PathViolation", "NotListed", "ArtifactMissing", "IntegrityMismatch",
+    "ReadFailed",
     "parse_manifest", "select_entry", "default_entry", "resolve_path", "verify_bytes", "read_verified",
 ]
 
@@ -66,7 +68,7 @@ _REQUIRED = ("path", "sha256", "size", "role", "in_wheel")
 # manifest-relative `path` where one applies. No message contains an absolute path.
 
 class ModelIntegrityError(Exception):
-    """Base class. `code` is one of the five codes below."""
+    """Base class. `code` is one of the six codes below."""
     code = "integrity_error"
 
     def __init__(self, message: str, *, path: str | None = None):
@@ -105,6 +107,30 @@ class IntegrityMismatch(ModelIntegrityError):
     def __init__(self, message: str, *, path: str, what: str, expected, actual):
         super().__init__(message, path=path)
         self.what, self.expected, self.actual = what, expected, actual
+
+
+class ReadFailed(ModelIntegrityError):
+    """
+    The operating system would not let the artifact be examined or read: permission denied,
+    an I/O error, a sharing violation. Not "missing" (the file may well be there) and not
+    "mismatch" (its content was never seen).
+
+    `operation` is "resolve", "open" or "read"; `reason` is the exception class name, such as
+    "PermissionError"; `errno` is the system error number, or None. The operating system's own
+    message is deliberately not kept: it contains the absolute path.
+    """
+    code = "read_failed"
+
+    def __init__(self, message: str, *, path: str, operation: str, reason: str, errno: int | None):
+        super().__init__(message, path=path)
+        self.operation, self.reason, self.errno = operation, reason, errno
+
+
+def _read_failed(entry: "Entry", exc: OSError, operation: str) -> ReadFailed:
+    """Classify an OSError without carrying its text, which names the absolute location."""
+    return ReadFailed(f"{entry.path}: could not {operation} the artifact ({type(exc).__name__})",
+                      path=entry.path, operation=operation, reason=type(exc).__name__,
+                      errno=exc.errno if isinstance(exc.errno, int) else None)
 
 
 # ── manifest ────────────────────────────────────────────────────────────────
@@ -249,26 +275,50 @@ def resolve_path(models_dir, entry: Entry) -> Path:
     Where the entry's file is, inside `models_dir`, with symbolic links resolved.
 
     Raises PathViolation if the resolved location is outside the directory or is not a regular
-    file, and ArtifactMissing if nothing is there. The entry's path was validated when the
-    manifest was parsed; it is checked again here because an Entry can be built by hand.
+    file, ArtifactMissing if nothing is there, and ReadFailed if the operating system refuses
+    to say. The entry's path was validated when the manifest was parsed; it is checked again
+    here because an Entry can be built by hand.
+
+    Only OSError is classified. Anything else (a wrong argument type, for instance) is a
+    programming error and is left to propagate.
     """
     try:
         _check_path(entry.path, "entry")
     except ManifestError as exc:
         raise PathViolation(str(exc), path=entry.path) from exc
-    root = os.path.realpath(os.fspath(models_dir))
-    if not os.path.isdir(root):
+    directory = os.fspath(models_dir)
+    try:
+        root = os.path.realpath(directory)
+        root_is_dir = stat.S_ISDIR(os.stat(root).st_mode)
+    except (FileNotFoundError, NotADirectoryError):
+        root_is_dir = False
+    except OSError as exc:
+        raise _read_failed(entry, exc, "resolve") from None
+    if not root_is_dir:
         raise ArtifactMissing("the model directory does not exist", path=entry.path)
-    candidate = os.path.realpath(os.path.join(root, *PurePosixPath(entry.path).parts))
+    try:
+        candidate = os.path.realpath(os.path.join(root, *PurePosixPath(entry.path).parts))
+    except OSError as exc:
+        raise _read_failed(entry, exc, "resolve") from None
     try:
         inside = os.path.commonpath([root, candidate]) == root and candidate != root
     except ValueError:                               # different drives
         inside = False
     if not inside:
         raise PathViolation("the artifact resolves to a location outside the model directory", path=entry.path)
-    if not os.path.lexists(candidate):
-        raise ArtifactMissing(f"listed artifact is not present: {entry.path}", path=entry.path)
-    if not os.path.isfile(candidate):
+    try:
+        os.lstat(candidate)                          # is anything there at all?
+    except (FileNotFoundError, NotADirectoryError):
+        raise ArtifactMissing(f"listed artifact is not present: {entry.path}", path=entry.path) from None
+    except OSError as exc:
+        raise _read_failed(entry, exc, "resolve") from None
+    try:
+        regular = stat.S_ISREG(os.stat(candidate).st_mode)
+    except (FileNotFoundError, NotADirectoryError):  # a link to nowhere
+        regular = False
+    except OSError as exc:
+        raise _read_failed(entry, exc, "resolve") from None
+    if not regular:
         raise PathViolation("the artifact is not a regular file", path=entry.path)
     return Path(candidate)
 
@@ -292,15 +342,23 @@ def read_verified(models_dir, entry: Entry) -> bytes:
     consulted again. Never more than one byte beyond the listed size is read, so a file that
     was swapped for a larger one is rejected without being loaded into memory.
 
-    Raises PathViolation, ArtifactMissing or IntegrityMismatch. Nothing is returned on failure.
+    Raises PathViolation, ArtifactMissing, ReadFailed or IntegrityMismatch. Nothing is returned
+    on failure. An OSError from the operating system is always one of those; no other kind of
+    exception is caught.
     """
     path = resolve_path(models_dir, entry)
     try:
-        with open(path, "rb") as f:
+        f = open(path, "rb")
+    except FileNotFoundError:                        # removed between the check and the open
+        raise ArtifactMissing(f"listed artifact is not present: {entry.path}", path=entry.path) from None
+    except OSError as exc:
+        raise _read_failed(entry, exc, "open") from None
+    with f:
+        try:
             data = f.read(entry.size + 1)
             on_disk = os.fstat(f.fileno()).st_size if len(data) > entry.size else len(data)
-    except FileNotFoundError as exc:
-        raise ArtifactMissing(f"listed artifact is not present: {entry.path}", path=entry.path) from exc
+        except OSError as exc:
+            raise _read_failed(entry, exc, "read") from None
     if len(data) > entry.size:
         raise IntegrityMismatch(f"{entry.path}: size {on_disk} does not match the manifest's {entry.size}",
                                 path=entry.path, what="size", expected=entry.size, actual=on_disk)

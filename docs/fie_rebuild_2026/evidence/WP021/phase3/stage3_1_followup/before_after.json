@@ -1,0 +1,98 @@
+{
+ "after": {
+  "cases": {
+   "I/O error on read": {
+    "cause": null,
+    "code": "read_failed",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ReadFailed"
+   },
+   "TypeError from open (a bug)": {
+    "cause": null,
+    "code": null,
+    "is_module_error": false,
+    "message_leaks_the_path": false,
+    "raised": "TypeError"
+   },
+   "file removed before open": {
+    "cause": null,
+    "code": "missing",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ArtifactMissing"
+   },
+   "permission denied on lstat": {
+    "cause": null,
+    "code": "read_failed",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ReadFailed"
+   },
+   "permission denied on open": {
+    "cause": null,
+    "code": "read_failed",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ReadFailed"
+   },
+   "permission denied on stat": {
+    "cause": null,
+    "code": "read_failed",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ReadFailed"
+   }
+  },
+  "sha256_lf_normalised": "73aadde04b0ef673888a37a1dcef35d94a7b85175802a1d21bb5f1de1b9e12c0",
+  "source": "fie/_model_integrity.py in the working tree"
+ },
+ "before": {
+  "cases": {
+   "I/O error on read": {
+    "cause": null,
+    "code": null,
+    "is_module_error": false,
+    "message_leaks_the_path": true,
+    "raised": "OSError"
+   },
+   "TypeError from open (a bug)": {
+    "cause": null,
+    "code": null,
+    "is_module_error": false,
+    "message_leaks_the_path": false,
+    "raised": "TypeError"
+   },
+   "file removed before open": {
+    "cause": "FileNotFoundError",
+    "code": "missing",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ArtifactMissing"
+   },
+   "permission denied on lstat": {
+    "cause": null,
+    "code": "missing",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "ArtifactMissing"
+   },
+   "permission denied on open": {
+    "cause": null,
+    "code": null,
+    "is_module_error": false,
+    "message_leaks_the_path": true,
+    "raised": "PermissionError"
+   },
+   "permission denied on stat": {
+    "cause": null,
+    "code": "path_violation",
+    "is_module_error": true,
+    "message_leaks_the_path": false,
+    "raised": "PathViolation"
+   }
+  },
+  "head": "5bac8cd0c3682fb6c91ad1e4989f565860fd53bc",
+  "source": "git show HEAD:fie/_model_integrity.py"
+ }
+}
