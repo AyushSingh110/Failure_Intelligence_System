@@ -1,0 +1,65 @@
+{
+ "also_open": {
+  "unlisted_minilm_onnx_json_files": [
+   "fie/models/minilm-onnx/config.json",
+   "fie/models/minilm-onnx/ort_config.json",
+   "fie/models/minilm-onnx/special_tokens_map.json",
+   "fie/models/minilm-onnx/tokenizer_config.json"
+  ],
+  "why_it_blocks": "the derived package manifest must say whether these are listed (with digests), ignored as non-model files, or forbidden"
+ },
+ "answer": "No. Both are left untouched.",
+ "decisions_needed": {
+  "W21-15": "Are failure_classifier_v4.pkl and feature_columns_v4.pkl, which nothing in fie/ loads, shipped in the wheel (in_wheel: true) or kept in the inventory for the server only (in_wheel: false)?",
+  "W21-22 (new)": "The four unlisted files in fie/models/minilm-onnx/ (config.json, ort_config.json, special_tokens_map.json, tokenizer_config.json): add them to the inventory with digests, or declare non-model JSON beside the encoder outside the inventory's scope?",
+  "W21-23 (new)": "Confirm that the new fields are added in place to scripts/model_manifest.json (the plan's proposal) and the role names to use, including for the side-car and tokenizer files.",
+  "W21-8": "Do model files ship inside the one wheel (in_wheel: true for the SDK's models), or is the wheel model-free?"
+ },
+ "fields": {
+  "default": {
+   "basis": "v6_3b: the loader's first choice, the manifest's own note, BL-0002's identity",
+   "status": "established"
+  },
+  "in_wheel": {
+   "basis": "requires W21-8 for every fie/models entry and W21-15 for two; the schema requires this field on every entry, so no valid production manifest can be written without it",
+   "status": "BLOCKED"
+  },
+  "path": {
+   "basis": "already in the tracked manifest",
+   "status": "established"
+  },
+  "role": {
+   "basis": "fie/layers/pair.py and fie/onnx_encoder.py name what each file is; failure_classifier_v4.pkl and feature_columns_v4.pkl are loaded by nothing in fie/, so their role depends on W21-15",
+   "status": "established for the files fie/ loads; open for two"
+  },
+  "sha256": {
+   "basis": "already in the tracked manifest; the meta_clf.pkl digest equals the owner-approved be6673d0... (W21-7)",
+   "status": "established"
+  },
+  "size": {
+   "basis": "already present on all 25 entries",
+   "status": "established"
+  },
+  "version": {
+   "basis": "the loader's own version names; the side-cars' declared versions",
+   "status": "established for classifiers"
+  }
+ },
+ "question": "Can scripts/model_manifest.json be given the schema's fields, and scripts/download_models.py be changed to write the derived package manifest, without assuming a decision the owner has not made?",
+ "tracked_manifest": {
+  "entries": 25,
+  "fields_present": [
+   "path",
+   "sha256",
+   "size",
+   "used_by"
+  ],
+  "modified_in_this_stage": false,
+  "sha256": "dde7e8ca04292214af9830e7d69703bf58df4c92daccf67e2fd42ae5408c96b2"
+ },
+ "what_remains_of_stage_3_1": [
+  "the fields in scripts/model_manifest.json",
+  "deriving fie/models/MANIFEST.json from it, and the test that the two agree",
+  "scripts/download_models.py writing the derived manifest"
+ ]
+}

@@ -1261,3 +1261,51 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add docs/fie_rebuild_2026 && git commit -m "docs: WP-021 phase 3 stage 3.0 - CI evidence and model provenance"
 ```
+
+### 14.5 Phase 3, Stage 3.1 (2026-10-13): standalone model-integrity primitives
+
+Detail and evidence:
+[EXECUTION_021_phase3-stage3_1-integrity-primitives.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_1-integrity-primitives.md),
+`evidence/WP021/phase3/stage3_1/`.
+
+**Status: partially complete, with a decision blocker.**
+
+**Owner decisions recorded:**
+
+- **D-034 (W21-7), approved by the owner** — the intended `meta_clf.pkl` is
+  `be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6`. The tracked manifest
+  already lists it; nothing was edited.
+- **D-035 (W21-20), approved by the owner** — the seven unmanifested experiment classifiers
+  and their side-cars are to be moved outside `fie/models/`. **Not yet executed.**
+  Research-workflow compatibility is a separately planned and reviewed step that comes first.
+
+**Done:**
+
+- `fie/_model_integrity.py` (new): standard library only. Parses and validates a manifest;
+  selects an entry by exact role and version, or the entry explicitly marked default; resolves
+  a path inside the model directory; reads a file once and returns the bytes it verified by size
+  and SHA-256. Five distinct errors: invalid manifest, path violation, not listed, missing,
+  mismatch. It deserializes nothing, falls back to nothing, and decides no layer state.
+- **The model loader does not use it.** No file in `fie/` refers to it and `import fie` does
+  not import it; a test asserts both.
+- `tests/test_model_integrity.py` (new): 144 tests on synthetic fixtures, 143 passed, 1 skipped
+  (a symbolic-link case that this Windows machine cannot set up; a directory-junction test
+  covers the same protection here).
+- Regression: 1140 tests pass, 0 fail, 1 skipped; `python -m evals baseline` exits 0,
+  byte-identical to `BL-0002`. `CANONICAL` unchanged.
+
+**Not done, blocked:** the new fields in `scripts/model_manifest.json`, the derived
+`fie/models/MANIFEST.json`, and the change to `scripts/download_models.py`. The schema requires
+`in_wheel` on every entry, and its value depends on decisions the owner has not made. Neither
+file was touched.
+
+**Decisions needed to finish Stage 3.1:** W21-8 (models in the one wheel or not); W21-15 (the
+two pickles nothing in `fie/` loads); W21-22, new (the four unlisted JSON files beside the
+encoder); W21-23, new (fields added in place to the tracked manifest, and the role names).
+Still open for later stages: W21-9, W21-16 to W21-19.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add fie/_model_integrity.py tests/test_model_integrity.py docs/fie_rebuild_2026 && git commit -m "fie: add standalone model-integrity primitives, not yet used by the loader (WP-021 phase 3 stage 3.1)"
+```
