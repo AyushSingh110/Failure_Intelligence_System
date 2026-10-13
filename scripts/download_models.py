@@ -17,7 +17,15 @@ Usage:
 Exit codes:
     0  all artifacts present and verified (or release unavailable in non-strict mode)
     1  checksum mismatch (always fatal — never run with corrupt models), or
-       release unreachable in --strict mode
+       release unreachable in --strict mode, or the package manifest could not
+       be derived from the inventory
+
+When every artifact in the inventory has been verified, this script also writes
+`fie/models/MANIFEST.json`: the package's own manifest, derived from
+`scripts/model_manifest.json` and from nothing else. It is a generated file — never
+edit it, never commit it. It is not written by `--check`, and it is not written or
+replaced when any artifact is missing, unreachable or corrupt, so it can never
+describe an inventory that was only partly verified.
 
 The release asset for a manifest entry `fie/models/foo.pkl` must be named
 `fie__models__foo.pkl` (slashes become double underscores — release assets are
@@ -41,6 +49,9 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MANIFEST_PATH = os.path.join(HERE, "model_manifest.json")
+# The derived manifest, and the one module that knows how to derive it.
+PACKAGE_MANIFEST_REL = "fie/models/MANIFEST.json"
+INTEGRITY_MODULE_PATH = os.path.join(ROOT, "fie", "_model_integrity.py")
 
 
 def _load_manifest() -> dict:
@@ -54,6 +65,53 @@ def _sha256(path: str) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _integrity():
+    """
+    fie/_model_integrity.py, loaded by file path.
+
+    It needs only the standard library. `import fie` would pull in the SDK's dependencies,
+    which are not installed when this script runs (see "Stdlib only" above).
+    """
+    import importlib.util
+
+    name = "_fie_model_integrity"
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, INTEGRITY_MODULE_PATH)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        try:
+            spec.loader.exec_module(module)
+        except BaseException:
+            del sys.modules[name]
+            raise
+    return sys.modules[name]
+
+
+def _write_package_manifest() -> str:
+    """
+    Derive fie/models/MANIFEST.json from the inventory and write it in one step.
+
+    Call only after every artifact has been verified. The file is replaced atomically, so a
+    reader never sees half of it, and a failure leaves whatever was there before.
+    """
+    with open(MANIFEST_PATH, "rb") as f:
+        data = _integrity().derive_package_manifest(f.read())
+    dest = os.path.join(ROOT, *PACKAGE_MANIFEST_REL.split("/"))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dest))
+    try:
+        with os.fdopen(fd, "wb") as out:
+            out.write(data)
+        os.replace(tmp, dest)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return dest
 
 
 def _asset_name(rel_path: str) -> str:
@@ -200,6 +258,25 @@ def main() -> int:
         print("[warn]    some artifacts unavailable — the system will run with "
               "rule-based fallbacks for those layers. Publish the release "
               f"'{tag}' (see docs/OPERATIONS.md) to enable full detection.")
+        return 0
+
+    # Every artifact in the inventory is present and verified. Only now is the package
+    # manifest written; --check stays read-only.
+    if not args.check:
+        try:
+            _write_package_manifest()
+        except Exception as exc:  # noqa: BLE001 - only the expected kinds are reported; others re-raise
+            # An inventory that breaks the rules, or a file that cannot be read or written.
+            # The integrity module's own error class is matched by name because the module is
+            # loaded by path and may itself be what failed to load.
+            expected = isinstance(exc, (OSError, ValueError)) or any(
+                cls.__name__ == "ModelIntegrityError" for cls in type(exc).__mro__)
+            if not expected:
+                raise
+            print(f"[FATAL]   could not derive {PACKAGE_MANIFEST_REL} from the inventory: "
+                  f"{type(exc).__name__}: {exc}")
+            return 1
+        print(f"[ok]      wrote {PACKAGE_MANIFEST_REL} (derived from scripts/model_manifest.json)")
     return 0
 
 

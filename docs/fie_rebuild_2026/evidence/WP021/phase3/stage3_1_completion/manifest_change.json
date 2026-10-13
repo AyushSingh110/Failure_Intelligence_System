@@ -1,0 +1,276 @@
+{
+ "by_role": {
+  "encoder": [
+   "fie/models/minilm-onnx/model.onnx"
+  ],
+  "legacy": [
+   "fie/models/failure_classifier_v4.pkl",
+   "fie/models/feature_columns_v4.pkl"
+  ],
+  "meta_classifier": [
+   "fie/models/meta_clf.pkl"
+  ],
+  "meta_classifier_meta": [
+   "fie/models/meta_clf.json"
+  ],
+  "pair_classifier": [
+   "fie/models/pair_intent_classifier.pkl",
+   "fie/models/pair_intent_classifier_v3.pkl",
+   "fie/models/pair_intent_classifier_v4.pkl",
+   "fie/models/pair_intent_classifier_v5.pkl",
+   "fie/models/pair_intent_classifier_v6.pkl",
+   "fie/models/pair_intent_classifier_v6_3.pkl",
+   "fie/models/pair_intent_classifier_v6_3b.pkl"
+  ],
+  "pair_meta": [
+   "fie/models/pair_intent_meta.json",
+   "fie/models/pair_intent_meta_v3.json",
+   "fie/models/pair_intent_meta_v4.json",
+   "fie/models/pair_intent_meta_v5.json",
+   "fie/models/pair_intent_meta_v6.json",
+   "fie/models/pair_intent_meta_v6_3.json",
+   "fie/models/pair_intent_meta_v6_3b.json"
+  ],
+  "server": [
+   "models/failure_classifier_slim.pkl",
+   "models/failure_classifier_slim_meta.json",
+   "models/feature_columns_slim.pkl",
+   "storage/faiss_adversarial.index",
+   "storage/faiss_adversarial_meta.json"
+  ],
+  "tokenizer": [
+   "fie/models/minilm-onnx/tokenizer.json"
+  ]
+ },
+ "comment_unchanged": true,
+ "entries": [
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "fie/models/minilm-onnx/model.onnx",
+   "role": "encoder",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "fie/models/minilm-onnx/tokenizer.json",
+   "role": "tokenizer",
+   "version": null
+  },
+  {
+   "default": true,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
+   "role": "pair_classifier",
+   "version": "v6_3b"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta_v6_3b.json",
+   "role": "pair_meta",
+   "version": "v6_3b"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier_v6_3.pkl",
+   "role": "pair_classifier",
+   "version": "v6_3"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta_v6_3.json",
+   "role": "pair_meta",
+   "version": "v6_3"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier_v6.pkl",
+   "role": "pair_classifier",
+   "version": "v6"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta_v6.json",
+   "role": "pair_meta",
+   "version": "v6"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier_v5.pkl",
+   "role": "pair_classifier",
+   "version": "v5"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta_v5.json",
+   "role": "pair_meta",
+   "version": "v5"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/meta_clf.pkl",
+   "role": "meta_classifier",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/meta_clf.json",
+   "role": "meta_classifier_meta",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "fie/models/failure_classifier_v4.pkl",
+   "role": "legacy",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "fie/models/feature_columns_v4.pkl",
+   "role": "legacy",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier_v4.pkl",
+   "role": "pair_classifier",
+   "version": "v4"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta_v4.json",
+   "role": "pair_meta",
+   "version": "v4"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier_v3.pkl",
+   "role": "pair_classifier",
+   "version": "v3"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta_v3.json",
+   "role": "pair_meta",
+   "version": "v3"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_classifier.pkl",
+   "role": "pair_classifier",
+   "version": "v1"
+  },
+  {
+   "default": false,
+   "in_wheel": true,
+   "path": "fie/models/pair_intent_meta.json",
+   "role": "pair_meta",
+   "version": "v1"
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "models/failure_classifier_slim.pkl",
+   "role": "server",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "models/feature_columns_slim.pkl",
+   "role": "server",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "models/failure_classifier_slim_meta.json",
+   "role": "server",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "storage/faiss_adversarial.index",
+   "role": "server",
+   "version": null
+  },
+  {
+   "default": false,
+   "in_wheel": false,
+   "path": "storage/faiss_adversarial_meta.json",
+   "role": "server",
+   "version": null
+  }
+ ],
+ "entries_after": 25,
+ "entries_before": 25,
+ "every_path_sha256_size_and_used_by_unchanged_and_in_the_same_order": true,
+ "fields_added_per_entry": [
+  "default",
+  "in_wheel",
+  "role",
+  "version"
+ ],
+ "file": "scripts/model_manifest.json",
+ "git_numstat": {
+  "lines_added": 90,
+  "lines_deleted": 0
+ },
+ "head": "d7587542ff2b9ffe520db377f04b558cc201de37",
+ "in_wheel_true": [
+  "fie/models/meta_clf.json",
+  "fie/models/meta_clf.pkl",
+  "fie/models/pair_intent_classifier.pkl",
+  "fie/models/pair_intent_classifier_v3.pkl",
+  "fie/models/pair_intent_classifier_v4.pkl",
+  "fie/models/pair_intent_classifier_v5.pkl",
+  "fie/models/pair_intent_classifier_v6.pkl",
+  "fie/models/pair_intent_classifier_v6_3.pkl",
+  "fie/models/pair_intent_classifier_v6_3b.pkl",
+  "fie/models/pair_intent_meta.json",
+  "fie/models/pair_intent_meta_v3.json",
+  "fie/models/pair_intent_meta_v4.json",
+  "fie/models/pair_intent_meta_v5.json",
+  "fie/models/pair_intent_meta_v6.json",
+  "fie/models/pair_intent_meta_v6_3.json",
+  "fie/models/pair_intent_meta_v6_3b.json"
+ ],
+ "meta_clf_sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+ "meta_clf_sha256_is_the_approved_digest": true,
+ "passes_validate_production": true,
+ "release_tag_unchanged": true,
+ "repo_unchanged": true,
+ "sha256_lf_normalised_after": "3516ef4dd515c5e0b780d63a6d8b99dea05ade011037d444b2874ead1cfc8a03",
+ "sha256_lf_normalised_before": "4ec937a190651c554a84ba3e99310d4891753528d54bd9c1b2fb6c171a6c51ac",
+ "top_level_keys_after": [
+  "_comment",
+  "schema",
+  "release_tag",
+  "repo",
+  "artifacts"
+ ],
+ "top_level_keys_before": [
+  "_comment",
+  "release_tag",
+  "repo",
+  "artifacts"
+ ]
+}

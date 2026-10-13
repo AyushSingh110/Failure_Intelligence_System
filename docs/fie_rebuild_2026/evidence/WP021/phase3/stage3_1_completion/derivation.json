@@ -1,0 +1,21 @@
+{
+ "ascii_only": true,
+ "entries": 20,
+ "function": "fie._model_integrity.derive_package_manifest(source) -> bytes",
+ "generated_manifest_exists_in_working_tree": false,
+ "generated_manifest_ignored_by": ".gitignore:18:**/models/*.json",
+ "identical_across_five_calls": true,
+ "in_wheel_false": [
+  "failure_classifier_v4.pkl",
+  "feature_columns_v4.pkl",
+  "minilm-onnx/model.onnx",
+  "minilm-onnx/tokenizer.json"
+ ],
+ "in_wheel_true": 16,
+ "input": "scripts/model_manifest.json (the tracked inventory), and nothing else",
+ "lf_only": true,
+ "note": "this copy is evidence of what the derivation produces today. fie/models/MANIFEST.json itself was NOT written in this stage: no download ran, and the download script's --check mode is read-only.",
+ "output_bytes": 5112,
+ "output_file_in_this_directory": "derived_package_manifest.json",
+ "output_sha256": "fbab28ab75acad2cfa8d178617caad112c32adafc6048d2a8483cd4a393bf2f5"
+}
