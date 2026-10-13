@@ -1212,3 +1212,52 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add scripts/release_check.py .github/workflows/ci.yml tests/test_release_check.py docs/fie_rebuild_2026 && git commit -m "ci: run the installed-wheel release gate on T-base and T-fastapi (WP-021 phase 2)"
 ```
+
+### 14.4 Phase 3, Stage 3.0 (2026-10-13): CI evidence and model provenance
+
+Detail and evidence:
+[EXECUTION_021_phase3-stage3_0-evidence.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_0-evidence.md),
+`evidence/WP021/phase3/stage3_0/`. Documentation and evidence only; no source, test, manifest,
+build, workflow or model file was changed, and no model file was deserialized.
+
+**CI, verified from GitHub's records and the uploaded reports.**
+
+- Run `38282217538` (pull request, `28683d4`): success on `ubuntu-24.04`, Python 3.11.17.
+  The release gate passed: T-base 11 of 11 criteria, T-fastapi 10 of 10 (Starlette 1.7.0).
+  Wheel SHA-256 `1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40`, 60 files,
+  18 bundled model files. `deploy-space` skipped.
+- Run `38282733913` (push to `main`, `d2b0c16`): success, all nine jobs including
+  `deploy-space`. Same wheel digest, same gate result.
+- This closes the open item of 14.3: the gate has now run on a CI runner, on Linux, installing
+  from PyPI. Two independent CI builds produced a byte-identical wheel.
+
+**`meta_clf.pkl`, verified.** The published 1.18.0 wheel carries
+`01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e`, which is what the manifest
+listed at the wheel's own tag. The manifest at HEAD, the working tree, the current release asset
+and BL-0002's fingerprint all carry
+`be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6`. The release
+`models-v1.18.0` was changed in place on 2026-08-11, the day after publication; commit
+`08d5474` updated the manifest and left the release tag name unchanged. Inferred, not
+verified: that the replaced asset was the first digest; that it is the pre-fix model. Unknown:
+whether either file is safe to deserialize.
+
+**Seven unmanifested classifiers in `fie/models/`, verified.** All untracked, git-ignored,
+absent from the manifest, the release and the PyPI wheel. `_v2` equals a blob committed on
+2026-05-17 and removed from tracking on 2026-05-24; the other six were never committed. Only
+`_v2` is reachable through `FIE_PAIR_VERSION`. The two `v64` files and the `v65` file are read
+by `scripts/eval_harmaug.py`'s own `joblib.load`. Three have no tracked reader. The stale
+`dist/` wheel contains four of them. Their origin is unknown. None was moved, deleted, loaded
+or added to an inventory.
+
+**Owner decisions required before Stage 3.1, neither made:**
+
+- **W21-7** — which `meta_clf.pkl` is intended. Recommended: the manifest's `be6673d0…`.
+- **W21-20** — whether the owner moves the seven experiment files out of `fie/models/`.
+  Recommended: yes. Consequences for `scripts/eval_harmaug.py` and the training scripts are in
+  the report, section H.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add docs/fie_rebuild_2026 && git commit -m "docs: WP-021 phase 3 stage 3.0 - CI evidence and model provenance"
+```

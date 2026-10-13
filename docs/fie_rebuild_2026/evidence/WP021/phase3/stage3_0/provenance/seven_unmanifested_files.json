@@ -1,0 +1,512 @@
+{
+ "files": {
+  "v2": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": true,
+    "git_blob_id_of_bytes_on_disk": "14a317b3e7aa495b2de18952f055657bd846cabd",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v2.pkl",
+    "path_history": [
+     {
+      "blob": null,
+      "commit": "38e21ef",
+      "date": "2026-05-24",
+      "equals_file_on_disk": null,
+      "status": "D"
+     },
+     {
+      "blob": null,
+      "commit": "935983a",
+      "date": "2026-05-24",
+      "equals_file_on_disk": null,
+      "status": "D"
+     },
+     {
+      "blob": "14a317b3e7aa495b2de18952f055657bd846cabd",
+      "commit": "ab681c3",
+      "date": "2026-05-17",
+      "equals_file_on_disk": true,
+      "status": "A"
+     },
+     {
+      "blob": "14a317b3e7aa495b2de18952f055657bd846cabd",
+      "commit": "0a4ef8f",
+      "date": "2026-05-17",
+      "equals_file_on_disk": true,
+      "status": "A"
+     }
+    ],
+    "sha256": "cfca34c732c61f217c871d301dd45112ca4ab3ceb7c69147cd9a5796bd832dc3",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [
+    "docs/ARCHITECTURE.md:1026:\u2502       \u251c\u2500\u2500 pair_intent_classifier_v2.pkl",
+    "docs/ARCHITECTURE.md:1027:\u2502       \u251c\u2500\u2500 pair_intent_meta_v2.json",
+    "docs/CODEBASE.md:38:- **Layer 7 \u2014 PAIR classifier** (`_run_pair_classifier`) \u2014 LinearSVM on sentence-transformer embeddings. Bundled model (`pair_intent_classifier_v2.pkl`). Catches iteratively rephra",
+    "fie/layers/pair.py:299:            (\"v2\", _models_dir / \"pair_intent_classifier_v2.pkl\",",
+    "fie/layers/pair.py:300:                   _models_dir / \"pair_intent_meta_v2.json\"),",
+    "scripts/retrain_pair_v2.py:19:    --output fie/models/pair_intent_classifier_v2.pkl",
+    "scripts/retrain_pair_v2.py:38:_V2_PKL   = _MODELS / \"pair_intent_classifier_v2.pkl\"",
+    "scripts/retrain_pair_v2.py:39:_V2_META  = _MODELS / \"pair_intent_meta_v2.json\"",
+    "scripts/retrain_pair_v2.py:320:    print(\"Or rename: pair_intent_classifier_v2.pkl -> pair_intent_classifier.pkl\")",
+    "scripts/retrain_pair_v3.py:39:_V2_PKL   = _MODELS / \"pair_intent_classifier_v2.pkl\"",
+    "scripts/retrain_pair_v3.py:40:_V2_META  = _MODELS / \"pair_intent_meta_v2.json\""
+   ],
+   "side_car": {
+    "bytes_exist_in_git_object_database": true,
+    "git_blob_id_of_bytes_on_disk": "7d9e5854d290fe0eefd37a9fb38b7305be3df21e",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v2.json",
+    "path_history": [
+     {
+      "blob": null,
+      "commit": "38e21ef",
+      "date": "2026-05-24",
+      "equals_file_on_disk": null,
+      "status": "D"
+     },
+     {
+      "blob": null,
+      "commit": "935983a",
+      "date": "2026-05-24",
+      "equals_file_on_disk": null,
+      "status": "D"
+     },
+     {
+      "blob": "7d9e5854d290fe0eefd37a9fb38b7305be3df21e",
+      "commit": "ab681c3",
+      "date": "2026-05-17",
+      "equals_file_on_disk": true,
+      "status": "A"
+     },
+     {
+      "blob": "7d9e5854d290fe0eefd37a9fb38b7305be3df21e",
+      "commit": "0a4ef8f",
+      "date": "2026-05-17",
+      "equals_file_on_disk": true,
+      "status": "A"
+     }
+    ],
+    "sha256": "81298d7a5d419e65f06c0b3d411f582e39e168e737f3b8a0a449075c9afe0c3f",
+    "size": 881,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "embed_dim",
+    "embed_model",
+    "hard_negatives",
+    "hard_positives",
+    "improvement_vs_v1",
+    "model_type",
+    "sources",
+    "threshold",
+    "train_size",
+    "trained_at",
+    "v1_val_metrics",
+    "val_metrics",
+    "val_size"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "threshold": 0.4126808827830868,
+    "trained_at": "2026-05-17T06:45:37Z"
+   }
+  },
+  "v3_w3x": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "cd3d98069a00a3c2937c8f30808f6b4bc8d67b39",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v3_w3x.pkl",
+    "path_history": [],
+    "sha256": "d802d62c6de8a97127ff04f569d89a681dc644dcf2dd0a64d95cb1c3dd17473d",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [],
+   "side_car": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "26e250a7cec986c645e89fc5bf16adf41d3569b3",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v3_w3x.json",
+    "path_history": [],
+    "sha256": "3e3aea6dd5a752c59ceb535bd30d77d36bc8a8bf9aaaa9e487f042210d9cd99e",
+    "size": 894,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "embed_dim",
+    "embed_model",
+    "experiment",
+    "hard_neg_weight",
+    "hard_pos_weight",
+    "model_type",
+    "note",
+    "threshold",
+    "train_size",
+    "trained_at",
+    "v3_val_metrics",
+    "val_metrics",
+    "val_size"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "threshold": 0.4181604617044297,
+    "trained_at": "2026-06-02T14:50:46Z"
+   }
+  },
+  "v64_harmaug": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "09d9903878b8a098c8fe829be7abbcbc52f91471",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": false,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v64_harmaug.pkl",
+    "path_history": [],
+    "sha256": "b00a8f220ab2bdc86f769fdc1ab87fdd26cabc5fa12989779de9232da011a400",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [
+    "data/benchmark_audit/benignaug_eval_report.json:7:    \"harmaug\": \"pair_intent_classifier_v64_harmaug.pkl\",",
+    "data/benchmark_audit/benignaug_vs_harmaug.json:7:    \"harmaug\": \"pair_intent_classifier_v64_harmaug.pkl\",",
+    "data/benchmark_audit/harmaug_eval_report.json:7:    \"harmaug\": \"pair_intent_classifier_v64_harmaug.pkl\",",
+    "scripts/eval_harmaug.py:71:    (\"harmaug\",       \"pair_intent_classifier_v64_harmaug.pkl\"),",
+    "scripts/train_pair_harmaug.py:52:    fie/models/pair_intent_classifier_v64_harmaug.pkl",
+    "scripts/train_pair_harmaug.py:53:    fie/models/pair_intent_meta_v64_harmaug.json"
+   ],
+   "side_car": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "8dfb9efa035d403245f09bbd694c6559899b7f38",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": false,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v64_harmaug.json",
+    "path_history": [],
+    "sha256": "7511dcb0e579d5da8c466901c18fc7e3058b5c7344c38fdff1daf10f587077ae",
+    "size": 1055,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "base_corpus",
+    "corpus_attack",
+    "corpus_attack_frac",
+    "corpus_rows",
+    "embed_backend",
+    "embed_model",
+    "experiment",
+    "harmaug_rows",
+    "model_type",
+    "neg_weight",
+    "note",
+    "pos_weight",
+    "sklearn",
+    "threshold",
+    "trained_at",
+    "val_metrics",
+    "version"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "threshold": 0.5,
+    "trained_at": "2026-08-12T17:31:01Z",
+    "version": "v64_harmaug"
+   }
+  },
+  "v64_harmaug_capped": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "181ebe104e5e6035a483c7fe2a9d569cad0057bb",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": false,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v64_harmaug_capped.pkl",
+    "path_history": [],
+    "sha256": "e085b93750d668936b4e9af6a88e3767290d00529727d27f4ff5af0a2b1defa0",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [
+    "data/benchmark_audit/benignaug_eval_report.json:8:    \"harmaug_cap\": \"pair_intent_classifier_v64_harmaug_capped.pkl\",",
+    "data/benchmark_audit/benignaug_vs_harmaug.json:8:    \"harmaug_cap\": \"pair_intent_classifier_v64_harmaug_capped.pkl\",",
+    "data/benchmark_audit/harmaug_eval_report.json:8:    \"harmaug_cap\": \"pair_intent_classifier_v64_harmaug_capped.pkl\"",
+    "docs/RESEARCH_LOG.md:1681:       --base data/pair_training/train.harmaug_capped.jsonl --tag v64_harmaug_capped",
+    "scripts/eval_harmaug.py:72:    (\"harmaug_cap\",   \"pair_intent_classifier_v64_harmaug_capped.pkl\"),",
+    "scripts/train_pair_harmaug.py:49:           --tag v64_harmaug_capped"
+   ],
+   "side_car": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "c9051f2d27e58d2b099dff2700b039d90b89eb4e",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": false,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v64_harmaug_capped.json",
+    "path_history": [],
+    "sha256": "833152642f1f4f742793eb3fb3275d7d24bebda64d2d08d6d04108f6b5bf4811",
+    "size": 1069,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "base_corpus",
+    "corpus_attack",
+    "corpus_attack_frac",
+    "corpus_rows",
+    "embed_backend",
+    "embed_model",
+    "experiment",
+    "harmaug_rows",
+    "model_type",
+    "neg_weight",
+    "note",
+    "pos_weight",
+    "sklearn",
+    "threshold",
+    "trained_at",
+    "val_metrics",
+    "version"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "threshold": 0.6,
+    "trained_at": "2026-08-12T17:31:32Z",
+    "version": "v64_harmaug_capped"
+   }
+  },
+  "v65_benignaug": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "a7164f6a3df11ca93e4803a398f6f3f82ba8a454",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": false,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v65_benignaug.pkl",
+    "path_history": [],
+    "sha256": "8929a7e339a4a1e1c1cc2cf90a67722be062be0e9ba7a22f09201e8d63cae5cc",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [
+    "data/benchmark_audit/benignaug_eval_report.json:9:    \"benignaug\": \"pair_intent_classifier_v65_benignaug.pkl\"",
+    "data/benchmark_audit/benignaug_vs_harmaug.json:9:    \"benignaug\": \"pair_intent_classifier_v65_benignaug.pkl\"",
+    "docs/RESEARCH_LOG.md:1799:       --base data/pair_training/train.harmaug_benignaug.jsonl --tag v65_benignaug",
+    "docs/RESEARCH_LOG.md:1801:       --model benignaug=pair_intent_classifier_v65_benignaug.pkl \\",
+    "docs/RESEARCH_LOG.md:1804:       --model benignaug=pair_intent_classifier_v65_benignaug.pkl \\",
+    "scripts/benignaug_build_trainset.py:376:          f\"{_rel(out_path)} --tag v65_benignaug\")",
+    "scripts/eval_harmaug.py:101:                         \"--model benignaug=pair_intent_classifier_v65_benignaug.pkl \""
+   ],
+   "side_car": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "4748f5f8e2b83d08c1ee8c18658b581003660b5c",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": false,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v65_benignaug.json",
+    "path_history": [],
+    "sha256": "053a9753df99b9360b89b6f7b2f04758ca4c6c417b99870e1d41023a8219299e",
+    "size": 1070,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "base_corpus",
+    "corpus_attack",
+    "corpus_attack_frac",
+    "corpus_rows",
+    "embed_backend",
+    "embed_model",
+    "experiment",
+    "harmaug_rows",
+    "model_type",
+    "neg_weight",
+    "note",
+    "pos_weight",
+    "sklearn",
+    "threshold",
+    "trained_at",
+    "val_metrics",
+    "version"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "threshold": 0.65,
+    "trained_at": "2026-08-12T19:04:03Z",
+    "version": "v65_benignaug"
+   }
+  },
+  "v6_1_contaminated": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "74587f7dca8e203b4162db00cd79c2976f721f65",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v6_1_contaminated.pkl",
+    "path_history": [],
+    "sha256": "9d7f3a1959785f2b7b7044fdefcd1f1e5591b6e5d3752a424e6902cbc2002e45",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [],
+   "side_car": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "f9666dd153801a26d9361f40a028e93b2eb9b70d",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v6_1_contaminated.json",
+    "path_history": [],
+    "sha256": "81fd1fb064263f5c0a56c2b6e0e1332ccb3e305e2ba47262133898d2a7bd9733",
+    "size": 1095,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "aug_weight",
+    "embed_dim",
+    "embed_model",
+    "model_type",
+    "notes",
+    "sklearn_version",
+    "threshold",
+    "train_size",
+    "trained_at",
+    "val_metrics",
+    "val_size",
+    "version"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "notes": "Domain-balanced corpus (medical/legal/coding/factual benign + 3 jailbreak benchmarks + 160 Llama paraphrases). Threshold 0.50 = balanced deployment point. Augmentation lifts the achievable recall ceiling to 90.5% at threshold 0.40 if higher recall is needed. Legal-domain benign FPR (~29%) is a known training-data gap (v6.2).",
+    "sklearn_version": "1.7.2",
+    "threshold": 0.5,
+    "trained_at": "2026-06-20T14:06:54Z",
+    "version": "v6"
+   }
+  },
+  "v6_noaug": {
+   "classifier": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "b7b573025e59e36bf5949b2fee5654449719b77c",
+    "ignored_by": ".gitignore:15:**/models/*.pkl",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_classifier_v6_noaug.pkl",
+    "path_history": [],
+    "sha256": "759e8d8ea3d937951ad2cd25cf04b9568b9cc569fa37473f128d7afbc09a58d3",
+    "size": 11349,
+    "tracked_now": false
+   },
+   "references_in_tracked_files": [],
+   "side_car": {
+    "bytes_exist_in_git_object_database": false,
+    "git_blob_id_of_bytes_on_disk": "d2ac3feebc099c0b83331d56ce302b56755de987",
+    "ignored_by": ".gitignore:18:**/models/*.json",
+    "in_dist_wheel": true,
+    "in_manifest": false,
+    "in_pypi_wheel": false,
+    "in_release_assets": false,
+    "path": "fie/models/pair_intent_meta_v6_noaug.json",
+    "path_history": [],
+    "sha256": "c0ffec95b5f565583eadec8a259289d5dc603fbd3036d932bc5a3c5fdcc11505",
+    "size": 738,
+    "tracked_now": false
+   },
+   "side_car_keys": [
+    "aug_weight",
+    "embed_dim",
+    "embed_model",
+    "model_type",
+    "notes",
+    "sklearn_version",
+    "threshold",
+    "train_size",
+    "trained_at",
+    "val_metrics",
+    "val_size",
+    "version"
+   ],
+   "side_car_metadata": {
+    "embed_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "notes": "Domain-balanced corpus (medical/legal/coding/factual benign + 3 jailbreak benchmarks + Llama paraphrases). Targets lower FPR on out-of-distribution benign vs v5.",
+    "sklearn_version": "1.7.2",
+    "threshold": 0.45,
+    "trained_at": "2026-06-20T12:43:09Z",
+    "version": "v6"
+   }
+  }
+ },
+ "how_they_are_loaded": {
+  "method": "static reading of source; no script was executed",
+  "scripts/eval_harmaug.py": {
+   "default_files": [
+    "pair_intent_classifier_v6_3b.pkl",
+    "pair_intent_classifier_v64_harmaug.pkl",
+    "pair_intent_classifier_v64_harmaug_capped.pkl"
+   ],
+   "mechanism": "its own joblib.load(ROOT/'fie'/'models'/<file>), line 134; not FIE_PAIR_VERSION",
+   "on_missing_file": "prints 'ERROR: missing <file>' and exits 1",
+   "optional": "--model TAG=FILE, documented with pair_intent_classifier_v65_benignaug.pkl"
+  },
+  "scripts/retrain_pair_v2.py, retrain_pair_v3.py": {
+   "mechanism": "joblib.dump; write v2/v3 files",
+   "reads_the_files": false
+  },
+  "scripts/train_pair_harmaug.py": {
+   "mechanism": "joblib.dump to fie/models/pair_intent_classifier_<tag>.pkl (default tag v64_harmaug)",
+   "reads_the_files": false
+  },
+  "sdk_loader": {
+   "file": "fie/layers/pair.py",
+   "lists": [
+    "v6_3b",
+    "v6",
+    "v6_3",
+    "v5",
+    "v4",
+    "v3",
+    "v2",
+    "v1"
+   ],
+   "note": "FIE_PAIR_VERSION is matched against this fixed list; v3_w3x, v6_1_contaminated, v6_noaug, v64_harmaug, v64_harmaug_capped and v65_benignaug are not in it and cannot be selected through the SDK",
+   "of_the_seven_reachable_through_FIE_PAIR_VERSION": [
+    "v2"
+   ]
+  },
+  "tests_and_harness": "no reference to any of the seven; the harness profiles pin v6_3b and v6, both manifest-listed",
+  "workflows_docker_deploy": "no reference to any of the seven in .github/, deploy/ or a Dockerfile"
+ }
+}

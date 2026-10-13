@@ -1,0 +1,634 @@
+{
+ "38282217538": {
+  "artifact_checksums": {
+   "files_bad": [],
+   "files_ok": 45,
+   "note": "the artifact's own SHA256SUMS.txt, re-verified after download"
+  },
+  "jobs": [
+   {
+    "completedAt": "2026-10-12T17:08:59Z",
+    "conclusion": "success",
+    "name": "dependency-audit",
+    "startedAt": "2026-10-12T17:08:24Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:08:35Z",
+    "conclusion": "success",
+    "name": "lint",
+    "startedAt": "2026-10-12T17:08:23Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:08:37Z",
+    "conclusion": "success",
+    "name": "secret-scan",
+    "startedAt": "2026-10-12T17:08:24Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:10:55Z",
+    "conclusion": "success",
+    "name": "test (3.12)",
+    "startedAt": "2026-10-12T17:08:37Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:10:55Z",
+    "conclusion": "success",
+    "name": "test (3.11)",
+    "startedAt": "2026-10-12T17:08:37Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:11:13Z",
+    "conclusion": "success",
+    "name": "test (3.10)",
+    "startedAt": "2026-10-12T17:08:37Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:12:40Z",
+    "conclusion": "success",
+    "name": "health-check",
+    "startedAt": "2026-10-12T17:11:16Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:11:54Z",
+    "conclusion": "success",
+    "name": "package",
+    "startedAt": "2026-10-12T17:11:15Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:12:40Z",
+    "conclusion": "skipped",
+    "name": "deploy-space",
+    "startedAt": "2026-10-12T17:12:40Z",
+    "status": "completed"
+   }
+  ],
+  "package_job_steps": [
+   {
+    "conclusion": "success",
+    "name": "Set up job"
+   },
+   {
+    "conclusion": "success",
+    "name": "Run actions/checkout@v4"
+   },
+   {
+    "conclusion": "success",
+    "name": "Set up Python"
+   },
+   {
+    "conclusion": "success",
+    "name": "Install build tools"
+   },
+   {
+    "conclusion": "success",
+    "name": "Download model artifacts"
+   },
+   {
+    "conclusion": "success",
+    "name": "Build wheel"
+   },
+   {
+    "conclusion": "success",
+    "name": "Check wheel contents"
+   },
+   {
+    "conclusion": "success",
+    "name": "Release check (installed wheel \u2014 T-base and T-fastapi)"
+   },
+   {
+    "conclusion": "success",
+    "name": "Upload release-check report"
+   },
+   {
+    "conclusion": "success",
+    "name": "Post Set up Python"
+   },
+   {
+    "conclusion": "success",
+    "name": "Post Run actions/checkout@v4"
+   },
+   {
+    "conclusion": "success",
+    "name": "Complete job"
+   }
+  ],
+  "release_check_log_lines": [
+   "release_check: fie_sdk-1.18.0-py3-none-any.whl  sha256 1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40",
+   "release_check: temporary environments under /home/runner/work/_temp/fie-release-check-ac5t066g",
+   "release_check: T-base  (fie_sdk-1.18.0-py3-none-any.whl)",
+   "  [PASS         ] T-base | AC-1 wheel installs: pip install exited 0",
+   "  [PASS         ] T-base | AC-2 pip check: No broken requirements found.",
+   "  [PASS         ] T-base | AC-3 installed set equals declared: installed set equals the declared closure",
+   "  [PASS         ] T-base | AC-4 installed files equal the wheel: 55 files compared, 0 differ",
+   "  [PASS         ] T-base | AC-5 import fie: import fie succeeded from the environment's site-packages",
+   "  [PASS         ] T-base | AC-6 every name in fie.__all__ resolves: 22 names, 0 unresolved",
+   "  [PASS         ] T-base | AC-8 no optional package imported by import fie: none imported",
+   "  [PASS         ] T-base | AC-7 command line starts: help and detect exited 0 with JSON output",
+   "  [PASS         ] T-base | T-base: starlette and fastapi not installed: neither starlette nor fastapi is installed",
+   "  [PASS         ] T-base | AC-10 FastAPI request without the extra fails clearly: ModuleNotFoundError, name='starlette': fie.integrations.fastapi needs Starlette, which is not installed. Install it with: pip install \"fie-sdk[fastapi]\"",
+   "  [PASS         ] T-base | AC-12 SDK wrappers import without their SDKs: wrappers import; building a client names the missing SDK",
+   "release_check: T-base: PASSED: every implemented criterion (exit 0)",
+   "release_check: T-fastapi  (fie_sdk-1.18.0-py3-none-any.whl[fastapi])",
+   "  [PASS         ] T-fastapi | AC-1 wheel installs: pip install exited 0",
+   "  [PASS         ] T-fastapi | AC-2 pip check: No broken requirements found.",
+   "  [PASS         ] T-fastapi | AC-3 installed set equals declared: installed set equals the declared closure",
+   "  [PASS         ] T-fastapi | AC-4 installed files equal the wheel: 55 files compared, 0 differ",
+   "  [PASS         ] T-fastapi | AC-5 import fie: import fie succeeded from the environment's site-packages",
+   "  [PASS         ] T-fastapi | AC-6 every name in fie.__all__ resolves: 22 names, 0 unresolved",
+   "  [PASS         ] T-fastapi | AC-8 no optional package imported by import fie: none imported",
+   "  [PASS         ] T-fastapi | AC-7 command line starts: help and detect exited 0 with JSON output",
+   "  [PASS         ] T-fastapi | AC-11 FastAPI integration imports with the extra: all documented imports succeed",
+   "  [PASS         ] T-fastapi | AC-11 middleware blocks an injection, passes a benign request: injection answered 400 (PROMPT_EXTRACTION), benign request reached the handler; starlette 1.7.0",
+   "release_check: T-fastapi: PASSED: every implemented criterion (exit 0)",
+   "release_check: T-base: PASSED: every implemented criterion; T-fastapi: PASSED: every implemented criterion",
+   "release_check: exit 0; report and per-command output in <HOME>/work/_temp/release-check"
+  ],
+  "report": {
+   "dependency_source": "pip's configured index",
+   "exit_code": 0,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "finished_utc": "2026-10-12T17:11:52Z",
+   "host_python": "3.11.17",
+   "platform": "linux",
+   "scope": "PLAN_021 section 5.2: Level 1 (AC-1 to AC-4), Level 2 (AC-5 to AC-8), Level 3 (AC-10 to AC-12)",
+   "started_utc": "2026-10-12T17:11:30Z",
+   "target_exit_codes": {
+    "T-base": 0,
+    "T-fastapi": 0
+   },
+   "verdict": "T-base: PASSED: every implemented criterion; T-fastapi: PASSED: every implemented criterion"
+  },
+  "run": {
+   "conclusion": "success",
+   "createdAt": "2026-10-12T17:08:21Z",
+   "databaseId": 38282217538,
+   "event": "pull_request",
+   "headBranch": "rebuild/wp-001-eval-harness",
+   "headSha": "28683d4b8e0ca137589ded73013a2ffbbef09a2a",
+   "status": "completed",
+   "updatedAt": "2026-10-12T17:12:41Z",
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282217538",
+   "workflowName": "CI"
+  },
+  "runner_image": "ubuntu-24.04",
+  "runner_image_version": "20261004.327.1",
+  "source": {
+   "artifact": "gh run download -n release-check",
+   "artifact_listing": "gh api .../actions/runs/<id>/artifacts",
+   "log": "gh run view --job <package> --log",
+   "run_metadata": "gh run view --json"
+  },
+  "targets": {
+   "T-base": {
+    "criteria": {
+     "AC-1 wheel installs": "PASS",
+     "AC-10 FastAPI request without the extra fails clearly": "PASS",
+     "AC-12 SDK wrappers import without their SDKs": "PASS",
+     "AC-2 pip check": "PASS",
+     "AC-3 installed set equals declared": "PASS",
+     "AC-4 installed files equal the wheel": "PASS",
+     "AC-5 import fie": "PASS",
+     "AC-6 every name in fie.__all__ resolves": "PASS",
+     "AC-7 command line starts": "PASS",
+     "AC-8 no optional package imported by import fie": "PASS",
+     "T-base: starlette and fastapi not installed": "PASS"
+    },
+    "criteria_passed": 11,
+    "criteria_total": 11,
+    "exit_code": 0,
+    "installed": {
+     "beautifulsoup4": "4.15.0",
+     "certifi": "2026.7.22",
+     "charset-normalizer": "3.5.2",
+     "deep-translator": "1.11.4",
+     "fie-sdk": "1.18.0",
+     "idna": "3.20",
+     "langdetect": "1.0.9",
+     "pip": "24.0",
+     "requests": "2.34.2",
+     "setuptools": "79.0.1",
+     "six": "1.17.0",
+     "soupsieve": "3.0.3",
+     "typing-extensions": "4.16.0",
+     "urllib3": "2.8.0"
+    },
+    "python": "3.11.17",
+    "requirement": "fie_sdk-1.18.0-py3-none-any.whl",
+    "verdict": "PASSED: every implemented criterion"
+   },
+   "T-fastapi": {
+    "criteria": {
+     "AC-1 wheel installs": "PASS",
+     "AC-11 FastAPI integration imports with the extra": "PASS",
+     "AC-11 middleware blocks an injection, passes a benign request": "PASS",
+     "AC-2 pip check": "PASS",
+     "AC-3 installed set equals declared": "PASS",
+     "AC-4 installed files equal the wheel": "PASS",
+     "AC-5 import fie": "PASS",
+     "AC-6 every name in fie.__all__ resolves": "PASS",
+     "AC-7 command line starts": "PASS",
+     "AC-8 no optional package imported by import fie": "PASS"
+    },
+    "criteria_passed": 10,
+    "criteria_total": 10,
+    "exit_code": 0,
+    "installed": {
+     "anyio": "4.15.1",
+     "beautifulsoup4": "4.15.0",
+     "certifi": "2026.7.22",
+     "charset-normalizer": "3.5.2",
+     "deep-translator": "1.11.4",
+     "fie-sdk": "1.18.0",
+     "idna": "3.20",
+     "langdetect": "1.0.9",
+     "pip": "24.0",
+     "requests": "2.34.2",
+     "setuptools": "79.0.1",
+     "six": "1.17.0",
+     "soupsieve": "3.0.3",
+     "starlette": "1.7.0",
+     "typing-extensions": "4.16.0",
+     "urllib3": "2.8.0"
+    },
+    "python": "3.11.17",
+    "requirement": "fie_sdk-1.18.0-py3-none-any.whl[fastapi]",
+    "verdict": "PASSED: every implemented criterion"
+   }
+  },
+  "three_sources_agree": true,
+  "uploaded_artifacts": [
+   {
+    "created_at": "2026-10-12T17:11:52Z",
+    "digest": "sha256:079dd898f50ef352df10bcc294a8c5c4c86dbd1a67d81f5d1c8919ccc1e2cb54",
+    "expired": false,
+    "expires_at": "2027-01-10T17:08:21Z",
+    "name": "release-check",
+    "size_in_bytes": 117321
+   },
+   {
+    "created_at": "2026-10-12T17:08:35Z",
+    "digest": "sha256:e747695a054739547b6349902bce5f7d6f764a59f7b08e3c6ba6e803cb576e5c",
+    "expired": false,
+    "expires_at": "2027-01-10T17:08:21Z",
+    "name": "gitleaks-results.sarif",
+    "size_in_bytes": 447
+   }
+  ],
+  "wheel_from_uploaded_report": {
+   "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+   "files": 60,
+   "name": "fie-sdk",
+   "provides_extra": [
+    "all",
+    "anthropic",
+    "dev",
+    "fastapi",
+    "lite",
+    "ml",
+    "openai",
+    "server",
+    "torch"
+   ],
+   "requires_dist_base": [
+    "deep-translator>=1.11.4",
+    "langdetect>=1.0.9",
+    "requests>=2.28.0"
+   ],
+   "requires_dist_fastapi": [
+    "starlette>=0.52.1; extra == 'fastapi'"
+   ],
+   "sha256": "1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40",
+   "size": 314670,
+   "version": "1.18.0"
+  },
+  "wheel_sha256_from_job_log_sha256sum": "1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40",
+  "wheel_sha256_from_job_log_tool_line": "1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40"
+ },
+ "38282733913": {
+  "artifact_checksums": {
+   "files_bad": [],
+   "files_ok": 45,
+   "note": "the artifact's own SHA256SUMS.txt, re-verified after download"
+  },
+  "jobs": [
+   {
+    "completedAt": "2026-10-12T17:13:12Z",
+    "conclusion": "success",
+    "name": "secret-scan",
+    "startedAt": "2026-10-12T17:13:04Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:13:15Z",
+    "conclusion": "success",
+    "name": "lint",
+    "startedAt": "2026-10-12T17:13:04Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:13:31Z",
+    "conclusion": "success",
+    "name": "dependency-audit",
+    "startedAt": "2026-10-12T17:13:04Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:15:47Z",
+    "conclusion": "success",
+    "name": "test (3.12)",
+    "startedAt": "2026-10-12T17:13:17Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:15:42Z",
+    "conclusion": "success",
+    "name": "test (3.10)",
+    "startedAt": "2026-10-12T17:13:17Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:15:09Z",
+    "conclusion": "success",
+    "name": "test (3.11)",
+    "startedAt": "2026-10-12T17:13:17Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:16:21Z",
+    "conclusion": "success",
+    "name": "package",
+    "startedAt": "2026-10-12T17:15:49Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:17:02Z",
+    "conclusion": "success",
+    "name": "health-check",
+    "startedAt": "2026-10-12T17:15:49Z",
+    "status": "completed"
+   },
+   {
+    "completedAt": "2026-10-12T17:20:55Z",
+    "conclusion": "success",
+    "name": "deploy-space",
+    "startedAt": "2026-10-12T17:17:07Z",
+    "status": "completed"
+   }
+  ],
+  "package_job_steps": [
+   {
+    "conclusion": "success",
+    "name": "Set up job"
+   },
+   {
+    "conclusion": "success",
+    "name": "Run actions/checkout@v4"
+   },
+   {
+    "conclusion": "success",
+    "name": "Set up Python"
+   },
+   {
+    "conclusion": "success",
+    "name": "Install build tools"
+   },
+   {
+    "conclusion": "success",
+    "name": "Download model artifacts"
+   },
+   {
+    "conclusion": "success",
+    "name": "Build wheel"
+   },
+   {
+    "conclusion": "success",
+    "name": "Check wheel contents"
+   },
+   {
+    "conclusion": "success",
+    "name": "Release check (installed wheel \u2014 T-base and T-fastapi)"
+   },
+   {
+    "conclusion": "success",
+    "name": "Upload release-check report"
+   },
+   {
+    "conclusion": "success",
+    "name": "Post Set up Python"
+   },
+   {
+    "conclusion": "success",
+    "name": "Post Run actions/checkout@v4"
+   },
+   {
+    "conclusion": "success",
+    "name": "Complete job"
+   }
+  ],
+  "release_check_log_lines": [
+   "release_check: fie_sdk-1.18.0-py3-none-any.whl  sha256 1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40",
+   "release_check: temporary environments under /home/runner/work/_temp/fie-release-check-ehwf9qt8",
+   "release_check: T-base  (fie_sdk-1.18.0-py3-none-any.whl)",
+   "  [PASS         ] T-base | AC-1 wheel installs: pip install exited 0",
+   "  [PASS         ] T-base | AC-2 pip check: No broken requirements found.",
+   "  [PASS         ] T-base | AC-3 installed set equals declared: installed set equals the declared closure",
+   "  [PASS         ] T-base | AC-4 installed files equal the wheel: 55 files compared, 0 differ",
+   "  [PASS         ] T-base | AC-5 import fie: import fie succeeded from the environment's site-packages",
+   "  [PASS         ] T-base | AC-6 every name in fie.__all__ resolves: 22 names, 0 unresolved",
+   "  [PASS         ] T-base | AC-8 no optional package imported by import fie: none imported",
+   "  [PASS         ] T-base | AC-7 command line starts: help and detect exited 0 with JSON output",
+   "  [PASS         ] T-base | T-base: starlette and fastapi not installed: neither starlette nor fastapi is installed",
+   "  [PASS         ] T-base | AC-10 FastAPI request without the extra fails clearly: ModuleNotFoundError, name='starlette': fie.integrations.fastapi needs Starlette, which is not installed. Install it with: pip install \"fie-sdk[fastapi]\"",
+   "  [PASS         ] T-base | AC-12 SDK wrappers import without their SDKs: wrappers import; building a client names the missing SDK",
+   "release_check: T-base: PASSED: every implemented criterion (exit 0)",
+   "release_check: T-fastapi  (fie_sdk-1.18.0-py3-none-any.whl[fastapi])",
+   "  [PASS         ] T-fastapi | AC-1 wheel installs: pip install exited 0",
+   "  [PASS         ] T-fastapi | AC-2 pip check: No broken requirements found.",
+   "  [PASS         ] T-fastapi | AC-3 installed set equals declared: installed set equals the declared closure",
+   "  [PASS         ] T-fastapi | AC-4 installed files equal the wheel: 55 files compared, 0 differ",
+   "  [PASS         ] T-fastapi | AC-5 import fie: import fie succeeded from the environment's site-packages",
+   "  [PASS         ] T-fastapi | AC-6 every name in fie.__all__ resolves: 22 names, 0 unresolved",
+   "  [PASS         ] T-fastapi | AC-8 no optional package imported by import fie: none imported",
+   "  [PASS         ] T-fastapi | AC-7 command line starts: help and detect exited 0 with JSON output",
+   "  [PASS         ] T-fastapi | AC-11 FastAPI integration imports with the extra: all documented imports succeed",
+   "  [PASS         ] T-fastapi | AC-11 middleware blocks an injection, passes a benign request: injection answered 400 (PROMPT_EXTRACTION), benign request reached the handler; starlette 1.7.0",
+   "release_check: T-fastapi: PASSED: every implemented criterion (exit 0)",
+   "release_check: T-base: PASSED: every implemented criterion; T-fastapi: PASSED: every implemented criterion",
+   "release_check: exit 0; report and per-command output in <HOME>/work/_temp/release-check"
+  ],
+  "report": {
+   "dependency_source": "pip's configured index",
+   "exit_code": 0,
+   "fie_controls": {
+    "FIE_NO_AUTO_DOWNLOAD": "1",
+    "FIE_NO_TELEMETRY": "1"
+   },
+   "finished_utc": "2026-10-12T17:16:19Z",
+   "host_python": "3.11.17",
+   "platform": "linux",
+   "scope": "PLAN_021 section 5.2: Level 1 (AC-1 to AC-4), Level 2 (AC-5 to AC-8), Level 3 (AC-10 to AC-12)",
+   "started_utc": "2026-10-12T17:16:04Z",
+   "target_exit_codes": {
+    "T-base": 0,
+    "T-fastapi": 0
+   },
+   "verdict": "T-base: PASSED: every implemented criterion; T-fastapi: PASSED: every implemented criterion"
+  },
+  "run": {
+   "conclusion": "success",
+   "createdAt": "2026-10-12T17:13:02Z",
+   "databaseId": 38282733913,
+   "event": "push",
+   "headBranch": "main",
+   "headSha": "d2b0c168543a9ca3c012c6be1365ee6034cf0259",
+   "status": "completed",
+   "updatedAt": "2026-10-12T17:20:56Z",
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913",
+   "workflowName": "CI"
+  },
+  "runner_image": "ubuntu-24.04",
+  "runner_image_version": "20261004.327.1",
+  "source": {
+   "artifact": "gh run download -n release-check",
+   "artifact_listing": "gh api .../actions/runs/<id>/artifacts",
+   "log": "gh run view --job <package> --log",
+   "run_metadata": "gh run view --json"
+  },
+  "targets": {
+   "T-base": {
+    "criteria": {
+     "AC-1 wheel installs": "PASS",
+     "AC-10 FastAPI request without the extra fails clearly": "PASS",
+     "AC-12 SDK wrappers import without their SDKs": "PASS",
+     "AC-2 pip check": "PASS",
+     "AC-3 installed set equals declared": "PASS",
+     "AC-4 installed files equal the wheel": "PASS",
+     "AC-5 import fie": "PASS",
+     "AC-6 every name in fie.__all__ resolves": "PASS",
+     "AC-7 command line starts": "PASS",
+     "AC-8 no optional package imported by import fie": "PASS",
+     "T-base: starlette and fastapi not installed": "PASS"
+    },
+    "criteria_passed": 11,
+    "criteria_total": 11,
+    "exit_code": 0,
+    "installed": {
+     "beautifulsoup4": "4.15.0",
+     "certifi": "2026.7.22",
+     "charset-normalizer": "3.5.2",
+     "deep-translator": "1.11.4",
+     "fie-sdk": "1.18.0",
+     "idna": "3.20",
+     "langdetect": "1.0.9",
+     "pip": "24.0",
+     "requests": "2.34.2",
+     "setuptools": "79.0.1",
+     "six": "1.17.0",
+     "soupsieve": "3.0.3",
+     "typing-extensions": "4.16.0",
+     "urllib3": "2.8.0"
+    },
+    "python": "3.11.17",
+    "requirement": "fie_sdk-1.18.0-py3-none-any.whl",
+    "verdict": "PASSED: every implemented criterion"
+   },
+   "T-fastapi": {
+    "criteria": {
+     "AC-1 wheel installs": "PASS",
+     "AC-11 FastAPI integration imports with the extra": "PASS",
+     "AC-11 middleware blocks an injection, passes a benign request": "PASS",
+     "AC-2 pip check": "PASS",
+     "AC-3 installed set equals declared": "PASS",
+     "AC-4 installed files equal the wheel": "PASS",
+     "AC-5 import fie": "PASS",
+     "AC-6 every name in fie.__all__ resolves": "PASS",
+     "AC-7 command line starts": "PASS",
+     "AC-8 no optional package imported by import fie": "PASS"
+    },
+    "criteria_passed": 10,
+    "criteria_total": 10,
+    "exit_code": 0,
+    "installed": {
+     "anyio": "4.15.1",
+     "beautifulsoup4": "4.15.0",
+     "certifi": "2026.7.22",
+     "charset-normalizer": "3.5.2",
+     "deep-translator": "1.11.4",
+     "fie-sdk": "1.18.0",
+     "idna": "3.20",
+     "langdetect": "1.0.9",
+     "pip": "24.0",
+     "requests": "2.34.2",
+     "setuptools": "79.0.1",
+     "six": "1.17.0",
+     "soupsieve": "3.0.3",
+     "starlette": "1.7.0",
+     "typing-extensions": "4.16.0",
+     "urllib3": "2.8.0"
+    },
+    "python": "3.11.17",
+    "requirement": "fie_sdk-1.18.0-py3-none-any.whl[fastapi]",
+    "verdict": "PASSED: every implemented criterion"
+   }
+  },
+  "three_sources_agree": true,
+  "uploaded_artifacts": [
+   {
+    "created_at": "2026-10-12T17:13:10Z",
+    "digest": "sha256:79a757917b1e4186e3c6862b38f9d706de6f4bea98f0f0551c5774dc73741767",
+    "expired": false,
+    "expires_at": "2027-01-10T17:13:02Z",
+    "name": "gitleaks-results.sarif",
+    "size_in_bytes": 447
+   },
+   {
+    "created_at": "2026-10-12T17:16:19Z",
+    "digest": "sha256:86e62c8ece816ae4e45c303b1d5c658a169cbb262a3be1a0dc5fc4a3df79db0b",
+    "expired": false,
+    "expires_at": "2027-01-10T17:13:02Z",
+    "name": "release-check",
+    "size_in_bytes": 117300
+   }
+  ],
+  "wheel_from_uploaded_report": {
+   "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+   "files": 60,
+   "name": "fie-sdk",
+   "provides_extra": [
+    "all",
+    "anthropic",
+    "dev",
+    "fastapi",
+    "lite",
+    "ml",
+    "openai",
+    "server",
+    "torch"
+   ],
+   "requires_dist_base": [
+    "deep-translator>=1.11.4",
+    "langdetect>=1.0.9",
+    "requests>=2.28.0"
+   ],
+   "requires_dist_fastapi": [
+    "starlette>=0.52.1; extra == 'fastapi'"
+   ],
+   "sha256": "1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40",
+   "size": 314670,
+   "version": "1.18.0"
+  },
+  "wheel_sha256_from_job_log_sha256sum": "1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40",
+  "wheel_sha256_from_job_log_tool_line": "1b149e77fda073783af47d77caef9d3fc2e16e8a1f846f5b3407e0c51274bf40"
+ }
+}

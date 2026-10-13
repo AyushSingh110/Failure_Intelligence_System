@@ -1,0 +1,201 @@
+{
+ "baseline_BL-0002": {
+  "fingerprint_commit": "924c70d 2026-10-10T22:56:33+05:30",
+  "models": {
+   "encoder": {
+    "file": "model.onnx",
+    "in_manifest": true,
+    "sha256": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+    "size": 90293328
+   },
+   "meta_classifier": {
+    "file": "meta_clf.pkl",
+    "in_manifest": true,
+    "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+    "size": 212131
+   },
+   "meta_classifier_meta": {
+    "file": "meta_clf.json",
+    "in_manifest": true,
+    "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+    "size": 725
+   },
+   "pair_classifier": {
+    "file": "pair_intent_classifier_v6_3b.pkl",
+    "in_manifest": true,
+    "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "size": 11349
+   },
+   "pair_meta": {
+    "file": "pair_intent_meta_v6_3b.json",
+    "in_manifest": true,
+    "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
+    "size": 888
+   },
+   "tokenizer": {
+    "file": "tokenizer.json",
+    "in_manifest": true,
+    "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+    "size": 711661
+   }
+  }
+ },
+ "candidates": {
+  "A_published": {
+   "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "side_car_sha256": "a7389bb4d198eaec29222cb35cf5f786d865b3e9f0a457a2c6b63159189ef620",
+   "size": 179675
+  },
+  "B_manifest": {
+   "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+   "side_car_sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+   "size": 212131
+  }
+ },
+ "commit_08d5474": {
+  "date": "2026-08-11T23:37:56+05:30",
+  "files": [
+   "data/meta_clf_balanced.jsonl     |  2370 ++++++",
+   " data/meta_clf_trainset.jsonl     | 16057 +++++++++++++++++++++++++++++++++++++",
+   " data/meta_impact_report.json     |    97 +",
+   " docs/RESEARCH_LOG.md             |    74 +",
+   " fie/adversarial.py               |    12 +-",
+   " scripts/model_manifest.json      |    12 +-",
+   " scripts/train_meta_classifier.py |    55 +-",
+   " tests/data/detection_golden.json |    14 +-",
+   " 8 files changed, 18662 insertions(+), 29 deletions(-)"
+  ],
+  "subject": "fix+measure: meta-classifier read 6 of 11 features as constant zero"
+ },
+ "inferences": [
+  "That the release asset replaced on 2026-08-11 was A. The original asset no longer exists and was never hashed by this project.",
+  "That A is the meta-classifier 'before the fix' described by commit 08d5474's subject. The side-cars differ (11 against 12 features, threshold 0.50 against 0.41), which is consistent with it; the pickles were not opened.",
+  "That the PyPI wheel was produced by the publish workflow. Its content equals the manifest at the tag, which is what that workflow would produce; no build log was examined."
+ ],
+ "manifest_history": [
+  {
+   "commit": "08d5474",
+   "date": "2026-08-11T23:37:56+05:30",
+   "meta_clf.json": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+   "meta_clf.pkl": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+   "release_tag": "models-v1.18.0",
+   "subject": "fix+measure: meta-classifier read 6 of 11 features as constant zero"
+  },
+  {
+   "commit": "d1565d1",
+   "date": "2026-08-10T11:00:08+05:30",
+   "meta_clf.json": "a7389bb4d198eaec29222cb35cf5f786d865b3e9f0a457a2c6b63159189ef620",
+   "meta_clf.pkl": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "release_tag": "models-v1.18.0",
+   "subject": "perf: replace torch with ONNX Runtime for sentence embeddings"
+  },
+  {
+   "commit": "1cc4036",
+   "date": "2026-08-10T09:24:34+05:30",
+   "meta_clf.json": "a7389bb4d198eaec29222cb35cf5f786d865b3e9f0a457a2c6b63159189ef620",
+   "meta_clf.pkl": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "release_tag": "models-v1.18.0",
+   "subject": "v1.18.0: production hardening, layer split, golden tests, ops docs"
+  },
+  {
+   "commit": "c6fd6de",
+   "date": "2026-06-20T21:27:36+05:30",
+   "meta_clf.json": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
+   "meta_clf.pkl": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "release_tag": "models-v1.15.0",
+   "subject": "Readme updated"
+  },
+  {
+   "commit": "77c39b9",
+   "date": "2026-06-19T12:31:29+05:30",
+   "meta_clf.json": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
+   "meta_clf.pkl": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "release_tag": "models-v1.15.0",
+   "subject": "v1.15.0: PAIR v5, meta-classifier, async scan, copyright layer, test suite"
+  },
+  {
+   "commit": "c9d4790",
+   "date": "2026-06-19T09:59:15+05:30",
+   "meta_clf.json": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
+   "meta_clf.pkl": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "release_tag": "models-v1.14.0",
+   "subject": "Fix asset naming in manifest and download script for models-v1.14.0 release"
+  },
+  {
+   "commit": "89ea5a3",
+   "date": "2026-06-19T09:52:45+05:30",
+   "meta_clf.json": "08d30c07e7cf5ef7e26163aadef97805acddd481278645d17b2847817da08f1b",
+   "meta_clf.pkl": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "release_tag": "models-v1.14.0",
+   "subject": "v1.14.0: multilingual fix (14 langs + translate-then-PAIR), layer score stacking"
+  },
+  {
+   "commit": "8627abe",
+   "date": "2026-06-11T08:20:07+05:30",
+   "meta_clf.json": null,
+   "meta_clf.pkl": null,
+   "release_tag": "models-v1.13.0",
+   "subject": "Updated pipeline"
+  }
+ ],
+ "pypi_upload": {
+  "filename": "fie_sdk-1.18.0-py3-none-any.whl",
+  "sha256": "be504dc748822699df5dc5353ad0038617ef639a4c1840ed18786bc8579e963d",
+  "source": "docs/fie_rebuild_2026/evidence/E51/stageC1/provisioning/pypi_fie-sdk_summary.json",
+  "upload_time": "2026-08-10T04:38:01.301494Z"
+ },
+ "tags": {
+  "models-v1.18.0": {
+   "commit": "1cc4036da335a2732fca42ccfe4c27f193c888eb",
+   "date": "2026-08-10T09:24:34+05:30"
+  },
+  "v1.18.0": {
+   "commit": "1cc4036da335a2732fca42ccfe4c27f193c888eb",
+   "date": "2026-08-10T09:24:34+05:30"
+  }
+ },
+ "unknown": [
+  "Whether either file is safe to deserialize. Nothing here establishes that.",
+  "What the published wheel does at run time with A under an [ml] install.",
+  "The contents of the published source distribution."
+ ],
+ "verified_facts": [
+  "The published wheel's meta_clf.pkl is A; hashed from the digest-verified wheel archive.",
+  "The tracked manifest listed A from v1.14.0 (2026-06-19) through commit d1565d1 (2026-08-10), including at the tag v1.18.0.",
+  "Both tags, v1.18.0 and models-v1.18.0, point to commit 1cc4036, whose manifest lists A.",
+  "PyPI's 1.18.0 wheel was uploaded at 2026-08-10T04:38:01Z.",
+  "The GitHub release models-v1.18.0 was published at 2026-08-10T03:59:05Z; its meta_clf.pkl and meta_clf.json assets carry created_at 2026-08-11T18:03, and the pkl asset's digest is B.",
+  "Commit 08d5474 (2026-08-11T18:07Z) changed the manifest's meta_clf entries from A to B and left release_tag unchanged.",
+  "The working-tree meta_clf.pkl is B and its side-car equals the manifest's.",
+  "BL-0002's fingerprint records meta_classifier sha256 B, in_manifest true.",
+  "The stale dist/ wheel also contains A."
+ ],
+ "where_each_is_found": {
+  "BL-0002_fingerprint": {
+   "file": "meta_clf.pkl",
+   "in_manifest": true,
+   "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+   "size": 212131
+  },
+  "dist_wheel": {
+   "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "size": 179675
+  },
+  "manifest_at_HEAD": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+  "manifest_at_tag_v1.18.0": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+  "pypi_wheel_1.18.0": {
+   "sha256": "01be1995d70f1963ae4f912468642f79f27fd0d68d9135187f0592329c162c9e",
+   "size": 179675
+  },
+  "release_asset_now": {
+   "created_at": "2026-08-11T18:03:53Z",
+   "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+   "size": 212131,
+   "updated_at": "2026-08-11T18:03:54Z"
+  },
+  "working_tree": {
+   "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+   "size": 212131
+  }
+ }
+}

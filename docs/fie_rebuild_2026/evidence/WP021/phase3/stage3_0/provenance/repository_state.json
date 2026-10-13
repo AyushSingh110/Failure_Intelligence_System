@@ -1,0 +1,20 @@
+{
+ "branch": "rebuild/wp-001-eval-harness",
+ "canonical": "BL-0002_pair-v6.3b_fie-70de7053",
+ "ci_yml_runs_release_check": true,
+ "head": "28683d4b8e0ca137589ded73013a2ffbbef09a2a",
+ "head_is_on_origin_main": true,
+ "origin_main": "d2b0c168543a9ca3c012c6be1365ee6034cf0259",
+ "staged": [],
+ "status_porcelain_before_stage": [],
+ "tags": {
+  "models-v1.18.0": "1cc4036da335a2732fca42ccfe4c27f193c888eb",
+  "v1.18.0": "1cc4036da335a2732fca42ccfe4c27f193c888eb"
+ },
+ "tracked": {
+  ".github/workflows/ci.yml": true,
+  "scripts/model_manifest.json": true,
+  "scripts/release_check.py": true,
+  "tests/test_release_check.py": true
+ }
+}

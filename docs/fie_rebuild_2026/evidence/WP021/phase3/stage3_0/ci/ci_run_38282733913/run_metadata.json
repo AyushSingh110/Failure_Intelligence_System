@@ -1,0 +1,873 @@
+{
+ "conclusion": "success",
+ "createdAt": "2026-10-12T17:13:02Z",
+ "databaseId": 38282733913,
+ "event": "push",
+ "headBranch": "main",
+ "headSha": "d2b0c168543a9ca3c012c6be1365ee6034cf0259",
+ "jobs": [
+  {
+   "completedAt": "2026-10-12T17:13:12Z",
+   "conclusion": "success",
+   "databaseId": 114923673626,
+   "name": "secret-scan",
+   "startedAt": "2026-10-12T17:13:04Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:13:05Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:13:04Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:08Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:13:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:10Z",
+     "conclusion": "success",
+     "name": "Scan for hardcoded secrets (gitleaks)",
+     "number": 3,
+     "startedAt": "2026-10-12T17:13:08Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:11Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 6,
+     "startedAt": "2026-10-12T17:13:10Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:11Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 7,
+     "startedAt": "2026-10-12T17:13:11Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114923673626"
+  },
+  {
+   "completedAt": "2026-10-12T17:13:15Z",
+   "conclusion": "success",
+   "databaseId": 114923673811,
+   "name": "lint",
+   "startedAt": "2026-10-12T17:13:04Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:13:05Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:13:04Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:07Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:13:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:10Z",
+     "conclusion": "success",
+     "name": "Run actions/setup-python@v5",
+     "number": 3,
+     "startedAt": "2026-10-12T17:13:07Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:13Z",
+     "conclusion": "success",
+     "name": "Install ruff",
+     "number": 4,
+     "startedAt": "2026-10-12T17:13:10Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:13Z",
+     "conclusion": "success",
+     "name": "Lint with ruff",
+     "number": 5,
+     "startedAt": "2026-10-12T17:13:13Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:13Z",
+     "conclusion": "success",
+     "name": "Post Run actions/setup-python@v5",
+     "number": 9,
+     "startedAt": "2026-10-12T17:13:13Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:14Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 10,
+     "startedAt": "2026-10-12T17:13:13Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:14Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 11,
+     "startedAt": "2026-10-12T17:13:14Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114923673811"
+  },
+  {
+   "completedAt": "2026-10-12T17:13:31Z",
+   "conclusion": "success",
+   "databaseId": 114923673845,
+   "name": "dependency-audit",
+   "startedAt": "2026-10-12T17:13:04Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:13:05Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:13:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:08Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:13:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:09Z",
+     "conclusion": "success",
+     "name": "Run actions/setup-python@v5",
+     "number": 3,
+     "startedAt": "2026-10-12T17:13:08Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:14Z",
+     "conclusion": "success",
+     "name": "Install pip-audit",
+     "number": 4,
+     "startedAt": "2026-10-12T17:13:09Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:29Z",
+     "conclusion": "success",
+     "name": "Audit Python dependencies",
+     "number": 5,
+     "startedAt": "2026-10-12T17:13:14Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:29Z",
+     "conclusion": "success",
+     "name": "Post Run actions/setup-python@v5",
+     "number": 9,
+     "startedAt": "2026-10-12T17:13:29Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:29Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 10,
+     "startedAt": "2026-10-12T17:13:29Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:29Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 11,
+     "startedAt": "2026-10-12T17:13:29Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114923673845"
+  },
+  {
+   "completedAt": "2026-10-12T17:15:47Z",
+   "conclusion": "success",
+   "databaseId": 114923753360,
+   "name": "test (3.12)",
+   "startedAt": "2026-10-12T17:13:17Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:13:18Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:13:17Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:20Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:13:18Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:21Z",
+     "conclusion": "success",
+     "name": "Set up Python 3.12",
+     "number": 3,
+     "startedAt": "2026-10-12T17:13:20Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:25Z",
+     "conclusion": "success",
+     "name": "Download model artifacts (strict)",
+     "number": 4,
+     "startedAt": "2026-10-12T17:13:21Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:14:21Z",
+     "conclusion": "success",
+     "name": "Install dependencies",
+     "number": 5,
+     "startedAt": "2026-10-12T17:13:25Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:37Z",
+     "conclusion": "success",
+     "name": "Run offline unit tests",
+     "number": 6,
+     "startedAt": "2026-10-12T17:14:21Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:37Z",
+     "conclusion": "skipped",
+     "name": "Upload coverage to Codecov",
+     "number": 7,
+     "startedAt": "2026-10-12T17:15:37Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:39Z",
+     "conclusion": "success",
+     "name": "Smoke-test adversarial scan",
+     "number": 8,
+     "startedAt": "2026-10-12T17:15:37Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:42Z",
+     "conclusion": "success",
+     "name": "Smoke-test many-shot detection",
+     "number": 9,
+     "startedAt": "2026-10-12T17:15:39Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:42Z",
+     "conclusion": "success",
+     "name": "Smoke-test prompt leakage detection",
+     "number": 10,
+     "startedAt": "2026-10-12T17:15:42Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:42Z",
+     "conclusion": "success",
+     "name": "Check integrations import",
+     "number": 11,
+     "startedAt": "2026-10-12T17:15:42Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:46Z",
+     "conclusion": "success",
+     "name": "Post Set up Python 3.12",
+     "number": 21,
+     "startedAt": "2026-10-12T17:15:42Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:46Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 22,
+     "startedAt": "2026-10-12T17:15:46Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:46Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 23,
+     "startedAt": "2026-10-12T17:15:46Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114923753360"
+  },
+  {
+   "completedAt": "2026-10-12T17:15:42Z",
+   "conclusion": "success",
+   "databaseId": 114923753501,
+   "name": "test (3.10)",
+   "startedAt": "2026-10-12T17:13:17Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:13:19Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:13:18Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:22Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:13:19Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:22Z",
+     "conclusion": "success",
+     "name": "Set up Python 3.10",
+     "number": 3,
+     "startedAt": "2026-10-12T17:13:22Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:29Z",
+     "conclusion": "success",
+     "name": "Download model artifacts (strict)",
+     "number": 4,
+     "startedAt": "2026-10-12T17:13:22Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:14:21Z",
+     "conclusion": "success",
+     "name": "Install dependencies",
+     "number": 5,
+     "startedAt": "2026-10-12T17:13:29Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:31Z",
+     "conclusion": "success",
+     "name": "Run offline unit tests",
+     "number": 6,
+     "startedAt": "2026-10-12T17:14:21Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:31Z",
+     "conclusion": "skipped",
+     "name": "Upload coverage to Codecov",
+     "number": 7,
+     "startedAt": "2026-10-12T17:15:31Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:33Z",
+     "conclusion": "success",
+     "name": "Smoke-test adversarial scan",
+     "number": 8,
+     "startedAt": "2026-10-12T17:15:31Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:35Z",
+     "conclusion": "success",
+     "name": "Smoke-test many-shot detection",
+     "number": 9,
+     "startedAt": "2026-10-12T17:15:33Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:35Z",
+     "conclusion": "success",
+     "name": "Smoke-test prompt leakage detection",
+     "number": 10,
+     "startedAt": "2026-10-12T17:15:35Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:36Z",
+     "conclusion": "success",
+     "name": "Check integrations import",
+     "number": 11,
+     "startedAt": "2026-10-12T17:15:35Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:40Z",
+     "conclusion": "success",
+     "name": "Post Set up Python 3.10",
+     "number": 21,
+     "startedAt": "2026-10-12T17:15:36Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:40Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 22,
+     "startedAt": "2026-10-12T17:15:40Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:40Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 23,
+     "startedAt": "2026-10-12T17:15:40Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114923753501"
+  },
+  {
+   "completedAt": "2026-10-12T17:15:09Z",
+   "conclusion": "success",
+   "databaseId": 114923754062,
+   "name": "test (3.11)",
+   "startedAt": "2026-10-12T17:13:17Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:13:19Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:13:18Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:22Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:13:19Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:24Z",
+     "conclusion": "success",
+     "name": "Set up Python 3.11",
+     "number": 3,
+     "startedAt": "2026-10-12T17:13:22Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:13:34Z",
+     "conclusion": "success",
+     "name": "Download model artifacts (strict)",
+     "number": 4,
+     "startedAt": "2026-10-12T17:13:24Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:14:11Z",
+     "conclusion": "success",
+     "name": "Install dependencies",
+     "number": 5,
+     "startedAt": "2026-10-12T17:13:34Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:14:58Z",
+     "conclusion": "success",
+     "name": "Run offline unit tests",
+     "number": 6,
+     "startedAt": "2026-10-12T17:14:11Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:02Z",
+     "conclusion": "success",
+     "name": "Upload coverage to Codecov",
+     "number": 7,
+     "startedAt": "2026-10-12T17:14:58Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:04Z",
+     "conclusion": "success",
+     "name": "Smoke-test adversarial scan",
+     "number": 8,
+     "startedAt": "2026-10-12T17:15:02Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:05Z",
+     "conclusion": "success",
+     "name": "Smoke-test many-shot detection",
+     "number": 9,
+     "startedAt": "2026-10-12T17:15:04Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:05Z",
+     "conclusion": "success",
+     "name": "Smoke-test prompt leakage detection",
+     "number": 10,
+     "startedAt": "2026-10-12T17:15:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:05Z",
+     "conclusion": "success",
+     "name": "Check integrations import",
+     "number": 11,
+     "startedAt": "2026-10-12T17:15:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:06Z",
+     "conclusion": "success",
+     "name": "Post Set up Python 3.11",
+     "number": 21,
+     "startedAt": "2026-10-12T17:15:05Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:06Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 22,
+     "startedAt": "2026-10-12T17:15:06Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:06Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 23,
+     "startedAt": "2026-10-12T17:15:06Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114923754062"
+  },
+  {
+   "completedAt": "2026-10-12T17:16:21Z",
+   "conclusion": "success",
+   "databaseId": 114924653511,
+   "name": "package",
+   "startedAt": "2026-10-12T17:15:49Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:15:51Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:15:50Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:53Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:15:51Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:54Z",
+     "conclusion": "success",
+     "name": "Set up Python",
+     "number": 3,
+     "startedAt": "2026-10-12T17:15:53Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:56Z",
+     "conclusion": "success",
+     "name": "Install build tools",
+     "number": 4,
+     "startedAt": "2026-10-12T17:15:54Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:03Z",
+     "conclusion": "success",
+     "name": "Download model artifacts",
+     "number": 5,
+     "startedAt": "2026-10-12T17:15:56Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:04Z",
+     "conclusion": "success",
+     "name": "Build wheel",
+     "number": 6,
+     "startedAt": "2026-10-12T17:16:03Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:04Z",
+     "conclusion": "success",
+     "name": "Check wheel contents",
+     "number": 7,
+     "startedAt": "2026-10-12T17:16:04Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:19Z",
+     "conclusion": "success",
+     "name": "Release check (installed wheel \u2014 T-base and T-fastapi)",
+     "number": 8,
+     "startedAt": "2026-10-12T17:16:04Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:19Z",
+     "conclusion": "success",
+     "name": "Upload release-check report",
+     "number": 9,
+     "startedAt": "2026-10-12T17:16:19Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:20Z",
+     "conclusion": "success",
+     "name": "Post Set up Python",
+     "number": 17,
+     "startedAt": "2026-10-12T17:16:19Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:20Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 18,
+     "startedAt": "2026-10-12T17:16:20Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:20Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 19,
+     "startedAt": "2026-10-12T17:16:20Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114924653511"
+  },
+  {
+   "completedAt": "2026-10-12T17:17:02Z",
+   "conclusion": "success",
+   "databaseId": 114924653540,
+   "name": "health-check",
+   "startedAt": "2026-10-12T17:15:49Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:15:51Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:15:50Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:53Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:15:51Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:15:54Z",
+     "conclusion": "success",
+     "name": "Run actions/setup-python@v5",
+     "number": 3,
+     "startedAt": "2026-10-12T17:15:53Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:00Z",
+     "conclusion": "success",
+     "name": "Download model artifacts",
+     "number": 4,
+     "startedAt": "2026-10-12T17:15:54Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:16:43Z",
+     "conclusion": "success",
+     "name": "Install server deps",
+     "number": 5,
+     "startedAt": "2026-10-12T17:16:00Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:00Z",
+     "conclusion": "success",
+     "name": "Start server and check /health",
+     "number": 6,
+     "startedAt": "2026-10-12T17:16:43Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:00Z",
+     "conclusion": "success",
+     "name": "Post Run actions/setup-python@v5",
+     "number": 11,
+     "startedAt": "2026-10-12T17:17:00Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:01Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 12,
+     "startedAt": "2026-10-12T17:17:00Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:01Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 13,
+     "startedAt": "2026-10-12T17:17:01Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114924653540"
+  },
+  {
+   "completedAt": "2026-10-12T17:20:55Z",
+   "conclusion": "success",
+   "databaseId": 114925102829,
+   "name": "deploy-space",
+   "startedAt": "2026-10-12T17:17:07Z",
+   "status": "completed",
+   "steps": [
+    {
+     "completedAt": "2026-10-12T17:17:09Z",
+     "conclusion": "success",
+     "name": "Set up job",
+     "number": 1,
+     "startedAt": "2026-10-12T17:17:08Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:10Z",
+     "conclusion": "success",
+     "name": "Run actions/checkout@v4",
+     "number": 2,
+     "startedAt": "2026-10-12T17:17:09Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:11Z",
+     "conclusion": "success",
+     "name": "Run actions/setup-python@v5",
+     "number": 3,
+     "startedAt": "2026-10-12T17:17:10Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:15Z",
+     "conclusion": "success",
+     "name": "Install deploy tooling",
+     "number": 4,
+     "startedAt": "2026-10-12T17:17:11Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:19Z",
+     "conclusion": "success",
+     "name": "Download model artifacts (strict)",
+     "number": 5,
+     "startedAt": "2026-10-12T17:17:15Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:17:22Z",
+     "conclusion": "success",
+     "name": "Deploy to Hugging Face Space",
+     "number": 6,
+     "startedAt": "2026-10-12T17:17:19Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:20:52Z",
+     "conclusion": "success",
+     "name": "Wait for the Space to come back up",
+     "number": 7,
+     "startedAt": "2026-10-12T17:17:22Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:20:53Z",
+     "conclusion": "success",
+     "name": "Verify the detector is not degraded",
+     "number": 8,
+     "startedAt": "2026-10-12T17:20:52Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:20:53Z",
+     "conclusion": "success",
+     "name": "Post Run actions/setup-python@v5",
+     "number": 15,
+     "startedAt": "2026-10-12T17:20:53Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:20:53Z",
+     "conclusion": "success",
+     "name": "Post Run actions/checkout@v4",
+     "number": 16,
+     "startedAt": "2026-10-12T17:20:53Z",
+     "status": "completed"
+    },
+    {
+     "completedAt": "2026-10-12T17:20:53Z",
+     "conclusion": "success",
+     "name": "Complete job",
+     "number": 17,
+     "startedAt": "2026-10-12T17:20:53Z",
+     "status": "completed"
+    }
+   ],
+   "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913/job/114925102829"
+  }
+ ],
+ "status": "completed",
+ "updatedAt": "2026-10-12T17:20:56Z",
+ "url": "https://github.com/AyushSingh110/Failure_Intelligence_System/actions/runs/38282733913",
+ "workflowName": "CI"
+}
