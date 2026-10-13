@@ -21,7 +21,20 @@ What this protects against: a wrong, stale, unreviewed or corrupted file being u
 of the one the project released. What it does not: someone who can already write to the
 installation can change the manifest too.
 
-Status: the primitives only. The model loader does not use this module yet.
+Status: the primitives, the rules for the project's own inventory, and the derivation of the
+manifest that ships inside the package. The model loader does not use this module yet.
+
+Two manifests, one source of truth:
+
+    scripts/model_manifest.json   tracked, reviewed, the only authoritative inventory.
+                                  Paths are relative to the repository root.
+    fie/models/MANIFEST.json      derived from it by derive_package_manifest(). Never edited,
+                                  never tracked. Paths are relative to fie/models/.
+
+validate_production() holds the tracked inventory to the project's rules: which roles exist,
+which classifier versions are supported and which is the default, what may ship in the wheel.
+Those rules are deliberately spelled out here, so that changing what ships means changing
+this file as well as the inventory, in a reviewed commit.
 
 Manifest format (schema 1). Paths are POSIX-style and relative to the model directory.
 
@@ -53,7 +66,9 @@ __all__ = [
     "SCHEMA", "Entry", "Manifest",
     "ModelIntegrityError", "ManifestError", "PathViolation", "NotListed", "ArtifactMissing", "IntegrityMismatch",
     "ReadFailed",
-    "parse_manifest", "select_entry", "default_entry", "resolve_path", "verify_bytes", "read_verified",
+    "parse_manifest", "select_entry", "default_entry", "sole_entry", "resolve_path", "verify_bytes", "read_verified",
+    "ROLES", "PAIR_VERSIONS", "DEFAULT_PAIR_VERSION", "SINGLETON_ROLES", "LEGACY_PATHS", "PACKAGE_PREFIX",
+    "PACKAGE_MANIFEST_NAME", "validate_production", "derive_package_manifest",
 ]
 
 SCHEMA = 1
@@ -266,6 +281,147 @@ def default_entry(manifest: Manifest, role: str) -> Entry:
         if e.role == role and e.default:
             return e
     raise NotListed(f"the manifest marks no default for role {role!r}", role=role)
+
+
+def sole_entry(manifest: Manifest, role: str) -> Entry:
+    """
+    The one entry of a role that has exactly one, such as the meta-classifier.
+
+    Raises NotListed if the manifest has none. Raises ManifestError if it has several: the
+    first is never chosen, because nothing says the first is the right one.
+    """
+    found = manifest.for_role(role)
+    if not found:
+        raise NotListed(f"the manifest lists no {role!r}", role=role)
+    if len(found) > 1:
+        raise ManifestError(f"role {role!r} must have exactly one entry, found {len(found)}: "
+                            f"{sorted(e.path for e in found)}")
+    return found[0]
+
+
+# ── the project's own inventory ─────────────────────────────────────────────
+# Rules for scripts/model_manifest.json. Each is an owner decision recorded in
+# docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md (WP-021).
+
+ROLES = frozenset({"pair_classifier", "pair_meta", "meta_classifier", "meta_classifier_meta",
+                   "encoder", "tokenizer", "server", "legacy"})
+
+# Selection keys: exactly what FIE_PAIR_VERSION is compared with, lowercased. This is not the
+# version a side-car declares ("v6" selects the model whose side-car says "v6.2"). Each key
+# names the classifier file and the side-car file the loader pairs with it.
+_PAIR_FILES = {
+    "v6_3b": ("pair_intent_classifier_v6_3b.pkl", "pair_intent_meta_v6_3b.json"),
+    "v6_3": ("pair_intent_classifier_v6_3.pkl", "pair_intent_meta_v6_3.json"),
+    "v6": ("pair_intent_classifier_v6.pkl", "pair_intent_meta_v6.json"),
+    "v5": ("pair_intent_classifier_v5.pkl", "pair_intent_meta_v5.json"),
+    "v4": ("pair_intent_classifier_v4.pkl", "pair_intent_meta_v4.json"),
+    "v3": ("pair_intent_classifier_v3.pkl", "pair_intent_meta_v3.json"),
+    "v1": ("pair_intent_classifier.pkl", "pair_intent_meta.json"),
+}
+PAIR_VERSIONS = tuple(_PAIR_FILES)
+DEFAULT_PAIR_VERSION = "v6_3b"
+# Selected by role alone. They have no version, and none is invented for them.
+SINGLETON_ROLES = ("meta_classifier", "meta_classifier_meta", "encoder", "tokenizer")
+# Listed so the server's download keeps verifying them; loaded by nothing in fie/; never shipped.
+LEGACY_PATHS = frozenset({"fie/models/failure_classifier_v4.pkl", "fie/models/feature_columns_v4.pkl"})
+PACKAGE_PREFIX = "fie/models/"
+PACKAGE_MANIFEST_NAME = "MANIFEST.json"
+_SERVER_PREFIXES = ("models/", "storage/")
+# What ships inside the wheel, by role. Anything else in the wheel is a defect.
+_IN_WHEEL = {"pair_classifier": True, "pair_meta": True, "meta_classifier": True, "meta_classifier_meta": True,
+             "encoder": False, "tokenizer": False, "server": False, "legacy": False}
+
+
+def _decode(source):
+    """The manifest as a decoded object, for the checks that need the fields as written."""
+    if isinstance(source, (bytes, bytearray)):
+        source = bytes(source).decode("utf-8")
+    return json.loads(source) if isinstance(source, str) else source
+
+
+def validate_production(source) -> Manifest:
+    """
+    Hold the tracked inventory (scripts/model_manifest.json) to the project's rules.
+
+    `source` is the manifest as JSON text, bytes or a decoded object, with paths relative to
+    the repository root. Returns the parsed Manifest. Raises ManifestError naming the first
+    rule broken; nothing is repaired or assumed.
+    """
+    manifest = parse_manifest(source)                # shape, digests, sizes, paths, uniqueness
+    raw_entries = _decode(source)["artifacts"]
+    for index, (raw, e) in enumerate(zip(raw_entries, manifest.entries)):
+        where = f"artifacts[{index}] ({e.path})"
+        if "default" not in raw:
+            raise ManifestError(f"{where}: 'default' must be stated on every entry", path=e.path)
+        if e.role not in ROLES:
+            raise ManifestError(f"{where}: role {e.role!r} is not one of {sorted(ROLES)}", path=e.path)
+        if e.path == PACKAGE_PREFIX + PACKAGE_MANIFEST_NAME:
+            raise ManifestError(f"{where}: the derived package manifest cannot list itself", path=e.path)
+        in_package = e.path.startswith(PACKAGE_PREFIX)
+        if not in_package and not e.path.startswith(_SERVER_PREFIXES):
+            raise ManifestError(f"{where}: path is outside the approved roots "
+                                f"{[PACKAGE_PREFIX, *_SERVER_PREFIXES]}", path=e.path)
+        if (e.path in LEGACY_PATHS) != (e.role == "legacy"):
+            raise ManifestError(f"{where}: role 'legacy' belongs to exactly {sorted(LEGACY_PATHS)}", path=e.path)
+        if (e.role == "server") == in_package:
+            raise ManifestError(f"{where}: 'server' entries live under {list(_SERVER_PREFIXES)}, "
+                                f"every other role under {PACKAGE_PREFIX!r}", path=e.path)
+        if e.in_wheel != _IN_WHEEL[e.role]:
+            raise ManifestError(f"{where}: role {e.role!r} must have in_wheel {str(_IN_WHEEL[e.role]).lower()}",
+                                path=e.path)
+        if e.role in ("pair_classifier", "pair_meta"):
+            if e.version not in _PAIR_FILES:
+                raise ManifestError(f"{where}: version {e.version!r} is not a supported selection key "
+                                    f"{list(PAIR_VERSIONS)}", path=e.path)
+            expected = PACKAGE_PREFIX + _PAIR_FILES[e.version][e.role == "pair_meta"]
+            if e.path != expected:
+                raise ManifestError(f"{where}: selection key {e.version!r} belongs to {expected!r}", path=e.path)
+        elif e.version is not None:
+            raise ManifestError(f"{where}: role {e.role!r} carries no version", path=e.path)
+        if e.default and (e.role != "pair_classifier" or e.version != DEFAULT_PAIR_VERSION):
+            raise ManifestError(f"{where}: only the {DEFAULT_PAIR_VERSION!r} pair_classifier is the default",
+                                path=e.path)
+
+    classifiers = {e.version for e in manifest.for_role("pair_classifier")}
+    side_cars = {e.version for e in manifest.for_role("pair_meta")}
+    if classifiers != set(PAIR_VERSIONS):
+        raise ManifestError(f"the supported pair_classifier versions are {list(PAIR_VERSIONS)}; "
+                            f"missing {sorted(set(PAIR_VERSIONS) - classifiers)}")
+    if side_cars != classifiers:
+        raise ManifestError(f"every pair_classifier needs its pair_meta; "
+                            f"without one: {sorted(classifiers - side_cars)}")
+    if [e.version for e in manifest.entries if e.default] != [DEFAULT_PAIR_VERSION]:
+        raise ManifestError(f"exactly one entry is the default: the {DEFAULT_PAIR_VERSION!r} pair_classifier")
+    for role in SINGLETON_ROLES:
+        if len(manifest.for_role(role)) != 1:
+            raise ManifestError(f"role {role!r} must have exactly one entry, "
+                                f"found {len(manifest.for_role(role))}")
+    return manifest
+
+
+def derive_package_manifest(source) -> bytes:
+    """
+    The bytes of fie/models/MANIFEST.json, derived from the tracked inventory and nothing else.
+
+    The inventory is validated first. Entries under fie/models/ are kept, with that prefix
+    removed; entries elsewhere (the server's) are left out. Entries with in_wheel false are
+    kept: they are recognised artifacts that are deliberately not shipped. Free text is
+    dropped. The output is a function of the inventory alone: sorted by path, sorted keys,
+    two-space indentation, LF line endings, a final newline, and no timestamp, path or
+    environment detail. The same inventory always gives the same bytes.
+    """
+    manifest = validate_production(source)
+    artifacts = []
+    for e in sorted(manifest.entries, key=lambda entry: entry.path):
+        if not e.path.startswith(PACKAGE_PREFIX):
+            continue
+        item = {"path": e.path[len(PACKAGE_PREFIX):], "sha256": e.sha256, "size": e.size, "role": e.role,
+                "default": e.default, "in_wheel": e.in_wheel}
+        if e.version is not None:
+            item["version"] = e.version
+        artifacts.append(item)
+    text = json.dumps({"schema": SCHEMA, "artifacts": artifacts}, indent=2, sort_keys=True, ensure_ascii=True)
+    return (text + "\n").encode("utf-8")
 
 
 # ── reading ─────────────────────────────────────────────────────────────────

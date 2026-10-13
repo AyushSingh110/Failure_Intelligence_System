@@ -1342,3 +1342,66 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add fie/_model_integrity.py tests/test_model_integrity.py docs/fie_rebuild_2026 && git commit -m "fie: classify filesystem failures in the model-integrity primitives as read_failed (WP-021 phase 3 stage 3.1 follow-up)"
 ```
+
+### 14.7 Phase 3, Stage 3.1 completion (2026-10-13): production inventory and derived manifest
+
+Detail and evidence:
+[EXECUTION_021_phase3-stage3_1-completion-manifest.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_1-completion-manifest.md),
+`evidence/WP021/phase3/stage3_1_completion/`.
+
+**Status: Stage 3.1 complete.** The loader is not connected (Stage 3.2, not started).
+
+**Owner decisions recorded and implemented:**
+
+- **D-036 (W21-8)** — the supported SDK model artifacts ship in the one wheel.
+- **D-037 (W21-15)** — `fie/models/failure_classifier_v4.pkl` and `feature_columns_v4.pkl`
+  stay in the inventory with role `legacy` and `in_wheel: false`.
+- **D-038 (W21-22)** — the five encoder by-products in `fie/models/minilm-onnx/` (`config.json`,
+  `ort_config.json`, `special_tokens_map.json`, `tokenizer_config.json`, `vocab.txt`) are
+  outside the model-artifact inventory.
+- **D-039 (W21-23)** — `scripts/model_manifest.json` is extended in place and stays the only
+  authoritative inventory; `fie/models/MANIFEST.json` is derived from it. Roles:
+  `pair_classifier`, `pair_meta`, `meta_classifier`, `meta_classifier_meta`, `encoder`,
+  `tokenizer`, `server`, `legacy`. `version` is the `FIE_PAIR_VERSION` selection key (`v6_3b`,
+  `v6_3`, `v6`, `v5`, `v4`, `v3`, `v1`), not the side-car's declared version. Singleton roles
+  are selected by role alone, with no invented version. All seven classifier versions ship.
+- **D-040** — `.gitkeep` is to be excluded from the wheel. **Recorded, not implemented**:
+  reserved for Stage 3.3.
+- D-034 (W21-7) and D-035 (W21-20) stand. The relocation under W21-20 is still **not executed**.
+
+**Done:**
+
+- `fie/_model_integrity.py`: `sole_entry`, `validate_production`, `derive_package_manifest`.
+  The validator pins the role vocabulary, the seven keys and their files, the single `v6_3b`
+  default, the roots, and `in_wheel` by role, so that a legacy or server file cannot enter the
+  wheel and an SDK model cannot leave it by editing the inventory alone.
+- `scripts/model_manifest.json`: `schema: 1` and the new fields on all 25 entries; 90 lines
+  added, none deleted; every path, digest, size and note identical to before. 16 entries are
+  `in_wheel: true`.
+- `scripts/download_models.py`: still downloads and strictly verifies every entry whatever
+  `in_wheel` says; `--check` stays read-only; the derived manifest is written, atomically,
+  only after every artifact is verified, and never on a partial or failed run.
+- `tests/test_model_manifest.py`: 153 tests, synthetic inventories and a mocked download.
+- The derivation is deterministic: 5,112 bytes, SHA-256 `fbab28ab…393bf2f5` for today's
+  inventory.
+
+**Verified:** 1330 tests pass, 0 fail, 2 platform skips. `python -m evals baseline` exits 0;
+all 11 per-prompt record files byte-identical to `BL-0002`. The harness fingerprint differs
+from the pinned one in six identity fields only (commit, dirty flags, `fie` tree, subject key);
+model identities identical. `CANONICAL` unchanged; the baseline was not rewritten.
+
+**Not established, not done:**
+
+- Nothing is enforced at run time yet: the loader still uses `joblib.load` on the first
+  preferred file that exists.
+- No build rule enforces `in_wheel`; `fie/models/MANIFEST.json` has not been generated here.
+- CI has not run on this change.
+
+**Open:** W21-9, W21-17, W21-18 (Stage 3.2); W21-16, W21-19 (Stage 3.3); the research-workflow
+compatibility plan and the relocation of the seven experiment files.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add fie/_model_integrity.py scripts/model_manifest.json scripts/download_models.py tests/test_model_manifest.py docs/fie_rebuild_2026 && git commit -m "fie: production model inventory, validator and derived package manifest; downloader writes it after full verification (WP-021 phase 3 stage 3.1)"
+```

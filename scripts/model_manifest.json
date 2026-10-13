@@ -1,5 +1,6 @@
 {
   "_comment": "SHA-256 manifest for FIE model artifacts. These files are deliberately NOT tracked in git (see .gitignore) and are distributed as GitHub Release assets instead. scripts/download_models.py reads this manifest, downloads each artifact from the release tagged below, and verifies its checksum before placing it. Asset names on the release are the plain filename (os.path.basename of path). See docs/OPERATIONS.md for the upload procedure.",
+  "schema": 1,
   "release_tag": "models-v1.18.0",
   "repo": "AyushSingh110/Failure_Intelligence_System",
   "artifacts": [
@@ -7,150 +8,239 @@
       "path": "fie/models/minilm-onnx/model.onnx",
       "sha256": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
       "size": 90293328,
+      "role": "encoder",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Sentence embedder - MiniLM-L6-v2 exported to ONNX (fp32). Replaces torch/sentence-transformers: ~45x smaller on disk, ~2.4x faster, cosine 1.000000 vs torch. int8 was rejected (cosine 0.879, fails the >0.999 gate)."
     },
     {
       "path": "fie/models/minilm-onnx/tokenizer.json",
       "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
       "size": 711661,
+      "role": "tokenizer",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Sentence embedder - WordPiece tokenizer for the ONNX MiniLM export."
     },
     {
       "path": "fie/models/pair_intent_classifier_v6_3b.pkl",
       "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
       "size": 11349,
+      "role": "pair_classifier",
+      "version": "v6_3b",
+      "default": true,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 - PAIR v6.3b SHIPPED DEFAULT. v6.2 corpus + targeted soft-harm/euphemism positives + safe-but-scary benign negatives. Threshold 0.50. Full-pipeline ship-gate PASSED: SORRY soft-harm +32pts, over-refusal flat, no clean-recall regression. sklearn 1.7.2."
     },
     {
       "path": "fie/models/pair_intent_meta_v6_3b.json",
       "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
       "size": 888,
+      "role": "pair_meta",
+      "version": "v6_3b",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 - PAIR v6.3b metadata (threshold, embed_model)."
     },
     {
       "path": "fie/models/pair_intent_classifier_v6_3.pkl",
       "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
       "size": 11349,
+      "role": "pair_classifier",
+      "version": "v6_3",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 - PAIR v6.3 (A/B via FIE_PAIR_VERSION=v6_3)."
     },
     {
       "path": "fie/models/pair_intent_meta_v6_3.json",
       "sha256": "bb35fc9c6edff795e2aa70acae43104f02011a7e8f40cfee4b6c95c9034c0220",
       "size": 742,
+      "role": "pair_meta",
+      "version": "v6_3",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 - PAIR v6.3 metadata."
     },
     {
       "path": "fie/models/pair_intent_classifier_v6.pkl",
       "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
       "size": 11349,
+      "role": "pair_classifier",
+      "version": "v6",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v6 domain-balanced classifier (full-pipeline recall 85.7%, OOD benign FPR 9.7% vs v5 41.5%, threshold 0.50, sklearn 1.7.2)"
     },
     {
       "path": "fie/models/pair_intent_meta_v6.json",
       "sha256": "b83c0e7c56772146eae539714e0288d965f5182f17574e0e13f9c47e8e9e2d9d",
       "size": 776,
+      "role": "pair_meta",
+      "version": "v6",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v6 threshold + embed model metadata"
     },
     {
       "path": "fie/models/pair_intent_classifier_v5.pkl",
       "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
       "size": 11349,
+      "role": "pair_classifier",
+      "version": "v5",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v5 semantic classifier (88.9% TPR, 7.5% FPR, threshold 0.70, sklearn 1.7.2)"
     },
     {
       "path": "fie/models/pair_intent_meta_v5.json",
       "sha256": "d1b52dd543be53a4dd39c7267519cb385cf1f12b7af90509f94175d62598a343",
       "size": 673,
+      "role": "pair_meta",
+      "version": "v5",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v5 threshold + embed model metadata"
     },
     {
       "path": "fie/models/meta_clf.pkl",
       "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
       "size": 212131,
+      "role": "meta_classifier",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK meta-layer - XGBoost meta-classifier on all 12 layer scores. Retrained 2026-08-11: the previous model was fitted on an older layer naming scheme, so 6 of its 11 features were constant zero and it never saw pair_classifier. Trained on a 1:1 balanced set."
     },
     {
       "path": "fie/models/meta_clf.json",
       "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
       "size": 725,
+      "role": "meta_classifier_meta",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK meta-layer - XGBoost meta-classifier on all 12 layer scores. Retrained 2026-08-11: the previous model was fitted on an older layer naming scheme, so 6 of its 11 features were constant zero and it never saw pair_classifier. Trained on a 1:1 balanced set."
     },
     {
       "path": "fie/models/failure_classifier_v4.pkl",
       "sha256": "839f8950f1e5e589b52a0656ee80de1b65c5af8d993a4fce8b0b5bb5459c5280",
       "size": 190524,
+      "role": "legacy",
+      "default": false,
+      "in_wheel": false,
       "used_by": "SDK local mode — XGBoost failure classifier (bundled in PyPI wheel)"
     },
     {
       "path": "fie/models/feature_columns_v4.pkl",
       "sha256": "ec84a4d40d9b9d2de1708c04795a742882f8ea1b9ea4fc8f0992710dbbada49b",
       "size": 24207,
+      "role": "legacy",
+      "default": false,
+      "in_wheel": false,
       "used_by": "SDK local mode — feature column ordering for the v4 classifier"
     },
     {
       "path": "fie/models/pair_intent_classifier_v4.pkl",
       "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
       "size": 11349,
+      "role": "pair_classifier",
+      "version": "v4",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v4 semantic classifier (97.18% TPR, threshold 0.50)"
     },
     {
       "path": "fie/models/pair_intent_meta_v4.json",
       "sha256": "00cf2aa50df6911f11454098619f7de2a0083dfa97943c475a4b3747350dc127",
       "size": 2153,
+      "role": "pair_meta",
+      "version": "v4",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v4 threshold + embed model metadata"
     },
     {
       "path": "fie/models/pair_intent_classifier_v3.pkl",
       "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
       "size": 11349,
+      "role": "pair_classifier",
+      "version": "v3",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v3 fallback"
     },
     {
       "path": "fie/models/pair_intent_meta_v3.json",
       "sha256": "97df4a1acca8a13c95b7c4abbd2efb396bd657f193aa77a9a68b74f755c9558d",
       "size": 1003,
+      "role": "pair_meta",
+      "version": "v3",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v3 metadata"
     },
     {
       "path": "fie/models/pair_intent_classifier.pkl",
       "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
       "size": 18325,
+      "role": "pair_classifier",
+      "version": "v1",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v1 fallback"
     },
     {
       "path": "fie/models/pair_intent_meta.json",
       "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
       "size": 866,
+      "role": "pair_meta",
+      "version": "v1",
+      "default": false,
+      "in_wheel": true,
       "used_by": "SDK Layer 8 — PAIR v1 metadata"
     },
     {
       "path": "models/failure_classifier_slim.pkl",
       "sha256": "128fd0bd3023d4d3d7621cc9813f664444ade7cb2c81b06f57ee3b48845096c0",
       "size": 225611,
+      "role": "server",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Server — slim 10-feature XGBoost classifier"
     },
     {
       "path": "models/feature_columns_slim.pkl",
       "sha256": "8ae05f38ae4aeaa910ea8451e4526263186f10ed60934125c033ea778e7c9b3f",
       "size": 250,
+      "role": "server",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Server — slim classifier feature columns"
     },
     {
       "path": "models/failure_classifier_slim_meta.json",
       "sha256": "1fb7a6ffa26189049f48bba3a0e5ed584fc16c5fecf808f5996e82bd3dceb3e7",
       "size": 771,
+      "role": "server",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Server — slim classifier metadata"
     },
     {
       "path": "storage/faiss_adversarial.index",
       "sha256": "5c72d8350e68218e5a68070f1f4d7885dbcfe18fdc982d2c786fc17341c02a73",
       "size": 208941,
+      "role": "server",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Server — FAISS adversarial archetype index"
     },
     {
       "path": "storage/faiss_adversarial_meta.json",
       "sha256": "cb2717210d1a4c4440e6c19f1ebbc8e7e059c1a02d18190618cd2e2ef05d38c5",
       "size": 25129,
+      "role": "server",
+      "default": false,
+      "in_wheel": false,
       "used_by": "Server — FAISS index metadata"
     }
   ]
