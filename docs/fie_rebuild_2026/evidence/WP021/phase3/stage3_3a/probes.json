@@ -1,0 +1,891 @@
+{
+ "base_build_section": "[tool.hatch.build]\nartifacts = [\n    \"fie/models/*.pkl\",\n    \"fie/models/*.json\",\n]\n\n[tool.hatch.build.targets.wheel]\npackages = [\"fie\"]",
+ "dummy_fixtures": {
+  "fie/dummy_ignored.log": {
+   "bytes": 39,
+   "sha256": "909155ffc90a727c6c17ad8b86c5f26fda74967c8238cfffc422dc5159c00b71"
+  },
+  "fie/dummy_plain.txt": {
+   "bytes": 48,
+   "sha256": "35719b57bbbc03e48c14df08831a0bbad44e86f0ac45bd618f4ef4967f7e48a9"
+  },
+  "fie/models/dummy_extra.pkl": {
+   "bytes": 65,
+   "sha256": "530de311ce17737c306eabf4c6595e40f72855d8b2e1358e56041d6f1e250f5f"
+  },
+  "fie/models/dummy_listed.pkl": {
+   "bytes": 66,
+   "sha256": "e3e1bf2a9eaaa96d0f26d68b54a68f9f45673bad089a94d257fc068a9f6f120b"
+  },
+  "fie/models/dummy_side.json": {
+   "bytes": 32,
+   "sha256": "6b8dddb38e7d10e032269a75c3e0c1e2802918358ee1d5b28041c10312a0bd61"
+  },
+  "fie/models/sub/dummy_nested.json": {
+   "bytes": 40,
+   "sha256": "60112817a830fe90a119a9720323cc4b1ea10e1bf2e6695979f6abb5b91b0bf6"
+  }
+ },
+ "gitignore_probes": [
+  {
+   ".gitignore_present": true,
+   "dot_git_present": false,
+   "probe": "G1_unpacked_sdist_with_gitignore",
+   "source": "P0 sdist unpacked fresh; files added after unpacking",
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\G1_unpacked_sdist_with_gitignore\\wheel <work>\\unpacked\\G1_unpacked_sdist_with_gitignore\\fie_sdk-1.18.0",
+    "elapsed_s": 1.66,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_G1_unpacked_sdist_with_gitignore_wheel",
+    "log": "logs/probe_G1_unpacked_sdist_with_gitignore_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 165147,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "095a06ba779100293b8413300e80d3025e6cd844f443df5653f719951d275c26"
+     }
+    ]
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/late_ignored.log": false,
+    "fie/late_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/late_extra.json": true,
+    "fie/models/late_extra.pkl": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   ".gitignore_present": false,
+   "dot_git_present": false,
+   "probe": "G2_unpacked_sdist_without_gitignore",
+   "source": "P0 sdist unpacked fresh; files added after unpacking",
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\G2_unpacked_sdist_without_gitignore\\wheel <work>\\unpacked\\G2_unpacked_sdist_without_gitignore\\fie_sdk-1.18.0",
+    "elapsed_s": 1.76,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_G2_unpacked_sdist_without_gitignore_wheel",
+    "log": "logs/probe_G2_unpacked_sdist_without_gitignore_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 165341,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "fbe2273b2e2f4ab8a397fa34c5531f822f4ff9edab1d49d852b7d2562521b961"
+     }
+    ]
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/late_ignored.log": true,
+    "fie/late_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/late_extra.json": true,
+    "fie/models/late_extra.pkl": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  }
+ ],
+ "late_fixtures": {
+  "fie/late_ignored.log": {
+   "bytes": 31,
+   "sha256": "638d94ff91808ce3048b9b3b7178c1ffbea86be18887bb196ddf54f25a3d4410"
+  },
+  "fie/late_plain.txt": {
+   "bytes": 20,
+   "sha256": "be0b1fc14a480b35330e57bdfb0e24d00adba382dba3915a40cd077f7b95c6dd"
+  },
+  "fie/models/late_extra.json": {
+   "bytes": 25,
+   "sha256": "fa16cd4bae7daf7d7f3d8c4d6581cade77f3c9e00e1b6153fe036660d0d893d8"
+  },
+  "fie/models/late_extra.pkl": {
+   "bytes": 64,
+   "sha256": "77370748d05e1fd25412823890ff497837a0dea8071e860a519c1c3c16eefb60"
+  }
+ },
+ "probes": [
+  {
+   "config_difference": "unchanged configuration",
+   "config_lines_added": [],
+   "config_lines_removed": [],
+   "probe": "P0_current",
+   "question": "baseline: what the current artifacts globs do with dummy files",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P0_current\\sdist <work>\\probes\\P0_current",
+    "elapsed_s": 21.87,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P0_current_sdist",
+    "log": "logs/probe_P0_current_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174386,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "c46559f81a2b2bfcb00ae5679241b7de8b28071d0f9e29846df6c1adb2fb67bb"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P0_current\\wheel <work>\\probes\\P0_current",
+    "elapsed_s": 2.03,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P0_current_wheel",
+    "log": "logs/probe_P0_current_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P0_current\\wheel_from_sdist <work>\\unpacked\\probe_P0_current\\fie_sdk-1.18.0",
+    "elapsed_s": 1.92,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P0_current_wheel_from_sdist",
+    "log": "logs/probe_P0_current_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "wheel target: exclude = [dummy_extra.pkl, .gitkeep]",
+   "config_lines_added": [
+    "exclude = [\"fie/models/dummy_extra.pkl\", \"fie/models/.gitkeep\"]"
+   ],
+   "config_lines_removed": [],
+   "probe": "P1_wheel_exclude_path",
+   "question": "does a wheel-target exclude of an exact path override the build-level artifacts glob?",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P1_wheel_exclude_path\\sdist <work>\\probes\\P1_wheel_exclude_path",
+    "elapsed_s": 22.81,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P1_wheel_exclude_path_sdist",
+    "log": "logs/probe_P1_wheel_exclude_path_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174410,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "ef21ae678c254f5afb6c15ea02a52c249deca763d8f5ccc3cffcef3aa8a9fd9a"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P1_wheel_exclude_path\\wheel <work>\\probes\\P1_wheel_exclude_path",
+    "elapsed_s": 1.87,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P1_wheel_exclude_path_wheel",
+    "log": "logs/probe_P1_wheel_exclude_path_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164370,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "e109caa0c5d0c915a212026a49de00b65703d14243687e203e00b8b32abdf91b"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P1_wheel_exclude_path\\wheel_from_sdist <work>\\unpacked\\probe_P1_wheel_exclude_path\\fie_sdk-1.18.0",
+    "elapsed_s": 2.0,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P1_wheel_exclude_path_wheel_from_sdist",
+    "log": "logs/probe_P1_wheel_exclude_path_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164370,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "e109caa0c5d0c915a212026a49de00b65703d14243687e203e00b8b32abdf91b"
+     }
+    ]
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": false,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": false,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "wheel target: exclude = [fie/models/dummy_*]",
+   "config_lines_added": [
+    "exclude = [\"fie/models/dummy_*\"]"
+   ],
+   "config_lines_removed": [],
+   "probe": "P2_wheel_exclude_glob",
+   "question": "does a wheel-target exclude glob override the artifacts glob?",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P2_wheel_exclude_glob\\sdist <work>\\probes\\P2_wheel_exclude_glob",
+    "elapsed_s": 17.86,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P2_wheel_exclude_glob_sdist",
+    "log": "logs/probe_P2_wheel_exclude_glob_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174397,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "15be287d08fe1cff1f709e72c73aa53f7cd132b9a17fc108de0897d408504376"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P2_wheel_exclude_glob\\wheel <work>\\probes\\P2_wheel_exclude_glob",
+    "elapsed_s": 1.74,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P2_wheel_exclude_glob_wheel",
+    "log": "logs/probe_P2_wheel_exclude_glob_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P2_wheel_exclude_glob\\wheel_from_sdist <work>\\unpacked\\probe_P2_wheel_exclude_glob\\fie_sdk-1.18.0",
+    "elapsed_s": 1.73,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P2_wheel_exclude_glob_wheel_from_sdist",
+    "log": "logs/probe_P2_wheel_exclude_glob_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "build level: exclude = [dummy_extra.pkl]",
+   "config_lines_added": [
+    "exclude = [\"fie/models/dummy_extra.pkl\"]"
+   ],
+   "config_lines_removed": [],
+   "probe": "P3_build_exclude_path",
+   "question": "does a build-level exclude override the build-level artifacts glob (wheel and sdist)?",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P3_build_exclude_path\\sdist <work>\\probes\\P3_build_exclude_path",
+    "elapsed_s": 17.49,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P3_build_exclude_path_sdist",
+    "log": "logs/probe_P3_build_exclude_path_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174401,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "a19bcbcc7a24a42a211f7c2f9facf4a958fd87515d2ccca87b25139901e2778f"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P3_build_exclude_path\\wheel <work>\\probes\\P3_build_exclude_path",
+    "elapsed_s": 1.79,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P3_build_exclude_path_wheel",
+    "log": "logs/probe_P3_build_exclude_path_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P3_build_exclude_path\\wheel_from_sdist <work>\\unpacked\\probe_P3_build_exclude_path\\fie_sdk-1.18.0",
+    "elapsed_s": 1.83,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P3_build_exclude_path_wheel_from_sdist",
+    "log": "logs/probe_P3_build_exclude_path_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "sdist target: exclude = [dummy_extra.pkl]",
+   "config_lines_added": [
+    "[tool.hatch.build.targets.sdist]",
+    "exclude = [\"fie/models/dummy_extra.pkl\"]"
+   ],
+   "config_lines_removed": [],
+   "probe": "P4_sdist_exclude_path",
+   "question": "does an sdist-target exclude drop an artifact from the sdist, and so from a wheel built from it?",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P4_sdist_exclude_path\\sdist <work>\\probes\\P4_sdist_exclude_path",
+    "elapsed_s": 17.88,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P4_sdist_exclude_path_sdist",
+    "log": "logs/probe_P4_sdist_exclude_path_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174408,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "2fad6a0810ba2fea30059439557a208303b1b5c117b8333618792f7dcf72b399"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P4_sdist_exclude_path\\wheel <work>\\probes\\P4_sdist_exclude_path",
+    "elapsed_s": 1.65,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P4_sdist_exclude_path_wheel",
+    "log": "logs/probe_P4_sdist_exclude_path_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_extra.pkl",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/dummy_side.json",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P4_sdist_exclude_path\\wheel_from_sdist <work>\\unpacked\\probe_P4_sdist_exclude_path\\fie_sdk-1.18.0",
+    "elapsed_s": 1.99,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P4_sdist_exclude_path_wheel_from_sdist",
+    "log": "logs/probe_P4_sdist_exclude_path_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164534,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "63baf6dc6f15ad9239394cb9d184d19c5fd9950bf95ccbfaecc24a5a3d0adc80"
+     }
+    ]
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": true,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": true,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "artifacts removed",
+   "config_lines_added": [],
+   "config_lines_removed": [
+    "[tool.hatch.build]",
+    "artifacts = [",
+    "    \"fie/models/*.pkl\",",
+    "    \"fie/models/*.json\","
+   ],
+   "probe": "P5_no_artifacts",
+   "question": "without artifacts, are ignored .pkl/.json files left out, and is .gitkeep still packed?",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P5_no_artifacts\\sdist <work>\\probes\\P5_no_artifacts",
+    "elapsed_s": 17.63,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P5_no_artifacts_sdist",
+    "log": "logs/probe_P5_no_artifacts_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174323,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "d28b070839900a2a9d356645505b707a93b2fa36d42865d853f724e6f71818f5"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P5_no_artifacts\\wheel <work>\\probes\\P5_no_artifacts",
+    "elapsed_s": 1.7,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P5_no_artifacts_wheel",
+    "log": "logs/probe_P5_no_artifacts_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 163842,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "3cbaa9b41d1b1b56dc674d629257a0369478604214a8374235b6b3964e195ddb"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P5_no_artifacts\\wheel_from_sdist <work>\\unpacked\\probe_P5_no_artifacts\\fie_sdk-1.18.0",
+    "elapsed_s": 1.8,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P5_no_artifacts_wheel_from_sdist",
+    "log": "logs/probe_P5_no_artifacts_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 163842,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "3cbaa9b41d1b1b56dc674d629257a0369478604214a8374235b6b3964e195ddb"
+     }
+    ]
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "artifacts removed; wheel force-include dummy_listed.pkl; wheel exclude the same path",
+   "config_lines_added": [
+    "exclude = [\"fie/models/dummy_listed.pkl\"]",
+    "[tool.hatch.build.targets.wheel.force-include]",
+    "\"fie/models/dummy_listed.pkl\" = \"fie/models/dummy_listed.pkl\""
+   ],
+   "config_lines_removed": [
+    "[tool.hatch.build]",
+    "artifacts = [",
+    "    \"fie/models/*.pkl\",",
+    "    \"fie/models/*.json\","
+   ],
+   "probe": "P6_force_include_and_exclude",
+   "question": "does force-include add an ignored file, and does an exclude of the same path override it?",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P6_force_include_and_exclude\\sdist <work>\\probes\\P6_force_include_and_exclude",
+    "elapsed_s": 17.44,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P6_force_include_and_exclude_sdist",
+    "log": "logs/probe_P6_force_include_and_exclude_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174364,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "d9d40a8879d698a574db3ff99cc8d7dd39dbf122641de544b6b7824e435dd7da"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P6_force_include_and_exclude\\wheel <work>\\probes\\P6_force_include_and_exclude",
+    "elapsed_s": 1.71,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P6_force_include_and_exclude_wheel",
+    "log": "logs/probe_P6_force_include_and_exclude_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164087,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "4fc07c2c762e52b0ab2c9920c326a51b098824fe6bffc8886a9d6d5d0932d72e"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P6_force_include_and_exclude\\wheel_from_sdist <work>\\unpacked\\probe_P6_force_include_and_exclude\\fie_sdk-1.18.0",
+    "elapsed_s": 1.65,
+    "exit_code": 1,
+    "kind": "wheel",
+    "label": "probe_P6_force_include_and_exclude_wheel_from_sdist",
+    "log": "logs/probe_P6_force_include_and_exclude_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": []
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": false,
+    "fie/models/.gitkeep": false,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": false
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  },
+  {
+   "config_difference": "artifacts removed; wheel force-include dummy_listed.pkl",
+   "config_lines_added": [
+    "[tool.hatch.build.targets.wheel.force-include]",
+    "\"fie/models/dummy_listed.pkl\" = \"fie/models/dummy_listed.pkl\""
+   ],
+   "config_lines_removed": [
+    "[tool.hatch.build]",
+    "artifacts = [",
+    "    \"fie/models/*.pkl\",",
+    "    \"fie/models/*.json\","
+   ],
+   "probe": "P7_force_include_only",
+   "question": "control for P6: force-include alone",
+   "sdist_build": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\probes\\P7_force_include_only\\sdist <work>\\probes\\P7_force_include_only",
+    "elapsed_s": 20.42,
+    "exit_code": 0,
+    "kind": "sdist",
+    "label": "probe_P7_force_include_only_sdist",
+    "log": "logs/probe_P7_force_include_only_sdist.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 67174357,
+      "name": "fie_sdk-1.18.0.tar.gz",
+      "sha256": "cc7ce5a089524f218d7e5413ecc2631a2dbfb739c712d26a89fa6da325ee442b"
+     }
+    ]
+   },
+   "sdist_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   },
+   "wheel_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P7_force_include_only\\wheel <work>\\probes\\P7_force_include_only",
+    "elapsed_s": 1.69,
+    "exit_code": 0,
+    "kind": "wheel",
+    "label": "probe_P7_force_include_only_wheel",
+    "log": "logs/probe_P7_force_include_only_wheel.log",
+    "network_attempts": [],
+    "outputs": [
+     {
+      "bytes": 164087,
+      "name": "fie_sdk-1.18.0-py3-none-any.whl",
+      "sha256": "4fc07c2c762e52b0ab2c9920c326a51b098824fe6bffc8886a9d6d5d0932d72e"
+     }
+    ]
+   },
+   "wheel_fie_models_members": [
+    "fie/models/.gitkeep",
+    "fie/models/dummy_listed.pkl",
+    "fie/models/sub/dummy_nested.json"
+   ],
+   "wheel_from_sdist_build": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\probes\\P7_force_include_only\\wheel_from_sdist <work>\\unpacked\\probe_P7_force_include_only\\fie_sdk-1.18.0",
+    "elapsed_s": 2.27,
+    "exit_code": 1,
+    "kind": "wheel",
+    "label": "probe_P7_force_include_only_wheel_from_sdist",
+    "log": "logs/probe_P7_force_include_only_wheel_from_sdist.log",
+    "network_attempts": [],
+    "outputs": []
+   },
+   "wheel_from_sdist_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": false,
+    "fie/models/.gitkeep": false,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": false,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": false
+   },
+   "wheel_has": {
+    "fie/dummy_ignored.log": false,
+    "fie/dummy_plain.txt": true,
+    "fie/models/.gitkeep": true,
+    "fie/models/dummy_extra.pkl": false,
+    "fie/models/dummy_listed.pkl": true,
+    "fie/models/dummy_side.json": false,
+    "fie/models/sub/dummy_nested.json": true
+   }
+  }
+ ]
+}
