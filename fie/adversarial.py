@@ -735,6 +735,7 @@ from fie.layers.pair import (
     _model_identities,
     _load_pair_classifier,
     _pair_state,
+    _pair_unavailable_detail_code,
     _pair_unavailable_state,
     _run_meta_classifier,
     _run_pair_classifier,
@@ -1208,6 +1209,12 @@ def _run_all_layers_parallel(
 
 # ── Warmup and readiness ──────────────────────────────────────────────────────
 
+# Loader detail codes that mean "a supported reduced configuration", not a fault:
+# the ML extras are not installed, or the models have not been downloaded (no
+# package manifest, or a listed file absent). Every other code is "failed".
+_WARMUP_UNAVAILABLE_DETAILS = frozenset({"dependency", "manifest_missing", "missing"})
+
+
 def warmup(timeout: float = 60.0) -> dict:
     """
     Preload every lazily-loaded model artifact. Blocking. Safe to call twice.
@@ -1239,9 +1246,16 @@ def warmup(timeout: float = 60.0) -> dict:
     else:
         # Distinguish a supported lite install (no ML extras, or models not
         # downloaded) from a genuine failure. Only the latter should page anyone.
-        err = _pair_state().get("error") or ""
-        expected = ("missing dependency" in err) or ("no PAIR classifier found" in err)
-        status["pair_classifier"] = "unavailable" if expected else "failed"
+        # Decided by the loader's fixed detail code, never by its message text.
+        detail = _pair_unavailable_detail_code()
+        if detail in _WARMUP_UNAVAILABLE_DETAILS:
+            status["pair_classifier"] = "unavailable"
+        else:
+            # An integrity refusal (unlisted, altered, unreadable, undeserializable,
+            # invalid manifest) or an unexpected error. Both are "failed"; the code
+            # says which, so an operator can tell tampering from a defect.
+            status["pair_classifier"] = "failed"
+            logger.error("warmup: pair_classifier failed detail=%s", detail or "unknown")
 
     status["meta_classifier"] = "ready" if _load_meta_classifier() else "unavailable"
 

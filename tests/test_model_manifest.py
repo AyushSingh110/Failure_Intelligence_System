@@ -19,7 +19,6 @@ import copy
 import hashlib
 import importlib.util
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -582,15 +581,46 @@ def test_tracked_inventory_lists_none_of_the_experiment_files_or_encoder_by_prod
 
 
 def test_tracked_selection_keys_agree_with_the_loader():
-    """Read from the loader's source text: each approved key names the same file there."""
-    source = (REPO / "fie" / "layers" / "pair.py").read_text(encoding="utf-8")
-    in_loader = dict(re.findall(r'\("(v[0-9a-z_]+)",\s*_models_dir\s*/\s*"(pair_intent_classifier[0-9a-z_]*\.pkl)"', source))
-    side_cars = dict(re.findall(r'_models_dir\s*/\s*"(pair_intent_classifier[0-9a-z_]*\.pkl)",\s*_models_dir\s*/\s*'
-                                r'"(pair_intent_meta[0-9a-z_]*\.json)"', source))
-    assert set(PAIR_KEYS) <= set(in_loader)
-    for key in PAIR_KEYS:
-        clf, meta = mi._PAIR_FILES[key]
-        assert in_loader[key] == clf and side_cars[clf] == meta
+    """
+    The loader accepts exactly the selection keys the tracked inventory lists, each for the
+    same classifier and side-car, and nothing else.
+
+    Stage 3.2: the loader has no version list of its own any more; it selects through the
+    package manifest derived from scripts/model_manifest.json. So this is checked by running
+    the loader's selection function on that derived manifest, with the keys and files read
+    from the tracked inventory itself. (Replaces the Stage 3.1 check, which parsed a version
+    list out of the loader's source.)
+    """
+    import ast
+
+    import fie.layers._verified_models as vm
+
+    source = TRACKED.read_bytes()
+    tracked = json.loads(source)["artifacts"]
+    classifiers = {a["version"]: a["path"] for a in tracked if a["role"] == "pair_classifier"}
+    side_cars = {a["version"]: a["path"] for a in tracked if a["role"] == "pair_meta"}
+    (default,) = [a["version"] for a in tracked if a["role"] == "pair_classifier" and a["default"]]
+    assert set(classifiers) == set(side_cars) == set(mi.PAIR_VERSIONS)
+
+    package = mi.parse_manifest(mi.derive_package_manifest(source))
+    strip = len(mi.PACKAGE_PREFIX)
+    for key, path in classifiers.items():
+        clf, meta = vm.select_pair(package, key)
+        assert (clf.path, meta.path) == (path[strip:], side_cars[key][strip:]), key
+    clf, meta = vm.select_pair(package, None)
+    assert (clf.version, clf.path, meta.path) == (default, classifiers[default][strip:], side_cars[default][strip:])
+    for name in ("v2", "v3_w3x", "v6_1_contaminated", "v6_noaug", "v64_harmaug", "v64_harmaug_capped",
+                 "v65_benignaug", "v6.3b", "default", ""):
+        if name:
+            with pytest.raises(vm.LoadRefused) as info:
+                vm.select_pair(package, name)
+            assert info.value.detail == "not_listed", name
+
+    # The loader selects through that function and the package manifest, with nothing else.
+    calls = {f"{n.func.value.id}.{n.func.attr}" for n in ast.walk(ast.parse((REPO / "fie" / "layers" / "pair.py")
+                                                                         .read_text(encoding="utf-8")))
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name)}
+    assert {"_vm.select_pair", "_vm.package_manifest", "_vm.select_meta"} <= calls
 
 
 def test_tracked_inventory_is_still_readable_by_the_harness():

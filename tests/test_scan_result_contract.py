@@ -1178,8 +1178,14 @@ def test_health_deep_reports_a_reason_code_not_the_loader_error(api, quiet_probe
 
     internal = pair._pair_state()["error"]
     assert internal, "precondition: the loader recorded an error string"
-    if reason == "model":
-        assert str(tmp_path) in internal, "precondition: the internal error names a local directory"
+    if reason != "dependency":
+        # WP-021 Stage 3.2 (W21-26): the internal error is sanitized too. It carries the
+        # loader's fixed detail code and a manifest-relative file name, never a local directory.
+        detail = {"model": "missing", "load_failed": "mismatch"}[reason]
+        assert pair._pair_unavailable_detail_code() == detail
+        assert internal.startswith(f"{detail}: "), internal
+        for needle in (str(tmp_path), tmp_path.name, "no-models-here", "broken-models"):
+            assert needle not in internal, f"the internal error names a local location: {needle!r}"
 
     response = api.get("/health/deep")
     assert response.status_code == 200

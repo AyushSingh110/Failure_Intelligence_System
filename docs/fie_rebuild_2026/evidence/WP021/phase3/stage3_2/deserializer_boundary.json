@@ -1,0 +1,29 @@
+{
+ "call_graph": [
+  "pair._load_pair_classifier_locked / pair._load_meta_classifier",
+  "  import joblib (dependency probe)",
+  "  _vm.package_manifest()  -> <fie>/models/MANIFEST.json only, parsed once, outcome cached",
+  "  _vm.select_pair(requested or None) | _vm.select_meta()  -> exact entry or LoadRefused",
+  "  _vm.read_artifact(classifier)  -> mi.read_verified: one open, size + SHA-256 checked",
+  "  _vm.read_artifact(side-car) -> _vm.parse_json: verified bytes only",
+  "  _vm.required_threshold / required_text / required_names  -> no defaults",
+  "  _vm.unpickle(entry, data)  -> verify_bytes again, joblib.load(io.BytesIO(data))",
+  "  identity digest = sha256(data)[:16]; publish all-or-nothing",
+  "  pair only: _build_embedder(embed_model from the verified side-car)"
+ ],
+ "deserializing_calls_in_fie": {
+  "fie/layers/_verified_models.py": [
+   "joblib.load"
+  ],
+  "fie/session_tracker.py": [
+   "pickle.loads"
+  ]
+ },
+ "model_loader": "fie/layers/_verified_models.py: joblib.load inside unpickle(), on an io.BytesIO of verified bytes",
+ "other_unverified_loaders_out_of_scope": [
+  "fie/layers/pair.py _build_embedder: SentenceTransformer(embed_model) fallback (WP-022)",
+  "fie/onnx_encoder.py: onnxruntime.InferenceSession and Tokenizer.from_file (WP-022)"
+ ],
+ "scanner": "tests/test_verified_loading.py::_deserializer_calls (AST, follows import aliases)",
+ "session_data_out_of_scope": "fie/session_tracker.py: pickle.loads (session data, not a model)"
+}

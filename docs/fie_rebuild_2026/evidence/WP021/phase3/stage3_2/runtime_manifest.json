@@ -1,0 +1,19 @@
+{
+ "byte_identical_to_fresh_derivation": true,
+ "bytes": 5112,
+ "entries": 20,
+ "file": "fie/models/MANIFEST.json (generated, git-ignored, not committed)",
+ "ignored_by": ".gitignore:18:**/models/*.json",
+ "sha256": "fbab28ab75acad2cfa8d178617caad112c32adafc6048d2a8483cd4a393bf2f5",
+ "step0_check": {
+  "command": "python -I scripts/download_models.py --check",
+  "exit_code": 0,
+  "output": "verified 25/25 artifacts (0 missing, 0 unreachable, 0 corrupt)"
+ },
+ "step0_generate": {
+  "command": "python -I scripts/download_models.py",
+  "downloads_attempted": false,
+  "exit_code": 0,
+  "output": "verified 25/25 artifacts (0 missing, 0 unreachable, 0 corrupt)\n[ok]      wrote fie/models/MANIFEST.json (derived from scripts/model_manifest.json)"
+ }
+}

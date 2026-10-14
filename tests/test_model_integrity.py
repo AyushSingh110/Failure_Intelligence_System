@@ -561,15 +561,46 @@ def test_importing_the_module_loads_no_model_library():
     assert json.loads(proc.stdout.strip().splitlines()[-1]) == []
 
 
-def test_the_loader_does_not_use_the_module_yet():
-    """Stage 3.1: the primitives exist and nothing in the package calls them."""
-    users = [p.relative_to(REPO).as_posix() for p in (REPO / "fie").rglob("*.py")
-             if p != MODULE and "_model_integrity" in p.read_text(encoding="utf-8", errors="replace")]
-    assert users == []
-    code = "import sys, fie\nprint('fie._model_integrity' in sys.modules)"
+def _imported_modules(path: Path) -> set[str]:
+    """Absolute module names a file imports, including `from x import y` as both x and x.y."""
+    found: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            found.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            found.add(node.module)
+            found.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return found
+
+
+def test_the_loader_uses_the_module_through_one_door_only():
+    """
+    Stage 3.2: the SDK's model loader uses these primitives, through exactly one module.
+
+    fie/layers/_verified_models.py is the only file in fie/ that refers to this module, and
+    fie/layers/pair.py, which loads the PAIR classifier and the meta-classifier, reaches the
+    primitives through it. Importing the loader loads the primitives but reads no model.
+    (Replaces the Stage 3.1 test that pinned "nothing uses the module yet".)
+    """
+    door = "fie/layers/_verified_models.py"
+    files = [p for p in (REPO / "fie").rglob("*.py") if p != MODULE]
+    by_text = sorted(p.relative_to(REPO).as_posix() for p in files
+                     if "_model_integrity" in p.read_text(encoding="utf-8", errors="replace"))
+    by_import = sorted(p.relative_to(REPO).as_posix() for p in files if "fie._model_integrity" in _imported_modules(p))
+    assert by_text == [door] and by_import == [door]
+    assert "fie.layers._verified_models" in _imported_modules(REPO / "fie" / "layers" / "pair.py")
+
+    code = ("import sys, json\nimport fie.layers.pair as pair\nimport fie.layers._verified_models as vm\n"
+            "print(json.dumps({'integrity': 'fie._model_integrity' in sys.modules,\n"
+            "                  'pair_attempted': pair._pair_load_attempted, 'meta_attempted': pair._meta_clf_attempted,\n"
+            "                  'manifests_read': len(vm._manifest_cache),\n"
+            "                  'manifest': vm.MANIFEST_PATH.relative_to(vm.MANIFEST_PATH.parents[2]).as_posix()}))")
     env = {**os.environ, "FIE_NO_TELEMETRY": "1", "FIE_NO_AUTO_DOWNLOAD": "1"}
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=str(REPO), env=env, timeout=300)
-    assert proc.returncode == 0 and proc.stdout.strip().splitlines()[-1] == "False"
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    assert json.loads(proc.stdout.strip().splitlines()[-1]) == {
+        "integrity": True, "pair_attempted": False, "meta_attempted": False, "manifests_read": 0,
+        "manifest": "fie/models/MANIFEST.json"}
 
 
 # ── the operating system refuses: read_failed (stage 3.1 follow-up) ─────────

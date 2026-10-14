@@ -13,12 +13,12 @@ tests/test_detection_golden.py, which pins the exact confidence values.
 """
 from __future__ import annotations
 
-import hashlib
 import logging
-import json as _json
 import re
 import threading
 from pathlib import Path
+
+from fie.layers import _verified_models as _vm
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +33,12 @@ logger = logging.getLogger(__name__)
 # Layer scores stayed identical, so only the golden-output test caught it.
 #
 # Deriving from the package root means these paths survive any future file move.
+#
+# Every artifact is selected through the package's own manifest and verified before it is
+# deserialized; see fie/layers/_verified_models.py. There is no second directory: the
+# repository-root models/ directory is never consulted (WP-021, W21-18).
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent   # .../fie
 _PKG_MODELS   = _PACKAGE_ROOT / "models"                 # bundled in the wheel
-_REPO_MODELS  = _PACKAGE_ROOT.parent / "models"          # source checkout only
 
 
 def _build_embedder(embed_model: str):
@@ -87,22 +90,10 @@ def _build_embedder(embed_model: str):
 # ── Artifact identity ─────────────────────────────────────────────────────────
 # A scan result names the artifacts that produced it: a version taken from the
 # artifact's own metadata file and the first 16 hex characters of the SHA-256
-# of the file that was loaded. Both are already public (scripts/model_manifest.json
+# of the bytes that were deserialized. Both are already public (scripts/model_manifest.json
 # lists the full hashes). Neither a path nor a file name is ever recorded here.
 _DIGEST_HEX: int = 16
 _VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$")
-
-
-def _file_digest(path: Path) -> str | None:
-    """Abbreviated SHA-256 of a model file, or None if it cannot be read."""
-    try:
-        digest = hashlib.sha256()
-        with open(path, "rb") as f:
-            for block in iter(lambda: f.read(1 << 20), b""):
-                digest.update(block)
-        return digest.hexdigest()[:_DIGEST_HEX]
-    except OSError:
-        return None
 
 
 def _declared_version(meta: dict) -> str | None:
@@ -113,18 +104,14 @@ def _declared_version(meta: dict) -> str | None:
     return None
 
 
-def _resolve_models_dir(sentinel: str) -> Path:
+def _resolve_models_dir(sentinel: str | None = None) -> Path:
     """
-    Pick the model directory containing `sentinel`.
+    The directory model artifacts are read from: the package's own models/.
 
-    Prefers the models bundled inside the installed package; falls back to the
-    repo-root models/ directory for source checkouts. Returns the package path
-    when neither exists, so error messages name the location users should fix.
+    Always the same directory. `sentinel` is accepted so existing callers keep
+    working and is ignored: which files happen to exist where no longer decides
+    anything. Which file is loaded is decided by the package manifest alone.
     """
-    if (_PKG_MODELS / sentinel).exists():
-        return _PKG_MODELS
-    if (_REPO_MODELS / sentinel).exists():
-        return _REPO_MODELS
     return _PKG_MODELS
 
 
@@ -136,11 +123,16 @@ _pair_threshold: float = 0.60
 _pair_load_attempted: bool = False
 _pair_load_error: str = ""
 # Why the classifier is not usable, as a fixed code: "dependency" (a package it
-# needs cannot be imported), "model" (no classifier file is present) or
-# "load_failed" (the file exists and could not be loaded). Empty while usable or
+# needs cannot be imported), "model" (nothing to load: no package manifest, or a
+# listed file is absent) or "load_failed" (refused or could not be loaded: not
+# listed, altered, unreadable, not deserializable). Empty while usable or
 # while a load is still in progress. `_pair_load_error` keeps the free text for
-# logs and health(); it can contain a local path, so it never reaches a result.
+# logs and health(); it never names an absolute location, and never reaches a result.
 _pair_unavailable_reason: str = ""
+# The finer-grained internal code behind that reason: a _verified_models detail
+# ("manifest_missing", "missing", "not_listed", "mismatch", ...), "dependency" or
+# "unexpected". For logs, warmup() and diagnostics; never part of a scan result.
+_pair_unavailable_detail: str = ""
 # {"version", "digest"} of the classifier file that was loaded. Empty otherwise.
 _pair_identity: dict = {}
 # PAIR loads two artifacts (an sklearn classifier and a sentence-transformer).
@@ -157,6 +149,10 @@ _meta_clf_threshold:  float      = 0.50
 _meta_clf_features:   list[str]  = []
 _meta_clf_attempted:  bool       = False
 _meta_clf_identity:   dict       = {}     # {"version", "digest"} of the loaded file
+# Why the meta-classifier is not loaded after an attempt, as a fixed code: a
+# _verified_models detail ("manifest_missing", "mismatch", ...), "dependency" or
+# "unexpected". For logs and diagnostics only; a scan result just says "unavailable".
+_meta_clf_unavailable_detail: str = ""
 _meta_clf_lock        = threading.Lock()
 # Whether the calling thread's last _run_meta_classifier() call produced a real
 # probability. The function returns 0.0 both for "no attack pattern" and for
@@ -165,37 +161,59 @@ _meta_call = threading.local()
 
 
 def _load_meta_classifier() -> bool:
+    """
+    Load the meta-classifier and its side-car, exactly once, through the package manifest.
+
+    Both artifacts are verified before either is used: the side-car's threshold and
+    feature list are read only from verified bytes, and only verified bytes are
+    deserialized. Nothing is published unless everything succeeded; a missing or
+    altered side-car leaves the meta-classifier unavailable rather than running it
+    with a default threshold or an empty feature list.
+    """
     global _meta_clf, _meta_clf_threshold, _meta_clf_features, _meta_clf_attempted
-    global _meta_clf_identity
+    global _meta_clf_identity, _meta_clf_unavailable_detail
     with _meta_clf_lock:
         if _meta_clf_attempted:
             return _meta_clf is not None
         _meta_clf_attempted = True
+        _meta_clf_unavailable_detail = ""
         try:
-            import json as _json2
-            import joblib
-            _models_dir = _resolve_models_dir("meta_clf.pkl")
-            _clf_path   = _models_dir / "meta_clf.pkl"
-            _meta_path  = _models_dir / "meta_clf.json"
-            if not _clf_path.exists():
-                return False
-            _digest = _file_digest(_clf_path)
-            _version = None
-            _meta_clf = joblib.load(_clf_path)
-            if _meta_path.exists():
-                with open(_meta_path, encoding="utf-8") as f:
-                    meta = _json2.load(f)
-                _meta_clf_threshold = float(meta.get("threshold", 0.30))
-                _meta_clf_features  = meta.get("layer_names", [])
-                _version = _declared_version(meta)
-            _meta_clf_identity = {"version": _version, "digest": _digest}
-            return True
+            import joblib  # noqa: F401 - without it nothing can be deserialized: report that first
+            clf_entry, meta_entry = _vm.select_meta(_vm.package_manifest())
+            models_dir = _resolve_models_dir("meta_clf.pkl")
+            data = _vm.read_artifact(models_dir, clf_entry)
+            meta = _vm.parse_json(meta_entry, _vm.read_artifact(models_dir, meta_entry))
+            threshold = _vm.required_threshold(meta_entry, meta)
+            features = _vm.required_names(meta_entry, meta, "layer_names")
+            version = _declared_version(meta)
+            model = _vm.unpickle(clf_entry, data)
+        except _vm.LoadRefused as exc:
+            _meta_clf_unavailable_detail = exc.detail
+            logger.warning(
+                "degraded capability=_load_meta_classifier impact='this optional step was skipped' "
+                "reason=%s detail=%s artifact=%s: %s", exc.reason, exc.detail, exc.artifact, exc,
+                exc_info=exc.detail == "deserialize_failed",
+            )
+            return False
         except Exception as exc:
+            _meta_clf_unavailable_detail = "dependency" if isinstance(exc, ImportError) else "unexpected"
             logger.warning(
                 "degraded capability=_load_meta_classifier impact='this optional step was skipped' "
                 "reason=%s: %s", type(exc).__name__, exc,
             )
             return False
+        _meta_clf_threshold = threshold
+        _meta_clf_features  = features
+        _meta_clf_identity  = {"version": version, "digest": _vm.digest(data)[:_DIGEST_HEX]}
+        _meta_clf           = model
+        return True
+
+
+def _meta_unavailable_detail() -> str | None:
+    """Why the meta-classifier is not loaded, as a fixed code; None if loaded or never attempted."""
+    if _meta_clf is not None or not _meta_clf_attempted:
+        return None
+    return _meta_clf_unavailable_detail or None
 
 
 def _run_meta_classifier(layer_scores: dict[str, float]) -> float:
@@ -249,99 +267,43 @@ def _load_pair_classifier() -> bool:
 def _load_pair_classifier_locked() -> bool:
     """Body of the PAIR load. Caller must hold _pair_lock."""
     global _pair_clf, _pair_embedder, _pair_threshold, _pair_load_attempted
-    global _pair_load_error, _pair_unavailable_reason, _pair_identity
+    global _pair_load_error, _pair_unavailable_reason, _pair_identity, _pair_unavailable_detail
 
     _pair_load_attempted = True
     _pair_unavailable_reason = ""
+    _pair_unavailable_detail = ""
     _pair_identity = {}
     try:
-        import json as _json
-        import joblib
+        import joblib  # noqa: F401 - without it nothing can be deserialized: report that first
         # sentence-transformers is NOT imported here. It is now an optional
         # fallback behind ONNX, so importing it eagerly would make torch a hard
         # requirement again — defeating the entire migration. _build_embedder()
         # imports it lazily, only if the ONNX backend is unavailable.
 
-        # Look inside the installed package first (fie/models/), then fall back
-        # to the repo root models/ directory for local development.
-        _models_dir = _resolve_models_dir("pair_intent_classifier.pkl")
-
-        # Prefer v6 > v5 > v4 > v3 > v2 > v1.
-        # v6 = domain-balanced corpus (medical/legal/coding/factual benign +
-        #      genuinely-harmful attacks). Fixes the out-of-distribution benign
-        #      FPR (medical 71%, legal 67% on v5) caused by Alpaca-only benign data.
-        # v5 = sklearn 1.7.2 + NLLB multilingual augmentation. Fixed the
-        #      1.6.1->1.7.2 boundary-shift regression but kept Alpaca-only benign.
-        # v4 = 3× hard-positive weighting at threshold 0.50.
-        #
-        # Override with FIE_PAIR_VERSION=v5 (etc.) to force a specific model —
-        # used for A/B comparison in the v6 evaluation.
+        # Which classifier: the one the package manifest marks as the default
+        # (v6.3b, shipped after the E26 full-pipeline ship gate), or exactly the
+        # version FIE_PAIR_VERSION names — a selection key such as v6 (PAIR v6.2)
+        # or v5, used for A/B comparison. A version the manifest does not list,
+        # or a listed one whose file is missing or altered, leaves the layer
+        # unavailable. Another classifier is never loaded in its place.
         import os as _os
-        _force = (_os.environ.get("FIE_PAIR_VERSION") or "").strip().lower()
-        _versions = [
-            # v6.3b = SHIPPED DEFAULT (E26). v6.2 corpus + targeted soft-harm/euphemism
-            # positives (E24) + safe-but-scary benign negatives (E25), threshold 0.50.
-            # Full-pipeline ship-gate PASSED: Pareto win over v6.2 — soft-harm recall
-            # +32 pts, over-refusal flat, no clean-recall regression. v6/v6_3 retained
-            # below for A/B via FIE_PAIR_VERSION (e.g. FIE_PAIR_VERSION=v6 for v6.2).
-            ("v6_3b", _models_dir / "pair_intent_classifier_v6_3b.pkl",
-                      _models_dir / "pair_intent_meta_v6_3b.json"),
-            ("v6", _models_dir / "pair_intent_classifier_v6.pkl",
-                   _models_dir / "pair_intent_meta_v6.json"),
-            ("v6_3", _models_dir / "pair_intent_classifier_v6_3.pkl",
-                     _models_dir / "pair_intent_meta_v6_3.json"),
-            ("v5", _models_dir / "pair_intent_classifier_v5.pkl",
-                   _models_dir / "pair_intent_meta_v5.json"),
-            ("v4", _models_dir / "pair_intent_classifier_v4.pkl",
-                   _models_dir / "pair_intent_meta_v4.json"),
-            ("v3", _models_dir / "pair_intent_classifier_v3.pkl",
-                   _models_dir / "pair_intent_meta_v3.json"),
-            ("v2", _models_dir / "pair_intent_classifier_v2.pkl",
-                   _models_dir / "pair_intent_meta_v2.json"),
-            ("v1", _models_dir / "pair_intent_classifier.pkl",
-                   _models_dir / "pair_intent_meta.json"),
-        ]
-
-        clf_path = meta_path = None
-        if _force:
-            for name, clf, meta in _versions:
-                if name == _force and clf.exists():
-                    clf_path, meta_path = clf, meta
-                    break
-        if clf_path is None:
-            for name, clf, meta in _versions:
-                if clf.exists():
-                    clf_path, meta_path = clf, meta
-                    break
-
-        if clf_path is None or not clf_path.exists():
-            _pair_load_error = (
-                f"no PAIR classifier found in {_models_dir} — "
-                "run `python scripts/download_models.py`"
-            )
-            _pair_unavailable_reason = "model"
-            logger.warning("layer=pair_classifier status=unavailable reason=%s",
-                           _pair_load_error)
-            return False
+        requested = (_os.environ.get("FIE_PAIR_VERSION") or "").strip().lower()
+        clf_entry, meta_entry = _vm.select_pair(_vm.package_manifest(), requested or None)
+        models_dir = _resolve_models_dir("pair_intent_classifier.pkl")
 
         # Build into locals. Nothing is published to module state until both
         # artifacts exist, so a failure here leaves the layer cleanly disabled
-        # rather than half-initialised.
-        # Hash the file immediately before it is loaded: the identity on a scan
-        # result must describe the artifact that ran, not the one a manifest expects.
-        local_digest = _file_digest(clf_path)
-        local_version = None
-        local_clf = joblib.load(clf_path)
-
-        if meta_path.exists():
-            with open(meta_path, encoding="utf-8") as f:
-                meta = _json.load(f)
-            local_threshold = float(meta.get("threshold", 0.60))
-            embed_model = meta.get("embed_model", "sentence-transformers/all-MiniLM-L6-v2")
-            local_version = _declared_version(meta)
-        else:
-            local_threshold = _pair_threshold
-            embed_model = "sentence-transformers/all-MiniLM-L6-v2"
+        # rather than half-initialised. Both files are verified before either
+        # is used: the side-car decides the threshold and which encoder the
+        # fallback fetches, so none of its fields is read until it has passed.
+        data = _vm.read_artifact(models_dir, clf_entry)
+        meta = _vm.parse_json(meta_entry, _vm.read_artifact(models_dir, meta_entry))
+        local_threshold = _vm.required_threshold(meta_entry, meta)
+        embed_model = _vm.required_text(meta_entry, meta, "embed_model")
+        local_version = _declared_version(meta)
+        # The identity on a scan result describes the bytes that were deserialized.
+        local_digest = _vm.digest(data)[:_DIGEST_HEX]
+        local_clf = _vm.unpickle(clf_entry, data)
 
         local_embedder = _build_embedder(embed_model)
 
@@ -359,29 +321,63 @@ def _load_pair_classifier_locked() -> bool:
         logger.info(
             "layer=pair_classifier status=ready model=%s threshold=%.2f "
             "backend=%s embed_model=%s",
-            clf_path.name, local_threshold, backend, embed_model,
+            _vm.file_name(clf_entry), local_threshold, backend, embed_model,
         )
         return True
+    except _vm.LoadRefused as exc:
+        # Nothing to load (no manifest, a listed file absent), or something that
+        # must not be loaded (unlisted, altered, unreadable, undeserializable).
+        # The public state is the reason; the detail code stays internal.
+        _pair_load_error = f"{exc.detail}: {exc}"
+        _pair_unavailable_reason = exc.reason
+        _pair_unavailable_detail = exc.detail
+        if exc.reason == "model":
+            logger.warning(
+                "layer=pair_classifier status=unavailable reason=model detail=%s artifact=%s: %s "
+                "action='python scripts/download_models.py'", exc.detail, exc.artifact, exc,
+            )
+        else:
+            logger.error(
+                "layer=pair_classifier status=failed reason=load_failed detail=%s artifact=%s: %s "
+                "— detection recall will be materially reduced", exc.detail, exc.artifact, exc,
+                exc_info=exc.detail == "deserialize_failed",
+            )
+        return False
     except ImportError as exc:
         # Expected in lite installs (`pip install fie-sdk` without [ml]).
         _pair_load_error = f"missing dependency: {exc}"
         _pair_unavailable_reason = "dependency"
+        _pair_unavailable_detail = "dependency"
         logger.warning(
             "layer=pair_classifier status=unavailable reason=%s "
             "action='pip install fie-sdk[ml]'", _pair_load_error,
         )
         return False
     except Exception as exc:
-        # Corrupt pickle, sklearn version skew, no HF cache and no network.
-        # Keep the traceback: this one is actionable and, per the ablation,
-        # this layer carries most of the detection.
+        # Not an integrity outcome: the encoder could not be built (no HF cache
+        # and no network), or a defect. Keep the traceback: this one is
+        # actionable and, per the ablation, this layer carries most of the detection.
         _pair_load_error = f"{type(exc).__name__}: {exc}"
         _pair_unavailable_reason = "load_failed"
+        _pair_unavailable_detail = "unexpected"
         logger.error(
             "layer=pair_classifier status=failed reason=%s — detection recall "
             "will be materially reduced", _pair_load_error, exc_info=True,
         )
         return False
+
+
+def _pair_unavailable_detail_code() -> str | None:
+    """
+    The internal code behind an unavailable classifier, or None if it is usable or no load
+    has been attempted. One of the _verified_models detail codes, "dependency" or
+    "unexpected". Fixed values only: safe to log, never placed in a scan result.
+    """
+    if _pair_clf is not None and _pair_embedder is not None:
+        return None
+    if not _pair_load_attempted:
+        return None
+    return _pair_unavailable_detail or None
 
 
 def _run_pair_classifier(prompt: str) -> tuple[str | None, float, dict]:
