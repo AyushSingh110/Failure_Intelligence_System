@@ -22,7 +22,8 @@ of the one the project released. What it does not: someone who can already write
 installation can change the manifest too.
 
 Status: the primitives, the rules for the project's own inventory, and the derivation of the
-manifest that ships inside the package. The model loader does not use this module yet.
+manifest that ships inside the package. The SDK's model loader uses this module through
+fie/layers/_verified_models.py, which is the only place in fie/ that deserializes a model.
 
 Two manifests, one source of truth:
 

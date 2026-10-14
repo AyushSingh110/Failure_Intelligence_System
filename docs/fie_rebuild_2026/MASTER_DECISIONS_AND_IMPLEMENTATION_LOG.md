@@ -1405,3 +1405,71 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add fie/_model_integrity.py scripts/model_manifest.json scripts/download_models.py tests/test_model_manifest.py docs/fie_rebuild_2026 && git commit -m "fie: production model inventory, validator and derived package manifest; downloader writes it after full verification (WP-021 phase 3 stage 3.1)"
 ```
+
+### 14.8 Phase 3, Stage 3.2 (2026-10-14): verified model loading
+
+Detail and evidence:
+[EXECUTION_021_phase3-stage3_2-verified-loading.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_2-verified-loading.md),
+`evidence/WP021/phase3/stage3_2/`.
+
+**Status: Stage 3.2 complete**, with one worktree-only test failure that clears on commit. The
+first session stopped at the Step 3 gate on an existing-test conflict. A read-only audit then
+found the stage partially complete, and the owner authorized the decisions below and the rest of
+the work.
+
+**Owner decisions recorded and implemented:**
+
+- **D-041 (W21-9)** — an integrity failure is `unavailable_load_failed`, with an internal detail
+  code (`manifest_invalid`, `not_listed`, `mismatch`, `read_failed`, `path_violation`,
+  `deserialize_failed`). No new public layer state.
+- **D-042 (W21-17)** — no silent fallback for `FIE_PAIR_VERSION`. Unset or empty selects the
+  manifest default. A listed key with a missing file gives `unavailable_model` / `missing`; an
+  unlisted key gives `unavailable_load_failed` / `not_listed`.
+- **D-043 (W21-18)** — the repository-root `models/` fallback is removed.
+- **D-044 (W21-24)** — the runtime manifest is `<package>/models/MANIFEST.json`, derived from
+  `scripts/model_manifest.json`, which stays the only authoritative inventory.
+- **D-045 (W21-25)** — a missing or invalid side-car makes the layer unavailable; no default
+  threshold, feature list or encoder name.
+- **D-046 (W21-26, W21-27)** — sanitized structured log lines and the existing `health()` error
+  text carry the detail code; no new audit event. A missing manifest gives `unavailable_model`;
+  an invalid one gives `unavailable_load_failed` / `manifest_invalid`.
+- **D-047** — health-deep test option B (precondition without an absolute path). The two
+  Stage 3.1 tests whose premise Stage 3.2 retires are replaced by stronger ones.
+
+**Done:**
+
+- `fie/layers/_verified_models.py` (new) is the only model deserializer in `fie/`. It reads the
+  package manifest once and selects exactly. Verified bytes go to `joblib.load(io.BytesIO(...))`;
+  side-cars are parsed from verified bytes, with required fields.
+- `fie/layers/pair.py`: both loaders use it. Identity is computed from the deserialized bytes;
+  root fallback, path hashing and the fixed version list removed. The readiness log, public
+  functions and locks are unchanged.
+- `fie/adversarial.py`: `warmup()` classifies by detail code, not message text.
+- `fie/_model_integrity.py`: docstring status corrected only.
+- Tests: `tests/test_verified_loading.py` (91 cases), plus the three authorized test updates.
+- Step 0: `fie/models/MANIFEST.json` generated locally without any download, byte-identical to
+  the derivation (`fbab28ab…393bf2f5`). Ignored, not committed.
+
+**Verified:** focused 91 passed. Full suite 1420 passed, 1 failed, 2 platform skips; the failure
+is `test_detector_source_files_are_untouched`, which lists exactly the three authorized
+uncommitted source files. `python -m evals baseline` exit 0: all 11 per-prompt record files
+byte-identical to `BL-0002`. The fingerprint differs only in identity metadata; model identities
+are identical. `CANONICAL` is unchanged and the baseline was not rewritten. The deserializer
+boundary scan finds only `_verified_models.py` (`joblib.load`) and the out-of-scope
+`session_tracker.py` (`pickle.loads`).
+
+**Not established, not done:**
+
+- CI has not run on this change.
+- The guard test must be rechecked after commit.
+- The `SentenceTransformer` fallback, ONNX encoder files and `session_tracker.py` remain
+  unverified (WP-022 or separately scoped).
+
+**Open:** Stage 3.3 (`in_wheel` enforcement, `.gitkeep` exclusion, sdist feasibility);
+W21-16, W21-19; the research-workflow plan and the experiment-file relocation (W21-20).
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add fie/layers/_verified_models.py fie/layers/pair.py fie/adversarial.py fie/_model_integrity.py tests/test_verified_loading.py tests/test_scan_result_contract.py tests/test_model_integrity.py tests/test_model_manifest.py docs/fie_rebuild_2026 && git commit -m "fie: load pair and meta classifiers only through the package manifest, from verified bytes; no fallback (WP-021 phase 3 stage 3.2)"
+```
