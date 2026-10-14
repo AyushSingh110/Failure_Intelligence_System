@@ -1473,3 +1473,67 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add fie/layers/_verified_models.py fie/layers/pair.py fie/adversarial.py fie/_model_integrity.py tests/test_verified_loading.py tests/test_scan_result_contract.py tests/test_model_integrity.py tests/test_model_manifest.py docs/fie_rebuild_2026 && git commit -m "fie: load pair and meta classifiers only through the package manifest, from verified bytes; no fallback (WP-021 phase 3 stage 3.2)"
 ```
+
+### 14.9 Phase 3, Stage 3.3b (2026-10-14): manifest-driven package allowlist
+
+Background, committed in `49b7a1f`:
+[EXECUTION_021_phase3-stage3_3-plan.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_3-plan.md)
+(planning audit) and
+[EXECUTION_021_phase3-stage3_3a-packaging-feasibility.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_3a-packaging-feasibility.md)
+(offline experiment). 3.3a measured on hatchling 1.29.0 that:
+
+- the `artifacts` globs pack every `fie/models/*.pkl` and `*.json` present, including experiment
+  files, the legacy pair and `.gitkeep`;
+- no `exclude` overrides `artifacts`;
+- `force-include` overrides `exclude`;
+- a wheel-only `force-include` does not reach the sdist.
+
+**Owner decisions recorded for this stage** (recorded before implementation):
+
+- **D-048 (W21-16)** — a normal build fails if any `in_wheel: true` artifact is missing or fails
+  its size or SHA-256 check. No model-free build flag is introduced in Stage 3.3b.
+- **D-049 (W21-28)** — the sdist carries the same 16 approved production model artifacts as the
+  wheel, together with the generated runtime manifest.
+- **D-050 (W21-31)** — the packaged `fie/models/MANIFEST.json` is derived at build time from the
+  tracked `scripts/model_manifest.json` by the existing deterministic derivation
+  (`derive_package_manifest`). Any generated file already in the working tree is never packed.
+- **D-051 (inclusion mechanism)** — the broad `artifacts` globs are replaced by a custom
+  Hatchling build hook that validates the inventory and verifies, then explicitly includes,
+  exactly the approved artifacts.
+- **D-052 (W21-33)** — the build requirement is pinned to `hatchling==1.29.0`, the version
+  measured in Stage 3.3a.
+
+Still open: W21-19 (line endings), W21-29 (narrowing the sdist), W21-32 (source-tree rule for
+unlisted files), W21-20-R (experiment-file relocation), W21-14 (published sdist).
+
+**Result** (details:
+[EXECUTION_021_phase3-stage3_3b-manifest-driven-package-allowlist.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_3b-manifest-driven-package-allowlist.md),
+`evidence/WP021/phase3/stage3_3b/`). **Status: Stage 3.3b complete; not committed.**
+
+- `pyproject.toml`: `hatchling==1.29.0`; `artifacts` globs removed; `/fie/models/**` excluded;
+  custom hook `hatch_build.py`.
+- `hatch_build.py` loads `fie/_model_integrity.py` by path, validates the inventory, verifies each
+  `in_wheel: true` artifact by size and SHA-256 (no deserialization), and force-includes exactly
+  those plus a temporary file holding the derived manifest. It runs for the sdist and the wheel.
+  Unlisted files are warned about and never packed.
+- Offline acceptance (M0/M1/M2 × LF/CRLF × 2, plus stale-manifest, tampered and missing cases):
+  **15/15 gates pass**.
+  - Every successful sdist, direct wheel and wheel from sdist contains under `fie/models/` exactly
+    the 16 approved artifacts plus `MANIFEST.json` (`fbab28ab…`).
+  - M0, tampered and missing builds are refused with a named diagnostic.
+  - The archive bytes are identical across M1, M2 and M1S; the direct wheel equals the wheel from
+    the sdist.
+  - Zero network attempts.
+- Tests: `tests/test_build_artifact_allowlist.py` 32 passed; full suite 1453 passed, 0 failed,
+  2 platform skips. 14 of the 32 need `build` and hatchling, which the CI test jobs do not
+  install; those will skip in CI.
+- Unchanged: inventory, download script, loader, models, workflows, baseline, `CANONICAL`.
+
+**Open:** Stage 3.3c (archive gate in CI, release check and publication); W21-29 (sdist scope,
+about 67 MB including third-party music files); W21-19; W21-32; W21-20-R; W21-14.
+
+Recommended manual commit command, not executed by the assistant:
+
+```text
+git add pyproject.toml hatch_build.py tests/test_build_artifact_allowlist.py docs/fie_rebuild_2026 && git commit -m "build: package exactly the verified in_wheel model artifacts via a manifest-driven hatch build hook; pin hatchling 1.29.0 (WP-021 phase 3 stage 3.3b)"
+```

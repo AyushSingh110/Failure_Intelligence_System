@@ -1,0 +1,22 @@
+{
+ "artifacts_key_in_pyproject": false,
+ "branch": "rebuild/wp-001-eval-harness",
+ "canonical": "BL-0002_pair-v6.3b_fie-70de7053",
+ "changed_or_new": [
+  "docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md",
+  "hatch_build.py",
+  "pyproject.toml",
+  "tests/test_build_artifact_allowlist.py"
+ ],
+ "file_sha256_lf": {
+  "docs/fie_rebuild_2026/MASTER_DECISIONS_AND_IMPLEMENTATION_LOG.md": "cb64f40f9803f6c31a84580dbdb4875a6b458b928704d5b0a0de01cf0ccaa2ef",
+  "hatch_build.py": "94c794d0646fd8fad55ec1fb2b7f49a277c93fcc2a81b1f8a7d5fa008b8d9536",
+  "pyproject.toml": "b26c316a85bc02d41a61cc9c63e63648be6f0e960f7d0fd9f7849c02e7288024",
+  "tests/test_build_artifact_allowlist.py": "c206e353a7e5285e18343a9e9ea3e4402424a477cc8e11b2bb0b443bc57b8417"
+ },
+ "head": "49b7a1f52fcded4178e97f6934a6aed875857416",
+ "local_generated_manifest_sha256": "fbab28ab75acad2cfa8d178617caad112c32adafc6048d2a8483cd4a393bf2f5",
+ "note": "tests/test_build_artifact_allowlist.py was changed after the full-suite run only to drop one unused local variable (ruff F841); the 32 focused tests were re-run afterwards and pass",
+ "protected_paths_status": "clean",
+ "staged": []
+}
