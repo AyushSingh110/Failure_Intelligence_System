@@ -1,0 +1,681 @@
+{
+ "crlf_converted_count": 1128,
+ "head": "7c7e3b1a13a37f8ebaefe3123de7f2c1ffd813c9",
+ "network_attempts_total": 0,
+ "overlay_pyproject_sha256_lf": "54802f67eef346ac9f70d0fa6c6aa88102e5a3f6fa0f1623e8e88212d0ba3799",
+ "pre_3_3b_negative_controls": [
+  {
+   "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\pre33b_M1_LF_r1.json --sdist <3.3a-work>\\out\\M1_LF_r1\\sdist\\fie_sdk-1.18.0.tar.gz --wheel <3.3a-work>\\out\\M1_LF_r1\\wheel_direct\\fie_sdk-1.18.0-py3-none-any.whl",
+   "exit_code": 1,
+   "label": "check_pre33b_M1_LF_r1",
+   "network_attempts": [],
+   "report": "reports/pre33b_M1_LF_r1.json",
+   "source": "stage 3.3a M1_LF_r1"
+  },
+  {
+   "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\pre33b_M2_LF_r1.json --sdist <3.3a-work>\\out\\M2_LF_r1\\sdist\\fie_sdk-1.18.0.tar.gz --wheel <3.3a-work>\\out\\M2_LF_r1\\wheel_direct\\fie_sdk-1.18.0-py3-none-any.whl",
+   "exit_code": 1,
+   "label": "check_pre33b_M2_LF_r1",
+   "network_attempts": [],
+   "report": "reports/pre33b_M2_LF_r1.json",
+   "source": "stage 3.3a M2_LF_r1"
+  }
+ ],
+ "runs": [
+  {
+   "build_sdist": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\M1_LF_r1\\dist <work>\\trees\\M1_LF_r1",
+    "exit_code": 0,
+    "label": "M1_LF_r1_build_sdist",
+    "network_attempts": []
+   },
+   "build_wheel_direct": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M1_LF_r1\\direct <work>\\trees\\M1_LF_r1",
+    "exit_code": 0,
+    "label": "M1_LF_r1_build_wheel_direct",
+    "network_attempts": []
+   },
+   "build_wheel_from_sdist": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M1_LF_r1\\dist <work>\\unpacked\\M1_LF_r1\\fie_sdk-1.18.0",
+    "exit_code": 0,
+    "label": "M1_LF_r1_build_wheel_from_sdist",
+    "network_attempts": []
+   },
+   "check_sdist": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_LF_r1_sdist.json --sdist <work>\\out\\M1_LF_r1\\dist\\fie_sdk-1.18.0.tar.gz",
+    "exit_code": 0,
+    "label": "check_M1_LF_r1_sdist",
+    "network_attempts": [],
+    "report": "reports/M1_LF_r1_sdist.json"
+   },
+   "check_sdist_and_wheel": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_LF_r1_sdist_and_wheel.json --sdist <work>\\out\\M1_LF_r1\\dist\\fie_sdk-1.18.0.tar.gz --wheel <work>\\out\\M1_LF_r1\\dist\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M1_LF_r1_sdist_and_wheel",
+    "network_attempts": [],
+    "report": "reports/M1_LF_r1_sdist_and_wheel.json"
+   },
+   "check_wheel_direct": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_LF_r1_wheel_direct.json --wheel <work>\\out\\M1_LF_r1\\direct\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M1_LF_r1_wheel_direct",
+    "network_attempts": [],
+    "report": "reports/M1_LF_r1_wheel_direct.json"
+   },
+   "dist": {
+    "fie_sdk-1.18.0-py3-none-any.whl": {
+     "bytes": 283452,
+     "sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+    },
+    "fie_sdk-1.18.0.tar.gz": {
+     "bytes": 267222,
+     "sha256": "0cc9174f39de780e155b2d97e82839573bf955cb70bd62fd522aa1297bbef7d5"
+    }
+   },
+   "sdist_members": {
+    "below_2MB": true,
+    "bytes": 267222,
+    "count": 62,
+    "exactly_the_allowlist": true,
+    "missing": [],
+    "names": [
+     ".gitignore",
+     "LICENSE",
+     "PKG-INFO",
+     "README.md",
+     "fie/__init__.py",
+     "fie/__main__.py",
+     "fie/_degrade.py",
+     "fie/_lite.py",
+     "fie/_model_integrity.py",
+     "fie/_telemetry.py",
+     "fie/adversarial.py",
+     "fie/client.py",
+     "fie/config.py",
+     "fie/feedback_store.py",
+     "fie/fiction_harm.py",
+     "fie/framing_filter.py",
+     "fie/integrations/__init__.py",
+     "fie/integrations/anthropic.py",
+     "fie/integrations/fastapi.py",
+     "fie/integrations/openai.py",
+     "fie/layers/__init__.py",
+     "fie/layers/_verified_models.py",
+     "fie/layers/copyright.py",
+     "fie/layers/direct_harm.py",
+     "fie/layers/gcg.py",
+     "fie/layers/indirect.py",
+     "fie/layers/many_shot.py",
+     "fie/layers/pair.py",
+     "fie/layers/patterns.py",
+     "fie/layers/perplexity.py",
+     "fie/layers/prompt_guard.py",
+     "fie/llama_guard.py",
+     "fie/local_predictor.py",
+     "fie/models/MANIFEST.json",
+     "fie/models/meta_clf.json",
+     "fie/models/meta_clf.pkl",
+     "fie/models/pair_intent_classifier.pkl",
+     "fie/models/pair_intent_classifier_v3.pkl",
+     "fie/models/pair_intent_classifier_v4.pkl",
+     "fie/models/pair_intent_classifier_v5.pkl",
+     "fie/models/pair_intent_classifier_v6.pkl",
+     "fie/models/pair_intent_classifier_v6_3.pkl",
+     "fie/models/pair_intent_classifier_v6_3b.pkl",
+     "fie/models/pair_intent_meta.json",
+     "fie/models/pair_intent_meta_v3.json",
+     "fie/models/pair_intent_meta_v4.json",
+     "fie/models/pair_intent_meta_v5.json",
+     "fie/models/pair_intent_meta_v6.json",
+     "fie/models/pair_intent_meta_v6_3.json",
+     "fie/models/pair_intent_meta_v6_3b.json",
+     "fie/monitor.py",
+     "fie/multilingual.py",
+     "fie/onnx_encoder.py",
+     "fie/output_scanner.py",
+     "fie/policy.py",
+     "fie/preflight.py",
+     "fie/session_tracker.py",
+     "fie/stream_guard.py",
+     "fie/virtualization.py",
+     "hatch_build.py",
+     "pyproject.toml",
+     "scripts/model_manifest.json"
+    ],
+    "unexpected": []
+   },
+   "setup": "M1_LF_r1",
+   "wheel_direct": {
+    "bytes": 283452,
+    "sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+   }
+  },
+  {
+   "build_sdist": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\M1_LF_r2\\dist <work>\\trees\\M1_LF_r2",
+    "exit_code": 0,
+    "label": "M1_LF_r2_build_sdist",
+    "network_attempts": []
+   },
+   "build_wheel_direct": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M1_LF_r2\\direct <work>\\trees\\M1_LF_r2",
+    "exit_code": 0,
+    "label": "M1_LF_r2_build_wheel_direct",
+    "network_attempts": []
+   },
+   "build_wheel_from_sdist": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M1_LF_r2\\dist <work>\\unpacked\\M1_LF_r2\\fie_sdk-1.18.0",
+    "exit_code": 0,
+    "label": "M1_LF_r2_build_wheel_from_sdist",
+    "network_attempts": []
+   },
+   "check_sdist": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_LF_r2_sdist.json --sdist <work>\\out\\M1_LF_r2\\dist\\fie_sdk-1.18.0.tar.gz",
+    "exit_code": 0,
+    "label": "check_M1_LF_r2_sdist",
+    "network_attempts": [],
+    "report": "reports/M1_LF_r2_sdist.json"
+   },
+   "check_sdist_and_wheel": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_LF_r2_sdist_and_wheel.json --sdist <work>\\out\\M1_LF_r2\\dist\\fie_sdk-1.18.0.tar.gz --wheel <work>\\out\\M1_LF_r2\\dist\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M1_LF_r2_sdist_and_wheel",
+    "network_attempts": [],
+    "report": "reports/M1_LF_r2_sdist_and_wheel.json"
+   },
+   "check_wheel_direct": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_LF_r2_wheel_direct.json --wheel <work>\\out\\M1_LF_r2\\direct\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M1_LF_r2_wheel_direct",
+    "network_attempts": [],
+    "report": "reports/M1_LF_r2_wheel_direct.json"
+   },
+   "dist": {
+    "fie_sdk-1.18.0-py3-none-any.whl": {
+     "bytes": 283452,
+     "sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+    },
+    "fie_sdk-1.18.0.tar.gz": {
+     "bytes": 267222,
+     "sha256": "0cc9174f39de780e155b2d97e82839573bf955cb70bd62fd522aa1297bbef7d5"
+    }
+   },
+   "sdist_members": {
+    "below_2MB": true,
+    "bytes": 267222,
+    "count": 62,
+    "exactly_the_allowlist": true,
+    "missing": [],
+    "names": [
+     ".gitignore",
+     "LICENSE",
+     "PKG-INFO",
+     "README.md",
+     "fie/__init__.py",
+     "fie/__main__.py",
+     "fie/_degrade.py",
+     "fie/_lite.py",
+     "fie/_model_integrity.py",
+     "fie/_telemetry.py",
+     "fie/adversarial.py",
+     "fie/client.py",
+     "fie/config.py",
+     "fie/feedback_store.py",
+     "fie/fiction_harm.py",
+     "fie/framing_filter.py",
+     "fie/integrations/__init__.py",
+     "fie/integrations/anthropic.py",
+     "fie/integrations/fastapi.py",
+     "fie/integrations/openai.py",
+     "fie/layers/__init__.py",
+     "fie/layers/_verified_models.py",
+     "fie/layers/copyright.py",
+     "fie/layers/direct_harm.py",
+     "fie/layers/gcg.py",
+     "fie/layers/indirect.py",
+     "fie/layers/many_shot.py",
+     "fie/layers/pair.py",
+     "fie/layers/patterns.py",
+     "fie/layers/perplexity.py",
+     "fie/layers/prompt_guard.py",
+     "fie/llama_guard.py",
+     "fie/local_predictor.py",
+     "fie/models/MANIFEST.json",
+     "fie/models/meta_clf.json",
+     "fie/models/meta_clf.pkl",
+     "fie/models/pair_intent_classifier.pkl",
+     "fie/models/pair_intent_classifier_v3.pkl",
+     "fie/models/pair_intent_classifier_v4.pkl",
+     "fie/models/pair_intent_classifier_v5.pkl",
+     "fie/models/pair_intent_classifier_v6.pkl",
+     "fie/models/pair_intent_classifier_v6_3.pkl",
+     "fie/models/pair_intent_classifier_v6_3b.pkl",
+     "fie/models/pair_intent_meta.json",
+     "fie/models/pair_intent_meta_v3.json",
+     "fie/models/pair_intent_meta_v4.json",
+     "fie/models/pair_intent_meta_v5.json",
+     "fie/models/pair_intent_meta_v6.json",
+     "fie/models/pair_intent_meta_v6_3.json",
+     "fie/models/pair_intent_meta_v6_3b.json",
+     "fie/monitor.py",
+     "fie/multilingual.py",
+     "fie/onnx_encoder.py",
+     "fie/output_scanner.py",
+     "fie/policy.py",
+     "fie/preflight.py",
+     "fie/session_tracker.py",
+     "fie/stream_guard.py",
+     "fie/virtualization.py",
+     "hatch_build.py",
+     "pyproject.toml",
+     "scripts/model_manifest.json"
+    ],
+    "unexpected": []
+   },
+   "setup": "M1_LF_r2",
+   "wheel_direct": {
+    "bytes": 283452,
+    "sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+   }
+  },
+  {
+   "build_sdist": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\M1_CRLF_r1\\dist <work>\\trees\\M1_CRLF_r1",
+    "exit_code": 0,
+    "label": "M1_CRLF_r1_build_sdist",
+    "network_attempts": []
+   },
+   "build_wheel_direct": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M1_CRLF_r1\\direct <work>\\trees\\M1_CRLF_r1",
+    "exit_code": 0,
+    "label": "M1_CRLF_r1_build_wheel_direct",
+    "network_attempts": []
+   },
+   "build_wheel_from_sdist": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M1_CRLF_r1\\dist <work>\\unpacked\\M1_CRLF_r1\\fie_sdk-1.18.0",
+    "exit_code": 0,
+    "label": "M1_CRLF_r1_build_wheel_from_sdist",
+    "network_attempts": []
+   },
+   "check_sdist": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_CRLF_r1_sdist.json --sdist <work>\\out\\M1_CRLF_r1\\dist\\fie_sdk-1.18.0.tar.gz",
+    "exit_code": 0,
+    "label": "check_M1_CRLF_r1_sdist",
+    "network_attempts": [],
+    "report": "reports/M1_CRLF_r1_sdist.json"
+   },
+   "check_sdist_and_wheel": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_CRLF_r1_sdist_and_wheel.json --sdist <work>\\out\\M1_CRLF_r1\\dist\\fie_sdk-1.18.0.tar.gz --wheel <work>\\out\\M1_CRLF_r1\\dist\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M1_CRLF_r1_sdist_and_wheel",
+    "network_attempts": [],
+    "report": "reports/M1_CRLF_r1_sdist_and_wheel.json"
+   },
+   "check_wheel_direct": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M1_CRLF_r1_wheel_direct.json --wheel <work>\\out\\M1_CRLF_r1\\direct\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M1_CRLF_r1_wheel_direct",
+    "network_attempts": [],
+    "report": "reports/M1_CRLF_r1_wheel_direct.json"
+   },
+   "dist": {
+    "fie_sdk-1.18.0-py3-none-any.whl": {
+     "bytes": 284460,
+     "sha256": "9646a7a39f50f3b84b423cf3d30549ddb765b028ed68522983c29f2a730703db"
+    },
+    "fie_sdk-1.18.0.tar.gz": {
+     "bytes": 268123,
+     "sha256": "688130d94ec53202aa71674df8e8440ccafc2b57b51d3a256a1a8990a6ec4896"
+    }
+   },
+   "sdist_members": {
+    "below_2MB": true,
+    "bytes": 268123,
+    "count": 62,
+    "exactly_the_allowlist": true,
+    "missing": [],
+    "names": [
+     ".gitignore",
+     "LICENSE",
+     "PKG-INFO",
+     "README.md",
+     "fie/__init__.py",
+     "fie/__main__.py",
+     "fie/_degrade.py",
+     "fie/_lite.py",
+     "fie/_model_integrity.py",
+     "fie/_telemetry.py",
+     "fie/adversarial.py",
+     "fie/client.py",
+     "fie/config.py",
+     "fie/feedback_store.py",
+     "fie/fiction_harm.py",
+     "fie/framing_filter.py",
+     "fie/integrations/__init__.py",
+     "fie/integrations/anthropic.py",
+     "fie/integrations/fastapi.py",
+     "fie/integrations/openai.py",
+     "fie/layers/__init__.py",
+     "fie/layers/_verified_models.py",
+     "fie/layers/copyright.py",
+     "fie/layers/direct_harm.py",
+     "fie/layers/gcg.py",
+     "fie/layers/indirect.py",
+     "fie/layers/many_shot.py",
+     "fie/layers/pair.py",
+     "fie/layers/patterns.py",
+     "fie/layers/perplexity.py",
+     "fie/layers/prompt_guard.py",
+     "fie/llama_guard.py",
+     "fie/local_predictor.py",
+     "fie/models/MANIFEST.json",
+     "fie/models/meta_clf.json",
+     "fie/models/meta_clf.pkl",
+     "fie/models/pair_intent_classifier.pkl",
+     "fie/models/pair_intent_classifier_v3.pkl",
+     "fie/models/pair_intent_classifier_v4.pkl",
+     "fie/models/pair_intent_classifier_v5.pkl",
+     "fie/models/pair_intent_classifier_v6.pkl",
+     "fie/models/pair_intent_classifier_v6_3.pkl",
+     "fie/models/pair_intent_classifier_v6_3b.pkl",
+     "fie/models/pair_intent_meta.json",
+     "fie/models/pair_intent_meta_v3.json",
+     "fie/models/pair_intent_meta_v4.json",
+     "fie/models/pair_intent_meta_v5.json",
+     "fie/models/pair_intent_meta_v6.json",
+     "fie/models/pair_intent_meta_v6_3.json",
+     "fie/models/pair_intent_meta_v6_3b.json",
+     "fie/monitor.py",
+     "fie/multilingual.py",
+     "fie/onnx_encoder.py",
+     "fie/output_scanner.py",
+     "fie/policy.py",
+     "fie/preflight.py",
+     "fie/session_tracker.py",
+     "fie/stream_guard.py",
+     "fie/virtualization.py",
+     "hatch_build.py",
+     "pyproject.toml",
+     "scripts/model_manifest.json"
+    ],
+    "unexpected": []
+   },
+   "setup": "M1_CRLF_r1",
+   "wheel_direct": {
+    "bytes": 284460,
+    "sha256": "9646a7a39f50f3b84b423cf3d30549ddb765b028ed68522983c29f2a730703db"
+   }
+  },
+  {
+   "build_sdist": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\M2_LF_r1\\dist <work>\\trees\\M2_LF_r1",
+    "exit_code": 0,
+    "label": "M2_LF_r1_build_sdist",
+    "network_attempts": []
+   },
+   "build_wheel_direct": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M2_LF_r1\\direct <work>\\trees\\M2_LF_r1",
+    "exit_code": 0,
+    "label": "M2_LF_r1_build_wheel_direct",
+    "network_attempts": []
+   },
+   "build_wheel_from_sdist": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M2_LF_r1\\dist <work>\\unpacked\\M2_LF_r1\\fie_sdk-1.18.0",
+    "exit_code": 0,
+    "label": "M2_LF_r1_build_wheel_from_sdist",
+    "network_attempts": []
+   },
+   "check_sdist": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M2_LF_r1_sdist.json --sdist <work>\\out\\M2_LF_r1\\dist\\fie_sdk-1.18.0.tar.gz",
+    "exit_code": 0,
+    "label": "check_M2_LF_r1_sdist",
+    "network_attempts": [],
+    "report": "reports/M2_LF_r1_sdist.json"
+   },
+   "check_sdist_and_wheel": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M2_LF_r1_sdist_and_wheel.json --sdist <work>\\out\\M2_LF_r1\\dist\\fie_sdk-1.18.0.tar.gz --wheel <work>\\out\\M2_LF_r1\\dist\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M2_LF_r1_sdist_and_wheel",
+    "network_attempts": [],
+    "report": "reports/M2_LF_r1_sdist_and_wheel.json"
+   },
+   "check_wheel_direct": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M2_LF_r1_wheel_direct.json --wheel <work>\\out\\M2_LF_r1\\direct\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M2_LF_r1_wheel_direct",
+    "network_attempts": [],
+    "report": "reports/M2_LF_r1_wheel_direct.json"
+   },
+   "dist": {
+    "fie_sdk-1.18.0-py3-none-any.whl": {
+     "bytes": 283452,
+     "sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+    },
+    "fie_sdk-1.18.0.tar.gz": {
+     "bytes": 267222,
+     "sha256": "0cc9174f39de780e155b2d97e82839573bf955cb70bd62fd522aa1297bbef7d5"
+    }
+   },
+   "sdist_members": {
+    "below_2MB": true,
+    "bytes": 267222,
+    "count": 62,
+    "exactly_the_allowlist": true,
+    "missing": [],
+    "names": [
+     ".gitignore",
+     "LICENSE",
+     "PKG-INFO",
+     "README.md",
+     "fie/__init__.py",
+     "fie/__main__.py",
+     "fie/_degrade.py",
+     "fie/_lite.py",
+     "fie/_model_integrity.py",
+     "fie/_telemetry.py",
+     "fie/adversarial.py",
+     "fie/client.py",
+     "fie/config.py",
+     "fie/feedback_store.py",
+     "fie/fiction_harm.py",
+     "fie/framing_filter.py",
+     "fie/integrations/__init__.py",
+     "fie/integrations/anthropic.py",
+     "fie/integrations/fastapi.py",
+     "fie/integrations/openai.py",
+     "fie/layers/__init__.py",
+     "fie/layers/_verified_models.py",
+     "fie/layers/copyright.py",
+     "fie/layers/direct_harm.py",
+     "fie/layers/gcg.py",
+     "fie/layers/indirect.py",
+     "fie/layers/many_shot.py",
+     "fie/layers/pair.py",
+     "fie/layers/patterns.py",
+     "fie/layers/perplexity.py",
+     "fie/layers/prompt_guard.py",
+     "fie/llama_guard.py",
+     "fie/local_predictor.py",
+     "fie/models/MANIFEST.json",
+     "fie/models/meta_clf.json",
+     "fie/models/meta_clf.pkl",
+     "fie/models/pair_intent_classifier.pkl",
+     "fie/models/pair_intent_classifier_v3.pkl",
+     "fie/models/pair_intent_classifier_v4.pkl",
+     "fie/models/pair_intent_classifier_v5.pkl",
+     "fie/models/pair_intent_classifier_v6.pkl",
+     "fie/models/pair_intent_classifier_v6_3.pkl",
+     "fie/models/pair_intent_classifier_v6_3b.pkl",
+     "fie/models/pair_intent_meta.json",
+     "fie/models/pair_intent_meta_v3.json",
+     "fie/models/pair_intent_meta_v4.json",
+     "fie/models/pair_intent_meta_v5.json",
+     "fie/models/pair_intent_meta_v6.json",
+     "fie/models/pair_intent_meta_v6_3.json",
+     "fie/models/pair_intent_meta_v6_3b.json",
+     "fie/monitor.py",
+     "fie/multilingual.py",
+     "fie/onnx_encoder.py",
+     "fie/output_scanner.py",
+     "fie/policy.py",
+     "fie/preflight.py",
+     "fie/session_tracker.py",
+     "fie/stream_guard.py",
+     "fie/virtualization.py",
+     "hatch_build.py",
+     "pyproject.toml",
+     "scripts/model_manifest.json"
+    ],
+    "unexpected": []
+   },
+   "setup": "M2_LF_r1",
+   "wheel_direct": {
+    "bytes": 283452,
+    "sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+   }
+  },
+  {
+   "build_sdist": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\M2_CRLF_r1\\dist <work>\\trees\\M2_CRLF_r1",
+    "exit_code": 0,
+    "label": "M2_CRLF_r1_build_sdist",
+    "network_attempts": []
+   },
+   "build_wheel_direct": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M2_CRLF_r1\\direct <work>\\trees\\M2_CRLF_r1",
+    "exit_code": 0,
+    "label": "M2_CRLF_r1_build_wheel_direct",
+    "network_attempts": []
+   },
+   "build_wheel_from_sdist": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M2_CRLF_r1\\dist <work>\\unpacked\\M2_CRLF_r1\\fie_sdk-1.18.0",
+    "exit_code": 0,
+    "label": "M2_CRLF_r1_build_wheel_from_sdist",
+    "network_attempts": []
+   },
+   "check_sdist": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M2_CRLF_r1_sdist.json --sdist <work>\\out\\M2_CRLF_r1\\dist\\fie_sdk-1.18.0.tar.gz",
+    "exit_code": 0,
+    "label": "check_M2_CRLF_r1_sdist",
+    "network_attempts": [],
+    "report": "reports/M2_CRLF_r1_sdist.json"
+   },
+   "check_sdist_and_wheel": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M2_CRLF_r1_sdist_and_wheel.json --sdist <work>\\out\\M2_CRLF_r1\\dist\\fie_sdk-1.18.0.tar.gz --wheel <work>\\out\\M2_CRLF_r1\\dist\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M2_CRLF_r1_sdist_and_wheel",
+    "network_attempts": [],
+    "report": "reports/M2_CRLF_r1_sdist_and_wheel.json"
+   },
+   "check_wheel_direct": {
+    "command": "<python> -I <repo>\\scripts\\verify_package_artifacts.py --report <work>\\reports\\M2_CRLF_r1_wheel_direct.json --wheel <work>\\out\\M2_CRLF_r1\\direct\\fie_sdk-1.18.0-py3-none-any.whl",
+    "exit_code": 0,
+    "label": "check_M2_CRLF_r1_wheel_direct",
+    "network_attempts": [],
+    "report": "reports/M2_CRLF_r1_wheel_direct.json"
+   },
+   "dist": {
+    "fie_sdk-1.18.0-py3-none-any.whl": {
+     "bytes": 284460,
+     "sha256": "9646a7a39f50f3b84b423cf3d30549ddb765b028ed68522983c29f2a730703db"
+    },
+    "fie_sdk-1.18.0.tar.gz": {
+     "bytes": 268123,
+     "sha256": "688130d94ec53202aa71674df8e8440ccafc2b57b51d3a256a1a8990a6ec4896"
+    }
+   },
+   "sdist_members": {
+    "below_2MB": true,
+    "bytes": 268123,
+    "count": 62,
+    "exactly_the_allowlist": true,
+    "missing": [],
+    "names": [
+     ".gitignore",
+     "LICENSE",
+     "PKG-INFO",
+     "README.md",
+     "fie/__init__.py",
+     "fie/__main__.py",
+     "fie/_degrade.py",
+     "fie/_lite.py",
+     "fie/_model_integrity.py",
+     "fie/_telemetry.py",
+     "fie/adversarial.py",
+     "fie/client.py",
+     "fie/config.py",
+     "fie/feedback_store.py",
+     "fie/fiction_harm.py",
+     "fie/framing_filter.py",
+     "fie/integrations/__init__.py",
+     "fie/integrations/anthropic.py",
+     "fie/integrations/fastapi.py",
+     "fie/integrations/openai.py",
+     "fie/layers/__init__.py",
+     "fie/layers/_verified_models.py",
+     "fie/layers/copyright.py",
+     "fie/layers/direct_harm.py",
+     "fie/layers/gcg.py",
+     "fie/layers/indirect.py",
+     "fie/layers/many_shot.py",
+     "fie/layers/pair.py",
+     "fie/layers/patterns.py",
+     "fie/layers/perplexity.py",
+     "fie/layers/prompt_guard.py",
+     "fie/llama_guard.py",
+     "fie/local_predictor.py",
+     "fie/models/MANIFEST.json",
+     "fie/models/meta_clf.json",
+     "fie/models/meta_clf.pkl",
+     "fie/models/pair_intent_classifier.pkl",
+     "fie/models/pair_intent_classifier_v3.pkl",
+     "fie/models/pair_intent_classifier_v4.pkl",
+     "fie/models/pair_intent_classifier_v5.pkl",
+     "fie/models/pair_intent_classifier_v6.pkl",
+     "fie/models/pair_intent_classifier_v6_3.pkl",
+     "fie/models/pair_intent_classifier_v6_3b.pkl",
+     "fie/models/pair_intent_meta.json",
+     "fie/models/pair_intent_meta_v3.json",
+     "fie/models/pair_intent_meta_v4.json",
+     "fie/models/pair_intent_meta_v5.json",
+     "fie/models/pair_intent_meta_v6.json",
+     "fie/models/pair_intent_meta_v6_3.json",
+     "fie/models/pair_intent_meta_v6_3b.json",
+     "fie/monitor.py",
+     "fie/multilingual.py",
+     "fie/onnx_encoder.py",
+     "fie/output_scanner.py",
+     "fie/policy.py",
+     "fie/preflight.py",
+     "fie/session_tracker.py",
+     "fie/stream_guard.py",
+     "fie/virtualization.py",
+     "hatch_build.py",
+     "pyproject.toml",
+     "scripts/model_manifest.json"
+    ],
+    "unexpected": []
+   },
+   "setup": "M2_CRLF_r1",
+   "wheel_direct": {
+    "bytes": 284460,
+    "sha256": "9646a7a39f50f3b84b423cf3d30549ddb765b028ed68522983c29f2a730703db"
+   }
+  },
+  {
+   "build_sdist": {
+    "command": "<python> -m build --no-isolation --sdist --outdir <work>\\out\\M0_LF_r1\\dist <work>\\trees\\M0_LF_r1",
+    "exit_code": 1,
+    "label": "M0_LF_r1_build_sdist",
+    "network_attempts": []
+   },
+   "build_wheel_direct": {
+    "command": "<python> -m build --no-isolation --wheel --outdir <work>\\out\\M0_LF_r1\\direct <work>\\trees\\M0_LF_r1",
+    "exit_code": 1,
+    "label": "M0_LF_r1_build_wheel_direct",
+    "network_attempts": []
+   },
+   "setup": "M0_LF_r1"
+  }
+ ]
+}

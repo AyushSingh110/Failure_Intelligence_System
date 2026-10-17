@@ -93,7 +93,7 @@ def synthetic_inventory() -> list[dict]:
 
 def make_project(root: Path, *, write_off_wheel=False) -> list[dict]:
     """The real build configuration and hook around a synthetic package and inventory."""
-    for rel in ("pyproject.toml", ".gitignore", "hatch_build.py", "fie/_model_integrity.py"):
+    for rel in ("pyproject.toml", ".gitignore", "hatch_build.py", "fie/_model_integrity.py", "LICENSE"):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / rel, root / rel)
     (root / "fie" / "__init__.py").write_text('"""synthetic package for packaging tests"""\n', encoding="utf-8")
@@ -295,13 +295,57 @@ def _walk(obj, path=()):
             yield from _walk(v, path + (k,))
 
 
-def test_no_pattern_selects_model_files():
-    """No `artifacts`, `include`, `only-include` or `force-include` anywhere may name model files."""
-    hatch = _pyproject()["tool"]["hatch"]
+# The sdist allowlist (WP-021 W21-29, Stage 3.3d). Pinned: an addition or a removal fails.
+SDIST_ONLY_INCLUDE = ["/fie", "/hatch_build.py", "/scripts/model_manifest.json", "/README.md", "/LICENSE"]
+# The one JSON file a selection key may name: the inventory, and only in the sdist's
+# only-include. It is the build hook's input, not a model artifact.
+_INVENTORY_ENTRY = (("build", "targets", "sdist", "only-include"), "/scripts/model_manifest.json")
+_SELECTION_KEYS = ("artifacts", "include", "only-include", "force-include", "sources", "shared-data")
+
+
+def _model_pattern_violations(hatch: dict) -> list:
+    """Every selection key that names model files: anything with `models`, `.pkl` or `.json`."""
+    violations = []
     for key_path, value in _walk(hatch):
-        if key_path[-1] in ("artifacts", "include", "only-include", "force-include", "sources", "shared-data"):
-            text = json.dumps(value)
-            assert "models" not in text and ".pkl" not in text and ".json" not in text, (key_path, value)
+        if key_path[-1] not in _SELECTION_KEYS:
+            continue
+        if key_path == _INVENTORY_ENTRY[0] and isinstance(value, list):
+            value = [v for v in value if v != _INVENTORY_ENTRY[1]]
+        text = json.dumps(value)
+        if "models" in text or ".pkl" in text or ".json" in text:
+            violations.append((key_path, value))
+    return violations
+
+
+def test_no_pattern_selects_model_files():
+    """
+    No `artifacts`, `include`, `only-include` or `force-include` anywhere may name model files.
+    The single exception is the inventory, /scripts/model_manifest.json, in the sdist's
+    only-include; and that list is pinned exactly.
+    """
+    hatch = _pyproject()["tool"]["hatch"]
+    assert _model_pattern_violations(hatch) == []
+    assert hatch["build"]["targets"]["sdist"]["only-include"] == SDIST_ONLY_INCLUDE
+
+
+@pytest.mark.parametrize("key_path, value", [
+    (("build", "targets", "sdist", "only-include"), SDIST_ONLY_INCLUDE + ["/fie/models"]),
+    (("build", "targets", "sdist", "only-include"), SDIST_ONLY_INCLUDE + ["/fie/models/meta_clf.pkl"]),
+    (("build", "targets", "sdist", "only-include"), SDIST_ONLY_INCLUDE + ["/fie/models/MANIFEST.json"]),
+    (("build", "targets", "sdist", "only-include"), SDIST_ONLY_INCLUDE + ["/data/meta_clf_trainset.json"]),
+    (("build", "targets", "wheel", "only-include"), ["/scripts/model_manifest.json"]),   # exception is sdist-only
+    (("build", "artifacts"), ["fie/models/*.pkl"]),
+    (("build", "targets", "sdist", "include"), ["*.json"]),
+    (("build", "targets", "wheel", "force-include"), {"x/meta_clf.pkl": "fie/models/meta_clf.pkl"}),
+])
+def test_guard_still_rejects_model_patterns(key_path, value):
+    """Negative controls: the inventory exception admits that one path and nothing else."""
+    hatch = json.loads(json.dumps(_pyproject()["tool"]["hatch"]))
+    node = hatch
+    for key in key_path[:-1]:
+        node = node.setdefault(key, {})
+    node[key_path[-1]] = value
+    assert _model_pattern_violations(hatch), f"{key_path} = {value} was not caught"
 
 
 def test_fie_models_is_excluded_and_the_hook_is_registered():
@@ -426,3 +470,144 @@ def test_build_fails_closed(tmp_path, kind, damage):
     assert "model packaging refused" in output and "fie/models/meta_clf.pkl" in output
     assert ("missing" if damage == "missing" else "mismatch") in output
     assert not list((tmp_path / "out").glob("*")) if (tmp_path / "out").exists() else True
+
+
+# ══ 4. The narrowed sdist (WP-021 W21-29, Stage 3.3d) ═════════════════════════
+# The sdist is a minimal build input: the `fie` package, the build hook, the inventory,
+# README and LICENSE, plus the approved model artifacts and MANIFEST.json the hook adds, and
+# the PKG-INFO and .gitignore hatchling writes. Everything else in a real checkout stays out.
+
+SDIST_SIZE_CEILING = 2_000_000          # bytes; today's narrowed sdist is about 0.27 MB
+
+# What a real checkout holds besides the package, under the names it really has.
+REPOSITORY_ONLY_FILES = {
+    "brag-output/brag.mp4": b"\0" * 4096,
+    "brag-output/composition/assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3": b"ID3" + b"\0" * 4096,
+    "brag-output-2026-09-29-113038/composition/index.html": b"<html></html>\n",
+    "docs/media/fie-explainer.mp4": b"\0" * 4096,
+    "docs/ARCHITECTURE.md": b"# docs\n",
+    "docs/fie_rebuild_2026/evidence/WP021/phase3/stage3_3a/builds.json": b"{}\n",
+    "docs/fie_rebuild_2026/experiments/E51/run.py": b"# experiment\n",
+    "evals/baselines/BL-0002_pair-v6.3b_fie-70de7053/records/std.advbench.jsonl": b"{}\n",
+    "evals/__init__.py": b"",
+    "data/meta_clf_trainset.jsonl": b"{}\n",
+    "notebooks/train_pair_classifier.ipynb": b"{}\n",
+    "tests/test_something.py": b"def test_x():\n    pass\n",
+    "app/main.py": b"# server\n",
+    "engine/core.py": b"# server\n",
+    "Frontend/src/App.jsx": b"// frontend\n",
+    "deploy/huggingface/push_space.py": b"# deployment\n",
+    "Dockerfile": b"FROM python:3.11\n",
+    "requirements.txt": b"requests\n",
+    ".github/workflows/ci.yml": b"name: CI\n",
+    "scripts/download_models.py": b"# downloader\n",
+    "scripts/release_check.py": b"# release gate\n",
+    "scripts/train_pair_harmaug.py": b"# research\n",
+    "evaluation/phase2/exp6_before_after/run_eval.py": b"# research\n",
+    "CHANGELOG.md": b"# changes\n",
+}
+
+
+def plant_repository_files(root: Path) -> None:
+    for rel, data in REPOSITORY_ONLY_FILES.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_bytes(data)
+
+
+def expected_sdist_members(root: Path, entries) -> set[str]:
+    """Exactly what the narrowed sdist may hold for the synthetic project at `root`."""
+    package = {p.relative_to(root).as_posix() for p in (root / "fie").rglob("*")
+               if p.is_file() and not p.relative_to(root).as_posix().startswith("fie/models/")}
+    return (package | approved_paths(entries) | {"fie/models/MANIFEST.json"}
+            | {"hatch_build.py", "pyproject.toml", "scripts/model_manifest.json", "README.md", "LICENSE",
+               "PKG-INFO", ".gitignore"})
+
+
+@pytest.fixture(scope="module")
+def narrowed(tmp_path_factory):
+    """A synthetic checkout with every kind of repository-only and unapproved file, built."""
+    _build_tools()
+    root = tmp_path_factory.mktemp("narrowed") / "project"
+    root.mkdir()
+    entries = make_project(root, write_off_wheel=True)
+    extras = add_extras(root)                     # experiment files, by-products, nested, .gitkeep, stale manifest
+    plant_repository_files(root)
+    big = root / "brag-output-2026-09-29-113038" / "brag.mp4"
+    big.write_bytes(os.urandom(5_000_000))        # incompressible: would breach the ceiling if packed
+    out = root.parent / "dist"
+    sdist = _run_build("sdist", root, out / "sdist")
+    assert sdist.returncode == 0, sdist.stdout[-3000:] + sdist.stderr[-3000:]
+    sdist_path = next((out / "sdist").glob("*.tar.gz"))
+    unpacked = root.parent / "unpacked"
+    with tarfile.open(sdist_path) as t:
+        t.extractall(unpacked)
+    wheel = _run_build("wheel", next(unpacked.iterdir()), out / "from_sdist")
+    assert wheel.returncode == 0, wheel.stdout[-3000:] + wheel.stderr[-3000:]
+    return {"root": root, "entries": entries, "extras": extras, "sdist_path": sdist_path,
+            "sdist": _sdist_members(sdist_path), "wheel_path": next((out / "from_sdist").glob("*.whl")),
+            "expected": expected_sdist_members(root, entries)}
+
+
+def test_narrowed_sdist_holds_exactly_the_allowlist(narrowed):
+    assert set(narrowed["sdist"]) == narrowed["expected"]
+
+
+def test_repository_only_files_do_not_leak_into_the_sdist(narrowed):
+    names = set(narrowed["sdist"])
+    leaked = sorted(n for n in names if n in REPOSITORY_ONLY_FILES or n.endswith((".mp4", ".mp3", ".ipynb", ".jsonl")))
+    assert leaked == []
+    for top in ("brag-output", "docs", "evals", "data", "notebooks", "tests", "app", "engine", "Frontend",
+                "deploy", ".github", "evaluation"):
+        assert not any(n == top or n.startswith(top + "/") for n in names), top
+    assert not any(n.startswith("brag-output") for n in names)
+
+
+def test_experiment_files_and_evidence_do_not_leak_into_the_sdist(narrowed):
+    names = set(narrowed["sdist"])
+    for rel in list(narrowed["extras"]) + ["fie/models/.gitkeep", "fie/models/failure_classifier_v4.pkl",
+                                            "fie/models/feature_columns_v4.pkl", "fie/models/minilm-onnx/model.onnx",
+                                            "docs/fie_rebuild_2026/evidence/WP021/phase3/stage3_3a/builds.json",
+                                            "docs/fie_rebuild_2026/experiments/E51/run.py"]:
+        assert rel not in names, rel
+
+
+def test_narrowed_sdist_carries_the_approved_models_and_build_inputs(narrowed):
+    for e in narrowed["entries"]:
+        if e["in_wheel"]:
+            assert narrowed["sdist"].get(e["path"]) == e["sha256"], e["path"]
+    derived = mi.derive_package_manifest((narrowed["root"] / "scripts/model_manifest.json").read_bytes())
+    assert narrowed["sdist"]["fie/models/MANIFEST.json"] == _sha(derived)
+    for rel in ("hatch_build.py", "pyproject.toml", "scripts/model_manifest.json", "fie/_model_integrity.py"):
+        assert rel in narrowed["sdist"], rel
+
+
+def test_narrowed_sdist_is_below_the_size_ceiling(narrowed):
+    assert narrowed["sdist_path"].stat().st_size < SDIST_SIZE_CEILING
+
+
+def test_wheel_from_the_narrowed_sdist_passes_the_archive_checker(narrowed):
+    proc = subprocess.run([sys.executable, "-I", str(ROOT / "scripts" / "verify_package_artifacts.py"),
+                           "--inventory", str(narrowed["root"] / "scripts" / "model_manifest.json"),
+                           "--sdist", str(narrowed["sdist_path"]), "--wheel", str(narrowed["wheel_path"])],
+                          capture_output=True, text=True, encoding="utf-8", timeout=120)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "verify_package_artifacts: PASSED (2 archive(s))" in proc.stdout
+
+
+@pytest.mark.parametrize("damage", ["missing", "tampered"])
+def test_narrowed_sdist_build_still_fails_closed(tmp_path, damage):
+    _build_tools()
+    root = tmp_path / "project"
+    root.mkdir()
+    make_project(root)
+    plant_repository_files(root)
+    victim = root / "fie/models/pair_intent_classifier_v6_3b.pkl"
+    if damage == "missing":
+        victim.unlink()
+    else:
+        victim.write_bytes(b"tampered")
+    proc = _run_build("sdist", root, tmp_path / "out")
+    output = proc.stdout + proc.stderr
+    assert proc.returncode != 0
+    assert "model packaging refused" in output and "fie/models/pair_intent_classifier_v6_3b.pkl" in output
+    assert not (tmp_path / "out").exists() or not list((tmp_path / "out").glob("*.tar.gz"))
