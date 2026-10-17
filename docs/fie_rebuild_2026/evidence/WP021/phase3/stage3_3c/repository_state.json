@@ -1,0 +1,19 @@
+{
+ "branch": "rebuild/wp-001-eval-harness",
+ "canonical": "BL-0002_pair-v6.3b_fie-70de7053",
+ "changed_or_new": [
+  ".github/workflows/ci.yml",
+  ".github/workflows/publish-pypi.yml",
+  "tests/test_package_artifact_gate.py"
+ ],
+ "file_sha256_lf": {
+  ".github/workflows/ci.yml": "f756ea8fdc2778bca5797e95046bafea0503bd1b7462bb9f4ae89692ad542668",
+  ".github/workflows/publish-pypi.yml": "aae78e57759b0f81498f59727305ae8c07f583a113fb7aeca2d3da8fcb0cb5b4",
+  "scripts/verify_package_artifacts.py": "83350a9296edc10c5fa2866283863adaea5c7dc4dafe8d463915094cdfc8f3d5",
+  "tests/test_package_artifact_gate.py": "c0c0400ab5f2de48aac101320f82ec6333e33718526688fe2fd7d4755a7d0bd2"
+ },
+ "head": "fe8f6c9eaa0168dd944cd471860e7d65aef42d7d",
+ "ignored_new_file_needing_force_add": "scripts/verify_package_artifacts.py (scripts/* is git-ignored; commit with git add -f, as scripts/release_check.py was)",
+ "protected_paths_status": "clean",
+ "staged": []
+}

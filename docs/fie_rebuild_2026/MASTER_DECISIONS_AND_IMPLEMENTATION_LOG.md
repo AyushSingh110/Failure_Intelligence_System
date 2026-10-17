@@ -1537,3 +1537,55 @@ Recommended manual commit command, not executed by the assistant:
 ```text
 git add pyproject.toml hatch_build.py tests/test_build_artifact_allowlist.py docs/fie_rebuild_2026 && git commit -m "build: package exactly the verified in_wheel model artifacts via a manifest-driven hatch build hook; pin hatchling 1.29.0 (WP-021 phase 3 stage 3.3b)"
 ```
+
+### 14.10 Phase 3, Stage 3.3c (2026-10-17): CI packaging gate, archive validation, publish protection
+
+Detail and evidence:
+[EXECUTION_021_phase3-stage3_3c-ci-release-archive-gate.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_3c-ci-release-archive-gate.md),
+`evidence/WP021/phase3/stage3_3c/`. **Status: implemented and verified locally; not committed;
+not yet run on a hosted CI runner.**
+
+**Implementation decisions recorded** (within the Stage 3.3c authorization):
+
+- **D-053** — one archive gate, `scripts/verify_package_artifacts.py`, is used by both the CI
+  `package` job and `publish-pypi.yml`. It derives its expectations only from
+  `scripts/model_manifest.json`, through `validate_production` and `derive_package_manifest`
+  (loaded by path). Under `fie/models/` it requires exactly the `in_wheel: true` artifacts, byte
+  for byte, plus `MANIFEST.json` equal to the derivation; nothing else. It also requires the
+  sdist's build inputs. It judges member bytes and never extracts or deserializes.
+- **D-054** — the CI `package` job builds the way publication does: strict download, sdist, gate,
+  wheel from that sdist, gate on both, release check on that wheel. The count-only "Check wheel
+  contents" step and the non-strict download are replaced.
+- **D-055** — the packaging tests (`test_build_artifact_allowlist.py`,
+  `test_package_artifact_gate.py`) run in the `package` job with `build` and `hatchling==1.29.0`
+  installed, and a JUnit check fails the job if any test is skipped. The test matrix is unchanged;
+  14 of these tests still skip there, by design.
+- **D-056** — `publish-pypi.yml` order: strict download, sdist, gate, wheel from the verified
+  sdist, gate on both, check that `dist/` holds exactly those two files, `twine check`, publish.
+  The trigger, permissions, credentials and publish step are unchanged.
+
+**Verified locally:**
+
+- gate tests 47 passed; allowlist tests 32 passed; together 79 run, 0 skipped, 0 failed under the
+  CI step's own no-skip check;
+- the same check fails when `build` is hidden (13 skips detected);
+- full suite 1500 passed, 0 failed, 2 platform skips;
+- offline rehearsal of the CI and publish sequence:
+  - M1 and M2, LF and CRLF: sdist, wheel from sdist and direct wheel all pass the gate with the
+    identical 17-member model area, and the wheel from the sdist equals the direct wheel byte for
+    byte;
+  - M0 is refused by the build hook;
+  - the pre-3.3b archives from 3.3a are refused by the gate;
+  - zero network attempts.
+
+**Not established:** a hosted CI run of these workflow changes (and of `fe8f6c9`); the publish
+workflow has not run (no release was made).
+
+**Open:** W21-19, W21-29, W21-32, W21-20-R, W21-14; Phase 4 (version and release).
+
+Recommended manual commit command, not executed by the assistant (the checker is under the
+git-ignored `scripts/` and needs `-f`, as `release_check.py` did):
+
+```text
+git add -f scripts/verify_package_artifacts.py && git add tests/test_package_artifact_gate.py .github/workflows/ci.yml .github/workflows/publish-pypi.yml docs/fie_rebuild_2026 && git commit -m "ci: gate sdist and wheel-from-sdist on the exact model allowlist in CI and before publishing; packaging tests may not skip (WP-021 phase 3 stage 3.3c)"
+```

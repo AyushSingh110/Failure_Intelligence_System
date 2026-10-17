@@ -36,20 +36,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build package
-        run: python -m build
+      # The archive gate (WP-021 Stage 3.3c). Both distributions are judged by
+      # their actual members against scripts/model_manifest.json: under
+      # fie/models/ exactly the in_wheel: true artifacts, byte for byte, plus
+      # the derived fie/models/MANIFEST.json, and nothing else. The wheel that is
+      # published is the one built from the sdist that passed. Any failure stops
+      # the job here, before anything is published.
+      - name: Build the sdist
+        run: python -m build --sdist --outdir dist
 
-      - name: Verify wheel bundles models
+      - name: Verify the sdist (model allowlist and build inputs)
         run: |
-          python -c "
-          import zipfile, glob
-          wheel = glob.glob('dist/*.whl')[0]
-          with zipfile.ZipFile(wheel) as z:
-              models = [n for n in z.namelist() if n.startswith('fie/models/') and n.endswith(('.pkl', '.json'))]
-          assert models, 'REFUSING TO PUBLISH: wheel contains no model files'
-          print(f'Wheel bundles {len(models)} model files:')
-          for m in models: print(' -', m)
-          "
+          sdists=(dist/*.tar.gz)
+          [ "${#sdists[@]}" -eq 1 ] && [ -f "${sdists[0]}" ] || { echo "expected exactly one sdist, found: ${sdists[*]}"; exit 2; }
+          python scripts/verify_package_artifacts.py --sdist "${sdists[0]}"
+
+      - name: Build the wheel from the verified sdist
+        run: |
+          sdists=(dist/*.tar.gz)
+          rm -rf "$RUNNER_TEMP/sdist-src" && mkdir -p "$RUNNER_TEMP/sdist-src"
+          tar -xzf "${sdists[0]}" -C "$RUNNER_TEMP/sdist-src"
+          srcs=("$RUNNER_TEMP"/sdist-src/*/)
+          [ "${#srcs[@]}" -eq 1 ] || { echo "the sdist must unpack to one directory"; exit 2; }
+          python -m build --wheel --outdir dist "${srcs[0]}"
+
+      - name: Verify the sdist and the wheel before publishing (model allowlist and digests)
+        run: |
+          sdists=(dist/*.tar.gz); wheels=(dist/*.whl)
+          [ "${#wheels[@]}" -eq 1 ] && [ -f "${wheels[0]}" ] || { echo "expected exactly one wheel, found: ${wheels[*]}"; exit 2; }
+          files=(dist/*)
+          [ "${#files[@]}" -eq 2 ] || { echo "dist/ must hold exactly the verified sdist and wheel, found: ${files[*]}"; exit 2; }
+          sha256sum "${sdists[0]}" "${wheels[0]}"
+          python scripts/verify_package_artifacts.py --sdist "${sdists[0]}" --wheel "${wheels[0]}"
 
       - name: Check distribution
         run: python -m twine check dist/*

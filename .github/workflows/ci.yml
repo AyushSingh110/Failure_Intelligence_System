@@ -152,7 +152,14 @@ jobs:
           print('Anthropic integration: OK')
           "
 
-  # ── Package build ─────────────────────────────────────────────────────
+  # ── Package build and archive gate ────────────────────────────────────
+  #
+  # Builds the distributions the way publish-pypi.yml does — the sdist, then
+  # the wheel from that very sdist — and judges both by their actual archive
+  # members (WP-021 Stage 3.3c): under fie/models/ exactly the in_wheel: true
+  # artifacts of scripts/model_manifest.json, byte for byte, plus the derived
+  # fie/models/MANIFEST.json; nothing else. The packaging tests run here, with
+  # the build tools they need, and this job fails if any of them is skipped.
   package:
     runs-on: ubuntu-latest
     needs: test
@@ -166,36 +173,83 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install build tools
-        run: pip install build hatchling
-
-      # Best-effort here (CI checkout has no models); the publish-pypi
-      # workflow runs this in --strict mode so a real release can never
-      # ship a wheel without the bundled models.
-      - name: Download model artifacts
-        run: python scripts/download_models.py
-
-      - name: Build wheel
-        run: python -m build --wheel
-
-      - name: Check wheel contents
+      # hatchling is pinned in pyproject.toml (WP-021 D-052); the packaging tests
+      # build with the installed copy, so it must be that exact version. The base
+      # dependencies are read from pyproject.toml: the tests import `fie`.
+      - name: Install build tools and the package's base dependencies
         run: |
-          pip install wheel
-          python -c "
-          import zipfile, glob
-          wheels = glob.glob('dist/*.whl')
-          assert wheels, 'No wheel found in dist/'
-          with zipfile.ZipFile(wheels[0]) as z:
-              names = z.namelist()
-              assert any('fie/' in n for n in names), 'fie/ not in wheel'
-              models = [n for n in names if n.startswith('fie/models/') and n.endswith(('.pkl', '.json'))]
-              print('Wheel OK — fie/ package present')
-              print(f'Files: {len(names)}, bundled models: {len(models)}')
-              if not models:
-                  print('WARNING: no model files in wheel — local mode would run '
-                        'with rule-based fallbacks. Publish the models release '
-                        '(docs/OPERATIONS.md) so CI can bundle them.')
-          "
+          pip install --upgrade pip
+          pip install build "hatchling==1.29.0" pytest
+          python -c "import tomllib; print('\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > "$RUNNER_TEMP/base-requirements.txt"
+          pip install -r "$RUNNER_TEMP/base-requirements.txt"
+
+      - name: Confirm the packaging tool versions
+        run: |
+          python - <<'EOF'
+          import importlib.util
+          from importlib.metadata import version
+          for name in ("build", "hatchling"):
+              assert importlib.util.find_spec(name), f"{name} is not importable"
+          assert version("hatchling") == "1.29.0", f"hatchling {version('hatchling')} installed; 1.29.0 required"
+          print(f"build {version('build')}, hatchling {version('hatchling')}")
+          EOF
+
+      # STRICT: the build hook refuses to package without every approved model
+      # (WP-021 D-048), so an unreachable or partial release must fail here, in
+      # one legible line, rather than as a build error further down.
+      - name: Download model artifacts (strict)
+        run: python scripts/download_models.py --strict
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # These tests skip where `build` or hatchling is missing (the test matrix
+      # above does not install them). Here they must all run: a skip fails.
+      - name: Packaging tests (every test must run)
+        env:
+          FIE_NO_TELEMETRY: "1"
+        run: |
+          mkdir -p "$RUNNER_TEMP/package-gate"
+          pytest tests/test_build_artifact_allowlist.py tests/test_package_artifact_gate.py \
+            -p no:cacheprovider -rA --junitxml="$RUNNER_TEMP/package-gate/packaging-tests.xml"
+          python - "$RUNNER_TEMP/package-gate/packaging-tests.xml" <<'EOF'
+          import sys
+          import xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1]).getroot()
+          suites = [root] if root.tag == "testsuite" else list(root)
+          count = lambda key: sum(int(s.get(key, 0)) for s in suites)
+          print(f"packaging tests: {count('tests')} collected, {count('skipped')} skipped, "
+                f"{count('failures') + count('errors')} failed")
+          assert count("tests") > 0 and count("failures") + count("errors") == 0, "packaging tests failed"
+          assert count("skipped") == 0, "packaging tests were skipped; every one must run in this job"
+          EOF
+
+      - name: Build the sdist
+        run: python -m build --sdist --outdir dist
+
+      - name: Verify the sdist (model allowlist and build inputs)
+        run: |
+          sdists=(dist/*.tar.gz)
+          [ "${#sdists[@]}" -eq 1 ] && [ -f "${sdists[0]}" ] || { echo "expected exactly one sdist, found: ${sdists[*]}"; exit 2; }
+          python scripts/verify_package_artifacts.py --sdist "${sdists[0]}" \
+            --report "$RUNNER_TEMP/package-gate/sdist.json"
+
+      # From the verified sdist, not the checkout: this is the wheel publication ships.
+      - name: Build the wheel from the verified sdist
+        run: |
+          sdists=(dist/*.tar.gz)
+          rm -rf "$RUNNER_TEMP/sdist-src" && mkdir -p "$RUNNER_TEMP/sdist-src"
+          tar -xzf "${sdists[0]}" -C "$RUNNER_TEMP/sdist-src"
+          srcs=("$RUNNER_TEMP"/sdist-src/*/)
+          [ "${#srcs[@]}" -eq 1 ] || { echo "the sdist must unpack to one directory"; exit 2; }
+          python -m build --wheel --outdir dist "${srcs[0]}"
+
+      - name: Verify the sdist and the wheel (model allowlist and digests)
+        run: |
+          sdists=(dist/*.tar.gz); wheels=(dist/*.whl)
+          [ "${#wheels[@]}" -eq 1 ] && [ -f "${wheels[0]}" ] || { echo "expected exactly one wheel, found: ${wheels[*]}"; exit 2; }
+          sha256sum "${sdists[0]}" "${wheels[0]}" | tee "$RUNNER_TEMP/package-gate/SHA256SUMS.txt"
+          python scripts/verify_package_artifacts.py --sdist "${sdists[0]}" --wheel "${wheels[0]}" \
+            --report "$RUNNER_TEMP/package-gate/archives.json"
 
       # The release gate. It installs the wheel built above — that exact file,
       # never the checkout — into two fresh virtual environments and tests what
@@ -235,6 +289,15 @@ jobs:
         with:
           name: release-check
           path: ${{ runner.temp }}/release-check
+          if-no-files-found: warn
+
+      # Named archive members, digests and the gate's verdict, kept even on failure.
+      - name: Upload package-gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-gate
+          path: ${{ runner.temp }}/package-gate
           if-no-files-found: warn
 
   # ── Health-check smoke test (against built server) ────────────────────
