@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\M0_LF_r1\wheel_direct <work>\trees\M0_LF_r1
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0-py3-none-any.whl
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...

@@ -1,0 +1,23 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\M0_CRLF_r1\wheel_direct <work>\trees\M0_CRLF_r1
+exit=1
+--- stdout ---
+
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...
+Traceback (most recent call last):
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 389, in <module>
+    main()
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 373, in main
+    json_out["return_val"] = hook(**hook_input["kwargs"])
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 280, in build_wheel
+    return _build_backend().build_wheel(
+  File "<python-env>\lib\site-packages\hatchling\build.py", line 58, in build_wheel
+    return os.path.basename(next(builder.build(directory=wheel_directory, versions=["standard"])))
+  File "<python-env>\lib\site-packages\hatchling\builders\plugin\interface.py", line 149, in build
+    build_hook.initialize(version, build_data)
+  File "<work>\trees\M0_CRLF_r1\hatch_build.py", line 116, in initialize
+    raise ModelArtifactError(f"model packaging refused: {exc}") from None
+hatch_build.py.ModelArtifactError: model packaging refused: 16 of 16 approved model artifacts cannot be packaged (fie/models/pair_intent_classifier_v6_3b.pkl: missing; fie/models/pair_intent_meta_v6_3b.json: missing; fie/models/pair_intent_classifier_v6_3.pkl: missing; fie/models/pair_intent_meta_v6_3.json: missing; fie/models/pair_intent_classifier_v6.pkl: missing; fie/models/pair_intent_meta_v6.json: missing; fie/models/pair_intent_classifier_v5.pkl: missing; fie/models/pair_intent_meta_v5.json: missing; fie/models/meta_clf.pkl: missing; fie/models/meta_clf.json: missing; fie/models/pair_intent_classifier_v4.pkl: missing; fie/models/pair_intent_meta_v4.json: missing; fie/models/pair_intent_classifier_v3.pkl: missing; fie/models/pair_intent_meta_v3.json: missing; fie/models/pair_intent_classifier.pkl: missing; fie/models/pair_intent_meta.json: missing). Fetch and verify them with `python scripts/download_models.py`. The build does not continue without them.
+ERROR Backend subprocess exited when trying to invoke build_wheel

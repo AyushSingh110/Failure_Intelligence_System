@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\probes\P3_build_exclude_path\wheel <work>\probes\P3_build_exclude_path
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0-py3-none-any.whl
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...

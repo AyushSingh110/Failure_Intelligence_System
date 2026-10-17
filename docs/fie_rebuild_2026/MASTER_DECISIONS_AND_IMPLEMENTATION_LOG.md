@@ -1589,3 +1589,12 @@ git-ignored `scripts/` and needs `-f`, as `release_check.py` did):
 ```text
 git add -f scripts/verify_package_artifacts.py && git add tests/test_package_artifact_gate.py .github/workflows/ci.yml .github/workflows/publish-pypi.yml docs/fie_rebuild_2026 && git commit -m "ci: gate sdist and wheel-from-sdist on the exact model allowlist in CI and before publishing; packaging tests may not skip (WP-021 phase 3 stage 3.3c)"
 ```
+
+**Correction (2026-10-17).** PR #25 merged `8bc61e7` without the git-ignored checker
+`scripts/verify_package_artifacts.py`. CI failed at test collection on the PR and on the merge
+commit `ed3921f`; nothing was deployed or published.
+
+The follow-up commit force-adds the checker and the `*.log` evidence files of Stages 3.3a to 3.3c,
+which `.gitignore` had excluded. It also makes `--report` write LF line endings, converts the 17
+`stage3_3c/reports/*.json` files to LF, and regenerates `stage3_3c/SHA256SUMS.txt`. See section K
+of the 3.3c report.

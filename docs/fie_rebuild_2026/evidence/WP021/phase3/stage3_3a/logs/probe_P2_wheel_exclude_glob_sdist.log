@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --sdist --outdir <work>\out\probes\P2_wheel_exclude_glob\sdist <work>\probes\P2_wheel_exclude_glob
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0.tar.gz
+
+--- stderr ---
+* Getting build dependencies for sdist...
+* Building sdist...

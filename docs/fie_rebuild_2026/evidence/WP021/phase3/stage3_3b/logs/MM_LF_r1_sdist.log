@@ -1,0 +1,23 @@
+$ <python> -m build --no-isolation --sdist --outdir <work>\out\MM_LF_r1\sdist <work>\trees\MM_LF_r1
+exit=1
+--- stdout ---
+
+
+--- stderr ---
+* Getting build dependencies for sdist...
+* Building sdist...
+Traceback (most recent call last):
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 389, in <module>
+    main()
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 373, in main
+    json_out["return_val"] = hook(**hook_input["kwargs"])
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 335, in build_sdist
+    return backend.build_sdist(sdist_directory, config_settings)
+  File "<python-env>\lib\site-packages\hatchling\build.py", line 34, in build_sdist
+    return os.path.basename(next(builder.build(directory=sdist_directory, versions=["standard"])))
+  File "<python-env>\lib\site-packages\hatchling\builders\plugin\interface.py", line 149, in build
+    build_hook.initialize(version, build_data)
+  File "<work>\trees\MM_LF_r1\hatch_build.py", line 116, in initialize
+    raise ModelArtifactError(f"model packaging refused: {exc}") from None
+hatch_build.py.ModelArtifactError: model packaging refused: 1 of 16 approved model artifacts cannot be packaged (fie/models/meta_clf.json: missing). Fetch and verify them with `python scripts/download_models.py`. The build does not continue without them.
+ERROR Backend subprocess exited when trying to invoke build_sdist
