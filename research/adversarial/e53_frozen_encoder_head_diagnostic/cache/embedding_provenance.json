@@ -1,0 +1,19 @@
+{
+  "dim": 384,
+  "dtype": "float32",
+  "elapsed_s": 544.1,
+  "embeddings_npy_sha256": "16fd0e274d0e897c45847840fc90bef76e6a241975795adee1b807116019d0e4",
+  "encoder": "fie/onnx_encoder.py OnnxEncoder loaded by file path; one text per call; prefix + text; normalize_embeddings=True",
+  "n": 12474,
+  "norm_max": 1.0000001192092896,
+  "norm_min": 0.9999998807907104,
+  "onnx_encoder_py_sha256": "7833b2d8fa88bacaf32e35dcf386dfb15e6e877cf0c7b2f3674fdaf1a3501d39",
+  "pinned_artifacts": {
+    "fie/models/minilm-onnx/model.onnx": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+    "fie/models/minilm-onnx/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+    "fie/models/pair_intent_classifier_v6_3b.pkl": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "fie/models/pair_intent_meta_v6_3b.json": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f"
+  },
+  "prefix": "Represent this text for security threat classification: ",
+  "texts_jsonl_sha256": "3bd7b3f831bf7db77b6827e643bfe947b9f134e1f1bd568d362f7fd095c5bf32"
+}
