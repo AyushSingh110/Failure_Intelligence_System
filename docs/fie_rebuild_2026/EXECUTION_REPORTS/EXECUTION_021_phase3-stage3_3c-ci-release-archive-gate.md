@@ -240,3 +240,34 @@ was refused, exit 1.
 | `test_results.json` | Full-suite counts and skips; the gate and allowlist test names |
 | `repository_state.json` | HEAD, changed files with digests, protected-path status, `CANONICAL` |
 | `scripts/rehearse.py`, `scripts/package_evidence.py` | The scripts that produced this |
+
+---
+
+## K. Correction (2026-10-17, after merge of PR #25)
+
+The Stage 3.3c commit `8bc61e7` was merged without `scripts/verify_package_artifacts.py`: the
+file is under the git-ignored `scripts/` and was not force-added. CI on PR #25 (run
+`39014383051`) and on the merge commit `ed3921f` (run `39014885011`) therefore failed:
+`tests/test_package_artifact_gate.py` could not load the checker (`FileNotFoundError`). The test
+matrix failed or was cancelled; `package`, `health-check` and `deploy-space` were skipped, so
+nothing was deployed or published.
+
+Two evidence defects were found by the pre-commit audit, verifying each `SHA256SUMS.txt` in a
+clean LF export of HEAD:
+
+1. The `*.log` evidence files of Stages 3.3a, 3.3b and 3.3c (63, 40 and 37) were excluded by
+   `.gitignore`'s `*.log` rule, although each `SHA256SUMS.txt` lists them.
+2. The 17 `stage3_3c/reports/*.json` files had been written with CRLF line endings by the
+   checker's `--report` option on Windows, and Git stored them as LF, so their recorded digests
+   did not match a clean checkout.
+
+Fix, in one follow-up commit:
+
+- the checker is force-added;
+- the ignored evidence logs are force-added;
+- `--report` now writes with `newline="\n"`;
+- the 17 reports were converted from CRLF to LF, content otherwise unchanged;
+- `stage3_3c/SHA256SUMS.txt` was regenerated over those LF bytes.
+
+No other evidence file changed. The sections above describe the gate as implemented and are
+unchanged.

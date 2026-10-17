@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\probes\P5_no_artifacts\wheel_from_sdist <work>\unpacked\probe_P5_no_artifacts\fie_sdk-1.18.0
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0-py3-none-any.whl
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...

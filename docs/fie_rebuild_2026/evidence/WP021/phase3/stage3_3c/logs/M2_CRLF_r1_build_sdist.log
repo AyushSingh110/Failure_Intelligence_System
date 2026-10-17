@@ -1,0 +1,11 @@
+$ <python> -m build --no-isolation --sdist --outdir <work>\out\M2_CRLF_r1\dist <work>\trees\M2_CRLF_r1
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0.tar.gz
+
+--- stderr ---
+* Getting build dependencies for sdist...
+* Building sdist...
+fie model allowlist: 19 file(s) under fie/models/ are not in scripts/model_manifest.json and are NOT packaged: fie/models/minilm-onnx/config.json, fie/models/minilm-onnx/ort_config.json, fie/models/minilm-onnx/special_tokens_map.json, fie/models/minilm-onnx/tokenizer_config.json, fie/models/minilm-onnx/vocab.txt, fie/models/pair_intent_classifier_v2.pkl, fie/models/pair_intent_classifier_v3_w3x.pkl, fie/models/pair_intent_classifier_v64_harmaug.pkl, fie/models/pair_intent_classifier_v64_harmaug_capped.pkl, fie/models/pair_intent_classifier_v65_benignaug.pkl, fie/models/pair_intent_classifier_v6_1_contaminated.pkl, fie/models/pair_intent_classifier_v6_noaug.pkl, fie/models/pair_intent_meta_v2.json, fie/models/pair_intent_meta_v3_w3x.json, fie/models/pair_intent_meta_v64_harmaug.json, fie/models/pair_intent_meta_v64_harmaug_capped.json, fie/models/pair_intent_meta_v65_benignaug.json, fie/models/pair_intent_meta_v6_1_contaminated.json, fie/models/pair_intent_meta_v6_noaug.json
+fie model allowlist: inventory entries marked in_wheel: false are present and NOT packaged: fie/models/failure_classifier_v4.pkl, fie/models/feature_columns_v4.pkl, fie/models/minilm-onnx/model.onnx, fie/models/minilm-onnx/tokenizer.json
+fie model allowlist: 16 approved model artifacts verified and included, with fie/models/MANIFEST.json derived from scripts/model_manifest.json

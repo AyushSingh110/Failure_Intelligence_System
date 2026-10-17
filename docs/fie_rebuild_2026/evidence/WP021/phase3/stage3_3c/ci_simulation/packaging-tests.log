@@ -1,0 +1,84 @@
+........................................................................ [ 91%]
+.......                                                                  [100%]
+=================================== PASSES ====================================
+=========================== short test summary info ===========================
+PASSED tests/test_build_artifact_allowlist.py::test_selection_is_exactly_the_in_wheel_entries
+PASSED tests/test_build_artifact_allowlist.py::test_real_inventory_selects_its_sixteen_in_wheel_entries
+PASSED tests/test_build_artifact_allowlist.py::test_real_tree_verifies_against_the_tracked_inventory
+PASSED tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[flip_byte]
+PASSED tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[append_byte]
+PASSED tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[truncate]
+PASSED tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[replace]
+PASSED tests/test_build_artifact_allowlist.py::test_missing_approved_artifact_fails
+PASSED tests/test_build_artifact_allowlist.py::test_no_model_files_at_all_fails
+PASSED tests/test_build_artifact_allowlist.py::test_off_wheel_entries_are_neither_required_nor_included
+PASSED tests/test_build_artifact_allowlist.py::test_extras_experiments_and_gitkeep_are_never_selected
+PASSED tests/test_build_artifact_allowlist.py::test_manifest_is_derived_even_when_a_stale_one_is_present
+PASSED tests/test_build_artifact_allowlist.py::test_derivation_is_deterministic_and_keeps_the_established_bytes
+PASSED tests/test_build_artifact_allowlist.py::test_invalid_inventory_fails_without_packaging_anything
+PASSED tests/test_build_artifact_allowlist.py::test_missing_inventory_or_integrity_module_fails
+PASSED tests/test_build_artifact_allowlist.py::test_hook_imports_neither_fie_nor_ml_packages
+PASSED tests/test_build_artifact_allowlist.py::test_no_pattern_selects_model_files
+PASSED tests/test_build_artifact_allowlist.py::test_fie_models_is_excluded_and_the_hook_is_registered
+PASSED tests/test_build_artifact_allowlist.py::test_hook_class_is_a_hatchling_build_hook
+PASSED tests/test_build_artifact_allowlist.py::test_archive_model_members_are_exactly_the_allowlist[sdist]
+PASSED tests/test_build_artifact_allowlist.py::test_archive_model_members_are_exactly_the_allowlist[wheel]
+PASSED tests/test_build_artifact_allowlist.py::test_archive_model_members_are_exactly_the_allowlist[from_sdist]
+PASSED tests/test_build_artifact_allowlist.py::test_wheel_from_sdist_has_the_same_model_members_as_the_direct_wheel
+PASSED tests/test_build_artifact_allowlist.py::test_nothing_unapproved_ships[sdist]
+PASSED tests/test_build_artifact_allowlist.py::test_nothing_unapproved_ships[wheel]
+PASSED tests/test_build_artifact_allowlist.py::test_nothing_unapproved_ships[from_sdist]
+PASSED tests/test_build_artifact_allowlist.py::test_sdist_carries_the_hook_inputs
+PASSED tests/test_build_artifact_allowlist.py::test_build_warns_about_unlisted_files
+PASSED tests/test_build_artifact_allowlist.py::test_build_fails_closed[sdist-missing]
+PASSED tests/test_build_artifact_allowlist.py::test_build_fails_closed[sdist-tampered]
+PASSED tests/test_build_artifact_allowlist.py::test_build_fails_closed[wheel-missing]
+PASSED tests/test_build_artifact_allowlist.py::test_build_fails_closed[wheel-tampered]
+PASSED tests/test_package_artifact_gate.py::test_expectations_are_the_in_wheel_entries_and_the_derived_manifest
+PASSED tests/test_package_artifact_gate.py::test_changing_the_inventory_changes_what_is_expected
+PASSED tests/test_package_artifact_gate.py::test_real_inventory_expects_sixteen_artifacts_and_the_established_manifest
+PASSED tests/test_package_artifact_gate.py::test_valid_wheel_and_sdist_pass
+PASSED tests/test_package_artifact_gate.py::test_unrelated_files_outside_the_model_area_are_not_judged
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[missing_artifact-<lambda>-missing required member: fie/models/meta_clf.pkl-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[missing_artifact-<lambda>-missing required member: fie/models/meta_clf.pkl-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[missing_manifest-<lambda>-missing required member: fie/models/MANIFEST.json-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[missing_manifest-<lambda>-missing required member: fie/models/MANIFEST.json-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[legacy-<lambda>-unexpected member under fie/models/: fie/models/failure_classifier_v4.pkl-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[legacy-<lambda>-unexpected member under fie/models/: fie/models/failure_classifier_v4.pkl-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[experiment_classifier-<lambda>-unexpected member under fie/models/: fie/models/pair_intent_classifier_v64_harmaug.pkl-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[experiment_classifier-<lambda>-unexpected member under fie/models/: fie/models/pair_intent_classifier_v64_harmaug.pkl-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[experiment_side_car-<lambda>-unexpected member under fie/models/: fie/models/pair_intent_meta_v2.json-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[experiment_side_car-<lambda>-unexpected member under fie/models/: fie/models/pair_intent_meta_v2.json-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[nested-<lambda>-unexpected member under fie/models/: fie/models/sub/extra.json-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[nested-<lambda>-unexpected member under fie/models/: fie/models/sub/extra.json-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[encoder_by_product-<lambda>-unexpected member under fie/models/: fie/models/minilm-onnx/vocab.txt-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[encoder_by_product-<lambda>-unexpected member under fie/models/: fie/models/minilm-onnx/vocab.txt-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[gitkeep-<lambda>-unexpected member under fie/models/: fie/models/.gitkeep-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[gitkeep-<lambda>-unexpected member under fie/models/: fie/models/.gitkeep-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[wrong_bytes-<lambda>-fie/models/pair_intent_classifier_v5.pkl: SHA-256 does not match the inventory-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[wrong_bytes-<lambda>-fie/models/pair_intent_classifier_v5.pkl: SHA-256 does not match the inventory-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[wrong_size-<lambda>-fie/models/pair_intent_meta_v5.json: size-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[wrong_size-<lambda>-fie/models/pair_intent_meta_v5.json: size-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[stale_manifest-<lambda>-fie/models/MANIFEST.json: bytes differ from the manifest derived from the inventory-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[stale_manifest-<lambda>-fie/models/MANIFEST.json: bytes differ from the manifest derived from the inventory-sdist]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[case_variant-<lambda>-unexpected member under fie/models/: FIE/models/meta_clf.pkl-wheel]
+PASSED tests/test_package_artifact_gate.py::test_negative_controls_fail[case_variant-<lambda>-unexpected member under fie/models/: FIE/models/meta_clf.pkl-sdist]
+PASSED tests/test_package_artifact_gate.py::test_duplicate_wheel_member_fails
+PASSED tests/test_package_artifact_gate.py::test_duplicate_sdist_member_fails
+PASSED tests/test_package_artifact_gate.py::test_members_differing_only_by_case_fail
+PASSED tests/test_package_artifact_gate.py::test_traversal_and_non_canonical_paths_fail[fie/models/../models/meta_clf.pkl]
+PASSED tests/test_package_artifact_gate.py::test_traversal_and_non_canonical_paths_fail[/fie/models/abs.pkl]
+PASSED tests/test_package_artifact_gate.py::test_traversal_and_non_canonical_paths_fail[fie\\models\\win.pkl]
+PASSED tests/test_package_artifact_gate.py::test_traversal_and_non_canonical_paths_fail[<path>
+PASSED tests/test_package_artifact_gate.py::test_traversal_and_non_canonical_paths_fail[fie/./models/dot.pkl]
+PASSED tests/test_package_artifact_gate.py::test_links_in_the_model_area_fail
+PASSED tests/test_package_artifact_gate.py::test_sdist_must_have_one_top_level_directory
+PASSED tests/test_package_artifact_gate.py::test_sdist_missing_a_build_input_fails[pyproject.toml]
+PASSED tests/test_package_artifact_gate.py::test_sdist_missing_a_build_input_fails[hatch_build.py]
+PASSED tests/test_package_artifact_gate.py::test_sdist_missing_a_build_input_fails[fie/_model_integrity.py]
+PASSED tests/test_package_artifact_gate.py::test_sdist_missing_a_build_input_fails[scripts/model_manifest.json]
+PASSED tests/test_package_artifact_gate.py::test_sdist_with_a_different_inventory_fails
+PASSED tests/test_package_artifact_gate.py::test_cli_exit_codes_and_report
+PASSED tests/test_package_artifact_gate.py::test_cli_unusable_inventory_or_arguments_exit_2
+PASSED tests/test_package_artifact_gate.py::test_checker_imports_neither_fie_nor_ml_packages
+79 passed in 12.13s

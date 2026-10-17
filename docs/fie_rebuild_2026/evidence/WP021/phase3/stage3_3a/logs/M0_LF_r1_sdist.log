@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --sdist --outdir <work>\out\M0_LF_r1\sdist <work>\trees\M0_LF_r1
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0.tar.gz
+
+--- stderr ---
+* Getting build dependencies for sdist...
+* Building sdist...

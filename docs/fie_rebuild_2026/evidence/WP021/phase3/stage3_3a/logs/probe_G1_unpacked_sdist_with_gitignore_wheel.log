@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\probes\G1_unpacked_sdist_with_gitignore\wheel <work>\unpacked\G1_unpacked_sdist_with_gitignore\fie_sdk-1.18.0
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0-py3-none-any.whl
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...

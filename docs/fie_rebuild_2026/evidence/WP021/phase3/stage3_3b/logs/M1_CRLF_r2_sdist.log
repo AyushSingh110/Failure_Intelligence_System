@@ -1,0 +1,10 @@
+$ <python> -m build --no-isolation --sdist --outdir <work>\out\M1_CRLF_r2\sdist <work>\trees\M1_CRLF_r2
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0.tar.gz
+
+--- stderr ---
+* Getting build dependencies for sdist...
+* Building sdist...
+fie model allowlist: inventory entries marked in_wheel: false are present and NOT packaged: fie/models/failure_classifier_v4.pkl, fie/models/feature_columns_v4.pkl, fie/models/minilm-onnx/model.onnx, fie/models/minilm-onnx/tokenizer.json
+fie model allowlist: 16 approved model artifacts verified and included, with fie/models/MANIFEST.json derived from scripts/model_manifest.json

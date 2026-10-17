@@ -1,0 +1,8 @@
+$ <python> -m build --no-isolation --sdist --outdir <work>\out\probes\P6_force_include_and_exclude\sdist <work>\probes\P6_force_include_and_exclude
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0.tar.gz
+
+--- stderr ---
+* Getting build dependencies for sdist...
+* Building sdist...

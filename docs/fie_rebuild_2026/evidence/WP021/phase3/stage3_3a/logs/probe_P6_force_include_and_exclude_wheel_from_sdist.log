@@ -1,0 +1,27 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\probes\P6_force_include_and_exclude\wheel_from_sdist <work>\unpacked\probe_P6_force_include_and_exclude\fie_sdk-1.18.0
+exit=1
+--- stdout ---
+
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...
+Traceback (most recent call last):
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 389, in <module>
+    main()
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 373, in main
+    json_out["return_val"] = hook(**hook_input["kwargs"])
+  File "<python-env>\lib\site-packages\pyproject_hooks\_in_process\_in_process.py", line 280, in build_wheel
+    return _build_backend().build_wheel(
+  File "<python-env>\lib\site-packages\hatchling\build.py", line 58, in build_wheel
+    return os.path.basename(next(builder.build(directory=wheel_directory, versions=["standard"])))
+  File "<python-env>\lib\site-packages\hatchling\builders\plugin\interface.py", line 157, in build
+    artifact = version_api[version](directory, **build_data)
+  File "<python-env>\lib\site-packages\hatchling\builders\wheel.py", line 505, in build_standard
+    for included_file in self.recurse_included_files():
+  File "<python-env>\lib\site-packages\hatchling\builders\plugin\interface.py", line 179, in recurse_included_files
+    yield from self.recurse_forced_files(self.config.get_force_include())
+  File "<python-env>\lib\site-packages\hatchling\builders\plugin\interface.py", line 239, in recurse_forced_files
+    raise FileNotFoundError(msg)
+FileNotFoundError: Forced include not found: <work>\unpacked\probe_P6_force_include_and_exclude\fie_sdk-1.18.0\fie\models\dummy_listed.pkl
+ERROR Backend subprocess exited when trying to invoke build_wheel

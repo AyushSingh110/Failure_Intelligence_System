@@ -1,0 +1,9 @@
+$ <python> -m build --no-isolation --wheel --outdir <work>\out\M1_LF_r2\wheel_from_sdist <work>\unpacked\M1_LF_r2\fie_sdk-1.18.0
+exit=0
+--- stdout ---
+Successfully built fie_sdk-1.18.0-py3-none-any.whl
+
+--- stderr ---
+* Getting build dependencies for wheel...
+* Building wheel...
+fie model allowlist: 16 approved model artifacts verified and included, with fie/models/MANIFEST.json derived from scripts/model_manifest.json
