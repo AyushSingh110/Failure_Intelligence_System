@@ -1,0 +1,306 @@
+{
+ "archive": "fie_sdk-1.18.0-py3-none-any.whl",
+ "archive_sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016",
+ "members": {
+  "fie/__init__.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "f2d4a57174cd7535e1e87499f6f770a98ccc9acfbd3f3eabe5d9563a1d443e70",
+   "size": 1260
+  },
+  "fie/__main__.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "17e449941b52a6596614cda5896b1dabdbdb14ad38a3fe75a4bbfe3460365b1a",
+   "size": 13666
+  },
+  "fie/_degrade.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "3fd5008a46d3a47eacc7d11cbee4ae805fc90f2765eb208480833bae2e0d6657",
+   "size": 5067
+  },
+  "fie/_lite.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "80839ff47a5ec3134c8cde7eb0d65f0aa9df1a3e6699b86573cc4e86378e5543",
+   "size": 6430
+  },
+  "fie/_model_integrity.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "121c4d75de016b3bf88cca4cb7728e5e1ad1eb2a3437fb6361c16be67569536f",
+   "size": 26257
+  },
+  "fie/_telemetry.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "6eaa335e3bfdce21bbc029dcdbf56c410db2376e14fc49eb7dc33c2755c1d08b",
+   "size": 1153
+  },
+  "fie/adversarial.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "7fb99f274174915ed8a8de8b7f44eddda8047b681d94cb9b70eeff64e73a9502",
+   "size": 90704
+  },
+  "fie/client.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "a044b9316864619dc18b447d4148bc32f4dfef9b5c02f64cf373abe993e396fe",
+   "size": 9855
+  },
+  "fie/config.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "8e84c9d7c644c529cebd333c2a604386acc58aee05bb52f088d6d23e4ae2f49d",
+   "size": 726
+  },
+  "fie/feedback_store.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "51e9fd586b1f01103c4b300932ee8546c3c5653c4926d913f2684620118f9194",
+   "size": 9201
+  },
+  "fie/fiction_harm.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "f3d8c3805929c9768c4606cbbdf93ce64fe93a66d392f0d4827d411138a5076d",
+   "size": 6429
+  },
+  "fie/framing_filter.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "6d84eaf6345f6607bbe68da62a1629b7f3a57ca868e7858c83d00ed1cfb73dbc",
+   "size": 5231
+  },
+  "fie/integrations/__init__.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "4dcaa0fdf6977ed4a3992ebd77bab753ce7e007b34bc556227326e95b3fe0e51",
+   "size": 2271
+  },
+  "fie/integrations/anthropic.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "db7bcb07b2a000f36fa3d91a6ef4666e338e9fe4321145719e053e8d97e19e02",
+   "size": 9382
+  },
+  "fie/integrations/fastapi.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "ed77bc4222e6bea7066a3a6b4786e50e4ada5d6997090265e95d882326b5f79d",
+   "size": 6491
+  },
+  "fie/integrations/openai.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "b39f43236fc644a56a366ce292b52ca4aac64d5081a098b9e4a056ff9e29767f",
+   "size": 9515
+  },
+  "fie/layers/__init__.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "feebb65abb629c8fd734d6ed3a69b580352fe12e6f8651ddd7bc7ca0f43b8db9",
+   "size": 1436
+  },
+  "fie/layers/_verified_models.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "06cf5dc928fc57571e8f01a81c6cffade8c132d69621bde24c103aead183caef",
+   "size": 10669
+  },
+  "fie/layers/copyright.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "7ab8145eaecaa9cfeae4029d96be734f45a7c2ac6b224dfdc5299161fef0d86e",
+   "size": 4311
+  },
+  "fie/layers/direct_harm.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "7c36f29f4e91a6f2dde690e060e6bf56c3983664bf4dc3e49bf04a15635d8370",
+   "size": 6753
+  },
+  "fie/layers/gcg.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "460ba2d502f9b646369681e2345423a380a68a86b6bf3787f78ad04815576aa6",
+   "size": 6241
+  },
+  "fie/layers/indirect.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "635b384ae91e0e2bd3d40c4ff04e2214d1bfa51078cb2e14b79f412cf50d44e3",
+   "size": 4808
+  },
+  "fie/layers/many_shot.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "b45a92bf0139b5ab166565f827739c9db114245237909db4f90dd5e13797d457",
+   "size": 10794
+  },
+  "fie/layers/pair.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "b836bf5dc843c2e3c4dd7c132545d73c2ce3915492e80b9a0156b515644be152",
+   "size": 24650
+  },
+  "fie/layers/patterns.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "3f277b4c3eef712c960b1b9938a1b20da4891f4c8730ef7cba36cc98dcbea820",
+   "size": 25985
+  },
+  "fie/layers/perplexity.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "2e42cec78957a7a3835bba60275d80b9448782160c69df5c97166821c0ef3a17",
+   "size": 8052
+  },
+  "fie/layers/prompt_guard.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "ab468bd7b32e473be71a0138153595d78ea9c18a926f8b1d1adc05b30e838281",
+   "size": 6925
+  },
+  "fie/llama_guard.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "87a24d8216db53be004bd76e882ac3e1863af641d4f64ec6e9f63762a0417a45",
+   "size": 5531
+  },
+  "fie/local_predictor.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "391d08a613e26d2a49d81f273ef1279be48ecab975ba99f3e5e59b394266a706",
+   "size": 5753
+  },
+  "fie/models/MANIFEST.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "fbab28ab75acad2cfa8d178617caad112c32adafc6048d2a8483cd4a393bf2f5",
+   "size": 5112
+  },
+  "fie/models/meta_clf.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+   "size": 725
+  },
+  "fie/models/meta_clf.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+   "size": 212131
+  },
+  "fie/models/pair_intent_classifier.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+   "size": 18325
+  },
+  "fie/models/pair_intent_classifier_v3.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+   "size": 11349
+  },
+  "fie/models/pair_intent_classifier_v4.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+   "size": 11349
+  },
+  "fie/models/pair_intent_classifier_v5.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+   "size": 11349
+  },
+  "fie/models/pair_intent_classifier_v6.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+   "size": 11349
+  },
+  "fie/models/pair_intent_classifier_v6_3.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+   "size": 11349
+  },
+  "fie/models/pair_intent_classifier_v6_3b.pkl": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+   "size": 11349
+  },
+  "fie/models/pair_intent_meta.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
+   "size": 866
+  },
+  "fie/models/pair_intent_meta_v3.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "97df4a1acca8a13c95b7c4abbd2efb396bd657f193aa77a9a68b74f755c9558d",
+   "size": 1003
+  },
+  "fie/models/pair_intent_meta_v4.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "00cf2aa50df6911f11454098619f7de2a0083dfa97943c475a4b3747350dc127",
+   "size": 2153
+  },
+  "fie/models/pair_intent_meta_v5.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "d1b52dd543be53a4dd39c7267519cb385cf1f12b7af90509f94175d62598a343",
+   "size": 673
+  },
+  "fie/models/pair_intent_meta_v6.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "b83c0e7c56772146eae539714e0288d965f5182f17574e0e13f9c47e8e9e2d9d",
+   "size": 776
+  },
+  "fie/models/pair_intent_meta_v6_3.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "bb35fc9c6edff795e2aa70acae43104f02011a7e8f40cfee4b6c95c9034c0220",
+   "size": 742
+  },
+  "fie/models/pair_intent_meta_v6_3b.json": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
+   "size": 888
+  },
+  "fie/monitor.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "0857edb673e1940bf6c15cef220350e8ce5524657746811a5235aa52f0fa710b",
+   "size": 17651
+  },
+  "fie/multilingual.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "744ac4eb3187ab47d3823a9e087f6ddfcfd7fa04d2669d7f93ad92094c568f97",
+   "size": 28721
+  },
+  "fie/onnx_encoder.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "7833b2d8fa88bacaf32e35dcf386dfb15e6e877cf0c7b2f3674fdaf1a3501d39",
+   "size": 15433
+  },
+  "fie/output_scanner.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "33403718e1ee35e9b47a05dc49ff73c45f4898b90d5daf958c18f9701a5f2e85",
+   "size": 10455
+  },
+  "fie/policy.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "18488f34b3188a7c9ad04fc3ba59361e79bd1875ce6bf30c9ea93d5b49434e95",
+   "size": 23045
+  },
+  "fie/preflight.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "d0f99e082c6eff2c559db5de17b3863fce412b39daecd962c247b1b1d9d5be16",
+   "size": 16782
+  },
+  "fie/session_tracker.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "5c4f7602c6ee8668938a22c68ca19346a860858e4b529a15278f47026f031274",
+   "size": 13704
+  },
+  "fie/stream_guard.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "8e6b6e70e2520edc48b65143e6d6514c806139b6aab163e6e8032e3f1aa7207e",
+   "size": 8133
+  },
+  "fie/virtualization.py": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "c9e90bed4c752392d91b8fe9d981935c2992aea52bc325ecb338b3f253e81b67",
+   "size": 9630
+  },
+  "fie_sdk-1.18.0.dist-info/METADATA": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "5e1e620503d427fb61a153969d5f8a4b97cce19ca48d3679474a075e3942322d",
+   "size": 19882
+  },
+  "fie_sdk-1.18.0.dist-info/RECORD": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "5fe8f2cd08c739a847f597ec22b08c62f6fe5ac6e958192b92ef9a9fde8431fe",
+   "size": 4923
+  },
+  "fie_sdk-1.18.0.dist-info/WHEEL": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "41c708c5adba6e097513ab8ccb9f1d7865a2fb469e22491a9e01dcc64da459fc",
+   "size": 87
+  },
+  "fie_sdk-1.18.0.dist-info/entry_points.txt": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "c92f537285bd88784f75086867ff1012f3dbd5327f71c3ea08e607e5b510447e",
+   "size": 42
+  },
+  "fie_sdk-1.18.0.dist-info/licenses/LICENSE": {
+   "date_time": "2020-02-02T00:00:00",
+   "sha256": "35ce357b8ad768bbef972cc2f20685d2a548d7c4801dcf1a5d9cd017a74feeba",
+   "size": 7526
+  }
+ }
+}

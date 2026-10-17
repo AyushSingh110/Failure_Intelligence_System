@@ -1,0 +1,58 @@
+{
+ "focused": {
+  "command": "python -m pytest tests/test_build_artifact_allowlist.py -p no:cacheprovider",
+  "failed": 0,
+  "passed": 32,
+  "skipped": 0,
+  "tests": [
+   "tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[append_byte]",
+   "tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[flip_byte]",
+   "tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[replace]",
+   "tests/test_build_artifact_allowlist.py::test_altered_approved_artifact_fails[truncate]",
+   "tests/test_build_artifact_allowlist.py::test_archive_model_members_are_exactly_the_allowlist[from_sdist]",
+   "tests/test_build_artifact_allowlist.py::test_archive_model_members_are_exactly_the_allowlist[sdist]",
+   "tests/test_build_artifact_allowlist.py::test_archive_model_members_are_exactly_the_allowlist[wheel]",
+   "tests/test_build_artifact_allowlist.py::test_build_fails_closed[sdist-missing]",
+   "tests/test_build_artifact_allowlist.py::test_build_fails_closed[sdist-tampered]",
+   "tests/test_build_artifact_allowlist.py::test_build_fails_closed[wheel-missing]",
+   "tests/test_build_artifact_allowlist.py::test_build_fails_closed[wheel-tampered]",
+   "tests/test_build_artifact_allowlist.py::test_build_warns_about_unlisted_files",
+   "tests/test_build_artifact_allowlist.py::test_derivation_is_deterministic_and_keeps_the_established_bytes",
+   "tests/test_build_artifact_allowlist.py::test_extras_experiments_and_gitkeep_are_never_selected",
+   "tests/test_build_artifact_allowlist.py::test_fie_models_is_excluded_and_the_hook_is_registered",
+   "tests/test_build_artifact_allowlist.py::test_hook_class_is_a_hatchling_build_hook",
+   "tests/test_build_artifact_allowlist.py::test_hook_imports_neither_fie_nor_ml_packages",
+   "tests/test_build_artifact_allowlist.py::test_invalid_inventory_fails_without_packaging_anything",
+   "tests/test_build_artifact_allowlist.py::test_manifest_is_derived_even_when_a_stale_one_is_present",
+   "tests/test_build_artifact_allowlist.py::test_missing_approved_artifact_fails",
+   "tests/test_build_artifact_allowlist.py::test_missing_inventory_or_integrity_module_fails",
+   "tests/test_build_artifact_allowlist.py::test_no_model_files_at_all_fails",
+   "tests/test_build_artifact_allowlist.py::test_no_pattern_selects_model_files",
+   "tests/test_build_artifact_allowlist.py::test_nothing_unapproved_ships[from_sdist]",
+   "tests/test_build_artifact_allowlist.py::test_nothing_unapproved_ships[sdist]",
+   "tests/test_build_artifact_allowlist.py::test_nothing_unapproved_ships[wheel]",
+   "tests/test_build_artifact_allowlist.py::test_off_wheel_entries_are_neither_required_nor_included",
+   "tests/test_build_artifact_allowlist.py::test_real_inventory_selects_its_sixteen_in_wheel_entries",
+   "tests/test_build_artifact_allowlist.py::test_real_tree_verifies_against_the_tracked_inventory",
+   "tests/test_build_artifact_allowlist.py::test_sdist_carries_the_hook_inputs",
+   "tests/test_build_artifact_allowlist.py::test_selection_is_exactly_the_in_wheel_entries",
+   "tests/test_build_artifact_allowlist.py::test_wheel_from_sdist_has_the_same_model_members_as_the_direct_wheel"
+  ]
+ },
+ "full_suite": {
+  "before_stage_3_3b_local": {
+   "failed": 0,
+   "passed": 1421,
+   "skipped": 2
+  },
+  "command": "python -m pytest tests/ -m \"not network\" -p no:cacheprovider --tb=short -q -rA",
+  "exit_code": 0,
+  "failed": [],
+  "passed": 1453,
+  "skipped": [
+   "SKIPPED [1] tests\\test_model_integrity.py:251: symbolic links cannot be created here",
+   "SKIPPED [1] tests\\test_model_integrity.py:805: file modes do not deny reading on Windows; the injected cases above cover this path"
+  ]
+ },
+ "note": "summary of the run output; the raw log is not kept here because it names local directories"
+}

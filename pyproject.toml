@@ -1,5 +1,7 @@
 [build-system]
-requires      = ["hatchling"]
+# Pinned (WP-021 D-052): the include/exclude behaviour hatch_build.py relies on was measured on
+# exactly this version (Stage 3.3a).
+requires      = ["hatchling==1.29.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -138,11 +140,19 @@ filterwarnings = [
     "ignore::UserWarning:xgboost.core",
 ]
 
+# Model files are never selected by pattern (WP-021 D-051). Everything under fie/models/ is
+# excluded here, for the sdist and the wheel, and hatch_build.py re-includes exactly the
+# `in_wheel: true` artifacts of scripts/model_manifest.json, after verifying their size and
+# SHA-256, plus fie/models/MANIFEST.json derived from it. A missing or altered artifact fails
+# the build. Do not add `artifacts` patterns for model files: no `exclude` overrides them
+# (measured in Stage 3.3a).
 [tool.hatch.build]
-artifacts = [
-    "fie/models/*.pkl",
-    "fie/models/*.json",
+exclude = [
+    "/fie/models/**",
 ]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["fie"]
