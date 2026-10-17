@@ -1598,3 +1598,41 @@ The follow-up commit force-adds the checker and the `*.log` evidence files of St
 which `.gitignore` had excluded. It also makes `--report` write LF line endings, converts the 17
 `stage3_3c/reports/*.json` files to LF, and regenerates `stage3_3c/SHA256SUMS.txt`. See section K
 of the 3.3c report.
+
+### 14.11 Phase 3, Stage 3.3d (2026-10-17): W21-29, the source distribution narrowed
+
+Plan:
+[EXECUTION_021_phase3-stage3_3d-sdist-narrowing-plan.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_3d-sdist-narrowing-plan.md)
+(`evidence/WP021/phase3/stage3_3d_plan/`). Implementation:
+[EXECUTION_021_phase3-stage3_3d-sdist-narrowing.md](EXECUTION_REPORTS/EXECUTION_021_phase3-stage3_3d-sdist-narrowing.md)
+(`evidence/WP021/phase3/stage3_3d/`). **Status: implemented and verified locally; not committed;
+not yet run on a hosted runner.** This closes the packaging-refinement workstream for now.
+
+**Owner decisions recorded and implemented:**
+
+- **D-057 (W21-29a)** — the sdist is narrowed by an explicit allowlist,
+  `[tool.hatch.build.targets.sdist] only-include = ["/fie", "/hatch_build.py",
+  "/scripts/model_manifest.json", "/README.md", "/LICENSE"]`. The approved model artifacts and
+  `fie/models/MANIFEST.json` still enter only through `hatch_build.py`.
+- **D-058 (W21-29b)** — the sdist ships no tests. It is a minimal build input, not a source-test
+  bundle.
+- **D-059 (W21-29c)** — `test_no_pattern_selects_model_files` permits exactly
+  `/scripts/model_manifest.json`, in the sdist's `only-include` only, and pins that list. Eight
+  negative controls prove it still rejects model artifacts and any other model-file pattern.
+- W21-29d (a CI-level sdist allowlist in the checker) was not approved and not done.
+
+**Verified locally:**
+
+- The sdist went from 67,956,881 bytes and 1,160 files to **267,222 bytes and 62 files**: exactly
+  the allowlist set, with no demo media, MP3s, evidence, baselines, data, notebooks, tests,
+  server or deployment files.
+- The wheel built from it is **byte-identical** to the established wheel (`810d5446…` LF,
+  `9646a7a3…` CRLF).
+- The archive checker passes; M0 fails closed; the pre-3.3b archives are refused.
+- 48 allowlist-module tests pass (16 new); the full suite has 1516 passed, 0 failed and 2
+  platform skips. Zero network attempts.
+
+Unchanged: `hatch_build.py`, the checker, both workflows, the inventory, the loader, models,
+baselines, and every repository file (nothing deleted or moved).
+
+**Open, deliberately not started:** W21-19, W21-32, W21-20-R, W21-14, Phase 4.

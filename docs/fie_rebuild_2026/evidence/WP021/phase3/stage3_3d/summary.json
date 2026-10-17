@@ -1,0 +1,63 @@
+{
+ "after": {
+  "compressed_bytes": 267222,
+  "exactly_the_allowlist": true,
+  "files": 62,
+  "sdist_sha256": "0cc9174f39de780e155b2d97e82839573bf955cb70bd62fd522aa1297bbef7d5",
+  "source": "rehearsal.json, M1_LF_r1 (narrowed configuration overlaid on HEAD)",
+  "wheel_direct_sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016",
+  "wheel_from_sdist_sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+ },
+ "allowlist_module": {
+  "passed": 48
+ },
+ "before": {
+  "compressed_bytes": 67956881,
+  "files": 1160,
+  "sdist_sha256": "05394995c946151ede414db79c537031acff955875c15a940cd4caac8408619d",
+  "source": "stage3_3d_plan/measure.json, CURRENT (also the sdist hosted CI built on PR #26)",
+  "uncompressed_bytes": 100411208,
+  "wheel_sha256": "810d5446a8018c201482606d3e368f46a81ac0afbb9b8da208c7e69db4c84016"
+ },
+ "full_suite": {
+  "before_stage_3_3d_local": {
+   "failed": 0,
+   "passed": 1500,
+   "skipped": 2
+  },
+  "command": "python -m pytest tests/ -m \"not network\" -p no:cacheprovider --tb=short -q -rA",
+  "exit_code": 0,
+  "failed": [],
+  "passed": 1516,
+  "skipped": [
+   "SKIPPED [1] tests\\test_model_integrity.py:251: symbolic links cannot be created here",
+   "SKIPPED [1] tests\\test_model_integrity.py:805: file modes do not deny reading on Windows; the injected cases above cover this path"
+  ]
+ },
+ "new_or_changed_tests": [
+  "tests/test_build_artifact_allowlist.py::test_experiment_files_and_evidence_do_not_leak_into_the_sdist",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path0-value0]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path1-value1]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path2-value2]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path3-value3]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path4-value4]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path5-value5]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path6-value6]",
+  "tests/test_build_artifact_allowlist.py::test_guard_still_rejects_model_patterns[key_path7-value7]",
+  "tests/test_build_artifact_allowlist.py::test_narrowed_sdist_build_still_fails_closed[missing]",
+  "tests/test_build_artifact_allowlist.py::test_narrowed_sdist_build_still_fails_closed[tampered]",
+  "tests/test_build_artifact_allowlist.py::test_narrowed_sdist_carries_the_approved_models_and_build_inputs",
+  "tests/test_build_artifact_allowlist.py::test_narrowed_sdist_holds_exactly_the_allowlist",
+  "tests/test_build_artifact_allowlist.py::test_narrowed_sdist_is_below_the_size_ceiling",
+  "tests/test_build_artifact_allowlist.py::test_no_pattern_selects_model_files",
+  "tests/test_build_artifact_allowlist.py::test_repository_only_files_do_not_leak_into_the_sdist",
+  "tests/test_build_artifact_allowlist.py::test_wheel_from_the_narrowed_sdist_passes_the_archive_checker"
+ ],
+ "sdist_only_include": [
+  "/fie",
+  "/hatch_build.py",
+  "/scripts/model_manifest.json",
+  "/README.md",
+  "/LICENSE"
+ ]
+}

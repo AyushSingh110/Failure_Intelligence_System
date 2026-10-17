@@ -1,0 +1,21 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index ea2f74c..5b02130 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -156,3 +156,16 @@ path = "hatch_build.py"
+ 
+ [tool.hatch.build.targets.wheel]
+ packages = ["fie"]
++
++# The sdist is a minimal build input (WP-021 W21-29, Stage 3.3d): exactly what a wheel build
++# from it needs, and nothing else from the repository (no demo media, data, notebooks,
++# evidence, baselines, tests, server or deployment files). The approved model artifacts and
++# fie/models/MANIFEST.json still enter through hatch_build.py, not through this list.
++[tool.hatch.build.targets.sdist]
++only-include = [
++    "/fie",
++    "/hatch_build.py",
++    "/scripts/model_manifest.json",
++    "/README.md",
++    "/LICENSE",
++]

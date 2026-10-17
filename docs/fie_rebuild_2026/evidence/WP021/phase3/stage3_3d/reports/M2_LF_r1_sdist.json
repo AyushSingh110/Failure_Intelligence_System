@@ -1,0 +1,220 @@
+{
+ "expected": {
+  "artifacts": {
+   "fie/models/meta_clf.json": {
+    "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+    "size": 725
+   },
+   "fie/models/meta_clf.pkl": {
+    "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+    "size": 212131
+   },
+   "fie/models/pair_intent_classifier.pkl": {
+    "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+    "size": 18325
+   },
+   "fie/models/pair_intent_classifier_v3.pkl": {
+    "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+    "size": 11349
+   },
+   "fie/models/pair_intent_classifier_v4.pkl": {
+    "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+    "size": 11349
+   },
+   "fie/models/pair_intent_classifier_v5.pkl": {
+    "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+    "size": 11349
+   },
+   "fie/models/pair_intent_classifier_v6.pkl": {
+    "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+    "size": 11349
+   },
+   "fie/models/pair_intent_classifier_v6_3.pkl": {
+    "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+    "size": 11349
+   },
+   "fie/models/pair_intent_classifier_v6_3b.pkl": {
+    "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "size": 11349
+   },
+   "fie/models/pair_intent_meta.json": {
+    "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
+    "size": 866
+   },
+   "fie/models/pair_intent_meta_v3.json": {
+    "sha256": "97df4a1acca8a13c95b7c4abbd2efb396bd657f193aa77a9a68b74f755c9558d",
+    "size": 1003
+   },
+   "fie/models/pair_intent_meta_v4.json": {
+    "sha256": "00cf2aa50df6911f11454098619f7de2a0083dfa97943c475a4b3747350dc127",
+    "size": 2153
+   },
+   "fie/models/pair_intent_meta_v5.json": {
+    "sha256": "d1b52dd543be53a4dd39c7267519cb385cf1f12b7af90509f94175d62598a343",
+    "size": 673
+   },
+   "fie/models/pair_intent_meta_v6.json": {
+    "sha256": "b83c0e7c56772146eae539714e0288d965f5182f17574e0e13f9c47e8e9e2d9d",
+    "size": 776
+   },
+   "fie/models/pair_intent_meta_v6_3.json": {
+    "sha256": "bb35fc9c6edff795e2aa70acae43104f02011a7e8f40cfee4b6c95c9034c0220",
+    "size": 742
+   },
+   "fie/models/pair_intent_meta_v6_3b.json": {
+    "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
+    "size": 888
+   }
+  },
+  "manifest": {
+   "sha256": "fbab28ab75acad2cfa8d178617caad112c32adafc6048d2a8483cd4a393bf2f5",
+   "size": 5112
+  }
+ },
+ "passed": true,
+ "results": [
+  {
+   "archive": "fie_sdk-1.18.0.tar.gz",
+   "archive_bytes": 267222,
+   "archive_sha256": "0cc9174f39de780e155b2d97e82839573bf955cb70bd62fd522aa1297bbef7d5",
+   "failures": [],
+   "fie_models": {
+    "fie/models/MANIFEST.json": {
+     "sha256": "fbab28ab75acad2cfa8d178617caad112c32adafc6048d2a8483cd4a393bf2f5",
+     "size": 5112
+    },
+    "fie/models/meta_clf.json": {
+     "sha256": "989091d0b2296c837d1a3bc3ac6857600fe15439e68a7ecd96de1d6ca8ec76ce",
+     "size": 725
+    },
+    "fie/models/meta_clf.pkl": {
+     "sha256": "be6673d094a879f9211318edec9750f144adf10b58788ecb855a2969f5cbe9a6",
+     "size": 212131
+    },
+    "fie/models/pair_intent_classifier.pkl": {
+     "sha256": "ebea67fdc69b4180ad5e3a0133638c7aba00b7166c5ff65bcfc9b9a2132b5baf",
+     "size": 18325
+    },
+    "fie/models/pair_intent_classifier_v3.pkl": {
+     "sha256": "a52c79b44959d04c07959817cc4b7f4ed8fdc388e3d14905ebbfe283b4f8af1b",
+     "size": 11349
+    },
+    "fie/models/pair_intent_classifier_v4.pkl": {
+     "sha256": "bd50eab9ba84e423879afac4447f5d80b5af7c30b3eada272aab507e27be15a1",
+     "size": 11349
+    },
+    "fie/models/pair_intent_classifier_v5.pkl": {
+     "sha256": "3036809f955d53b3e7fc34f04cfc69a09790c71e010e79d2db916e2fdf3a5ae6",
+     "size": 11349
+    },
+    "fie/models/pair_intent_classifier_v6.pkl": {
+     "sha256": "25c1a421b03ff493b72452cc83a67092951140cec1ccc17d5aae64b3dd00619e",
+     "size": 11349
+    },
+    "fie/models/pair_intent_classifier_v6_3.pkl": {
+     "sha256": "4eea43fec56884d360fa804021d15c4d08f89faaca605d46ded920f2648e9fa7",
+     "size": 11349
+    },
+    "fie/models/pair_intent_classifier_v6_3b.pkl": {
+     "sha256": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+     "size": 11349
+    },
+    "fie/models/pair_intent_meta.json": {
+     "sha256": "ee2245119d8a00bef51141600385fcc956137fb3819b5da8408483ae6c7cda07",
+     "size": 866
+    },
+    "fie/models/pair_intent_meta_v3.json": {
+     "sha256": "97df4a1acca8a13c95b7c4abbd2efb396bd657f193aa77a9a68b74f755c9558d",
+     "size": 1003
+    },
+    "fie/models/pair_intent_meta_v4.json": {
+     "sha256": "00cf2aa50df6911f11454098619f7de2a0083dfa97943c475a4b3747350dc127",
+     "size": 2153
+    },
+    "fie/models/pair_intent_meta_v5.json": {
+     "sha256": "d1b52dd543be53a4dd39c7267519cb385cf1f12b7af90509f94175d62598a343",
+     "size": 673
+    },
+    "fie/models/pair_intent_meta_v6.json": {
+     "sha256": "b83c0e7c56772146eae539714e0288d965f5182f17574e0e13f9c47e8e9e2d9d",
+     "size": 776
+    },
+    "fie/models/pair_intent_meta_v6_3.json": {
+     "sha256": "bb35fc9c6edff795e2aa70acae43104f02011a7e8f40cfee4b6c95c9034c0220",
+     "size": 742
+    },
+    "fie/models/pair_intent_meta_v6_3b.json": {
+     "sha256": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f",
+     "size": 888
+    }
+   },
+   "kind": "sdist",
+   "member_count": 62,
+   "members": [
+    ".gitignore",
+    "LICENSE",
+    "PKG-INFO",
+    "README.md",
+    "fie/__init__.py",
+    "fie/__main__.py",
+    "fie/_degrade.py",
+    "fie/_lite.py",
+    "fie/_model_integrity.py",
+    "fie/_telemetry.py",
+    "fie/adversarial.py",
+    "fie/client.py",
+    "fie/config.py",
+    "fie/feedback_store.py",
+    "fie/fiction_harm.py",
+    "fie/framing_filter.py",
+    "fie/integrations/__init__.py",
+    "fie/integrations/anthropic.py",
+    "fie/integrations/fastapi.py",
+    "fie/integrations/openai.py",
+    "fie/layers/__init__.py",
+    "fie/layers/_verified_models.py",
+    "fie/layers/copyright.py",
+    "fie/layers/direct_harm.py",
+    "fie/layers/gcg.py",
+    "fie/layers/indirect.py",
+    "fie/layers/many_shot.py",
+    "fie/layers/pair.py",
+    "fie/layers/patterns.py",
+    "fie/layers/perplexity.py",
+    "fie/layers/prompt_guard.py",
+    "fie/llama_guard.py",
+    "fie/local_predictor.py",
+    "fie/models/MANIFEST.json",
+    "fie/models/meta_clf.json",
+    "fie/models/meta_clf.pkl",
+    "fie/models/pair_intent_classifier.pkl",
+    "fie/models/pair_intent_classifier_v3.pkl",
+    "fie/models/pair_intent_classifier_v4.pkl",
+    "fie/models/pair_intent_classifier_v5.pkl",
+    "fie/models/pair_intent_classifier_v6.pkl",
+    "fie/models/pair_intent_classifier_v6_3.pkl",
+    "fie/models/pair_intent_classifier_v6_3b.pkl",
+    "fie/models/pair_intent_meta.json",
+    "fie/models/pair_intent_meta_v3.json",
+    "fie/models/pair_intent_meta_v4.json",
+    "fie/models/pair_intent_meta_v5.json",
+    "fie/models/pair_intent_meta_v6.json",
+    "fie/models/pair_intent_meta_v6_3.json",
+    "fie/models/pair_intent_meta_v6_3b.json",
+    "fie/monitor.py",
+    "fie/multilingual.py",
+    "fie/onnx_encoder.py",
+    "fie/output_scanner.py",
+    "fie/policy.py",
+    "fie/preflight.py",
+    "fie/session_tracker.py",
+    "fie/stream_guard.py",
+    "fie/virtualization.py",
+    "hatch_build.py",
+    "pyproject.toml",
+    "scripts/model_manifest.json"
+   ],
+   "passed": true
+  }
+ ]
+}
