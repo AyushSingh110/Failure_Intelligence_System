@@ -1,0 +1,11 @@
+whole 2000/8312 55s
+whole 4000/8312 110s
+whole 6000/8312 166s
+whole 8000/8312 219s
+- 2026-10-17T13:05:33Z s02 whole: 8312 texts in 227s; gate BL-0002 dec mm 0, val mm 0, max 5.0e-05; E53 max |d| 5.0e-16 over 7720 items; passed=True
+views 2000/11835 48s
+views 4000/11835 94s
+views 6000/11835 140s
+views 8000/11835 186s
+views 10000/11835 231s
+- 2026-10-17T13:10:11Z s02 views: 11835 extra view texts in 274s; per-prompt records for 8467 items

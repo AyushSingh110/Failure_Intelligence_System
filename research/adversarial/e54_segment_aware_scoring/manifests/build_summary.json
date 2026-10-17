@@ -1,0 +1,108 @@
+{
+  "authored_fixtures_sha256": "78702e377f116d851a70d20a9b02b20cc8e1e6620743f24bc4f7af0a4412daa2",
+  "dataset_content_sha256": {
+    "harmbench": "64fb6223c220de18b9d5076d3d45152f29642f552805fa508bd02a137f1ffdcc",
+    "jailbreakbench": "c2863415ba0043c20814989eff14fd6ee2652c7ce82eacdfd67081b186ef8449",
+    "orbench_hard": "fca67026934f58c60da4990f1705d96b973b7d64b55262ee42507f030c91b422",
+    "sorrybench": "c0c50561c0798e845c1ea1ce1b8087af47d9659a1e5ddde0f69afb559e66d5f2",
+    "strongreject": "e431789610a036b52347c6c620c6e01d1b77e3a2de14644f9525cd0a0b82ac24",
+    "xstest_safe": "a3340fa6411cee841fb711191d6013bfee4fffa385333d8f38630d0d40f6e54f",
+    "xstest_unsafe": "fc68a4560711b5b94673578867ed9e2e7e510954bd656086344d0066cc22f660"
+  },
+  "docs": {
+    "chunks": {
+      "README.md": 7,
+      "SECURITY.md": 2,
+      "Technical_report.md": 10,
+      "docs/ARCHITECTURE.md": 10,
+      "docs/OVERREFUSAL_FINDINGS.md": 6,
+      "docs/RESEARCH_REVIEW_2026-09.md": 10,
+      "docs/fie_rebuild_2026/BASELINE_AUDIT.md": 9
+    },
+    "files_sha256": {
+      "README.md": "85848058d3e7310d77986475ecea0d91f615afb662831366916c2d87abe64fbb",
+      "SECURITY.md": "a5cb42a70c7fe5cf95ebd63e43bf3d0cac465b31f8ca3979db9a650177bbd1cb",
+      "Technical_report.md": "4ba73cfa9760511a543c5bf38b6a0c0ca96acbb0af9ff26b3c1d99214f6b597e",
+      "docs/ARCHITECTURE.md": "fe6fc506c11f78c2ca71f74a86616a0385a8bbb45c3f964fb3dae31b6624d506",
+      "docs/OVERREFUSAL_FINDINGS.md": "ca1c1c0d312113cc246b6d5bdad52fb98f171249e0605a98c28a2788b657feb2",
+      "docs/RESEARCH_REVIEW_2026-09.md": "e7d9597a657de1f8c6a0ec3e11222d7a0691dcbf2161df95b8426252f804cc88",
+      "docs/fie_rebuild_2026/BASELINE_AUDIT.md": "1ef976deefcca1f2cad937319f2818dd2b39387953748577b918c41e86db4a85"
+    }
+  },
+  "e53_inputs_used": {
+    "cache/texts.jsonl": "3bd7b3f831bf7db77b6827e643bfe947b9f134e1f1bd568d362f7fd095c5bf32",
+    "manifests/calibration_kept.jsonl": "7203cc21510e68fc1255ce9cf8fc5da41e666a3191fe4c3fb7a2092e6ec5e7bb",
+    "manifests/train_corpus.jsonl": "199d63df35d0852d26eeed96eed056c3d3fcffd95ab3dbcfe675508a69460f83"
+  },
+  "exact_overlap_with_pair_training_corpus": {},
+  "fixtures": {
+    "framing_templates": "c4d3798d667d656d4139708cca7c166b2fe9b2356dbffb386d8bec145395d948",
+    "padding_filler": "327ad88d2c1b63496943f0e3a11f89f085d78bcd5fff39847000af76ebdcc1b8"
+  },
+  "items": 8467,
+  "items_by_partition_dataset": {
+    "cal_attack|cal_attack_primary": 83,
+    "cal_benign|cal_short_benign": 139,
+    "cal_benign|long_auth_cal": 12,
+    "cal_benign|long_mmlu_cal": 151,
+    "eval|docs": 54,
+    "eval|frame_harmbench": 1548,
+    "eval|frame_jailbreakbench": 536,
+    "eval|frame_strongreject": 968,
+    "eval|frame_xstest_safe": 1000,
+    "eval|harmbench": 387,
+    "eval|hb120": 1320,
+    "eval|jailbreakbench": 134,
+    "eval|long_auth": 12,
+    "eval|long_mmlu": 149,
+    "eval|orbench_hard": 250,
+    "eval|sorrybench": 387,
+    "eval|strongreject": 242,
+    "eval|test_benign": 147,
+    "eval|xs_pad": 500,
+    "eval|xstest_safe": 250,
+    "eval|xstest_unsafe": 198
+  },
+  "mmlu": {
+    "path": "data/datasets/mmlu.json",
+    "per_subject": {
+      "high_school_european_history": {
+        "groups": 42,
+        "items": 60
+      },
+      "high_school_us_history": {
+        "groups": 39,
+        "items": 60
+      },
+      "high_school_world_history": {
+        "groups": 41,
+        "items": 60
+      },
+      "professional_law": {
+        "groups": 60,
+        "items": 60
+      },
+      "professional_medicine": {
+        "groups": 60,
+        "items": 60
+      }
+    },
+    "sha256": "bd98b3a04399e91a94e4dc07f65436a259d0aa56ee0f26197604613d210c4bec"
+  },
+  "pinned": {
+    "fie/models/minilm-onnx/model.onnx": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+    "fie/models/minilm-onnx/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+    "fie/models/pair_intent_classifier_v6_3b.pkl": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "fie/onnx_encoder.py": "7833b2d8fa88bacaf32e35dcf386dfb15e6e877cf0c7b2f3674fdaf1a3501d39"
+  },
+  "test_jsonl_sha256": "a0f0dacbe2127101a814cbaf1fb17edc43f6678c4c2be554e66a196e5c2269a1",
+  "unique_texts_total": 20147,
+  "unique_view_texts_beyond_whole": 11835,
+  "unique_views_sum_by_variant": {
+    "V0": 8467,
+    "V1": 35347,
+    "V2": 44767,
+    "V3": 71646
+  },
+  "unique_whole_texts": 8312
+}
