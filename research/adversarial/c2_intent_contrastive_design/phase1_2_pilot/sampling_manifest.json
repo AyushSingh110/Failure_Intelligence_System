@@ -1,0 +1,165 @@
+{
+  "algorithm": [
+    "rebuild the v6.3b corpus from the five original files in recipe order with SHA-1 normalised dedup; verify every row against E53 train_corpus (512-char hash, source, label)",
+    "S1: 5 cross-label conflict pairs (Phase 1 audit, nearest opposite-label cosine >= 0.92), both rows kept intentionally",
+    "S2..S7: per stratum, seeded permutation of the pool; harm-vocabulary-cue quota where set; skip a row if cosine >= 0.95 to an already selected row",
+    "20 preregistered repeat rows (seeded) get a second pilot id; each reviewer sees 220 items; every repeat pair >= 50 positions apart in both packets",
+    "reviewer packets: independent seeded orders; columns = position, pilot_id, text, blank annotation fields"
+  ],
+  "availability": {
+    "S2_redteam": {
+      "pool": 484,
+      "selected": 40,
+      "with_harm_vocab_cue": 89
+    },
+    "S3_harmfulqa": {
+      "pool": 464,
+      "selected": 40,
+      "with_harm_vocab_cue": 34
+    },
+    "S4a_toxicchat_jailbreak": {
+      "pool": 71,
+      "selected": 15,
+      "with_harm_vocab_cue": 7
+    },
+    "S4b_toxicchat_toxic_query": {
+      "pool": 180,
+      "selected": 15,
+      "with_harm_vocab_cue": 24
+    },
+    "S5a_llama_refusal": {
+      "pool": 82,
+      "selected": 10,
+      "with_harm_vocab_cue": 28
+    },
+    "S5b_llama_non_refusal": {
+      "pool": 78,
+      "selected": 10,
+      "with_harm_vocab_cue": 7
+    },
+    "S6_retained_attack_aug_v63_seeds": {
+      "pool": 58,
+      "selected": 6,
+      "with_harm_vocab_cue": 0
+    },
+    "S6_retained_attack_forbidden_qs": {
+      "pool": 210,
+      "selected": 6,
+      "with_harm_vocab_cue": 64
+    },
+    "S6_retained_attack_harmful_behaviors": {
+      "pool": 288,
+      "selected": 6,
+      "with_harm_vocab_cue": 171
+    },
+    "S6_retained_attack_jbb_behaviors": {
+      "pool": 89,
+      "selected": 3,
+      "with_harm_vocab_cue": 22
+    },
+    "S6_retained_attack_maliciousinstruct": {
+      "pool": 100,
+      "selected": 4,
+      "with_harm_vocab_cue": 30
+    },
+    "S7_retained_benign_alpaca": {
+      "pool": 633,
+      "selected": 4,
+      "with_harm_vocab_cue": 8
+    },
+    "S7_retained_benign_aug_v63b": {
+      "pool": 43,
+      "selected": 4,
+      "with_harm_vocab_cue": 9
+    },
+    "S7_retained_benign_hand_written": {
+      "pool": 30,
+      "selected": 4,
+      "with_harm_vocab_cue": 8
+    },
+    "S7_retained_benign_hh_helpful": {
+      "pool": 550,
+      "selected": 7,
+      "with_harm_vocab_cue": 9
+    },
+    "S7_retained_benign_law_stackexchange": {
+      "pool": 100,
+      "selected": 6,
+      "with_harm_vocab_cue": 3
+    },
+    "S7_retained_benign_mbpp": {
+      "pool": 100,
+      "selected": 2,
+      "with_harm_vocab_cue": 0
+    },
+    "S7_retained_benign_medqa": {
+      "pool": 150,
+      "selected": 3,
+      "with_harm_vocab_cue": 29
+    },
+    "S7_retained_benign_medquad": {
+      "pool": 150,
+      "selected": 3,
+      "with_harm_vocab_cue": 1
+    },
+    "S7_retained_benign_tatsu_alpaca": {
+      "pool": 197,
+      "selected": 2,
+      "with_harm_vocab_cue": 1
+    }
+  },
+  "conflict_pairs": 5,
+  "e53_inputs_sha256": {
+    "cache/embeddings.npy": "16fd0e274d0e897c45847840fc90bef76e6a241975795adee1b807116019d0e4",
+    "manifests/train_corpus.jsonl": "199d63df35d0852d26eeed96eed056c3d3fcffd95ab3dbcfe675508a69460f83"
+  },
+  "items_per_packet": 220,
+  "limitations": [
+    "not statistically representative of the corpus: strata are fixed quotas chosen to exercise the rubric",
+    "harm-vocabulary and refusal cues are regex heuristics, not labels",
+    "dual-use / ambiguous rows cannot be pre-identified without review; law_stackexchange, aug_v63b, hand_written and medqa strata are included as likely sources",
+    "instruction-manipulation candidates are scarce: only the 71 ToxicChat jailbreak rows (15 sampled)",
+    "texts are shown as single user messages; hh-rlhf rows are first human turns of longer conversations and that context is not available locally"
+  ],
+  "original_file_sha256": {
+    "data/pair_training/train.decontam.jsonl": "46f140e4760fa0f93729e8224eaf58afb6b17ffa87dba508b570dce499ad0d9a",
+    "data/pair_training_v6/augmented_v6.decontam.jsonl": "09f7135ddf600c7b98504d63cc4211942b439ba6821f709ccbde77330ae5f39f",
+    "data/pair_training_v6/augmented_v6_3_train.jsonl": "18496767902043a812929ad15e8687100cf216c4db34c3b906f8f4c954a293cd",
+    "data/pair_training_v6/augmented_v6_3b_benign_train.jsonl": "8164f548f006e0446fe9f651f26c5cc86f7bcb7dbb45fbedc73d6dc768d028c8",
+    "data/pair_training_v6/dataset_v6.decontam.jsonl": "642a24012e223d263130a1f6729c1fd34c0861f66021f78c270e5168efee9971"
+  },
+  "original_label_counts_in_sample": {
+    "0": 40,
+    "1": 160
+  },
+  "repeats": 20,
+  "rows_truncated_in_training_shown_in_full": 12,
+  "rows_with_harm_vocab_cue": 66,
+  "rows_with_refusal_cue": 10,
+  "seed": 20261018,
+  "shortages": {},
+  "strata": {
+    "S1_cross_label_conflict_pair": 10,
+    "S2_redteam": 40,
+    "S3_harmfulqa": 40,
+    "S4a_toxicchat_jailbreak": 15,
+    "S4b_toxicchat_toxic_query": 15,
+    "S5a_llama_refusal": 10,
+    "S5b_llama_non_refusal": 10,
+    "S6_retained_attack_aug_v63_seeds": 6,
+    "S6_retained_attack_forbidden_qs": 6,
+    "S6_retained_attack_harmful_behaviors": 6,
+    "S6_retained_attack_jbb_behaviors": 3,
+    "S6_retained_attack_maliciousinstruct": 4,
+    "S7_retained_benign_alpaca": 4,
+    "S7_retained_benign_aug_v63b": 4,
+    "S7_retained_benign_hand_written": 4,
+    "S7_retained_benign_hh_helpful": 7,
+    "S7_retained_benign_law_stackexchange": 6,
+    "S7_retained_benign_mbpp": 2,
+    "S7_retained_benign_medqa": 3,
+    "S7_retained_benign_medquad": 3,
+    "S7_retained_benign_tatsu_alpaca": 2
+  },
+  "uses_no_model_prediction": true
+}

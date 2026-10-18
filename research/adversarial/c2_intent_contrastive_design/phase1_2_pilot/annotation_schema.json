@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "taxonomy_source": "C2_PHASE1_DESIGN.md section 3; C2_PHASE1_1_HUMAN_REVIEW_PROTOCOL.md sections 1-2",
+  "fields": {
+    "reviewer_id": {"type": "string", "required": true, "rule": "pseudonymous id assigned by the owner (e.g. R1, R2); never a real name"},
+    "M_manipulation": {"type": "enum", "required": true, "values": ["yes", "no", "unclear"],
+                       "meaning": "Does the text try to override, bypass, extract or redefine the assistant's instructions, role, policy or control boundary?"},
+    "H_harmful_intent": {"type": "enum", "required": true, "values": ["harmful", "dual_use", "none", "unclear"],
+                         "meaning": "Would fulfilling the request give operational help inside the harmful-content policy?"},
+    "C_context": {"type": "multi_enum", "required": true, "separator": ";",
+                  "values": ["educational", "academic", "historical", "fictional", "defensive_security", "quoted", "professional_domain", "none"],
+                  "rule": "one or more values; 'none' cannot be combined with another value; context never changes H by itself"},
+    "Q_confidence": {"type": "enum", "required": true, "values": ["high", "medium", "low"],
+                     "rule": "must be 'low' when M or H is 'unclear'"},
+    "not_a_user_input": {"type": "enum", "required": true, "values": ["yes", "no"],
+                         "meaning": "The text is a model refusal, a model answer or another non-prompt fragment"},
+    "toxic_only": {"type": "enum", "required": true, "values": ["yes", "no"],
+                   "meaning": "Abusive or hateful language with no request for harmful help and no manipulation"},
+    "same_topic_pair_note": {"type": "string", "required": false},
+    "notes": {"type": "string", "required": false},
+    "timestamp_utc": {"type": "string", "required": true, "rule": "ISO 8601, time the row was completed"}
+  },
+  "locked_columns": ["position", "pilot_id", "text"],
+  "consistency_rules": [
+    "Q_confidence == 'low' if M_manipulation == 'unclear' or H_harmful_intent == 'unclear'",
+    "if not_a_user_input == 'yes': M_manipulation == 'no' and H_harmful_intent == 'none'",
+    "if toxic_only == 'yes': M_manipulation == 'no' and H_harmful_intent == 'none'",
+    "C_context contains 'none' only alone"
+  ],
+  "production_mapping_reference_only": "attack = M yes OR H harmful; H dual_use held out (OD-C2-3 pending); not_a_user_input, toxic_only-without-request and Q low excluded from training. Not applied during the pilot."
+}

@@ -1,0 +1,48 @@
+{
+  "all_annotations_blank": true,
+  "annotations_returned_empty": true,
+  "canonical_pointer": "BL-0002_pair-v6.3b_fie-70de7053",
+  "git_head": "fa2fffc80cad69a529d709966a529eda3391af73",
+  "git_status_protected": "",
+  "mapping_recovers_original_rows": true,
+  "model_digests": {
+    "fie/models/minilm-onnx/model.onnx": "57eb46cc82cd048d",
+    "fie/models/pair_intent_classifier_v6_3b.pkl": "9c682b285a9fa205"
+  },
+  "no_label_score_or_source_columns": true,
+  "no_other_reviewer_answers_or_scores_in_packets": true,
+  "orders_differ": true,
+  "original_files_unchanged": true,
+  "packet_columns": [
+    "C_context",
+    "H_harmful_intent",
+    "M_manipulation",
+    "Q_confidence",
+    "not_a_user_input",
+    "notes",
+    "pilot_id",
+    "position",
+    "reviewer_id",
+    "same_topic_pair_note",
+    "text",
+    "timestamp_utc",
+    "toxic_only"
+  ],
+  "packet_rows": {
+    "a": 220,
+    "b": 220
+  },
+  "packets_text_matches_mapping_hash": true,
+  "passed": true,
+  "prior_checksums_verified": true,
+  "repeat_gap_min": {
+    "a": 69,
+    "b": 53
+  },
+  "same_200_examples": true,
+  "same_pilot_ids": true,
+  "unique_underlying_examples": {
+    "a": 200,
+    "b": 200
+  }
+}
