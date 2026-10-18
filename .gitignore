@@ -209,3 +209,12 @@ data/benignaug/
 # Evaluation harness working output (evals/). Pinned baselines under
 # evals/baselines/ ARE tracked; per-run output is not.
 evals/runs/
+
+# Confidential research material — keep LOCAL only, never in the public repo.
+#  - owner_only/: answer keys (original labels/sources) for blinded human-review pilots
+#  - reviewer_packets/ and annotations_returned/: raw harmful/toxic text and reviewers' answers
+#  - cache/texts.jsonl: raw copies of training and benchmark prompts (regenerable locally)
+research/**/owner_only/
+research/**/reviewer_packets/
+research/**/annotations_returned/
+research/**/cache/texts.jsonl
