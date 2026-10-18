@@ -1,0 +1,997 @@
+{
+  "aug_v63_family_recovery": {
+    "back_translations": 172,
+    "bt_nearest_seed_cos_lt_0.7": 0,
+    "bt_to_nearest_seed_cos_median": 0.9418482780456543,
+    "bt_with_margin_lt_0.05_over_second_seed": 6,
+    "seeds": 58
+  },
+  "cue_regex": {
+    "conversation_marker": "(\\bHuman:|\\bAssistant:|\\bUser:|\\bAI:)",
+    "harm_topic": "\\b(kill|murder|bomb|explosive|weapon|gun|poison|drug|meth|cocaine|hack|malware|virus|steal|theft|fraud|scam|suicide|racist|terror|abuse|rape|assault|attack|violence)\\w*\\b",
+    "manipulation": "\\b(ignore (all |the )?(previous|prior|above)|disregard|jailbreak|\\bDAN\\b|do anything now|developer mode|you are now|pretend (to be|you are)|roleplay|role-play|act as|no (restrictions|filters|guidelines)|system prompt|from now on)\\b",
+    "refusal_text": "^\\s*(i can'?t|i cannot|i'm not able|i am not able|i won'?t|sorry, but|i'm sorry)",
+    "request_action": "\\b(how (do|can|would|to)|give me|tell me|write|create|make|generate|explain how|step[- ]by[- ]step|instructions? (for|to)|help me)\\b"
+  },
+  "harm_topic_vocab_by_label": {
+    "P(attack | harm_topic)": 0.875,
+    "P(attack | no harm_topic)": 0.48808234019501623,
+    "attack": 0.208955223880597,
+    "benign": 0.03472931562819203
+  },
+  "label_counts": {
+    "0": 1958,
+    "1": 2278
+  },
+  "length_by_label": {
+    "attack_mean_words": 16.7396839332748,
+    "benign_mean_words": 15.337078651685394
+  },
+  "llama_paraphrase_refusal_rows": [
+    3803,
+    3804,
+    3805,
+    3806,
+    3807,
+    3808,
+    3809,
+    3814,
+    3815,
+    3818,
+    3819,
+    3820,
+    3821,
+    3822,
+    3823,
+    3824,
+    3830,
+    3831,
+    3832,
+    3833,
+    3834,
+    3835,
+    3836,
+    3837,
+    3847,
+    3848,
+    3849,
+    3850,
+    3851,
+    3852,
+    3853,
+    3854,
+    3855,
+    3856,
+    3857,
+    3858,
+    3859,
+    3860,
+    3861,
+    3862,
+    3863,
+    3864,
+    3869,
+    3874,
+    3875,
+    3876,
+    3877,
+    3882,
+    3883,
+    3884,
+    3890,
+    3895,
+    3896,
+    3897,
+    3902,
+    3903,
+    3912,
+    3913,
+    3918,
+    3927,
+    3928,
+    3929,
+    3930,
+    3931,
+    3932,
+    3933,
+    3934,
+    3939,
+    3940,
+    3941,
+    3946,
+    3947,
+    3948,
+    3949,
+    3950,
+    3951,
+    3953,
+    3958,
+    3959,
+    3960,
+    3961,
+    3962
+  ],
+  "n_rows": 4236,
+  "sources": {
+    "JailbreakBench/JBB-Behaviors": {
+      "category_values": {
+        "jailbreakbench": 89
+      },
+      "conflict_row_ids": [
+        2482
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.24719101123595505,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.6741573033707865
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.012195121951219513,
+      "e53_rowcv_disagreement_rate": 0.012195121951219513,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 89
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.7441171407699585,
+      "mean_nn_cos_same_label": 0.8315912485122681,
+      "modes": {
+        "None": 89
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 45,
+        "anthropic_rlhf_helpful": 18,
+        "dim/law_stackexchange": 5,
+        "hand_written": 9,
+        "tatsu-lab/alpaca": 9
+      },
+      "rows": 89,
+      "rows_with_opposite_label_neighbour_ge_0.80": 12,
+      "rows_with_opposite_label_neighbour_ge_0.92": 1,
+      "rows_with_within_source_near_duplicate_ge_0.95": 0,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 82,
+        "va": 7
+      },
+      "words_mean": 14.134831460674157,
+      "words_median": 14.0,
+      "words_p90": 20.0
+    },
+    "TrustAIRLab/forbidden_question_set": {
+      "category_values": {
+        "forbidden_qs": 210
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.3047619047619048,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.6619047619047619
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.015873015873015872,
+      "e53_rowcv_disagreement_rate": 0.010582010582010581,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 210
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.7653433680534363,
+      "mean_nn_cos_same_label": 0.8527347445487976,
+      "modes": {
+        "None": 210
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 101,
+        "anthropic_rlhf_helpful": 51,
+        "aug_v63b": 9,
+        "dim/law_stackexchange": 6,
+        "tatsu-lab/alpaca": 35
+      },
+      "rows": 210,
+      "rows_with_opposite_label_neighbour_ge_0.80": 55,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 0,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 189,
+        "va": 21
+      },
+      "words_mean": 12.50952380952381,
+      "words_median": 13.0,
+      "words_p90": 16.0
+    },
+    "alpaca": {
+      "category_values": {
+        "benign_instruction": 634
+      },
+      "conflict_row_ids": [
+        105,
+        1494,
+        1973
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.012618296529968454,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.3280757097791798
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.1140819964349376,
+      "e53_rowcv_disagreement_rate": 0.035650623885918005,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training/train.decontam.jsonl": 634
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.7682238817214966,
+      "mean_nn_cos_same_label": 0.8223684430122375,
+      "modes": {
+        "None": 634
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "anthropic_rlhf_redteam": 177,
+        "aug_v63": 77,
+        "harmfulqa": 181,
+        "llama_paraphrase:llama3.1:8b": 92,
+        "mlabonne/harmful_behaviors": 45
+      },
+      "rows": 634,
+      "rows_with_opposite_label_neighbour_ge_0.80": 200,
+      "rows_with_opposite_label_neighbour_ge_0.92": 3,
+      "rows_with_within_source_near_duplicate_ge_0.95": 10,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 561,
+        "va": 73
+      },
+      "words_mean": 10.372239747634069,
+      "words_median": 10.0,
+      "words_p90": 14.0
+    },
+    "anthropic_rlhf_helpful": {
+      "category_values": {
+        "benign_question": 551
+      },
+      "conflict_row_ids": [
+        275,
+        727,
+        1794
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.016333938294010888,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.35571687840290384
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.323943661971831,
+      "e53_rowcv_disagreement_rate": 0.0744466800804829,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training/train.decontam.jsonl": 551
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.7252545356750488,
+      "mean_nn_cos_same_label": 0.7634002566337585,
+      "modes": {
+        "None": 551
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "anthropic_rlhf_redteam": 236,
+        "aug_v63": 68,
+        "harmfulqa": 116,
+        "llama_paraphrase:llama3.1:8b": 30,
+        "mlabonne/harmful_behaviors": 33
+      },
+      "rows": 551,
+      "rows_with_opposite_label_neighbour_ge_0.80": 90,
+      "rows_with_opposite_label_neighbour_ge_0.92": 3,
+      "rows_with_within_source_near_duplicate_ge_0.95": 2,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 497,
+        "va": 54
+      },
+      "words_mean": 13.698729582577133,
+      "words_median": 11.0,
+      "words_p90": 23.0
+    },
+    "anthropic_rlhf_redteam": {
+      "category_values": {
+        "red_team_attempt": 485
+      },
+      "conflict_row_ids": [
+        742,
+        1816
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.18350515463917524,
+        "manipulation": 0.002061855670103093,
+        "refusal_text": 0.004123711340206186,
+        "request_action": 0.2907216494845361
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.2261072261072261,
+      "e53_rowcv_disagreement_rate": 0.07459207459207459,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training/train.decontam.jsonl": 485
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.7347905039787292,
+      "mean_nn_cos_same_label": 0.7864420413970947,
+      "modes": {
+        "None": 485
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 141,
+        "anthropic_rlhf_helpful": 216,
+        "dim/law_stackexchange": 17,
+        "hand_written": 14,
+        "tatsu-lab/alpaca": 81
+      },
+      "rows": 485,
+      "rows_with_opposite_label_neighbour_ge_0.80": 74,
+      "rows_with_opposite_label_neighbour_ge_0.92": 2,
+      "rows_with_within_source_near_duplicate_ge_0.95": 6,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 429,
+        "va": 56
+      },
+      "words_mean": 13.498969072164948,
+      "words_median": 11.0,
+      "words_p90": 23.0
+    },
+    "aug_v63": {
+      "category_values": {
+        "environmental_crimes": 28,
+        "euphemism_general": 39,
+        "fake_news": 36,
+        "false_advertising": 35,
+        "false_common_knowledge": 28,
+        "ip_infringement": 36,
+        "pii_violation": 28
+      },
+      "conflict_row_ids": [
+        4009,
+        4066,
+        4117,
+        4124,
+        4182
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.004347826086956522,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.6173913043478261
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.19718309859154928,
+      "e53_rowcv_disagreement_rate": 0.023474178403755867,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/augmented_v6_3_train.jsonl": 230
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.749103844165802,
+      "mean_nn_cos_same_label": 0.9485147595405579,
+      "modes": {
+        "bt_deu_Latn": 57,
+        "bt_rus_Cyrl": 57,
+        "bt_zho_Hans": 58,
+        "seed": 58
+      },
+      "n_category_values": 7,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 84,
+        "anthropic_rlhf_helpful": 61,
+        "dim/law_stackexchange": 5,
+        "hand_written": 11,
+        "tatsu-lab/alpaca": 62
+      },
+      "rows": 230,
+      "rows_with_opposite_label_neighbour_ge_0.80": 34,
+      "rows_with_opposite_label_neighbour_ge_0.92": 5,
+      "rows_with_within_source_near_duplicate_ge_0.95": 133,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 213,
+        "va": 17
+      },
+      "words_mean": 14.317391304347826,
+      "words_median": 14.0,
+      "words_p90": 18.0
+    },
+    "aug_v63b": {
+      "category_values": {
+        "dark_history": 4,
+        "definitions_legal": 7,
+        "fiction_creative": 5,
+        "figurative_violence": 5,
+        "homonyms": 4,
+        "medical_info": 7,
+        "safe_context": 5,
+        "security_education": 6
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.20930232558139536,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.3953488372093023
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.1951219512195122,
+      "e53_rowcv_disagreement_rate": 0.0975609756097561,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/augmented_v6_3b_benign_train.jsonl": 43
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.7478070855140686,
+      "mean_nn_cos_same_label": 0.7795833945274353,
+      "modes": {
+        "seed": 43
+      },
+      "n_category_values": 8,
+      "nearest_opposite_label_row_source": {
+        "TrustAIRLab/forbidden_question_set": 4,
+        "anthropic_rlhf_redteam": 11,
+        "harmfulqa": 13,
+        "mlabonne/harmful_behaviors": 3,
+        "toxicchat": 4
+      },
+      "rows": 43,
+      "rows_with_opposite_label_neighbour_ge_0.80": 8,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 0,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 41,
+        "va": 2
+      },
+      "words_mean": 10.395348837209303,
+      "words_median": 10.0,
+      "words_p90": 13.0
+    },
+    "dim/law_stackexchange": {
+      "category_values": {
+        "legal": 100
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.03,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.04
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.4111111111111111,
+      "e53_rowcv_disagreement_rate": 0.23333333333333334,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 100
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.7238829731941223,
+      "mean_nn_cos_same_label": 0.7162696123123169,
+      "modes": {
+        "None": 100
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "TrustAIRLab/forbidden_question_set": 12,
+        "anthropic_rlhf_redteam": 25,
+        "aug_v63": 9,
+        "harmfulqa": 26,
+        "walledai/MaliciousInstruct": 13
+      },
+      "rows": 100,
+      "rows_with_opposite_label_neighbour_ge_0.80": 16,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 0,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 90,
+        "va": 10
+      },
+      "words_mean": 12.37,
+      "words_median": 12.0,
+      "words_p90": 19.0
+    },
+    "google-research-datasets/mbpp": {
+      "category_values": {
+        "coding": 100
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.0,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 1.0
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.0,
+      "e53_rowcv_disagreement_rate": 0.0,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 100
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.6796000599861145,
+      "mean_nn_cos_same_label": 0.8449850678443909,
+      "modes": {
+        "None": 100
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "anthropic_rlhf_redteam": 8,
+        "harmfulqa": 33,
+        "llama_paraphrase:llama3.1:8b": 40,
+        "toxicchat": 16,
+        "walledai/MaliciousInstruct": 1
+      },
+      "rows": 100,
+      "rows_with_opposite_label_neighbour_ge_0.80": 0,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 6,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 91,
+        "va": 9
+      },
+      "words_mean": 15.54,
+      "words_median": 15.0,
+      "words_p90": 20.0
+    },
+    "hand_written": {
+      "category_values": {
+        "hard_benign": 30
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.26666666666666666,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.26666666666666666
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.08,
+      "e53_rowcv_disagreement_rate": 0.08,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 30
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.7683835625648499,
+      "mean_nn_cos_same_label": 0.7813298106193542,
+      "modes": {
+        "None": 30
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "anthropic_rlhf_redteam": 3,
+        "aug_v63": 3,
+        "harmfulqa": 6,
+        "mlabonne/harmful_behaviors": 4,
+        "walledai/MaliciousInstruct": 7
+      },
+      "rows": 30,
+      "rows_with_opposite_label_neighbour_ge_0.80": 10,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 0,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 25,
+        "va": 5
+      },
+      "words_mean": 9.666666666666666,
+      "words_median": 10.0,
+      "words_p90": 11.100000000000001
+    },
+    "harmfulqa": {
+      "category_values": {
+        "harmful": 465
+      },
+      "conflict_row_ids": [
+        343,
+        612
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.07311827956989247,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.9548387096774194
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.08274231678486997,
+      "e53_rowcv_disagreement_rate": 0.016548463356973995,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training/train.decontam.jsonl": 465
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.7932038307189941,
+      "mean_nn_cos_same_label": 0.876733660697937,
+      "modes": {
+        "None": 465
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 228,
+        "anthropic_rlhf_helpful": 120,
+        "aug_v63b": 11,
+        "dim/law_stackexchange": 7,
+        "tatsu-lab/alpaca": 87
+      },
+      "rows": 465,
+      "rows_with_opposite_label_neighbour_ge_0.80": 212,
+      "rows_with_opposite_label_neighbour_ge_0.92": 2,
+      "rows_with_within_source_near_duplicate_ge_0.95": 42,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 423,
+        "va": 42
+      },
+      "words_mean": 10.477419354838709,
+      "words_median": 10.0,
+      "words_p90": 14.0
+    },
+    "keivalya/MedQuad-MedicalQnADataset": {
+      "category_values": {
+        "medical": 150
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.006666666666666667,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.36666666666666664
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.06474820143884892,
+      "e53_rowcv_disagreement_rate": 0.0,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 150
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.7101518511772156,
+      "mean_nn_cos_same_label": 0.9494069218635559,
+      "modes": {
+        "None": 150
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "anthropic_rlhf_redteam": 10,
+        "harmfulqa": 102,
+        "llama_paraphrase:llama3.1:8b": 22,
+        "mlabonne/harmful_behaviors": 4,
+        "toxicchat": 9
+      },
+      "rows": 150,
+      "rows_with_opposite_label_neighbour_ge_0.80": 0,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 100,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 139,
+        "va": 11
+      },
+      "words_mean": 9.186666666666667,
+      "words_median": 9.0,
+      "words_p90": 12.099999999999994
+    },
+    "llama_paraphrase:llama3.1:8b": {
+      "category_values": {
+        "paraphrase_aug": 160
+      },
+      "conflict_row_ids": [
+        3883
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.21875,
+        "manipulation": 0.0,
+        "refusal_text": 0.5125,
+        "request_action": 0.375
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.0,
+      "e53_rowcv_disagreement_rate": 0.0,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/augmented_v6.decontam.jsonl": 160
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.7849637269973755,
+      "mean_nn_cos_same_label": 0.8935345411300659,
+      "modes": {
+        "None": 160
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 61,
+        "anthropic_rlhf_helpful": 36,
+        "aug_v63b": 3,
+        "dim/law_stackexchange": 2,
+        "tatsu-lab/alpaca": 56
+      },
+      "rows": 160,
+      "rows_with_opposite_label_neighbour_ge_0.80": 54,
+      "rows_with_opposite_label_neighbour_ge_0.92": 1,
+      "rows_with_within_source_near_duplicate_ge_0.95": 28,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 143,
+        "va": 17
+      },
+      "words_mean": 17.83125,
+      "words_median": 18.0,
+      "words_p90": 26.0
+    },
+    "medalpaca/medical_meadow_medqa": {
+      "category_values": {
+        "medical": 150
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.19333333333333333,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.006666666666666667
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.0,
+      "e53_rowcv_disagreement_rate": 0.0,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 150
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.5798606872558594,
+      "mean_nn_cos_same_label": 0.7159519195556641,
+      "modes": {
+        "None": 150
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "JailbreakBench/JBB-Behaviors": 4,
+        "anthropic_rlhf_redteam": 18,
+        "aug_v63": 14,
+        "harmfulqa": 106,
+        "walledai/MaliciousInstruct": 5
+      },
+      "rows": 150,
+      "rows_with_opposite_label_neighbour_ge_0.80": 0,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 0,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 132,
+        "va": 18
+      },
+      "words_mean": 61.66,
+      "words_median": 62.0,
+      "words_p90": 72.0
+    },
+    "mlabonne/harmful_behaviors": {
+      "category_values": {
+        "advbench_mirror": 288
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.59375,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.7604166666666666
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.0078125,
+      "e53_rowcv_disagreement_rate": 0.00390625,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 288
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.7897518277168274,
+      "mean_nn_cos_same_label": 0.9074051380157471,
+      "modes": {
+        "None": 288
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 147,
+        "anthropic_rlhf_helpful": 55,
+        "aug_v63b": 12,
+        "hand_written": 17,
+        "tatsu-lab/alpaca": 47
+      },
+      "rows": 288,
+      "rows_with_opposite_label_neighbour_ge_0.80": 112,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 66,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 256,
+        "va": 32
+      },
+      "words_mean": 12.243055555555555,
+      "words_median": 12.0,
+      "words_p90": 16.0
+    },
+    "tatsu-lab/alpaca": {
+      "category_values": {
+        "general": 200
+      },
+      "conflict_row_ids": [
+        2681,
+        2692,
+        2870,
+        3282,
+        3533
+      ],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.005,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.235
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.010752688172043012,
+      "e53_rowcv_disagreement_rate": 0.016129032258064516,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 200
+      },
+      "label": 0,
+      "mean_nn_cos_opposite_label": 0.8114585280418396,
+      "mean_nn_cos_same_label": 0.8754943609237671,
+      "modes": {
+        "None": 200
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "TrustAIRLab/forbidden_question_set": 6,
+        "anthropic_rlhf_redteam": 51,
+        "aug_v63": 15,
+        "harmfulqa": 49,
+        "llama_paraphrase:llama3.1:8b": 71
+      },
+      "rows": 200,
+      "rows_with_opposite_label_neighbour_ge_0.80": 114,
+      "rows_with_opposite_label_neighbour_ge_0.92": 5,
+      "rows_with_within_source_near_duplicate_ge_0.95": 24,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 186,
+        "va": 14
+      },
+      "words_mean": 8.755,
+      "words_median": 8.0,
+      "words_p90": 12.0
+    },
+    "toxicchat": {
+      "category_values": {
+        "jailbreak": 71,
+        "toxic_query": 180
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0199203187250996,
+        "harm_topic": 0.11952191235059761,
+        "manipulation": 0.1952191235059761,
+        "refusal_text": 0.0,
+        "request_action": 0.5976095617529881
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.08733624454148471,
+      "e53_rowcv_disagreement_rate": 0.008733624454148471,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training/train.decontam.jsonl": 251
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.6884232759475708,
+      "mean_nn_cos_same_label": 0.7780069708824158,
+      "modes": {
+        "None": 251
+      },
+      "n_category_values": 2,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 123,
+        "anthropic_rlhf_helpful": 55,
+        "dim/law_stackexchange": 7,
+        "hand_written": 3,
+        "tatsu-lab/alpaca": 57
+      },
+      "rows": 251,
+      "rows_with_opposite_label_neighbour_ge_0.80": 15,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 24,
+      "share_truncated_512_chars": 0.30278884462151395,
+      "splits": {
+        "tr": 229,
+        "va": 22
+      },
+      "words_mean": 48.23107569721115,
+      "words_median": 36.0,
+      "words_p90": 95.0
+    },
+    "walledai/MaliciousInstruct": {
+      "category_values": {
+        "malicious_instruct": 100
+      },
+      "conflict_row_ids": [],
+      "cue_rates": {
+        "conversation_marker": 0.0,
+        "harm_topic": 0.3,
+        "manipulation": 0.0,
+        "refusal_text": 0.0,
+        "request_action": 0.44
+      },
+      "disagreement_definition": "attack: score < 0.2; benign: score > 0.8 (E53 saved scores, tr rows only)",
+      "e53_loso_disagreement_rate": 0.0,
+      "e53_rowcv_disagreement_rate": 0.0,
+      "exact_duplicates_after_normalisation": 0,
+      "files": {
+        "data/pair_training_v6/dataset_v6.decontam.jsonl": 100
+      },
+      "label": 1,
+      "mean_nn_cos_opposite_label": 0.764970064163208,
+      "mean_nn_cos_same_label": 0.8737386465072632,
+      "modes": {
+        "None": 100
+      },
+      "n_category_values": 1,
+      "nearest_opposite_label_row_source": {
+        "alpaca": 41,
+        "anthropic_rlhf_helpful": 21,
+        "dim/law_stackexchange": 8,
+        "hand_written": 6,
+        "tatsu-lab/alpaca": 21
+      },
+      "rows": 100,
+      "rows_with_opposite_label_neighbour_ge_0.80": 27,
+      "rows_with_opposite_label_neighbour_ge_0.92": 0,
+      "rows_with_within_source_near_duplicate_ge_0.95": 2,
+      "share_truncated_512_chars": 0.0,
+      "splits": {
+        "tr": 86,
+        "va": 14
+      },
+      "words_mean": 10.51,
+      "words_median": 10.0,
+      "words_p90": 13.0
+    }
+  },
+  "thresholds": {
+    "cross_label_conflict": 0.92,
+    "near_dup": 0.95,
+    "topic_matched_candidate": 0.8
+  }
+}

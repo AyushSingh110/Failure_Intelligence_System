@@ -1,0 +1,33 @@
+{
+  "status": "C2 Phase 1 design proposal; nothing trained, generated or relabelled; requires owner decisions OD-C2-1..8 before Phase 2",
+  "baseline": {"canonical": "BL-0002_pair-v6.3b_fie-70de7053", "A0_recipe": "scripts/train_pair_v63b.py with train_test_split row order (E53 D9)", "encoder": "frozen ONNX all-MiniLM-L6-v2 (57eb46cc...)"},
+  "taxonomy_v0": {
+    "M_instruction_manipulation": ["0", "1", "unclear"],
+    "H_harmful_content_intent": ["none", "harmful", "dual_use"],
+    "C_legitimate_context": ["educational", "analytical_defensive", "fictional", "historical", "quoted", "professional_domain", "none"],
+    "Q_confidence": ["high", "medium", "low"],
+    "production_mapping": "attack = M==1 OR H==harmful OR (H==dual_use AND policy_blocks_dual_use)",
+    "rules": ["topic is not intent", "addressee test for quoted content", "security research: conceptual/defensive = none; operational exploit = harmful", "framing preserves intent unless the requested output changes", "M and H recorded independently", "low-Q excluded from training, analysed separately"]
+  },
+  "review_required_rows_estimate": {"anthropic_rlhf_redteam": 485, "harmfulqa": 465, "toxicchat": 251, "llama_paraphrase_non_refusal": 78, "cross_label_conflicts_overlapping": 22, "total_approx": 1300, "llama_paraphrase_refusals_excludable_pending_OD_C2_2": 82},
+  "minimal_pairs": {"topic_groups": 12, "train_pairs_min": 480, "heldout_pairs_min": 200, "routes": ["mined natural pairs (595 attack-side candidates at cos>=0.80, human-verified)", "human-written benign twins of existing human-written attack requests", "local-model benign twins under review (OD-C2-4)"], "harmful_side_generation": "none planned", "controls": ["length ratio 0.67-1.5", "token Jaccard >= 0.4", "harm-vocabulary count equal +-1", "same framing and quotation class", "surface-only classifier near chance", "generator-artifact classifier near chance"], "partition_unit": "pair_id with seed family and descendants"},
+  "framing": {"frame_classes": ["neutral", "medical", "legal_compliance", "academic", "developer_security_analysis"], "structures": ["prefix", "inline_no_boundary", "suffix"], "banks": ["train", "heldout (different author, no shared 4-grams)"], "excluded": "E54 and E55 templates", "symmetric": true, "semantic_change_check": "reviewer confirmation, 10% double review"},
+  "head": {"form": "z = w^T tanh(P e(x)) + b, P in R^{64x384}; linear head when P = I; A0 keeps LinearSVC+sigmoid", "implementation": "numpy/scipy L-BFGS (torch not installed; OD-C2-7)"},
+  "objective": {"terms": {"bce_weighted": "sum_i w_i l(y_i, z_i)", "pairwise_margin": "lambda_p * sum_(a,b) max(0, m - (z_a - z_b)), m = 1", "consistency": "lambda_c * sum_(x,x') (z_x - z_x')^2", "l2": "lambda_2 ||theta||^2"}, "grid": {"lambda_p": [0.1, 1.0], "lambda_c": [0.1, 1.0]}, "group_dro_optional": {"eta": 0.01, "eligibility": ">= 8 source x register groups with >= 100 rows"}},
+  "arms": [
+    {"id": "A0", "data": "v6.3b corpus", "objective": "SVM+sigmoid", "control": null},
+    {"id": "A1", "data": "label-audited", "objective": "SVM+sigmoid", "control": "R1 random drop/flip, same count, prior fixed"},
+    {"id": "A2", "data": "A1 + reviewed minimal pairs", "objective": "SVM+sigmoid", "control": "A1 + same count reviewed non-paired rows"},
+    {"id": "A3", "data": "A2 + symmetric framed copies", "objective": "SVM+sigmoid", "control": "A2 + same count duplicated unframed copies"},
+    {"id": "A4", "data": "A3", "objective": "BCE + margin + consistency", "control": "A3 data, same head, BCE only"},
+    {"id": "A5", "conditional": true, "data": "A3", "objective": "group-DRO variant of A4", "control": "A4"}
+  ],
+  "seeds_per_arm": 5,
+  "partitions": {"groups": ["source", "recovered seed family", "MedQuad template", "pair_id", "framing transformation group", "near-dup cluster cos>=0.92 (two encoders)"], "train": "group-aware", "calibration": "group-held-out within training sources; thresholds only", "development": "group-held-out + mandatory LOSO over sources with >=100 tr rows (12) + register-held-out", "final": "to be collected, deduplicated and hash-frozen before any C2 model (OD-C2-5); not constructible from local data"},
+  "development_only_sets": ["XSTest", "OR-Bench-hard", "SORRY-Bench", "HarmBench", "StrongREJECT", "JailbreakBench", "TruthfulQA", "HaluEval first 600", "MMLU subsets used in E54/E55"],
+  "metrics": {"primary": ["P1 LOSO macro attack recall at alpha=10% calibration-benign FPR", "P2 hard-benign over-refusal at matched recall", "P3 held-out minimal-pair accuracy P(z_a > z_b)"], "secondary": ["source/register-held-out benign FPR", "framing flip rate and evasion on held-out frames", "M recall", "human-filler padding dose-response", "per-family / per-domain", "PR-AUC", "ECE/Brier", "latency"]},
+  "acceptance_draft": {"P1_non_inferiority_pts": -2.0, "P2_improvement_pts": 6.0, "P3_improvement_pts": 5.0, "each_arm_vs_own_control": true, "bootstrap": {"B": 10000, "paired": true, "stratified": true}, "multiplicity": "Holm across arms for P1-P3"},
+  "sample_size_minimums": {"headline_benign_per_register": 400, "family_or_domain_claim": 100, "heldout_pairs": 200, "pairs_per_topic_group_for_counts": 12},
+  "feasibility": {"compute": "adequate (20 CPU threads, RTX 3050 4GB; cached embeddings)", "local_generation": "ollama.exe and models on disk; NOT started; unverified", "human_review_hours_estimate": 90, "manipulation_axis": "71 local candidates only (ToxicChat jailbreak); insufficient without new reviewed data"},
+  "owner_decisions": ["OD-C2-1 results/ force-add", "OD-C2-2 refusal exclusion", "OD-C2-3 dual-use policy", "OD-C2-4 local benign-twin generation + reviewers", "OD-C2-5 final evaluation set download", "OD-C2-6 second encoder for dedup", "OD-C2-7 numpy/scipy vs torch", "OD-C2-8 manipulation head in scope"]
+}

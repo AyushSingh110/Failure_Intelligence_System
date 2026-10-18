@@ -1,0 +1,35 @@
+# E53 run log (append-only)
+
+- 2026-10-17T12:17:41Z PREREGISTRATION.md sha256=7639e9461495dc1863d0f0b91539ff4938aca2c1f0afdbf4bd616d6be4d78bf9 written before any training or scoring. HEAD f1eaeaf, tree clean.
+- 2026-10-17T12:19:06Z s01 built inputs: corpus 4236 (tr 3812, va 424), calibration candidates 370, eval items 8059, unique texts 12474
+- 2026-10-17T12:28:28Z s02 embedded 12474 unique texts in 544s (one text per call, ONNX)
+- 2026-10-17T12:28:38Z s03 calibration: kept 325 of 370 (dropped 45); primary attack pool 83, secondary attack pool 186, benign 139
+- 2026-10-17T12:28:42Z s03 gate1 fidelity passed=True (decision mismatches 0, value mismatches 0, max |d| 5.00e-05); gate2 agreement 97.8271% passed=False (pearson 0.994510, max |d| 0.1721)
+- 2026-10-17T12:28:42Z STOP: A0 sanity gate failed; candidate comparisons must not be interpreted
+- 2026-10-17T12:32:49Z s03 gate1 fidelity passed=True (decision mismatches 0, value mismatches 0, max |d| 5.00e-05); gate2 agreement 100.0000% passed=True (pearson 1.000000, max |d| 0.0000)
+- 2026-10-17T12:32:57Z DEVIATION D9: first gate run (results/a0_reproducibility.json, 97.83% agreement) FAILED because this experiment's A0 fitted tr rows in corpus order; the v6.3b script fits them in train_test_split order, and CalibratedClassifierCV(cv=3) folds depend on order. Diagnosed by per-fold coefficient cosines (0.83-0.91) and confirmed before any arm was trained. Fixed in scripts (tr_rows_in_recipe_order); failed result retained. Rerun: results/a0_reproducibility_rerun1.json PASSED. No candidate arm had been trained or scored at either point.
+- 2026-10-17T12:33:01Z s04 fitted A0: rows 3812
+- 2026-10-17T12:33:01Z s04 fitted A1: rows 3389
+- 2026-10-17T12:33:02Z s04 fitted A2: rows 3383
+- 2026-10-17T12:33:02Z s04 fitted A3: rows 2960
+- 2026-10-17T12:33:03Z s04 fitted A4: rows 3812
+- 2026-10-17T12:33:04Z s04 fitted R1_s1: rows 3389
+- 2026-10-17T12:33:04Z s04 fitted R1_s2: rows 3389
+- 2026-10-17T12:33:05Z s04 fitted R1_s3: rows 3389
+- 2026-10-17T12:33:06Z s04 fitted R1_s4: rows 3389
+- 2026-10-17T12:33:06Z s04 fitted R1_s5: rows 3389
+- 2026-10-17T12:33:07Z s04 fitted R2_s1: rows 3383
+- 2026-10-17T12:33:08Z s04 fitted R2_s2: rows 3383
+- 2026-10-17T12:33:09Z s04 fitted R2_s3: rows 3383
+- 2026-10-17T12:33:09Z s04 fitted R2_s4: rows 3383
+- 2026-10-17T12:33:10Z s04 fitted R2_s5: rows 3383
+- 2026-10-17T12:33:11Z s04 fitted R3_s1: rows 2960
+- 2026-10-17T12:33:11Z s04 fitted R3_s2: rows 2960
+- 2026-10-17T12:33:12Z s04 fitted R3_s3: rows 2960
+- 2026-10-17T12:33:12Z s04 fitted R3_s4: rows 2960
+- 2026-10-17T12:33:13Z s04 fitted R3_s5: rows 2960
+- 2026-10-17T12:33:13Z s04 thresholds fixed from calibration: r*=0.9157 (n=83); A0=0.5865, A1=0.4864, A2=0.3468, A3=0.2552, A4=0.5146
+- 2026-10-17T12:33:26Z s04 A5 LOSO done for 18 sources
+- 2026-10-17T12:34:33Z s05 metrics written; decisions {"H1": {"supported": false, "attributed_to_source_identity_secondary": false}, "H2": {"supported": false}, "H0": {"rejected": false, "arms_rejecting": []}}
+- 2026-10-17T12:36:12Z s06 integrity passed=True
+- 2026-10-17T12:37:32Z SHA256SUMS.txt written over 53 files (RUN_LOG.md excluded: append-only)

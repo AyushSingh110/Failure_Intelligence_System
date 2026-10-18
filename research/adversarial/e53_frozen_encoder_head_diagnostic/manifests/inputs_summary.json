@@ -1,0 +1,73 @@
+{
+  "calibration_candidates": 370,
+  "dataset_content_sha256": {
+    "harmbench": "64fb6223c220de18b9d5076d3d45152f29642f552805fa508bd02a137f1ffdcc",
+    "jailbreakbench": "c2863415ba0043c20814989eff14fd6ee2652c7ce82eacdfd67081b186ef8449",
+    "orbench_hard": "fca67026934f58c60da4990f1705d96b973b7d64b55262ee42507f030c91b422",
+    "sorrybench": "c0c50561c0798e845c1ea1ce1b8087af47d9659a1e5ddde0f69afb559e66d5f2",
+    "strongreject": "e431789610a036b52347c6c620c6e01d1b77e3a2de14644f9525cd0a0b82ac24",
+    "xstest_safe": "a3340fa6411cee841fb711191d6013bfee4fffa385333d8f38630d0d40f6e54f",
+    "xstest_unsafe": "fc68a4560711b5b94673578867ed9e2e7e510954bd656086344d0066cc22f660"
+  },
+  "eval_items": 8059,
+  "eval_items_by_suite": {
+    "extra": 339,
+    "risk.framing": 4052,
+    "risk.long_input": 1820,
+    "std.harmbench": 387,
+    "std.jailbreakbench": 134,
+    "std.orbench_hard": 250,
+    "std.sorrybench": 387,
+    "std.strongreject": 242,
+    "std.xstest": 448
+  },
+  "fixtures": {
+    "framing_templates": "c4d3798d667d656d4139708cca7c166b2fe9b2356dbffb386d8bec145395d948",
+    "padding_filler": "327ad88d2c1b63496943f0e3a11f89f085d78bcd5fff39847000af76ebdcc1b8"
+  },
+  "input_file_sha256": {
+    "data/pair_training/test.jsonl": "a0f0dacbe2127101a814cbaf1fb17edc43f6678c4c2be554e66a196e5c2269a1",
+    "data/pair_training/train.decontam.jsonl": "46f140e4760fa0f93729e8224eaf58afb6b17ffa87dba508b570dce499ad0d9a",
+    "data/pair_training/val.jsonl": "5efed09f435f18a9645a1e6653d0e56d5bd7a21287c1014b0e43ead78fd081ff",
+    "data/pair_training_v6/augmented_v6.decontam.jsonl": "09f7135ddf600c7b98504d63cc4211942b439ba6821f709ccbde77330ae5f39f",
+    "data/pair_training_v6/augmented_v6_3_test.jsonl": "d58f9a65c3e634ece687cae10490b73ccabbcbbd337e02ca6bcc5c1b261c9c9f",
+    "data/pair_training_v6/augmented_v6_3_train.jsonl": "18496767902043a812929ad15e8687100cf216c4db34c3b906f8f4c954a293cd",
+    "data/pair_training_v6/augmented_v6_3b_benign_test.jsonl": "65037e1af9403f70c52907cd61aafda3352d3a235802956d71821cb313e6cd10",
+    "data/pair_training_v6/augmented_v6_3b_benign_train.jsonl": "8164f548f006e0446fe9f651f26c5cc86f7bcb7dbb45fbedc73d6dc768d028c8",
+    "data/pair_training_v6/dataset_v6.decontam.jsonl": "642a24012e223d263130a1f6729c1fd34c0861f66021f78c270e5168efee9971"
+  },
+  "pinned_artifacts": {
+    "fie/models/minilm-onnx/model.onnx": "57eb46cc82cd048d1986b0a4c30d50e4a87fc06d15773075b74441748f8ed2ea",
+    "fie/models/minilm-onnx/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+    "fie/models/pair_intent_classifier_v6_3b.pkl": "9c682b285a9fa20519da0c764c34b5ed49702c663f64ba8e39c8c1f728702514",
+    "fie/models/pair_intent_meta_v6_3b.json": "5babb7ec71c8a6e809379a3290c0c16fb0d35d696af0f17d2dd27ccc0b35c27f"
+  },
+  "tr_rows": 3812,
+  "train_corpus_rows": 4236,
+  "train_label_counts": {
+    "0": 1958,
+    "1": 2278
+  },
+  "train_source_label_counts": {
+    "JailbreakBench/JBB-Behaviors|1": 89,
+    "TrustAIRLab/forbidden_question_set|1": 210,
+    "alpaca|0": 634,
+    "anthropic_rlhf_helpful|0": 551,
+    "anthropic_rlhf_redteam|1": 485,
+    "aug_v63b|0": 43,
+    "aug_v63|1": 230,
+    "dim/law_stackexchange|0": 100,
+    "google-research-datasets/mbpp|0": 100,
+    "hand_written|0": 30,
+    "harmfulqa|1": 465,
+    "keivalya/MedQuad-MedicalQnADataset|0": 150,
+    "llama_paraphrase:llama3.1:8b|1": 160,
+    "medalpaca/medical_meadow_medqa|0": 150,
+    "mlabonne/harmful_behaviors|1": 288,
+    "tatsu-lab/alpaca|0": 200,
+    "toxicchat|1": 251,
+    "walledai/MaliciousInstruct|1": 100
+  },
+  "unique_texts_to_embed": 12474,
+  "va_rows": 424
+}
