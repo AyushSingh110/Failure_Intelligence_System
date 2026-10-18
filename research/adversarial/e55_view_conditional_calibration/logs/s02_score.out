@@ -1,0 +1,9 @@
+whole 5000/21010 280s
+whole 10000/21010 602s
+whole 15000/21010 765s
+whole 20000/21010 967s
+- 2026-10-17T18:01:14Z s02 whole: 21010 texts 1002s; BL-0002 dec 0 val 0 max 5.0e-05; E54 max 0.0e+00 over 2143; passed=True
+views 5000/15527 77s
+views 10000/15527 150s
+views 15000/15527 228s
+- 2026-10-17T18:05:16Z s02 views: 15527 extra texts 236s; records 21710
