@@ -140,6 +140,10 @@ docs/media/*
 !docs/media/fie-overview.jpg
 !docs/media/fie-explainer.mp4
 !docs/media/fie-explainer.jpg
+# Project banner shown at the top of the README
+!docs/assets/
+docs/assets/*
+!docs/assets/fie-banner.svg
 
 # Rebuild log, plans and execution reports (docs/fie_rebuild_2026/). Tracked so
 # the source-of-truth log is under version control. See WP-001, decision OD-12.

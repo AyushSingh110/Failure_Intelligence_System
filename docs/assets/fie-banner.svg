@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">FIE: Failure Intelligence Engine</title>
+  <desc id="desc">Offline guardrail for LLMs. Screens every prompt before your model runs and checks every answer after.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0f1f"/>
+      <stop offset="0.55" stop-color="#0f1730"/>
+      <stop offset="1" stop-color="#151b3b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.22" cy="0.5" r="0.45">
+      <stop offset="0" stop-color="#6366f1" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#c7d2fe"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <clipPath id="card"><rect width="1280" height="360" rx="20"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#card)">
+    <rect width="1280" height="360" fill="url(#bg)"/>
+    <rect width="1280" height="360" fill="url(#grid)"/>
+    <rect width="1280" height="360" fill="url(#glow)"/>
+
+    <!-- shield mark: a guard with a scan line passing through it -->
+    <g transform="translate(150 70)">
+      <path d="M110 0 L210 36 V112 C210 172 166 206 110 220 C54 206 10 172 10 112 V36 Z"
+            fill="#0b1226" stroke="url(#shield)" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M110 30 L182 56 V112 C182 156 150 182 110 192 C70 182 38 156 38 112 V56 Z"
+            fill="url(#shield)" fill-opacity="0.12"/>
+      <!-- scan signal: calm, a spike (the attack), calm -->
+      <polyline points="34,124 74,124 92,124 104,84 118,160 130,104 142,124 186,124"
+                fill="none" stroke="#e0e7ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>    </g>
+
+    <!-- wordmark -->
+    <g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+      <text x="430" y="168" font-size="112" font-weight="800" letter-spacing="6" fill="url(#word)">FIE</text>
+      <text x="436" y="214" font-size="30" font-weight="600" letter-spacing="1.5" fill="#c7d2fe">Failure Intelligence Engine</text>
+      <text x="436" y="256" font-size="21" fill="#94a3b8">An offline guardrail for LLMs, and an honest measurement of where guardrails fail.</text>
+
+      <!-- capability chips -->
+      <g font-size="16" font-weight="600" fill="#e0e7ff">
+        <rect x="436" y="282" width="168" height="34" rx="17" fill="#1e2547" stroke="#3b4580"/>
+        <text x="520" y="304" text-anchor="middle">12 detection layers</text>
+        <rect x="616" y="282" width="150" height="34" rx="17" fill="#1e2547" stroke="#3b4580"/>
+        <text x="691" y="304" text-anchor="middle">~33 ms, offline</text>
+        <rect x="778" y="282" width="190" height="34" rx="17" fill="#1e2547" stroke="#3b4580"/>
+        <text x="873" y="304" text-anchor="middle">Hash-verified models</text>
+        <rect x="980" y="282" width="170" height="34" rx="17" fill="#1e2547" stroke="#3b4580"/>
+        <text x="1065" y="304" text-anchor="middle">Open evaluation</text>
+      </g>
+    </g>
+  </g>
+</svg>
