@@ -9,6 +9,7 @@ import time
 from typing import Callable, Optional
 
 from fie.client import FIEClient, SDK_VERSION
+from fie.correction import proposal_from_response, report_proposal
 from fie.config import get_config
 from fie.local_predictor import predict_local
 from fie.preflight import preflight_check, make_guarded_response
@@ -61,9 +62,15 @@ def monitor(
     domain:        Optional[str] = None,
 
     async_mode:    Optional[bool] = None,
+    on_proposal:   Optional[Callable] = None,
 ):
     """
-    Decorator that monitors or corrects LLM outputs automatically."""
+    Decorator that monitors LLM outputs.
+
+    mode="correct" waits for the server's verdict but always returns the original
+    answer: a correction the server suggests is passed to `on_proposal` as an
+    unverified fie.correction.CorrectionProposal and logged, never substituted
+    (D-065; see fie/correction.py)."""
 
     if async_mode is not None:
         effective_mode = "monitor" if async_mode else "correct"
@@ -285,20 +292,10 @@ def monitor(
                         "mode":              "correct",
                     })
 
-                    # Check if fix was applied
-                    fix_result   = fie_result.get("fix_result") or {}
-                    fix_applied  = fix_result.get("fix_applied", False)
-                    fixed_output = fix_result.get("fixed_output", "")
-
-                    if fix_applied and fixed_output:
-                        logger.info(
-                            "[FIE] ⚡ CORRECTED — User gets fixed answer | "
-                            "strategy=%s | original='%s...' | fixed='%s...'",
-                            fix_result.get("fix_strategy", ""),
-                            _preview(primary_output),
-                            _preview(fixed_output),
-                        )
-                        return fixed_output
+                    # D-065: never substitute. A suggested correction — including a
+                    # legacy server's fix_applied=True — is reported as a proposal.
+                    fix_result = fie_result.get("fix_result") or {}
+                    report_proposal(fie_result, primary_output, on_proposal)
 
                     warning = fix_result.get("warning", "")
                     if warning:
@@ -331,10 +328,10 @@ def _log_result(
     fix_applied = fix_result.get("fix_applied", False)
     risk_label  = "⚠ HIGH RISK" if high_risk else "✓ STABLE"
 
-    if fix_applied:
+    if fix_applied or fix_result.get("proposed_output"):
         strategy = fix_result.get("fix_strategy", "")
         logger.info(
-            "[FIE] %s | ⚡ FIXED | %s → %s | latency=%.0fms | %s",
+            "[FIE] %s | correction proposed (not applied) | %s → %s | latency=%.0fms | %s",
             model_name, archetype, strategy, latency_ms, _preview(summary),
         )
     else:
@@ -394,14 +391,13 @@ def _fire_slack_alert(
     agreement  = fsv.get("agreement_score", 0)
 
     fix_result  = fie_result.get("fix_result") or {}
-    fix_applied = fix_result.get("fix_applied", False)
     fix_strategy = fix_result.get("fix_strategy", "")
-    fixed_output = fix_result.get("fixed_output", "")
+    proposal = proposal_from_response(fie_result, primary_output)
 
     fix_section = (
-        f"\n\n *Auto-Fixed:* `{fix_strategy}`\n"
-        f"*Fixed output:* {fixed_output[:200]}"
-        if fix_applied else
+        f"\n\n *Correction proposed, NOT applied (unverified):* `{fix_strategy}`\n"
+        f"*Proposed output:* {proposal.proposed_output[:200]}"
+        if proposal else
         "\n\n *Fix not applied* — manual review needed"
     )
 

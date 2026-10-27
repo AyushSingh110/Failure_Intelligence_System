@@ -27,6 +27,16 @@ class GroundTruthPipelineResult:
     provenance_label:    str = "UNVERIFIED_MODEL_INFERENCE"
     provenance_category: str = "GENERAL_KNOWLEDGE"
 
+    # ── Evidence record (D-060) ───────────────────────────────────────────────
+    # Read by engine/reliability_contract.py. The fields above keep their legacy
+    # values; these say what the verifier actually established.
+    verifier:           str = ""   # serper | wikidata | cache | self_consistency | none_applicable | ""
+    evidence_state:     str = ""   # EvidenceState value from the strict parser; "" = no verifier reached
+    evidence_text:      str = ""   # the passage the judge saw (search snippet or entity description)
+    evidence_source:    str = ""   # provider and identifier, e.g. "Wikidata (Q42)"
+    cache_source_class: str = ""
+    cache_verified_at:  str = ""
+
 def run_ground_truth_pipeline(
     prompt:           str,
     primary_output:   str,
@@ -75,6 +85,7 @@ def run_ground_truth_pipeline(
     # External sources (Wikidata, Serper) cannot verify reasoning or code.
     # If shadow models agree semantically, treat the medoid as pseudo-GT.
     if qt in ("REASONING", "CODE"):
+        result.verifier = "self_consistency"
         result.pipeline_trace.append(
             f"Question type={qt}: routing to self-consistency verifier "
             "(Wikidata/Serper disabled for this type)"
@@ -140,6 +151,7 @@ def run_ground_truth_pipeline(
         result.confidence       = jury_confidence
         result.source           = "none"
         result.provenance_label = "UNVERIFIED_MODEL_INFERENCE"
+        result.verifier         = "none_applicable"
         return result
 
     # Cache lookup
@@ -152,6 +164,10 @@ def run_ground_truth_pipeline(
             result.source           = f"GT Cache ({cache_hit.source})"
             result.from_cache       = True
             result.provenance_label = "FULLY_PROVENANCED"
+            result.verifier           = "cache"
+            result.evidence_source    = cache_hit.source
+            result.cache_source_class = getattr(cache_hit, "source_class", "unknown")
+            result.cache_verified_at  = cache_hit.verified_at
             # No identity and no usage count in the trace: it is returned to the caller.
             result.pipeline_trace.append(
                 f"Cache HIT — '{cache_hit.verified_answer[:60]}' (source: {cache_hit.source})"
@@ -196,6 +212,10 @@ def run_ground_truth_pipeline(
         try:
             from engine.verifier.serper_verifier import verify_with_serper
             serper = verify_with_serper(prompt, primary_output)
+            result.verifier        = "serper"
+            result.evidence_state  = serper.evidence_state or "VERIFIER_UNAVAILABLE"
+            result.evidence_text   = serper.search_answer
+            result.evidence_source = serper.source if serper.found else ""
 
             if serper.skip:
                 result.pipeline_trace.append(f"Serper skipped: {serper.error}")
@@ -240,6 +260,8 @@ def run_ground_truth_pipeline(
 
         except Exception as exc:
             logger.warning("Serper verification failed: %s", exc)
+            result.verifier       = "serper"
+            result.evidence_state = "VERIFIER_UNAVAILABLE"
             result.pipeline_trace.append(f"Serper error: {exc}")
             result.requires_escalation = True
             result.provenance_label    = "REQUIRES_TOOL_VERIFICATION"
@@ -259,6 +281,10 @@ def run_ground_truth_pipeline(
                 property_name = claim.property,
                 claimed_value = claim.value,
             )
+            result.verifier        = "wikidata"
+            result.evidence_state  = wiki.evidence_state or "VERIFIER_UNAVAILABLE"
+            result.evidence_text   = wiki.entity_desc
+            result.evidence_source = wiki.source if wiki.found else ""
 
             if wiki.found:
                 result.pipeline_trace.append(
@@ -313,6 +339,8 @@ def run_ground_truth_pipeline(
 
         except Exception as exc:
             logger.warning("Wikidata verification failed: %s", exc)
+            result.verifier       = "wikidata"
+            result.evidence_state = "VERIFIER_UNAVAILABLE"
             result.pipeline_trace.append(f"Wikidata error: {exc}")
 
     # All verification sources exhausted

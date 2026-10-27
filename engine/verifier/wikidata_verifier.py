@@ -32,6 +32,8 @@ class WikidataResult:
     confidence      : How confident we are in the match/mismatch (0–1)
     source          : Human-readable source label for the explanation
     error           : Non-empty if the lookup failed
+    evidence_state  : engine.reliability_contract.EvidenceState value read
+                      strictly; matches_claim keeps its legacy meaning
     """
     found:          bool
     entity_label:   str   = ""
@@ -41,6 +43,7 @@ class WikidataResult:
     confidence:     float = 0.0
     source:         str   = "Wikidata"
     error:          str   = ""
+    evidence_state: str   = ""
 
 
 # Properties that imply the subject is something humans invented/created/founded
@@ -89,6 +92,7 @@ def verify_claim_with_wikidata(
             return WikidataResult(
                 found  = False,
                 error  = f"No Wikidata entity found for '{subject}'",
+                evidence_state = "INSUFFICIENT_EVIDENCE",
             )
 
         entity_id    = entity.get("id", "")
@@ -101,7 +105,7 @@ def verify_claim_with_wikidata(
         )
 
         #Ask Groq whether the claimed value matches the entity description.
-        matches, confidence, wikidata_value = _verify_via_groq(
+        matches, confidence, wikidata_value, state = _verify_via_groq_detailed(
             entity_label  = entity_label,
             entity_desc   = entity_desc,
             property_name = property_name,
@@ -116,14 +120,16 @@ def verify_claim_with_wikidata(
             matches_claim  = matches,
             confidence     = confidence,
             source         = f"Wikidata ({entity_id})",
+            evidence_state = state,
         )
 
     except requests.exceptions.Timeout:
         logger.warning("Wikidata API timed out for subject='%s'", subject)
-        return WikidataResult(found=False, error="Wikidata API timeout")
+        return WikidataResult(found=False, error="Wikidata API timeout",
+                              evidence_state="VERIFIER_UNAVAILABLE")
     except Exception as exc:
         logger.warning("Wikidata verification error: %s", exc)
-        return WikidataResult(found=False, error=str(exc))
+        return WikidataResult(found=False, error=str(exc), evidence_state="VERIFIER_UNAVAILABLE")
 
 
 def _search_entity_with_context(
@@ -210,8 +216,25 @@ def _verify_via_groq(
     """
     Uses Groq to compare the claimed value against the Wikidata entity description.
     """
+    return _verify_via_groq_detailed(entity_label, entity_desc, property_name, claimed_value)[:3]
+
+
+def _verify_via_groq_detailed(
+    entity_label:  str,
+    entity_desc:   str,
+    property_name: str,
+    claimed_value: str,
+) -> tuple[bool, float, str, str]:
+    """
+    _verify_via_groq plus the strict evidence state. The first three values are
+    unchanged. No description is INSUFFICIENT_EVIDENCE; no judge is
+    VERIFIER_UNAVAILABLE.
+    """
+    from engine.reliability_contract import parse_verdict_strict
+
+    unavailable = "VERIFIER_UNAVAILABLE"
     if not entity_desc:
-        return True, 0.0, ""
+        return True, 0.0, "", "INSUFFICIENT_EVIDENCE"
 
     prompt = f"""You are a fact-checker. Compare the claim against the Wikidata description.
 
@@ -232,7 +255,7 @@ CORRECT_VALUE: <a complete, self-contained answer phrase that directly answers t
         from engine.groq_service import get_groq_service
         groq = get_groq_service()
         if not groq:
-            return True, 0.0, ""
+            return True, 0.0, "", unavailable
 
         from config import get_settings
         resp = groq.complete(
@@ -242,13 +265,14 @@ CORRECT_VALUE: <a complete, self-contained answer phrase that directly answers t
             temperature = 0.0,
         )
         if not resp.success:
-            return True, 0.0, ""
+            return True, 0.0, "", unavailable
 
-        return _parse_groq_verdict(resp.output_text)
+        strict = parse_verdict_strict(resp.output_text, "CORRECT_VALUE")
+        return (*_parse_groq_verdict(resp.output_text), strict.state.value)
 
     except Exception as exc:
         logger.debug("Groq Wikidata verification failed: %s", exc)
-        return True, 0.0, ""
+        return True, 0.0, "", unavailable
 
 
 def _parse_groq_verdict(text: str) -> tuple[bool, float, str]:

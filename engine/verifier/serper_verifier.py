@@ -25,6 +25,8 @@ class SerperResult:
     confidence       : How confident we are in the match/mismatch (0–1)
     source           : Source label for explainability
     error            : Non-empty if search failed
+    evidence_state   : engine.reliability_contract.EvidenceState value read
+                       strictly; matches_output keeps its legacy meaning
     """
     found:           bool
     skip:            bool  = False
@@ -34,12 +36,14 @@ class SerperResult:
     confidence:      float = 0.0
     source:          str   = "Serper (Google Search)"
     error:           str   = ""
+    evidence_state:  str   = ""
 
 
 def verify_with_serper(prompt: str, primary_output: str) -> SerperResult:
     settings = _get_settings()
     if not settings:
-        return SerperResult(found=False, skip=True, error="Settings unavailable")
+        return SerperResult(found=False, skip=True, error="Settings unavailable",
+                            evidence_state="VERIFIER_UNAVAILABLE")
 
     if not settings.serper_enabled or not settings.serper_api_key:
         logger.debug(
@@ -49,6 +53,7 @@ def verify_with_serper(prompt: str, primary_output: str) -> SerperResult:
             found = False,
             skip  = True,
             error = "Serper not configured — set SERPER_API_KEY in .env to enable real-time verification",
+            evidence_state = "VERIFIER_UNAVAILABLE",
         )
 
     try:
@@ -59,17 +64,19 @@ def verify_with_serper(prompt: str, primary_output: str) -> SerperResult:
         )
 
         if not search_data:
-            return SerperResult(found=False, error="Serper returned no results")
+            return SerperResult(found=False, error="Serper returned no results",
+                                evidence_state="INSUFFICIENT_EVIDENCE")
 
         # Extract the best answer from the search results
         search_answer = _extract_best_answer(search_data)
         if not search_answer:
-            return SerperResult(found=False, error="Could not extract answer from search results")
+            return SerperResult(found=False, error="Could not extract answer from search results",
+                                evidence_state="INSUFFICIENT_EVIDENCE")
 
         logger.info("Serper search answer: %.100s", search_answer)
 
         # Ask Groq to compare the primary output against the search answer
-        matches, confidence, grounded = _verify_via_groq(
+        matches, confidence, grounded, state = _verify_via_groq_detailed(
             primary_output = primary_output,
             search_answer  = search_answer,
             prompt         = prompt,
@@ -82,14 +89,16 @@ def verify_with_serper(prompt: str, primary_output: str) -> SerperResult:
             matches_output  = matches,
             confidence      = confidence,
             source          = "Google Search via Serper.dev",
+            evidence_state  = state,
         )
 
     except requests.exceptions.Timeout:
         logger.warning("Serper API timed out for query: %.80s", prompt)
-        return SerperResult(found=False, error="Serper API timeout")
+        return SerperResult(found=False, error="Serper API timeout",
+                            evidence_state="VERIFIER_UNAVAILABLE")
     except Exception as exc:
         logger.warning("Serper verification error: %s", exc)
-        return SerperResult(found=False, error=str(exc))
+        return SerperResult(found=False, error=str(exc), evidence_state="VERIFIER_UNAVAILABLE")
 
 
 def _search_google(query: str, api_key: str, timeout: int) -> Optional[dict]:
@@ -152,6 +161,22 @@ def _verify_via_groq(
     """
     Uses Groq to compare the primary output against the live search result.
     """
+    return _verify_via_groq_detailed(primary_output, search_answer, prompt)[:3]
+
+
+def _verify_via_groq_detailed(
+    primary_output: str,
+    search_answer:  str,
+    prompt:         str,
+) -> tuple[bool, float, str, str]:
+    """
+    _verify_via_groq plus the strict evidence state. The first three values are
+    unchanged. The heuristic fallback is reported as VERIFIER_UNAVAILABLE: word
+    overlap is not a verdict.
+    """
+    from engine.reliability_contract import parse_verdict_strict
+
+    unavailable = "VERIFIER_UNAVAILABLE"
     verification_prompt = f"""You are a fact-checker comparing a model output to a live search result.
 
 Original question: {prompt[:200]}
@@ -170,7 +195,7 @@ GROUNDED_ANSWER: <most accurate answer based on the search result>"""
         groq = get_groq_service()
         if not groq:
             # Fallback: if output and search answer share significant words → consistent
-            return _heuristic_match(primary_output, search_answer)
+            return (*_heuristic_match(primary_output, search_answer), unavailable)
 
         from config import get_settings
         resp = groq.complete(
@@ -180,13 +205,14 @@ GROUNDED_ANSWER: <most accurate answer based on the search result>"""
             temperature = 0.0,
         )
         if not resp.success:
-            return _heuristic_match(primary_output, search_answer)
+            return (*_heuristic_match(primary_output, search_answer), unavailable)
 
-        return _parse_groq_verdict(resp.output_text)
+        strict = parse_verdict_strict(resp.output_text, "GROUNDED_ANSWER")
+        return (*_parse_groq_verdict(resp.output_text), strict.state.value)
 
     except Exception as exc:
         logger.debug("Groq Serper verification failed: %s", exc)
-        return _heuristic_match(primary_output, search_answer)
+        return (*_heuristic_match(primary_output, search_answer), unavailable)
 
 
 def _parse_groq_verdict(text: str) -> tuple[bool, float, str]:

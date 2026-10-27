@@ -27,6 +27,9 @@ class ReasoningStep:
     is_correct:  bool  = True   # False means failure detected at this step
     confidence:  float = 0.0
     failure_note: str  = ""
+    # EvidenceState value (engine/reliability_contract.py). is_correct=True means
+    # only "no failure flagged"; this says whether the step was checked (D-064).
+    verification_status: str = "NOT_CHECKED"
 
 
 # ── Groq extraction prompt ────────────────────────────────────────────────────

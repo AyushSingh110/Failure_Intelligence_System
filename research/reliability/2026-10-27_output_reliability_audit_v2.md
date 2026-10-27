@@ -4,7 +4,9 @@
 **Scope:** Workstream B (output reliability) only. Workstream A (adversarial-input detection, C2) is out of scope. No C2 artifact, canonical baseline, threshold or model was touched.
 **Status:** Read-only analysis and planning. No production code, configuration, dataset or prior report was changed. No external API, Serper, Groq or web call was made, and nothing was downloaded. The only computation was local, read-only analysis of existing JSONL logs under `data/hallucination_eval/`; the commands are in Appendix A.
 **Companion plan:** [2026-10-27_E-R1_verifier_benchmark_plan.md](2026-10-27_E-R1_verifier_benchmark_plan.md)
-**Prior work:** [2026-10-20_output_reliability_audit.md](2026-10-20_output_reliability_audit.md) and [2026-10-20_verifier_replay_experiment_plan.md](2026-10-20_verifier_replay_experiment_plan.md). Both are preserved unchanged. §2 lists what this audit confirms, corrects and adds.
+**Prior work:** [2026-10-20_output_reliability_audit.md](2026-10-20_output_reliability_audit.md) (restored copy) and [2026-10-20_verifier_replay_experiment_plan.RECONSTRUCTED.md](2026-10-20_verifier_replay_experiment_plan.RECONSTRUCTED.md) (reconstruction). §2 lists what this audit confirms, corrects and adds.
+
+> **Erratum (2026-10-27, OD-S0-5).** An earlier version of this line said both 2026-10-20 files "are preserved unchanged". That was wrong: both files were deleted from the working tree on 2026-10-27 at about 11:51 IST, before this audit was committed. They had never been committed and are in no git ref. They were restored from copies captured during this audit's session; see [2026-10-20_RECOVERY_PROVENANCE.md](2026-10-20_RECOVERY_PROVENANCE.md) for hashes and limits. The audit copy is content-identical to a raw capture of the original. The plan is a reconstruction and carries its own provenance note.
 
 ### Evidence labels used throughout
 

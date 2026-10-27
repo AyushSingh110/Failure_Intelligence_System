@@ -4,7 +4,8 @@ fie.integrations.anthropic — FIE-wrapped Anthropic client.
 Drop-in replacement for anthropic.Anthropic. Every messages.create call is:
   1. Scanned for adversarial attacks BEFORE the API call
   2. Monitored by FIE AFTER the response (background thread, never adds latency)
-  3. Optionally corrected if FIE detects a hallucination (mode="correct")
+  3. With mode="correct", checked synchronously; a suggested correction is reported
+     as an unverified proposal (on_proposal), never substituted (D-065)
 
 Usage:
     from fie.integrations import anthropic
@@ -83,6 +84,9 @@ class Client:
         mode        : "monitor" (default) | "correct" | "local"
         alert_slack : Slack webhook URL for high-risk alerts
         block_attacks: raise ValueError when adversarial attack detected (default False)
+        on_proposal : callable receiving a fie.correction.CorrectionProposal when the
+                      server suggests a correction. "correct" mode never replaces the
+                      response text (D-065).
     """
 
     def __init__(
@@ -94,6 +98,7 @@ class Client:
         alert_slack:   Optional[str] = None,
         run_full_jury: bool          = True,
         block_attacks: bool          = False,
+        on_proposal                  = None,
         **anthropic_kwargs,
     ):
         try:
@@ -110,6 +115,7 @@ class Client:
         self._alert_slack   = alert_slack
         self._run_full_jury = run_full_jury
         self._block_attacks = block_attacks
+        self._on_proposal   = on_proposal
         self._fie_client    = None
 
         if fie_url and fie_api_key:
@@ -207,23 +213,10 @@ class Client:
             )
             if result:
                 _log_fie_result(result, model)
-                fix = result.get("fix_result") or {}
-                if fix.get("fix_applied") and fix.get("fixed_output"):
-                    try:
-                        # Mutate the first text block in-place
-                        for block in response.content:
-                            if hasattr(block, "text"):
-                                object.__setattr__(block, "text", fix["fixed_output"])
-                                break
-                        logger.info(
-                            "[FIE:anthropic] CORRECTED | strategy=%s | model=%s",
-                            fix.get("fix_strategy", ""), model,
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            "degraded capability=_run_fie_correct impact='this optional step was skipped' "
-                            "reason=%s: %s", type(exc).__name__, exc,
-                        )
+                # D-065: the response is never mutated. A suggested correction,
+                # including a legacy server's fix_applied=True, is a proposal.
+                from fie.correction import report_proposal
+                report_proposal(result, primary_output, self._on_proposal, "[FIE:anthropic]")
         except Exception as exc:
             logger.debug("FIE correct mode error (non-fatal): %s", exc)
 
@@ -232,8 +225,8 @@ def _log_fie_result(result: dict, model: str) -> None:
     high_risk = result.get("high_failure_risk", False)
     summary   = result.get("failure_summary", "")
     fix       = result.get("fix_result") or {}
-    if fix.get("fix_applied"):
-        logger.info("[FIE:anthropic] FIXED | model=%s | strategy=%s | %s",
+    if fix.get("fix_applied") or fix.get("proposed_output"):
+        logger.info("[FIE:anthropic] correction proposed (not applied) | model=%s | strategy=%s | %s",
                     model, fix.get("fix_strategy", ""), summary[:100])
     elif high_risk:
         logger.warning("[FIE:anthropic] HIGH RISK | model=%s | %s", model, summary[:100])

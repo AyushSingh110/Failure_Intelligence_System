@@ -13,6 +13,9 @@ class GroundingResult:
     confidence:       float = 0.0
     source:           str  = ""
     error:            str  = ""
+    # True when the judge said the article does not answer the question and the
+    # raw summary was returned in its place (D-060: that is not evidence).
+    insufficient_context: bool = False
 
 
 @dataclass
@@ -53,6 +56,7 @@ def ground_with_wikipedia(prompt: str, model_output: str) -> GroundingResult:
             grounded_answer = summary[:1000],  # limit context length
             confidence      = 0.72,
             source          = "Wikipedia REST API",
+            insufficient_context = True,
         )
 
     except Exception as exc:

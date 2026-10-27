@@ -28,7 +28,7 @@ class StepVerificationResult:
     step_type:   str
     is_correct:  bool
     confidence:  float    # 0.0 = no signal, 1.0 = certain failure/pass
-    method:      str      # "arithmetic_eval" | "wikidata" | "serper" | "shadow_consistency" | "text_overlap" | "passthrough"
+    method:      str      # "arithmetic_eval" | "not_checked" | "shadow_consistency" | "text_overlap" | "passthrough" | ...
     note:        str  = ""
 
 
@@ -204,62 +204,17 @@ def _verify_factual(
             note="External verification disabled — factual premise not checked (offline mode).",
         )
 
-    # Attempt GT pipeline verification using step text as pseudo-answer
-    try:
-        from engine.verifier.ground_truth_pipeline import run_ground_truth_pipeline
-        from config import get_settings
-        settings = get_settings()
-
-        gt = run_ground_truth_pipeline(
-            prompt          = question,
-            primary_output  = step.text,
-            root_cause      = "FACTUAL_HALLUCINATION",
-            jury_confidence = 0.6,
-            shadow_outputs  = shadow_outputs,
-            shadow_weights  = shadow_weights,
-            use_wikidata    = settings.wikidata_enabled,
-            use_serper      = settings.serper_enabled,
-            question_type   = "FACTUAL",
-        )
-
-        if gt.source in ("wikidata", "serper") and gt.confidence >= 0.60:
-            # GT found a verified answer — check if it matches the step claim
-            # If GT returned a different answer with high confidence → premise is wrong
-            mismatch = (
-                gt.verified_answer
-                and gt.verified_answer.strip().lower()
-                not in step.text.lower()
-                and step.text.strip().lower()
-                not in gt.verified_answer.lower()
-                and len(gt.verified_answer) > 3
-            )
-            if mismatch:
-                return StepVerificationResult(
-                    step_index=step.index, step_type=step.step_type,
-                    is_correct=False, confidence=gt.confidence,
-                    method=gt.source,
-                    note=(
-                        f"Factual premise contradicts {gt.source} ground truth. "
-                        f"Step says: '{step.text[:80]}'. "
-                        f"Verified answer: '{gt.verified_answer[:80]}'."
-                    ),
-                )
-            return StepVerificationResult(
-                step_index=step.index, step_type=step.step_type,
-                is_correct=True, confidence=gt.confidence * 0.8,
-                method=gt.source,
-                note=f"Factual premise consistent with {gt.source} (confidence={gt.confidence:.2f}).",
-            )
-
-    except Exception as exc:
-        logger.debug("Factual step verification GT call failed: %s", exc)
-
-    # No external source available — return no signal
+    # D-064 (OD-S0-4): no factual check is performed. This used to run the full
+    # ground-truth pipeline (claim extraction, Wikidata, Serper calls) and then
+    # discard the result: its guard tested gt.source against "wikidata"/"serper",
+    # strings the pipeline never emits, so every call fell through to "no
+    # signal". The call is removed rather than repaired, because repairing it
+    # would switch on an unvalidated verifier. The step is reported NOT_CHECKED.
     return StepVerificationResult(
         step_index=step.index, step_type=step.step_type,
         is_correct=True, confidence=0.0,
-        method="no_external_source",
-        note="External verification unavailable — factual premise not checked.",
+        method="not_checked",
+        note="Factual premise not checked: no validated factual verifier is enabled.",
     )
 
 
@@ -421,6 +376,15 @@ def verify_steps(
         step.is_correct  = result.is_correct or result.confidence < STEP_FAIL_THRESHOLD
         step.confidence  = result.confidence
         step.failure_note = result.note if not result.is_correct else ""
+        # is_correct=True only means "no failure flagged". verification_status
+        # says whether anything was actually checked (D-064).
+        from engine.reliability_contract import EvidenceState, step_evidence_state
+        if not result.is_correct and result.confidence < STEP_FAIL_THRESHOLD:
+            step.verification_status = EvidenceState.INSUFFICIENT_EVIDENCE.value
+        else:
+            step.verification_status = step_evidence_state(
+                result.is_correct, result.confidence, result.method,
+            ).value
 
         results.append(result)
         logger.debug(

@@ -172,10 +172,20 @@ def test_monitor_uses_rag_for_externally_verified_factual_mismatch(monkeypatch):
         principal=principal,
     )
 
+    # D-060 (OD-R2, owner-approved 2026-10-27): the monitor is warn-only. Until
+    # 2026-10-27 this test asserted fix_applied=True and the Wikipedia answer in
+    # fixed_output. The RAG path still runs and its answer is still reported, but
+    # as a proposal: the original answer is what the caller receives.
     assert response.fix_result is not None
-    assert response.fix_result.fix_applied is True
     assert response.fix_result.fix_strategy == "RAG_GROQ_GROUNDING"
-    assert "100 degrees Celsius" in response.fix_result.fixed_output
+    assert response.fix_result.fix_applied is False
+    assert response.fix_result.fixed_output == "Water boils at 150 degrees Celsius."
+    assert "100 degrees Celsius" in response.fix_result.proposed_output
+    assert response.reliability is not None
+    assert response.reliability.correction_applied is False
+    assert response.reliability.proposed_strategy == "RAG_GROQ_GROUNDING"
+    assert response.reliability.answer_action != "PASS_VERIFIED"
+    assert not response.failure_summary.startswith("AUTO-FIXED")
 
 
 def test_numeric_verifier_accepts_equivalent_speed_of_light_units():

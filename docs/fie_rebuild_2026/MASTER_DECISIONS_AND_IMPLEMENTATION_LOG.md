@@ -1636,3 +1636,109 @@ Unchanged: `hatch_build.py`, the checker, both workflows, the inventory, the loa
 baselines, and every repository file (nothing deleted or moved).
 
 **Open, deliberately not started:** W21-19, W21-32, W21-20-R, W21-14, Phase 4.
+
+---
+
+## 15. Workstream B record: output-reliability containment (S0) and E-R1 Part A
+
+**Date:** 2026-10-27.
+**Status:** **implemented, awaiting owner review. NOT COMMITTED.**
+**Report:** [research/reliability/2026-10-27_S0_containment_and_E-R1_part_A_report.md](../../research/reliability/2026-10-27_S0_containment_and_E-R1_part_A_report.md).
+**Basis:** [audit v2](../../research/reliability/2026-10-27_output_reliability_audit_v2.md) and the [E-R1 plan](../../research/reliability/2026-10-27_E-R1_verifier_benchmark_plan.md), committed by the owner as `f0888bb`.
+
+Workstream B is the output monitor. It is kept separate from Workstream A (the input guard) and from C2: no shared score, and no Workstream A artifact was touched.
+
+### 15.1 Decisions
+
+- **D-060 — The output monitor is warn-only, under an explicit reliability contract.**
+  - *Status:* approved by the owner (OD-R2); implemented and uncommitted.
+  - **The contract.** `/monitor` always delivers the primary answer. An engine correction is reported as `fix_result.proposed_output`, with `fix_applied=False`.
+  - **Escalation.** A fallback never clears `requires_human_review`.
+  - **Labels.** FULLY_PROVENANCED requires an explicit verdict, a retained evidence passage and a source identity.
+  - **Decision object.** Each response carries `reliability`: an evidence state and an action. PASS_VERIFIED stays unreachable until a verifier is validated by E-R1 Part B and the owner sets the threshold (OD-R7).
+  - **Unchanged.** The classifier's inputs, probability and `high_failure_risk`, and the signal log's values.
+  - **Code.** `engine/reliability_contract.py`; Step 8b of `app/routes/monitor.py`.
+  - **Relationship to D-001.** This implements D-001's "must not gate or rewrite anything in a production path" for the monitor, which D-001 left proposed.
+- **D-061 — Audit v2 is the working research basis for Workstream B.**
+  - *Status:* approved by the owner (OD-R1), provisionally.
+  - **Conditions.** Its important findings are to be reproduced. Verified defects, measured results and hypotheses stay labelled as such.
+  - **Already reproduced (S0 Part A, under the hermetic guard):**
+    - the permissive verdict parsers and heuristics;
+    - the degenerate consensus;
+    - confirmation followed by replacement;
+    - escalation cleared by the Wikipedia fallback;
+    - the raw-summary fallback;
+    - FULLY_PROVENANCED cache hits;
+    - the dead reasoning branch.
+  - **Erratum, not applied.** Audit v2 line 7 says the 2026-10-20 files "are preserved unchanged". They are not in the repository or any git ref. Recovered copies are outside the repository. Correcting that line is the owner's decision.
+- **D-062 — The jury regex defect waits for containment.**
+  - *Status:* approved by the owner (OD-R3).
+  - **The defect.** `engine/agents/adversarial/patterns.py:94` (`\x00||`) matches every input. Fixing it re-routes traffic into the correction paths that S0 contained.
+  - **Order.** The regex is fixed by Workstream A only after D-060 is committed, deployed and verified. Recall and over-refusal are to be reported against `BL-0002_pair-v6.3b_fie-70de7053`. The regex was not modified.
+- **D-063 — The 2026-10-20 verifier-replay plan is folded into E-R1 Part A.**
+  - *Status:* approved by the owner (OD-R9).
+  - Its contract matrix is covered by fixtures A1–A17. The prior plan and audit are not modified or deleted.
+
+### 15.2 Evidence (measured, offline, no network)
+
+**E-R1 Part A.**
+- **Scope.** 17 fixtures as 20 cases, driving the real handler, pipeline, verifiers, fix engine, classifier and SDK `correct_wrapper`. Only the I/O leaves are replaced.
+- **B2 (current).** 0 of 19 route cases deliver a replacement. None reaches SUPPORTED or PASS_VERIFIED from unknown evidence, or clears an escalation.
+- **B0 (route at `f0888bb`).** All 19 route cases show exactly their documented defect.
+- **Classifier.** Its inputs and probabilities are identical between B0 and B2.
+- **Hermetic guard.** 0 violations; the self-test passed.
+
+**Tests.**
+- **New:** `tests/reliability/`, 149 tests.
+- **Full offline suite:** 1,640 passed, 2 failed, 24 skipped. Both failures are classified in the report §5:
+  - `test_a_tenant_gets_its_own_correction_back` conflicts with D-060 for tenant corrections. It was not edited; see OD-S0-1.
+  - `test_detector_source_files_are_untouched` is the WP-004 tripwire on uncommitted `app/` and `engine/` changes. It passes after commit.
+- **Contract test updated:** `tests/test_monitor_rag_fix.py`, per D-060.
+
+### 15.3 Not established
+
+- **Accuracy.** That any verifier is accurate. That is E-R1 Part B, which is not started and has nothing downloaded.
+- **Deployed behaviour.** The deployed server's behaviour, until the owner redeploys.
+
+### 15.4 Open for the owner
+
+- **OD-S0-1:** tenant corrections under warn-only.
+- **OD-S0-2:** scope of the WP-004 tripwire.
+- **OD-S0-3:** harden the SDK `correct` mode, or deploy the server first.
+- **OD-S0-4:** the dead factual-step GT call.
+- **OD-S0-5:** the audit v2 erratum and restoring the 2026-10-20 files.
+- **Part B:** OD-R4 to OD-R8.
+
+*S0 was committed by the owner as `1bad753`. The open items above were decided on 2026-10-27, below.*
+
+### 15.5 S0 finalisation (2026-10-27) — implemented, awaiting review, NOT COMMITTED
+
+The stage report is local only (`worklog/reports/2026-10-27_S0b_finalize_and_FEVER_preflight.md`), following the owner's documentation rule.
+
+- **OD-S0-1 — tenant corrections stay warn-only.** *Approved; implemented.*
+  - A tenant's cached correction is returned as `fix_result.proposed_output`, never delivered.
+  - `reliability.proposal_source = "cache:tenant_feedback"` and `proposal_status = "UNVERIFIED_PROPOSAL"`, with the reason `tenant_correction_not_independently_verified`. The label is never FULLY_PROVENANCED.
+  - `test_a_tenant_gets_its_own_correction_back` now asserts exactly this. Its isolation assertions are kept, and one was added: the other tenant's marker never appears.
+- **OD-S0-2 — the WP-004 tripwire is unchanged.** *Approved.* `test_detector_source_files_are_untouched` fails while changes are uncommitted, as designed. It is reported separately, not as a regression.
+- **D-064 (OD-S0-4) — the dead factual-step GT call is removed.** *Approved; implemented.*
+  - `_verify_factual` no longer runs the ground-truth pipeline, whose result could never be used.
+  - It returns `method="not_checked"`.
+  - Steps carry an explicit `verification_status` (NOT_CHECKED / SUPPORTED / CONTRADICTED / INSUFFICIENT_EVIDENCE) on `ReasoningStep` and on `ReasoningStepResult`. The field is additive.
+  - `is_correct` keeps its meaning, "no failure flagged".
+- **D-065 (OD-S0-3) — the SDK never substitutes an answer.** *Approved; implemented.*
+  - **Scope.** `fie.monitor` `correct` mode, and the OpenAI and Anthropic wrappers.
+  - **Behaviour.** They always return the original answer and never mutate the provider response.
+  - **Proposals.** A suggested correction, including a legacy server's `fix_applied=True`, becomes an unverified `fie.correction.CorrectionProposal`. It is logged and passed to a new optional `on_proposal` callback.
+  - **Legacy servers.** A missing `reliability` block is never read as verification.
+  - **No switch.** There is no setting to re-enable replacement.
+  - **Documentation.** The change is documented in `CHANGELOG.md` [Unreleased] and the README.
+  - **Gap closed.** This closes gap G1.
+- **D-066 (OD-S0-5) — the historical reports are restored, with provenance.** *Approved; implemented.*
+  - The 2026-10-20 audit is restored under its original name. It is content-identical to the raw capture, sha256 `5b11f8ac…702d200c`.
+  - The plan is restored as `…experiment_plan.RECONSTRUCTED.md`, with a provenance header.
+  - See `research/reliability/2026-10-20_RECOVERY_PROVENANCE.md`.
+  - Audit v2 line 7 was corrected with a dated erratum. Links in audit v2 and the E-R1 plan now point to existing files.
+- **Part B preparation.** *Owner decisions recorded: OD-R4 FEVER, subject to preflight; OD-R5 no NLI; OD-R6 staged compute; OD-R7 thresholds retained; OD-R8 git-ignored data directory; OD-R9 folded.*
+  - The preflight is `research/reliability/2026-10-27_E-R1_partB_FEVER_preflight.md`.
+  - **Not downloaded.** Open: OD-B1 to OD-B5.
+- **Next free decision number: D-067.**
