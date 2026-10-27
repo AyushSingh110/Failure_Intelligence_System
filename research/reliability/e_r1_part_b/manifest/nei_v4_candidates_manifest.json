@@ -1,0 +1,125 @@
+{
+ "schema": "e-r1-partB-nei-v4-candidates/1",
+ "construction": "fever_nei_v4_candidates/1",
+ "script_sha256": "3b6928a9155d7cdc1a610edabc7237371f6c5a9a0154c13f4dd8d6d39c43d717",
+ "protocol_v4_sha256": "d27d0a6f34e2d8a1454397901dac198aa333ba522dfcfc649b4be02886a321fd",
+ "archive_sha256": "4b06d95da6adf7fe02d2796176c670dacccb21348da89cba4c50676ab99665f2",
+ "sealed_label_file_opened": false,
+ "claims_per_role": {
+  "smoke": 10,
+  "calibration": 120,
+  "test": 280
+ },
+ "candidate_count_distribution": {
+  "smoke": {
+   "3": 2,
+   "4": 2,
+   "5": 6
+  },
+  "calibration": {
+   "0": 1,
+   "1": 3,
+   "2": 32,
+   "3": 15,
+   "4": 13,
+   "5": 56
+  },
+  "test": {
+   "0": 5,
+   "1": 2,
+   "2": 78,
+   "3": 24,
+   "4": 24,
+   "5": 147
+  }
+ },
+ "claims_with_no_candidate": {
+  "smoke": 0,
+  "calibration": 1,
+  "test": 5
+ },
+ "generation_reason_counts": {
+  "span1_page1_lead": 404,
+  "span1_page1_later_window": 356,
+  "span2_page1_lead": 226,
+  "span3_page1_lead": 76,
+  "span4_page1_lead": 25,
+  "span2_page2_lead": 122,
+  "span2_page3_lead": 58,
+  "span1_page2_lead": 146,
+  "span1_page3_lead": 68,
+  "span1_page4_lead": 44,
+  "span2_page4_lead": 7,
+  "span1_page5_lead": 6,
+  "span5_page1_lead": 2,
+  "span3_page2_lead": 9
+ },
+ "blank_packet_sha256": {
+  "packet_smoke.csv": "436c7e219c3ea70e72fd64f1f734c32d6918da925f8af4c532ebc5dd18bad49f",
+  "packet_calibration.csv": "a0ca6acd6d7169b94e346b79652b6356ae6e1f7f51cb03afbbd91b884487964c",
+  "packet_test.csv": "61552344bce551d7ddfffcdb072b43e65095719c28407a035583c9312ff556e4",
+  "second_review_packet.csv": "000dbd83b2ae0a2bfd48745605c51b0cfcb3f619a86782e9302940dd113e9455"
+ },
+ "mapping_sha256": {
+  "mapping_smoke.json": "6b9ce45550479283bf54af9338ab16cbb99d7baaaf1352fe26701571f18a64ba",
+  "mapping_calibration.json": "6ffc32e49d95d1961848f69ac07dda3660e8f7c0478afdbb0dc62c086b7c75aa",
+  "mapping_test.json": "9b97c86337715b931c3718bde9435c3290b585d4857d13a84975696b756726ad"
+ },
+ "second_review_ids": [
+  "R4-calibration-083",
+  "R4-calibration-106",
+  "R4-calibration-094",
+  "R4-smoke-010",
+  "R4-calibration-018",
+  "R4-calibration-074",
+  "R4-calibration-057",
+  "R4-calibration-019",
+  "R4-calibration-104",
+  "R4-calibration-098",
+  "R4-calibration-004",
+  "R4-calibration-090",
+  "R4-calibration-067",
+  "R4-calibration-033",
+  "R4-calibration-061",
+  "R4-calibration-008",
+  "R4-calibration-022",
+  "R4-calibration-005",
+  "R4-calibration-002",
+  "R4-calibration-028",
+  "R4-calibration-026",
+  "R4-calibration-045",
+  "R4-calibration-119",
+  "R4-calibration-021",
+  "R4-calibration-047",
+  "R4-calibration-036",
+  "R4-calibration-038",
+  "R4-calibration-111",
+  "R4-calibration-075",
+  "R4-calibration-034",
+  "R4-calibration-086",
+  "R4-calibration-089",
+  "R4-calibration-029",
+  "R4-calibration-085",
+  "R4-calibration-052",
+  "R4-calibration-059",
+  "R4-calibration-108",
+  "R4-calibration-120",
+  "R4-calibration-088",
+  "R4-calibration-053",
+  "R4-calibration-060",
+  "R4-calibration-115",
+  "R4-calibration-087",
+  "R4-calibration-117",
+  "R4-calibration-037",
+  "R4-calibration-040",
+  "R4-calibration-103",
+  "R4-calibration-020",
+  "R4-calibration-064",
+  "R4-calibration-032"
+ ],
+ "seeds": {
+  "order": "20261027:v4-order:<role>",
+  "candidate_letters": "20261027:v4-cand",
+  "second_review": "20261027:v4-second"
+ }
+}

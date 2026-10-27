@@ -1,0 +1,26 @@
+{
+ "schema": "e-r1-partB-nei-audit/1",
+ "protocol": "PROTOCOL.md §4 (stop rule fixed before review)",
+ "reviewer": "assistant (LLM-performed review, not human); owner/human confirmation recommended",
+ "sample_file": "nei_audit_sample.json (seed 20261027:nei-audit, smoke + calibration only; no test item inspected)",
+ "materializer": "fever_materialize/2",
+ "counts": {"OK": 40, "ACCIDENTAL_SUPPORT": 2, "ACCIDENTAL_REFUTE": 2, "CONSTRUCTION_FAIL": 6},
+ "stop_rule": {"accidental_threshold": 3, "accidental_observed": 4,
+               "construction_threshold": 5, "construction_observed": 6},
+ "decision": "STOP before scoring: both thresholds met. Even counting only the two unambiguous accidental cases (#16, #44), construction failures alone trigger the stop.",
+ "items": [
+  {"n": 1,  "item_id": "calibration-52245",  "class": "CONSTRUCTION_FAIL", "why": "wrong sense: film claim matched page on lunar light; passage begins with image-caption residue 'thumb |'"},
+  {"n": 7,  "item_id": "calibration-165264", "class": "CONSTRUCTION_FAIL", "why": "misspelt name ('Phillip') left only 'Glass', matched page on the material"},
+  {"n": 11, "item_id": "calibration-71613",  "class": "CONSTRUCTION_FAIL", "why": "longest-span rule preferred 'Woman of the Year' (1942 film) over the person 'Tatum O'Neal'"},
+  {"n": 13, "item_id": "calibration-72072",  "class": "CONSTRUCTION_FAIL", "why": "film 'Mud' matched page on soil"},
+  {"n": 22, "item_id": "calibration-152285", "class": "CONSTRUCTION_FAIL", "why": "band 'Tool' matched page on hand tools"},
+  {"n": 40, "item_id": "calibration-196737", "class": "CONSTRUCTION_FAIL", "why": "film 'Marnie' matched page on the 1961 novel"},
+  {"n": 44, "item_id": "smoke-119799",       "class": "ACCIDENTAL_SUPPORT", "why": "'ran on ABC from 1968 to 1973' settles 'five years on ABC' (unambiguous)"},
+  {"n": 38, "item_id": "calibration-42725",  "class": "ACCIDENTAL_SUPPORT", "why": "'active in the late 1960s' vs 'active in September 1968' (borderline)"},
+  {"n": 16, "item_id": "calibration-135648", "class": "ACCIDENTAL_REFUTE",  "why": "'Indian socialist revolutionary' vs 'Bhagat Singh was American' (unambiguous for a typical reader)"},
+  {"n": 23, "item_id": "calibration-170955", "class": "ACCIDENTAL_REFUTE",  "why": "'Indian cricketer' vs 'Indian soccer player' (borderline: not logically exclusive)"}
+ ],
+ "borderline_ok_noted": ["#04 Jefferson 'retired' vs served 1801-1809", "#26 'architects and engineers' vs 'civil engineers'",
+                         "#34 disambiguation lists a 1995 novel", "#42 'likes music' vs musician", "#08 passage starts mid-sentence ('is a 1997 ...')"],
+ "other_items_ok": "remaining 40 related, do not settle the claim"
+}

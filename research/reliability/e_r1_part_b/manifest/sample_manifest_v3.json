@@ -1,0 +1,1008 @@
+{
+ "schema": "e-r1-partB-sample/3",
+ "construction": "fever_nei/3",
+ "script_sha256": "491cd9c625c652a41dcabac074c69464c0917b3673a4f47071b1593a5fea5bbf",
+ "base_selection": "fever_materialize/2 (imported)",
+ "v2_script_sha256": "0f05f986943a82f077ccc63575cf81694c301ea356e06dabf39711462f3aeda0",
+ "archive_sha256": "4b06d95da6adf7fe02d2796176c670dacccb21348da89cba4c50676ab99665f2",
+ "span_keys": 5200,
+ "candidate_bases_found": 1164,
+ "candidate_pages_total": 6582,
+ "counts": {
+  "calibration|NEI": 80,
+  "calibration|gold": 240,
+  "smoke|NEI": 6,
+  "smoke|gold": 20,
+  "test|NEI": 189,
+  "test|gold": 560
+ },
+ "nei_change_vs_v2": {
+  "nei_same_page": 134,
+  "nei_dropped_by_v3": 126,
+  "nei_page_changed": 141
+ },
+ "excluded": [
+  {
+   "item_id": "smoke-203694",
+   "fever_id": 203694,
+   "role": "smoke",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 10
+  },
+  {
+   "item_id": "smoke-189893",
+   "fever_id": 189893,
+   "role": "smoke",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 9
+  },
+  {
+   "item_id": "smoke-24408",
+   "fever_id": 24408,
+   "role": "smoke",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 19
+  },
+  {
+   "item_id": "smoke-14514",
+   "fever_id": 14514,
+   "role": "smoke",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 32
+  },
+  {
+   "item_id": "calibration-60917",
+   "fever_id": 60917,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "calibration-76736",
+   "fever_id": 76736,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 5
+  },
+  {
+   "item_id": "calibration-147230",
+   "fever_id": 147230,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 76
+  },
+  {
+   "item_id": "calibration-91755",
+   "fever_id": 91755,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 18
+  },
+  {
+   "item_id": "calibration-219044",
+   "fever_id": 219044,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 12
+  },
+  {
+   "item_id": "calibration-139191",
+   "fever_id": 139191,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "calibration-152285",
+   "fever_id": 152285,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "calibration-116550",
+   "fever_id": 116550,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "calibration-110544",
+   "fever_id": 110544,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 5
+  },
+  {
+   "item_id": "calibration-60840",
+   "fever_id": 60840,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 21
+  },
+  {
+   "item_id": "calibration-72546",
+   "fever_id": 72546,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "calibration-34979",
+   "fever_id": 34979,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 7
+  },
+  {
+   "item_id": "calibration-135648",
+   "fever_id": 135648,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 10
+  },
+  {
+   "item_id": "calibration-102608",
+   "fever_id": 102608,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "calibration-138460",
+   "fever_id": 138460,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 19
+  },
+  {
+   "item_id": "calibration-106899",
+   "fever_id": 106899,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 11
+  },
+  {
+   "item_id": "calibration-193400",
+   "fever_id": 193400,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 18
+  },
+  {
+   "item_id": "calibration-69902",
+   "fever_id": 69902,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 8
+  },
+  {
+   "item_id": "calibration-123235",
+   "fever_id": 123235,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "calibration-69916",
+   "fever_id": 69916,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "calibration-166649",
+   "fever_id": 166649,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 14
+  },
+  {
+   "item_id": "calibration-143527",
+   "fever_id": 143527,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 45
+  },
+  {
+   "item_id": "calibration-171079",
+   "fever_id": 171079,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 14
+  },
+  {
+   "item_id": "calibration-204340",
+   "fever_id": 204340,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "calibration-146557",
+   "fever_id": 146557,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 19
+  },
+  {
+   "item_id": "calibration-111416",
+   "fever_id": 111416,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 7
+  },
+  {
+   "item_id": "calibration-90348",
+   "fever_id": 90348,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 8
+  },
+  {
+   "item_id": "calibration-117478",
+   "fever_id": 117478,
+   "role": "calibration",
+   "reason": "no_candidate",
+   "candidates_considered": 0
+  },
+  {
+   "item_id": "calibration-116653",
+   "fever_id": 116653,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "calibration-28666",
+   "fever_id": 28666,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "calibration-16202",
+   "fever_id": 16202,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "calibration-4747",
+   "fever_id": 4747,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "calibration-165264",
+   "fever_id": 165264,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 10
+  },
+  {
+   "item_id": "calibration-757",
+   "fever_id": 757,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 14
+  },
+  {
+   "item_id": "calibration-160417",
+   "fever_id": 160417,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "calibration-89354",
+   "fever_id": 89354,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 11
+  },
+  {
+   "item_id": "calibration-225293",
+   "fever_id": 225293,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 5
+  },
+  {
+   "item_id": "calibration-101000",
+   "fever_id": 101000,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 19
+  },
+  {
+   "item_id": "calibration-145385",
+   "fever_id": 145385,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 12
+  },
+  {
+   "item_id": "calibration-112392",
+   "fever_id": 112392,
+   "role": "calibration",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 21
+  },
+  {
+   "item_id": "test-99367",
+   "fever_id": 99367,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 16
+  },
+  {
+   "item_id": "test-188138",
+   "fever_id": 188138,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 9
+  },
+  {
+   "item_id": "test-161724",
+   "fever_id": 161724,
+   "role": "test",
+   "reason": "no_candidate",
+   "candidates_considered": 0
+  },
+  {
+   "item_id": "test-131785",
+   "fever_id": 131785,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 16
+  },
+  {
+   "item_id": "test-221141",
+   "fever_id": 221141,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 8
+  },
+  {
+   "item_id": "test-192787",
+   "fever_id": 192787,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 24
+  },
+  {
+   "item_id": "test-78562",
+   "fever_id": 78562,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-160664",
+   "fever_id": 160664,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-220973",
+   "fever_id": 220973,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 12
+  },
+  {
+   "item_id": "test-93858",
+   "fever_id": 93858,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 22
+  },
+  {
+   "item_id": "test-224570",
+   "fever_id": 224570,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 23
+  },
+  {
+   "item_id": "test-57989",
+   "fever_id": 57989,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "test-104276",
+   "fever_id": 104276,
+   "role": "test",
+   "reason": "no_candidate",
+   "candidates_considered": 0
+  },
+  {
+   "item_id": "test-150650",
+   "fever_id": 150650,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 10
+  },
+  {
+   "item_id": "test-178895",
+   "fever_id": 178895,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-195205",
+   "fever_id": 195205,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 12
+  },
+  {
+   "item_id": "test-225816",
+   "fever_id": 225816,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 9
+  },
+  {
+   "item_id": "test-31256",
+   "fever_id": 31256,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "test-71381",
+   "fever_id": 71381,
+   "role": "test",
+   "reason": "no_candidate",
+   "candidates_considered": 0
+  },
+  {
+   "item_id": "test-156623",
+   "fever_id": 156623,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-5787",
+   "fever_id": 5787,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 22
+  },
+  {
+   "item_id": "test-223298",
+   "fever_id": 223298,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 13
+  },
+  {
+   "item_id": "test-6943",
+   "fever_id": 6943,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "test-134468",
+   "fever_id": 134468,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-100345",
+   "fever_id": 100345,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-92801",
+   "fever_id": 92801,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-116054",
+   "fever_id": 116054,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-60399",
+   "fever_id": 60399,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-95485",
+   "fever_id": 95485,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 18
+  },
+  {
+   "item_id": "test-39411",
+   "fever_id": 39411,
+   "role": "test",
+   "reason": "no_candidate",
+   "candidates_considered": 0
+  },
+  {
+   "item_id": "test-23460",
+   "fever_id": 23460,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 14
+  },
+  {
+   "item_id": "test-50700",
+   "fever_id": 50700,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "test-222168",
+   "fever_id": 222168,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 8
+  },
+  {
+   "item_id": "test-211869",
+   "fever_id": 211869,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-96309",
+   "fever_id": 96309,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-86055",
+   "fever_id": 86055,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 11
+  },
+  {
+   "item_id": "test-146202",
+   "fever_id": 146202,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 8
+  },
+  {
+   "item_id": "test-144067",
+   "fever_id": 144067,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 22
+  },
+  {
+   "item_id": "test-120065",
+   "fever_id": 120065,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 37
+  },
+  {
+   "item_id": "test-127652",
+   "fever_id": 127652,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 22
+  },
+  {
+   "item_id": "test-80328",
+   "fever_id": 80328,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 10
+  },
+  {
+   "item_id": "test-227772",
+   "fever_id": 227772,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-140523",
+   "fever_id": 140523,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 30
+  },
+  {
+   "item_id": "test-90458",
+   "fever_id": 90458,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-144927",
+   "fever_id": 144927,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "test-148053",
+   "fever_id": 148053,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "test-65850",
+   "fever_id": 65850,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 36
+  },
+  {
+   "item_id": "test-33663",
+   "fever_id": 33663,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 12
+  },
+  {
+   "item_id": "test-185993",
+   "fever_id": 185993,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "test-79157",
+   "fever_id": 79157,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 14
+  },
+  {
+   "item_id": "test-201597",
+   "fever_id": 201597,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 47
+  },
+  {
+   "item_id": "test-86904",
+   "fever_id": 86904,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 30
+  },
+  {
+   "item_id": "test-223283",
+   "fever_id": 223283,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 19
+  },
+  {
+   "item_id": "test-216797",
+   "fever_id": 216797,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "test-160366",
+   "fever_id": 160366,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 10
+  },
+  {
+   "item_id": "test-44874",
+   "fever_id": 44874,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "test-43586",
+   "fever_id": 43586,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 13
+  },
+  {
+   "item_id": "test-129074",
+   "fever_id": 129074,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 2
+  },
+  {
+   "item_id": "test-30756",
+   "fever_id": 30756,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 7
+  },
+  {
+   "item_id": "test-86080",
+   "fever_id": 86080,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 7
+  },
+  {
+   "item_id": "test-188966",
+   "fever_id": 188966,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 18
+  },
+  {
+   "item_id": "test-104693",
+   "fever_id": 104693,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "test-52565",
+   "fever_id": 52565,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 5
+  },
+  {
+   "item_id": "test-20502",
+   "fever_id": 20502,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 28
+  },
+  {
+   "item_id": "test-62419",
+   "fever_id": 62419,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 25
+  },
+  {
+   "item_id": "test-91007",
+   "fever_id": 91007,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-53734",
+   "fever_id": 53734,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-86172",
+   "fever_id": 86172,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-129927",
+   "fever_id": 129927,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 25
+  },
+  {
+   "item_id": "test-154054",
+   "fever_id": 154054,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 14
+  },
+  {
+   "item_id": "test-2191",
+   "fever_id": 2191,
+   "role": "test",
+   "reason": "no_candidate",
+   "candidates_considered": 0
+  },
+  {
+   "item_id": "test-180693",
+   "fever_id": 180693,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-44075",
+   "fever_id": 44075,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 5
+  },
+  {
+   "item_id": "test-84332",
+   "fever_id": 84332,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 43
+  },
+  {
+   "item_id": "test-93664",
+   "fever_id": 93664,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-14385",
+   "fever_id": 14385,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 16
+  },
+  {
+   "item_id": "test-27002",
+   "fever_id": 27002,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 40
+  },
+  {
+   "item_id": "test-76488",
+   "fever_id": 76488,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 28
+  },
+  {
+   "item_id": "test-164900",
+   "fever_id": 164900,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "test-189861",
+   "fever_id": 189861,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 6
+  },
+  {
+   "item_id": "test-52326",
+   "fever_id": 52326,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 3
+  },
+  {
+   "item_id": "test-64190",
+   "fever_id": 64190,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 1
+  },
+  {
+   "item_id": "test-86444",
+   "fever_id": 86444,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 23
+  },
+  {
+   "item_id": "test-83367",
+   "fever_id": 83367,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 26
+  },
+  {
+   "item_id": "test-99655",
+   "fever_id": 99655,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 20
+  },
+  {
+   "item_id": "test-201591",
+   "fever_id": 201591,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 24
+  },
+  {
+   "item_id": "test-185773",
+   "fever_id": 185773,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  },
+  {
+   "item_id": "test-30304",
+   "fever_id": 30304,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 7
+  },
+  {
+   "item_id": "test-89911",
+   "fever_id": 89911,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 5
+  },
+  {
+   "item_id": "test-62343",
+   "fever_id": 62343,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 30
+  },
+  {
+   "item_id": "test-80504",
+   "fever_id": 80504,
+   "role": "test",
+   "reason": "no_defensible_page_overlap_0",
+   "candidates_considered": 4
+  }
+ ],
+ "excluded_counts": {
+  "smoke|no_defensible_page_overlap_0": 4,
+  "calibration|no_defensible_page_overlap_0": 39,
+  "calibration|no_candidate": 1,
+  "test|no_defensible_page_overlap_0": 86,
+  "test|no_candidate": 5
+ },
+ "derived_files": {
+  "calibration.jsonl": {
+   "sha256": "af03892332f383a2b325a8a7ec7af2debffd345f373e97c905e8694a2f0de22a",
+   "bytes": 299455,
+   "rows": 320
+  },
+  "smoke.jsonl": {
+   "sha256": "d13c189b8b33e9698fdb08a0304dc53054f1408664457d593de367b6ab914e5b",
+   "bytes": 20830,
+   "rows": 26
+  },
+  "test_sealed.jsonl": {
+   "sha256": "354310522db3dfc26d55084e116cd254e032b5c7b244cfa0c7aef78d6a160932",
+   "bytes": 678959,
+   "rows": 749
+  },
+  "test_sealed_labels.jsonl": {
+   "sha256": "67b4ed84b9547f2ab33f6fc4703600fbfd9013face6e121e8d05d35d84e5c3ed",
+   "bytes": 37387,
+   "rows": 749
+  }
+ },
+ "rules": {
+  "lead_sentences": 2,
+  "stop_words": 105,
+  "stemmer": "strip ing/ed/es/s if len>4",
+  "artefact_regex": "^\\s*(thumb|left|right|upright|frame)\\b[^|]*\\|",
+  "disambiguation_page_regex": "\\bmay (also )?refer to\\b",
+  "tie_break": "score, span tokens, undisambiguated, title order"
+ }
+}
