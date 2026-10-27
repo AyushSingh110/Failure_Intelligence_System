@@ -30,7 +30,7 @@ SCHEMA = "e-r1-part-a/1"
 
 CHILD = r'''
 import json, os, sys
-repo, legacy_path, out_path, log_path = sys.argv[1:5]
+repo, legacy_path, legacy_step_path, out_path, log_path = sys.argv[1:6]
 sys.path[:0] = [repo, os.path.join(repo, "tests")]
 os.chdir(repo)
 from evals import hermetic
@@ -42,15 +42,16 @@ logging.disable(logging.CRITICAL)
 from reliability.e_r1_part_a import CASES, observe
 from reliability.harness import load_route_from_source
 legacy = load_route_from_source(open(legacy_path, encoding="utf-8").read(), "legacy_monitor_b0")
+legacy_step = load_route_from_source(open(legacy_step_path, encoding="utf-8").read(), "legacy_step_verifier_b0")
 
 rows = []
 for case in CASES:
     row = {"id": case.id, "fixture": case.fixture, "title": case.title,
            "unknown_input": case.unknown_input, "source_ref": case.source_ref,
            "b0_expected": sorted(case.b0_expected)}
-    for label, route in (("B2", None), ("B0", legacy)):
+    for label, route, step in (("B2", None, None), ("B0", legacy, legacy_step)):
         try:
-            row[label] = observe(case) if case.function is not None else observe(case, route)
+            row[label] = observe(case, step_module=step) if case.function is not None else observe(case, route)
         except Exception as exc:
             row[label] = {"error": f"{type(exc).__name__}: {exc}", "violations": ["error"]}
     rows.append(row)
@@ -79,6 +80,9 @@ def main() -> int:
         scratch = Path(scratch)
         legacy = scratch / "legacy_monitor.py"
         legacy.write_text(_git("show", f"{LEGACY_COMMIT}:app/routes/monitor.py"), encoding="utf-8")
+        legacy_step = scratch / "legacy_step_verifier.py"
+        legacy_step.write_text(_git("show", f"{LEGACY_COMMIT}:engine/reasoning/step_verifier.py"),
+                               encoding="utf-8")
         child_out, child_log = scratch / "child.json", scratch / "guard_events.jsonl"
         hf_home = os.environ.get("HF_HOME") or str(Path.home() / ".cache" / "huggingface")
         env = sanitized_env(os.environ, {
@@ -89,7 +93,8 @@ def main() -> int:
             "OLLAMA_ENABLED": "false", "DEBUG": "false",
         }, scratch)
         proc = subprocess.run(
-            [sys.executable, "-I", "-c", CHILD, str(REPO), str(legacy), str(child_out), str(child_log)],
+            [sys.executable, "-I", "-c", CHILD, str(REPO), str(legacy), str(legacy_step), str(child_out),
+             str(child_log)],
             cwd=REPO, env=env, capture_output=True, text=True, encoding="utf-8", timeout=1800,
         )
         if proc.returncode != 0 or not child_out.exists():
@@ -98,16 +103,15 @@ def main() -> int:
         result = json.loads(child_out.read_text(encoding="utf-8"))
 
     rows = result["rows"]
-    b2_fail = [r["id"] for r in rows
-               if (r["B2"].get("violations") if r["fixture"] != "A17"
-                   else ([] if r["B2"].get("contract_state") == "NOT_CHECKED" else ["contract_state"]))]
+    b2_fail = [r["id"] for r in rows if r["B2"].get("violations")]
     b0_mismatch = [r["id"] for r in rows if sorted(r["B0"].get("violations", [])) != r["b0_expected"]]
     doc = {
         "schema": SCHEMA,
         "run_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "head": _git("rev-parse", "HEAD").strip(),
         "working_tree_dirty": bool(_git("status", "--porcelain").strip()),
-        "b0_route_source": f"{LEGACY_COMMIT}:app/routes/monitor.py",
+        "b0_sources": [f"{LEGACY_COMMIT}:app/routes/monitor.py",
+                       f"{LEGACY_COMMIT}:engine/reasoning/step_verifier.py"],
         "python": sys.version.split()[0],
         "guard": result["guard"],
         "guard_selftest": result["selftest"],

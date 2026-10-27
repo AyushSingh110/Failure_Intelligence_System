@@ -182,25 +182,31 @@ CASES: list[Case] = [
 
 # ── A17: reasoning-step factual branch (function level) ──────────────────────
 
-def a17_factual_step() -> dict:
+PIPELINE_SOURCES = ["Wikidata (Q11035)", "Wikidata confirmed: Wikidata (Q11035)",
+                    "Google Search via Serper.dev", "Serper confirmed: Google Search via Serper.dev",
+                    "GT Cache (serper)", "shadow_consensus", "self_consistency_factual", "none"]
+
+
+def a17_factual_step(step_module: Optional[types.ModuleType] = None) -> dict:
     """
-    engine/reasoning/step_verifier.py:_verify_factual tests gt.source against
-    ("wikidata", "serper"), strings the pipeline never emits, so every GT result
-    falls through to is_correct=True, confidence=0.0. Feed it a confident,
-    contradicting GT result and record what comes back.
+    Run verify_steps() on one factual premise, with the ground-truth pipeline
+    replaced by a confident, contradicting result, and count pipeline calls.
+
+    B0 (step_verifier before D-064): the pipeline is called, then discarded
+    because its guard tests gt.source against "wikidata"/"serper", strings the
+    pipeline never emits (PIPELINE_SOURCES); the step is is_correct=True with no
+    status. B2: no call, verification_status NOT_CHECKED.
     """
-    import engine.reasoning.step_verifier as sv
+    import engine.reasoning.step_verifier as current
     import engine.verifier.ground_truth_pipeline as gtp
     from engine.reasoning.chain_decomposer import ReasoningStep
-    from engine.reliability_contract import step_evidence_state
     from .harness import Patcher
 
-    emitted_sources = ["Wikidata (Q11035)", "Wikidata confirmed: Wikidata (Q11035)",
-                       "Google Search via Serper.dev", "Serper confirmed: Google Search via Serper.dev",
-                       "GT Cache (serper)", "shadow_consensus", "self_consistency_factual", "none"]
-    reachable = [s for s in emitted_sources if s in ("wikidata", "serper")]
+    sv = step_module or current
+    calls: list[dict] = []
 
     def fake_pipeline(**kwargs):
+        calls.append(kwargs)
         return gtp.GroundTruthPipelineResult(
             verified_answer="Alexander Graham Bell", confidence=0.95, source="Wikidata (Q11035)",
         )
@@ -209,31 +215,36 @@ def a17_factual_step() -> dict:
     try:
         p.setattr(gtp, "run_ground_truth_pipeline", fake_pipeline)
         step = ReasoningStep(index=1, text="Thomas Edison invented the telephone.", step_type="FACTUAL_PREMISE")
-        r = sv._verify_factual(step, FACTUAL_Q, [], [], use_external=True)
+        step.verification_status = None            # detect whether the verifier sets it
+        [r] = sv.verify_steps([step], FACTUAL_Q, [], [], use_groq=True)
     finally:
         p.undo()
     return {
-        "is_correct": r.is_correct, "confidence": r.confidence, "method": r.method,
-        "branch_reachable_sources": reachable,
-        "contract_state": step_evidence_state(r.is_correct, r.confidence, r.method).value,
+        "is_correct": step.is_correct, "confidence": r.confidence, "method": r.method,
+        "verification_status": step.verification_status,
+        "pipeline_calls": len(calls),
+        "branch_reachable_sources": [s for s in PIPELINE_SOURCES if s in ("wikidata", "serper")],
     }
 
 
 CASES.append(Case("A17", "A17", "Reasoning factual step with a confident contradicting GT result", True,
                   function=a17_factual_step,
-                  source_ref="engine/reasoning/step_verifier.py:225 dead branch",
-                  b0_expected=frozenset({"unchecked_reported_correct"})))
+                  source_ref="engine/reasoning/step_verifier.py _verify_factual (dead branch, removed by D-064)",
+                  b0_expected=frozenset({"unchecked_reported_correct", "discarded_gt_call"})))
 
 
 # ── observation ──────────────────────────────────────────────────────────────
 
-def observe(case: Case, route_module: Optional[types.ModuleType] = None) -> dict:
+def observe(case: Case, route_module: Optional[types.ModuleType] = None,
+            step_module: Optional[types.ModuleType] = None) -> dict:
     if case.function is not None:
-        out = case.function()
+        out = case.function(step_module)
         violations = []
-        if out["is_correct"] and out["confidence"] == 0.0 and not out["branch_reachable_sources"]:
+        if out["is_correct"] and out["verification_status"] != "NOT_CHECKED" and out["confidence"] == 0.0:
             violations.append("unchecked_reported_correct")
-        if out["contract_state"] == "SUPPORTED":
+        if out["pipeline_calls"]:
+            violations.append("discarded_gt_call")
+        if out["verification_status"] == "SUPPORTED":
             violations.append("supported")
         out["violations"] = violations
         return out
@@ -243,11 +254,19 @@ def observe(case: Case, route_module: Optional[types.ModuleType] = None) -> dict
     r = outcome.response
     rel = r.reliability
     gt = r.ground_truth
-    delivered = delivered_by_sdk(r.model_dump(), sc.primary)
+    # Two views of "replaced": what the server instructs (any pre-D-065 SDK obeys
+    # fix_applied=True with a different fixed_output) and what the current SDK
+    # actually returns. Either one is a replacement.
+    fix = r.fix_result
+    server_replaced = bool(fix and fix.fix_applied and fix.fixed_output and fix.fixed_output != sc.primary)
+    sdk_delivered = delivered_by_sdk(r.model_dump(), sc.primary)
+    delivered = fix.fixed_output if server_replaced else sdk_delivered
     shadow_answers = sum(1 for s in sc.shadows if s.success and s.text)
     obs = {
         "delivered":             delivered[:160],
-        "replaced":              delivered != sc.primary,
+        "server_replaced":       server_replaced,
+        "sdk_replaced":          sdk_delivered != sc.primary,
+        "replaced":              server_replaced or sdk_delivered != sc.primary,
         "fix_strategy":          r.fix_result.fix_strategy if r.fix_result else "",
         "fix_applied":           bool(r.fix_result and r.fix_result.fix_applied),
         "proposed_output":       (r.fix_result.proposed_output if r.fix_result else "")[:160],

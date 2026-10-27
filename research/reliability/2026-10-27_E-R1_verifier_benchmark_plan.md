@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-10-27 · **Status:** draft for owner review. Nothing has been run, downloaded or created.
 **Parent:** [2026-10-27_output_reliability_audit_v2.md](2026-10-27_output_reliability_audit_v2.md) (§7–§9)
-**Supersedes, if OD-R9 is approved:** [2026-10-20_verifier_replay_experiment_plan.md](2026-10-20_verifier_replay_experiment_plan.md), folded in as Part A. That file is left unchanged.
+**Supersedes, if OD-R9 is approved:** [2026-10-20_verifier_replay_experiment_plan.RECONSTRUCTED.md](2026-10-20_verifier_replay_experiment_plan.RECONSTRUCTED.md), folded in as Part A. That file is left unchanged. *(Link corrected 2026-10-27, OD-S0-5: the original file no longer exists; this is its reconstruction. OD-R9 was approved.)*
 **Workstream:** B only. No C2 artifact, canonical baseline, threshold, model or production file is touched.
 
 ## 1. Research questions

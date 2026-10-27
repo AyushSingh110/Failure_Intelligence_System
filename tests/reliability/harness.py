@@ -153,8 +153,10 @@ def _jury(root_cause: str, confidence: float):
 
 def load_route_from_source(source: str, name: str) -> types.ModuleType:
     """Execute a historical app/routes/monitor.py next to the current engine (B0)."""
+    import sys
     module = types.ModuleType(name)
     module.__file__ = f"<{name}>"
+    sys.modules[name] = module   # dataclasses resolve string annotations through sys.modules
     exec(compile(source, f"<{name}>", "exec"), module.__dict__)
     return module
 
@@ -247,14 +249,15 @@ def _claim(spec, text):
     return ExtractedClaim(subject=subject, property=prop, value=value, raw_text=text)
 
 
-def delivered_by_sdk(response_dict: dict, primary_output: str) -> str:
+def delivered_by_sdk(response_dict: dict, primary_output: str, on_proposal=None,
+                     sdk_module: Optional[types.ModuleType] = None) -> str:
     """
     What fie/monitor.py's `correct` mode returns for this server response: the
     real correct_wrapper is run with the FIE client replaced by one that returns
     `response_dict`.
     """
     # `fie.monitor` the attribute is the decorator; the module is in sys.modules.
-    sdk = importlib.import_module("fie.monitor")
+    sdk = sdk_module or importlib.import_module("fie.monitor")
 
     class _Client:
         def __init__(self, config):
@@ -273,7 +276,10 @@ def delivered_by_sdk(response_dict: dict, primary_output: str) -> str:
         p.setattr(sdk, "preflight_check",
                   lambda prompt, domain=None: types.SimpleNamespace(blocked=False, attack_type=None))
 
-        @sdk.monitor(fie_url="http://127.0.0.1:9", api_key="fixture", mode="correct", log_results=False)
+        extra = {"on_proposal": on_proposal} if on_proposal is not None else {}   # legacy SDK lacks it
+
+        @sdk.monitor(fie_url="http://127.0.0.1:9", api_key="fixture", mode="correct", log_results=False,
+                     **extra)
         def model(prompt: str) -> str:
             return primary_output
 

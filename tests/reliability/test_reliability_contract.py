@@ -256,10 +256,26 @@ def test_sdk_correct_mode_returns_original_for_a_contained_response():
     assert delivered_by_sdk({"fix_result": delivered.model_dump()}, "primary") == "primary"
 
 
-def test_b0_sdk_correct_mode_still_substitutes_a_legacy_response():
-    """Residual risk, documented: an SDK talking to a server without D-060 still substitutes."""
+def test_sdk_no_longer_substitutes_a_legacy_response():
+    """G1 closed by D-065: a legacy fix_applied=True response is not obeyed."""
     from .harness import delivered_by_sdk
-    assert delivered_by_sdk({"fix_result": _fix().model_dump()}, "primary") == "candidate"
+    assert delivered_by_sdk({"fix_result": _fix().model_dump()}, "primary") == "primary"
+
+
+def test_b0_pre_d065_sdk_substituted_a_legacy_response():
+    """B0: fie/monitor.py at f0888bb returned the server's fixed_output."""
+    import subprocess
+    from pathlib import Path
+
+    from .harness import delivered_by_sdk, load_route_from_source
+    try:
+        source = subprocess.run(["git", "show", "f0888bb:fie/monitor.py"], capture_output=True, text=True,
+                                encoding="utf-8", check=True, timeout=30,
+                                cwd=Path(__file__).resolve().parents[2]).stdout
+    except (OSError, subprocess.SubprocessError):
+        pytest.skip("pre-D-065 SDK source not in this checkout")
+    legacy_sdk = load_route_from_source(source, "legacy_fie_monitor_f0888bb")
+    assert delivered_by_sdk({"fix_result": _fix().model_dump()}, "primary", sdk_module=legacy_sdk) == "candidate"
 
 
 def test_reliability_states_are_disjoint_from_workstream_a_decisions():

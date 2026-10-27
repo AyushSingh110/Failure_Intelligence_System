@@ -213,6 +213,10 @@ class ReliabilityAssessment(BaseModel):
     warn_only:          bool = True
     correction_applied: bool = False
     proposed_strategy:  str  = ""
+    # Where a proposed correction came from, e.g. "cache:tenant_feedback", and its
+    # status. Every proposal is UNVERIFIED_PROPOSAL while the monitor is warn-only.
+    proposal_source:    str  = ""
+    proposal_status:    str  = ""
     ensemble_available: bool = True
     shadow_responses:   int  = 0
 
@@ -293,6 +297,9 @@ class ReasoningStepResult(BaseModel):
     is_correct:   bool  = True
     confidence:   float = Field(default=0.0, ge=0.0, le=1.0)
     failure_note: str   = ""
+    # D-064: is_correct=True means "no failure flagged", not "verified". This field
+    # says what was established: NOT_CHECKED | SUPPORTED | CONTRADICTED | INSUFFICIENT_EVIDENCE.
+    verification_status: str = "NOT_CHECKED"
 
 
 class ReasoningVerification(BaseModel):

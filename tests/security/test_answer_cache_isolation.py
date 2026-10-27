@@ -57,11 +57,30 @@ def _correct(actor, key: str, question: str = QUESTION) -> None:
 # ── End to end ────────────────────────────────────────────────────────────────
 
 def test_a_tenant_gets_its_own_correction_back(a, cache_path):
+    """
+    Isolation: the tenant's own correction, and only its own, comes back.
+
+    D-060 / OD-S0-1 (owner decision 2026-10-27): the monitor is warn-only, and a
+    tenant correction is not exempt. Until then this test asserted the correction
+    replaced the answer (fix_result.fixed_output). Now the original answer is
+    delivered and the correction is returned as an unverified proposal whose
+    source is the tenant's feedback.
+    """
     _correct(a, "a")
     body = _ask(a)
     assert body["ground_truth"]["from_cache"] is True
     assert body["ground_truth"]["verified_answer"] == MARK["a"]["fix"]
-    assert body["fix_result"]["fixed_output"] == MARK["a"]["fix"]
+    assert MARK["b"]["fix"] not in str(body)
+
+    fix, rel = body["fix_result"], body["reliability"]
+    assert fix["fixed_output"] == WRONG and fix["fix_applied"] is False
+    assert fix["proposed_output"] == MARK["a"]["fix"]
+    assert rel["proposal_source"] == "cache:tenant_feedback"
+    assert rel["proposal_status"] == "UNVERIFIED_PROPOSAL"
+    assert rel["correction_applied"] is False
+    assert rel["evidence_state"] != "SUPPORTED" and rel["answer_action"] != "PASS_VERIFIED"
+    assert "tenant_correction_not_independently_verified" in rel["reasons"]
+    assert body["failure_signal_vector"]["provenance_label"] != "FULLY_PROVENANCED"
 
 
 def test_cache_a_writes_b_misses(a, b, cache_path):

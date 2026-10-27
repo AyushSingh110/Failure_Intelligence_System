@@ -1708,3 +1708,37 @@ Workstream B is the output monitor. It is kept separate from Workstream A (the i
 - **OD-S0-4:** the dead factual-step GT call.
 - **OD-S0-5:** the audit v2 erratum and restoring the 2026-10-20 files.
 - **Part B:** OD-R4 to OD-R8.
+
+*S0 was committed by the owner as `1bad753`. The open items above were decided on 2026-10-27, below.*
+
+### 15.5 S0 finalisation (2026-10-27) — implemented, awaiting review, NOT COMMITTED
+
+The stage report is local only (`worklog/reports/2026-10-27_S0b_finalize_and_FEVER_preflight.md`), following the owner's documentation rule.
+
+- **OD-S0-1 — tenant corrections stay warn-only.** *Approved; implemented.*
+  - A tenant's cached correction is returned as `fix_result.proposed_output`, never delivered.
+  - `reliability.proposal_source = "cache:tenant_feedback"` and `proposal_status = "UNVERIFIED_PROPOSAL"`, with the reason `tenant_correction_not_independently_verified`. The label is never FULLY_PROVENANCED.
+  - `test_a_tenant_gets_its_own_correction_back` now asserts exactly this. Its isolation assertions are kept, and one was added: the other tenant's marker never appears.
+- **OD-S0-2 — the WP-004 tripwire is unchanged.** *Approved.* `test_detector_source_files_are_untouched` fails while changes are uncommitted, as designed. It is reported separately, not as a regression.
+- **D-064 (OD-S0-4) — the dead factual-step GT call is removed.** *Approved; implemented.*
+  - `_verify_factual` no longer runs the ground-truth pipeline, whose result could never be used.
+  - It returns `method="not_checked"`.
+  - Steps carry an explicit `verification_status` (NOT_CHECKED / SUPPORTED / CONTRADICTED / INSUFFICIENT_EVIDENCE) on `ReasoningStep` and on `ReasoningStepResult`. The field is additive.
+  - `is_correct` keeps its meaning, "no failure flagged".
+- **D-065 (OD-S0-3) — the SDK never substitutes an answer.** *Approved; implemented.*
+  - **Scope.** `fie.monitor` `correct` mode, and the OpenAI and Anthropic wrappers.
+  - **Behaviour.** They always return the original answer and never mutate the provider response.
+  - **Proposals.** A suggested correction, including a legacy server's `fix_applied=True`, becomes an unverified `fie.correction.CorrectionProposal`. It is logged and passed to a new optional `on_proposal` callback.
+  - **Legacy servers.** A missing `reliability` block is never read as verification.
+  - **No switch.** There is no setting to re-enable replacement.
+  - **Documentation.** The change is documented in `CHANGELOG.md` [Unreleased] and the README.
+  - **Gap closed.** This closes gap G1.
+- **D-066 (OD-S0-5) — the historical reports are restored, with provenance.** *Approved; implemented.*
+  - The 2026-10-20 audit is restored under its original name. It is content-identical to the raw capture, sha256 `5b11f8ac…702d200c`.
+  - The plan is restored as `…experiment_plan.RECONSTRUCTED.md`, with a provenance header.
+  - See `research/reliability/2026-10-20_RECOVERY_PROVENANCE.md`.
+  - Audit v2 line 7 was corrected with a dated erratum. Links in audit v2 and the E-R1 plan now point to existing files.
+- **Part B preparation.** *Owner decisions recorded: OD-R4 FEVER, subject to preflight; OD-R5 no NLI; OD-R6 staged compute; OD-R7 thresholds retained; OD-R8 git-ignored data directory; OD-R9 folded.*
+  - The preflight is `research/reliability/2026-10-27_E-R1_partB_FEVER_preflight.md`.
+  - **Not downloaded.** Open: OD-B1 to OD-B5.
+- **Next free decision number: D-067.**

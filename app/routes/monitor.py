@@ -287,6 +287,7 @@ def monitor(
                         is_correct   = s.is_correct,
                         confidence   = s.confidence,
                         failure_note = s.failure_note,
+                        verification_status = getattr(s, "verification_status", "NOT_CHECKED"),
                     )
                     for s in _rr.steps
                 ],
@@ -702,8 +703,16 @@ def monitor(
         _assessment.state, _assessment.verifier,
         requires_human_review, signal.high_failure_risk,
     )
+    _proposal_source = ""
+    if _proposed_output:
+        _proposal_source = (
+            f"cache:{gt_pipeline_result.cache_source_class or 'unknown'}"
+            if _assessment.verifier == "cache" else _proposed_strategy
+        )
     from app.schemas import ReliabilityAssessment
     reliability_schema = ReliabilityAssessment(
+        proposal_source    = _proposal_source,
+        proposal_status    = "UNVERIFIED_PROPOSAL" if _proposed_output else "",
         evidence_state     = _assessment.state.value,
         answer_action      = _action.value,
         verifier           = _assessment.verifier,

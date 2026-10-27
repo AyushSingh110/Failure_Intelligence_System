@@ -85,34 +85,43 @@ def test_a_contained_correction_is_reported_not_lost(case):
     assert not obs["failure_summary"].startswith("AUTO-FIXED")
 
 
-def test_a17_unchecked_reasoning_step_is_not_checked_not_correct():
+def test_a17_unchecked_reasoning_step_is_not_checked_and_makes_no_call():
+    """D-064: the dead ground-truth call is gone and the step says NOT_CHECKED."""
     case = next(c for c in CASES if c.id == "A17")
     obs = observe(case)
-    # The production function is unchanged (documented gap): it still says
-    # is_correct=True with confidence 0. The contract classifies that result.
+    assert obs["violations"] == [], obs
+    assert obs["pipeline_calls"] == 0
+    assert (obs["verification_status"], obs["method"], obs["confidence"]) == ("NOT_CHECKED", "not_checked", 0.0)
     assert obs["branch_reachable_sources"] == []
-    assert (obs["is_correct"], obs["confidence"], obs["method"]) == (True, 0.0, "no_external_source")
-    assert obs["contract_state"] == "NOT_CHECKED"
 
 
-def _legacy_route():
+def test_a17_b0_step_verifier_made_a_discarded_call(legacy_step_verifier):
+    case = next(c for c in CASES if c.id == "A17")
+    obs = observe(case, step_module=legacy_step_verifier)
+    assert set(obs["violations"]) == set(case.b0_expected), obs
+    assert obs["pipeline_calls"] == 1 and obs["method"] == "no_external_source"
+
+
+def _legacy_module(path: str, name: str):
     try:
         source = subprocess.run(
-            ["git", "show", f"{LEGACY_COMMIT}:app/routes/monitor.py"], cwd=REPO,
+            ["git", "show", f"{LEGACY_COMMIT}:{path}"], cwd=REPO,
             capture_output=True, text=True, encoding="utf-8", check=True, timeout=30,
         ).stdout
     except (OSError, subprocess.SubprocessError):
-        return None
+        pytest.skip(f"pre-D-060 source {path} ({LEGACY_COMMIT[:7]}) not in this checkout")
     from .harness import load_route_from_source
-    return load_route_from_source(source, "legacy_monitor_f0888bb")
+    return load_route_from_source(source, name)
 
 
 @pytest.fixture(scope="module")
 def legacy_route():
-    route = _legacy_route()
-    if route is None:
-        pytest.skip(f"pre-D-060 route source ({LEGACY_COMMIT[:7]}) not in this checkout")
-    return route
+    return _legacy_module("app/routes/monitor.py", "legacy_monitor_f0888bb")
+
+
+@pytest.fixture(scope="module")
+def legacy_step_verifier():
+    return _legacy_module("engine/reasoning/step_verifier.py", "legacy_step_verifier_f0888bb")
 
 
 @pytest.mark.parametrize("case", ROUTE_CASES, ids=[c.id for c in ROUTE_CASES])

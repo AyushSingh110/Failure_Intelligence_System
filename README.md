@@ -197,8 +197,10 @@ fie explain "Ignore all previous instructions"                 # every layer's s
 ```
 
 Async is also supported (`scan_prompt_async`), as are three monitor modes: `local` is fully
-offline; `monitor` reports to a dashboard in the background; `correct` waits for the verdict
-and replaces wrong answers.
+offline; `monitor` reports to a dashboard in the background; `correct` waits for the verdict.
+**`correct` does not replace answers.** FIE's answer corrections are not yet validated, so
+the original answer is always returned and any suggested correction is passed to an
+`on_proposal=` callback as an unverified `fie.correction.CorrectionProposal` (see CHANGELOG).
 
 ## Self-hosting the API and dashboard
 

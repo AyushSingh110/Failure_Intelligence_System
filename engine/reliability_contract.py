@@ -191,6 +191,9 @@ def assess_ground_truth(gt: Any, primary_output: str, time_sensitive: bool = Fal
         reasons.append("cache_entry_has_no_retained_evidence")
         source_class = getattr(gt, "cache_source_class", "") or "unknown"
         reasons.append(f"cache_source_class={source_class}")
+        if source_class == "tenant_feedback":
+            # The tenant's own assertion: kept and shown, never treated as evidence.
+            reasons.append("tenant_correction_not_independently_verified")
         if time_sensitive or getattr(gt, "provenance_category", "") in _LIVE_CATEGORIES:
             # No as-of policy is approved, so no cached answer is fresh enough.
             reasons.append("cache_stale_for_live_question")
@@ -313,7 +316,8 @@ def ensemble_available(shadow_successes: int) -> bool:
 
 # ── Reasoning steps (engine/reasoning/step_verifier.py) ──────────────────────
 
-_STEP_NO_SIGNAL = frozenset({"no_external_source", "offline_skipped", "hedge_detected", "passthrough"})
+_STEP_NO_SIGNAL = frozenset({"not_checked", "no_external_source", "offline_skipped",
+                             "hedge_detected", "passthrough"})
 
 
 def step_evidence_state(is_correct: bool, confidence: float, method: str) -> EvidenceState:

@@ -222,3 +222,14 @@ research/**/owner_only/
 research/**/reviewer_packets/
 research/**/annotations_returned/
 research/**/cache/texts.jsonl
+
+# Local working records — owner instruction 2026-10-27: never committed.
+#  - worklog/FIE_WORKLOG.md: the single running record of everything implemented,
+#    decided, broken and fixed; worklog/reports/: one report per implementation
+#  - CLAUDE.md: the assistant's local standing instructions
+/worklog/
+/CLAUDE.md
+
+# E-R1 Part B raw dataset text (OD-R8): local only. Only the licence record,
+# manifest, hashes, counts and aggregate results are tracked, outside data/.
+research/reliability/data/

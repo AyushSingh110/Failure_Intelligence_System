@@ -4,6 +4,35 @@ All notable changes to FIE (Failure Intelligence Engine) are documented here.
 
 ---
 
+## [Unreleased] — output monitor is warn-only
+
+### Changed — behaviour (read this if you use `mode="correct"`)
+
+- **`correct` mode no longer replaces your model's answer** (`fie.monitor`,
+  `fie.integrations.openai.Client`, `fie.integrations.anthropic.Client`). It still waits for
+  the FIE server's verdict, logs it and fires Slack alerts, but always returns the original
+  answer and never mutates the provider's response object. FIE's corrections (shadow-model
+  consensus, Wikipedia/Wikidata/search lookups, cached corrections) have not passed an
+  accuracy evaluation; an internal audit found they replaced correct answers about as often
+  as wrong ones.
+- **Suggested corrections are reported, not applied.** Pass `on_proposal=` (a callable) to
+  receive a `fie.correction.CorrectionProposal` with `proposed_output`, `strategy`, `source`
+  (for example `cache:tenant_feedback`), `server_contract` (`reliability-v1` or `legacy`) and
+  `status="UNVERIFIED_PROPOSAL"`. It is also logged at WARNING.
+- **Older servers.** A server that still answers `fix_applied=True` is treated the same way:
+  its `fixed_output` becomes a proposal. A missing `reliability` block is never read as
+  verification.
+- **Server (`/api/v1/monitor`).** `fix_result.fix_applied` is always `false` and
+  `fixed_output` is the submitted answer; the suggestion is in `fix_result.proposed_output`.
+  New additive field `reliability` (evidence state, action, reasons, proposal source and
+  status). A fallback no longer clears `requires_human_review`. Reasoning steps carry a new
+  `verification_status`; a factual premise that is not checked is `NOT_CHECKED` (previously
+  it silently ran a ground-truth lookup whose result was discarded).
+- There is no switch to re-enable automatic replacement. It returns only after the
+  end-to-end reliability evaluation passes.
+
+---
+
 ## [1.18.0] — production hardening (2026-08-09)
 
 Behaviour-preserving except where explicitly noted. Detection output is pinned by
