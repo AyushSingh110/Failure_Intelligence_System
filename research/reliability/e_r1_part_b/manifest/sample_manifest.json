@@ -1,0 +1,148 @@
+{
+ "schema": "e-r1-partB-sample/1",
+ "script": "fever_materialize/2",
+ "script_sha256": "0f05f986943a82f077ccc63575cf81694c301ea356e06dabf39711462f3aeda0",
+ "seed": 20261027,
+ "quotas_per_label": {
+  "smoke": 10,
+  "calibration": 120,
+  "test": 280
+ },
+ "sources": {
+  "paper_dev.jsonl": {
+   "sha256": "41158707810008747946bf23471e82df53e77a513524b9e3ec1c2e674ef5ef8c",
+   "bytes": 2168767
+  },
+  "paper_test.jsonl": {
+   "sha256": "fb7b0280a0adc2302bbb29bfb7af37274fa585de3171bcf908f180642d11d88e",
+   "bytes": 2181168
+  },
+  "wiki-pages.zip": {
+   "sha256": "4b06d95da6adf7fe02d2796176c670dacccb21348da89cba4c50676ab99665f2",
+   "bytes": 1713485474
+  }
+ },
+ "dedupe_rows_dropped": {
+  "paper_dev": 464,
+  "paper_test": 276
+ },
+ "zip_members_scanned": 109,
+ "zip_members_skipped": {
+  "count": 115,
+  "macosx_resource_forks": 113,
+  "other": [
+   "license.html",
+   "wiki-pages/"
+  ]
+ },
+ "pages_requested": {
+  "gold": 719,
+  "nei_candidates": 5200
+ },
+ "pages_extracted": 1619,
+ "gold_pages_missing_from_archive": [],
+ "kept_counts": {
+  "smoke|SUPPORTS": 10,
+  "smoke|REFUTES": 10,
+  "smoke|NOT ENOUGH INFO": 10,
+  "calibration|SUPPORTS": 120,
+  "calibration|REFUTES": 120,
+  "calibration|NOT ENOUGH INFO": 119,
+  "test|SUPPORTS": 280,
+  "test|REFUTES": 280,
+  "test|NOT ENOUGH INFO": 272
+ },
+ "excluded": [
+  {
+   "fever_id": 117478,
+   "role": "calibration",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 2191,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 39411,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 44075,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 52565,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 71381,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 104276,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 131785,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  },
+  {
+   "fever_id": 161724,
+   "role": "test",
+   "label": "NOT ENOUGH INFO",
+   "reason": "no_related_page"
+  }
+ ],
+ "excluded_counts": {
+  "calibration|NOT ENOUGH INFO|no_related_page": 1,
+  "test|NOT ENOUGH INFO|no_related_page": 8
+ },
+ "derived_files": {
+  "calibration.jsonl": {
+   "sha256": "01cf7b779691d3c4002bf2f3c3abba6c57f33dfb388ce59dda6b463ba0655b70",
+   "bytes": 321777,
+   "rows": 359
+  },
+  "smoke.jsonl": {
+   "sha256": "76e52b9925ffcf607352fcfed0e33cb4ac8639f754cdc08199f439b6d43cab8b",
+   "bytes": 22876,
+   "rows": 30
+  },
+  "test_sealed.jsonl": {
+   "sha256": "3a3c3a5aa5be37fda669ce9b4109eefc1183a2e17166d03812a48974bd210ad2",
+   "bytes": 708150,
+   "rows": 832
+  },
+  "test_sealed_labels.jsonl": {
+   "sha256": "525952a0d7f93431f9c96d806bf8a86b40f41d01ea0a80f7becf4a6e5775eea7",
+   "bytes": 41990,
+   "rows": 832
+  }
+ },
+ "escape_mapping": {
+  "-LRB-": "(",
+  "-RRB-": ")",
+  "-LSB-": "[",
+  "-RSB-": "]",
+  "-LCB-": "{",
+  "-RCB-": "}",
+  "-COLON-": ":",
+  "``": "\"",
+  "''": "\""
+ }
+}

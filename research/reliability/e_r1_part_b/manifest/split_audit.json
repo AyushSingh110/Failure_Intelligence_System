@@ -1,0 +1,160 @@
+{
+ "schema": "e-r1-partB-split-audit/1",
+ "files": {
+  "paper_dev.jsonl": {
+   "file": "paper_dev.jsonl",
+   "bytes": 2168767,
+   "sha256": "41158707810008747946bf23471e82df53e77a513524b9e3ec1c2e674ef5ef8c",
+   "md5": "0343eb51f4ca70ee91df152ac559034a",
+   "lines": 9999,
+   "rows_parsed": 9999,
+   "parse_errors": [],
+   "missing_required_fields": {},
+   "label_counts": {
+    "SUPPORTS": 3333,
+    "REFUTES": 3333,
+    "NOT ENOUGH INFO": 3333
+   },
+   "other_labels": {},
+   "label_x_verifiable": {
+    "NOT ENOUGH INFO|NOT VERIFIABLE": 3333,
+    "REFUTES|VERIFIABLE": 3333,
+    "SUPPORTS|VERIFIABLE": 3333
+   },
+   "duplicate_ids": 0,
+   "duplicate_normalized_claims": {
+    "distinct_texts_repeated": 207,
+    "rows_in_repeats": 464
+   },
+   "evidence_structure": {
+    "nei_item_null_page": 4524,
+    "gold_item_ok": 14475
+   },
+   "evidence_sets_per_claim (capped 10)": {
+    "1": 8167,
+    "2": 841,
+    "3": 273,
+    "4": 192,
+    "5": 187,
+    "6": 96,
+    "7": 60,
+    "8": 46,
+    "9": 26,
+    "10": 111
+   },
+   "sentences_per_set (capped 10)": {
+    "1": 13713,
+    "2": 1566,
+    "3": 217,
+    "4": 104,
+    "5": 94,
+    "6": 46,
+    "7": 9,
+    "8": 15,
+    "9": 3,
+    "10": 8
+   },
+   "pages_per_set (capped 10)": {
+    "1": 14325,
+    "2": 1317,
+    "3": 80,
+    "4": 18,
+    "5": 14,
+    "6": 7,
+    "7": 5,
+    "8": 8,
+    "10": 1
+   }
+  },
+  "paper_test.jsonl": {
+   "file": "paper_test.jsonl",
+   "bytes": 2181168,
+   "sha256": "fb7b0280a0adc2302bbb29bfb7af37274fa585de3171bcf908f180642d11d88e",
+   "md5": "2f2c122972f77af033f43574e2039093",
+   "lines": 9999,
+   "rows_parsed": 9999,
+   "parse_errors": [],
+   "missing_required_fields": {},
+   "label_counts": {
+    "SUPPORTS": 3333,
+    "REFUTES": 3333,
+    "NOT ENOUGH INFO": 3333
+   },
+   "other_labels": {},
+   "label_x_verifiable": {
+    "NOT ENOUGH INFO|NOT VERIFIABLE": 3333,
+    "REFUTES|VERIFIABLE": 3333,
+    "SUPPORTS|VERIFIABLE": 3333
+   },
+   "duplicate_ids": 0,
+   "duplicate_normalized_claims": {
+    "distinct_texts_repeated": 130,
+    "rows_in_repeats": 276
+   },
+   "evidence_structure": {
+    "nei_item_null_page": 4417,
+    "gold_item_ok": 14150
+   },
+   "evidence_sets_per_claim (capped 10)": {
+    "1": 8181,
+    "2": 834,
+    "3": 288,
+    "4": 199,
+    "5": 159,
+    "6": 104,
+    "7": 62,
+    "8": 48,
+    "9": 30,
+    "10": 94
+   },
+   "sentences_per_set (capped 10)": {
+    "1": 13695,
+    "2": 1458,
+    "3": 204,
+    "4": 102,
+    "5": 100,
+    "6": 32,
+    "7": 13,
+    "8": 2,
+    "9": 2,
+    "10": 8
+   },
+   "pages_per_set (capped 10)": {
+    "1": 14272,
+    "2": 1221,
+    "3": 83,
+    "4": 18,
+    "5": 8,
+    "6": 8,
+    "7": 6
+   }
+  }
+ },
+ "concatenation_check": {
+  "sum_bytes": 4349935,
+  "zenodo_shared_task_dev_bytes": 4349935,
+  "sum_rows": 19998,
+  "documented_shared_task_dev_rows": 19998
+ },
+ "overlap": {
+  "claim_ids": 0,
+  "normalized_claim_texts": 0,
+  "gold_evidence_pages_dev": 1460,
+  "gold_evidence_pages_test": 1499,
+  "gold_evidence_pages_shared": 67,
+  "test_gold_rows": 6666,
+  "test_gold_rows_citing_a_page_also_cited_in_dev": 323
+ },
+ "id_ranges": {
+  "paper_dev": [
+   11,
+   229319
+  ],
+  "paper_test": [
+   6,
+   228697
+  ],
+  "interleaved": true,
+  "union_size": 19998
+ }
+}

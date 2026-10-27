@@ -1,0 +1,71 @@
+{
+ "schema": "e-r1-partB-source/1",
+ "retrieved_at_utc": "2026-10-27T11:36:42Z",
+ "dataset": "FEVER 1.0 (Thorne, Vlachos, Christodoulopoulos, Mittal; NAACL 2018)",
+ "official_pages": [
+  "https://fever.ai/dataset/fever.html",
+  "https://fever.ai/download/fever/license.html"
+ ],
+ "zenodo": {
+  "doi": "10.5281/zenodo.4925954",
+  "record": "https://zenodo.org/records/4925954",
+  "revision": 2,
+  "publication_date": "2018-04-03",
+  "license": "cc-by-sa-3.0",
+  "creators": [
+   "Thorne, James",
+   "Vlachos, Andreas",
+   "Christodoulopoulos, Christos",
+   "Mittal, Arpit"
+  ],
+  "updated": "2021-06-11T13:48:24.048451+00:00",
+  "api_record_sha256": "9a2ed95a2657aa8e13b8378208beb22e95dfb169060ca186eab91e9b995e0b33"
+ },
+ "licence": {
+  "fever_ai_license_html_sha256": "eaddbd6e2854b45e6925bac9171fb6a2438492dc0efd4fda80144e836ae1ad05",
+  "license_html_in_zip_sha256": "eaddbd6e2854b45e6925bac9171fb6a2438492dc0efd4fda80144e836ae1ad05",
+  "identical": true,
+  "summary": "Annotations incorporate Wikipedia material; available under the licence terms of the applicable Wikipedia article pages or, where unavailable, CC BY-SA 3.0. One set of terms covers annotations and dump. Zenodo lists cc-by-sa-3.0.",
+  "obligations": [
+   "attribute FEVER (cite Thorne et al. 2018) and Wikipedia",
+   "share-alike for any redistributed derived text",
+   "raw/derived text kept local (OD-R8)"
+  ]
+ },
+ "files_downloaded": {
+  "paper_dev.jsonl": {
+   "url": "https://zenodo.org/api/records/4925954/files/paper_dev.jsonl/content",
+   "zenodo_size": 2168767,
+   "zenodo_checksum": "md5:0343eb51f4ca70ee91df152ac559034a",
+   "local_bytes": 2168767,
+   "local_md5": "0343eb51f4ca70ee91df152ac559034a",
+   "local_sha256": "41158707810008747946bf23471e82df53e77a513524b9e3ec1c2e674ef5ef8c",
+   "md5_match": true
+  },
+  "paper_test.jsonl": {
+   "url": "https://zenodo.org/api/records/4925954/files/paper_test.jsonl/content",
+   "zenodo_size": 2181168,
+   "zenodo_checksum": "md5:2f2c122972f77af033f43574e2039093",
+   "local_bytes": 2181168,
+   "local_md5": "2f2c122972f77af033f43574e2039093",
+   "local_sha256": "fb7b0280a0adc2302bbb29bfb7af37274fa585de3171bcf908f180642d11d88e",
+   "md5_match": true
+  },
+  "wiki-pages.zip": {
+   "url": "https://zenodo.org/api/records/4925954/files/wiki-pages.zip/content",
+   "zenodo_size": 1713485474,
+   "zenodo_checksum": "md5:ed8bfd894a2c47045dca61f0c8dc4c07",
+   "local_bytes": 1713485474,
+   "local_md5": "ed8bfd894a2c47045dca61f0c8dc4c07",
+   "local_sha256": "4b06d95da6adf7fe02d2796176c670dacccb21348da89cba4c50676ab99665f2",
+   "md5_match": true
+  }
+ },
+ "files_not_downloaded": [
+  "shared_task_test.jsonl",
+  "shared_task_dev.jsonl",
+  "train.jsonl",
+  "shared_task_dev_public.jsonl"
+ ],
+ "zip_layout": "109 shards wiki-pages/wiki-001..109.jsonl, plus license.html and 113 __MACOSX resource-fork entries (ignored); uncompressed total 7,615,259,879 bytes"
+}
