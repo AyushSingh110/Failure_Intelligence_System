@@ -195,6 +195,28 @@ class FixResult(BaseModel):
     fix_confidence:    float = Field(default=0.0, ge=0.0, le=1.0)
     improvement_score: float = Field(default=0.0, ge=0.0, le=1.0)
     warning:           str   = ""
+    # D-060 warn-only: a correction the engine proposed but did not apply.
+    # fixed_output is then the original answer and fix_applied is False.
+    proposed_output:   str   = ""
+
+
+class ReliabilityAssessment(BaseModel):
+    """
+    Output-reliability decision for the primary answer (engine/reliability_contract.py).
+    Separate from the input guard's ALLOW / REVIEW / BLOCK decision.
+    """
+    evidence_state:     str  = "NOT_CHECKED"     # EvidenceState
+    answer_action:      str  = "PASS_QUALIFIED"  # AnswerAction
+    verifier:           str  = ""
+    reasons:            list[str] = Field(default_factory=list)
+    evidence_source:    str  = ""
+    warn_only:          bool = True
+    correction_applied: bool = False
+    proposed_strategy:  str  = ""
+    ensemble_available: bool = True
+    shadow_responses:   int  = 0
+
+
 class ExplanationSignal(BaseModel):
     """Normalized signal used to justify a diagnosis or mitigation."""
     name: str
@@ -341,6 +363,9 @@ class MonitorResponse(BaseModel):
     ground_truth:          Optional[GroundTruthVerification] = None
     requires_human_review: bool = False
     escalation_reason:     str  = ""
+
+    # Output-reliability decision (D-060). None only on paths that return early.
+    reliability:           Optional[ReliabilityAssessment] = None
 
     # Reasoning verification (populated when question_type = REASONING)
     reasoning_verification: Optional[ReasoningVerification] = None

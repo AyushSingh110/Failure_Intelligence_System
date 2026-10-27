@@ -21,6 +21,7 @@ class CacheHit:
     verified_by:     str
     verified_at:     str
     use_count:       int
+    source_class:    str = "unknown"   # "tenant_feedback" | "system"; read by engine/reliability_contract.py
 
 
 # ── Internal helpers ────────────────────────────────────────────────────────
@@ -143,7 +144,8 @@ def lookup_cache(question: str, *, scope=None) -> Optional[CacheHit]:
         docs = list(col.find(owned, {"question_vector": 1, "question_text": 1,
                                      "verified_answer": 1, "source": 1,
                                      "confidence": 1, "verified_by": 1,
-                                     "verified_at": 1, "use_count": 1}))
+                                     "verified_at": 1, "use_count": 1,
+                                     "source_class": 1}))
 
         best_sim  = -1.0
         best_doc  = None
@@ -266,4 +268,5 @@ def _doc_to_hit(doc: dict) -> CacheHit:
         verified_by     = doc.get("verified_by", "unknown"),
         verified_at     = doc.get("verified_at", ""),
         use_count       = doc.get("use_count", 0),
+        source_class    = doc.get("source_class", "unknown"),
     )

@@ -22,6 +22,14 @@ from app.auth_guard import (
 )
 from app.security_events import emit
 from app.tenancy import TenantScope, tenant_analytics
+from engine.reliability_contract import (
+    WARN_ONLY,
+    assess_ground_truth,
+    contain_fix,
+    decide_action,
+    ensemble_available,
+    provenance_label as contract_provenance_label,
+)
 from storage.tenant_store import (
     TenantStore,
     calibration_stats_all_tenants,
@@ -372,6 +380,12 @@ def monitor(
             f"Entropy: {signal.entropy_score:.3f}, "
             f"Agreement: {signal.agreement_score:.3f}"
         )
+    elif not ensemble_available(sum(1 for r in shadow_model_results if r.success)):
+        # Fewer than two shadow answers: disagreement cannot be measured, so the
+        # absence of a risk signal is not evidence of stability (D-060).
+        failure_summary = (
+            f"Shadow ensemble unavailable — stability not assessed — archetype: {archetype}"
+        )
     else:
         failure_summary = f"Model outputs are stable — archetype: {archetype}"
 
@@ -381,8 +395,12 @@ def monitor(
     gt_pipeline_result    = None   # raw dataclass — carries provenance_label/category
     requires_human_review = False
     escalation_reason_str = ""
+    _gt_skip_reason       = "no_jury_verdict"
+    _fallback_cleared_review = False   # legacy behaviour, kept only as a classifier input
+    _rag_insufficient     = False
 
     if jury_verdict and jury_verdict.primary_verdict:
+        _gt_skip_reason = ""
         try:
             from engine.fix_engine import apply_fix, prompt_requires_live_data
             from app.schemas import FixResult as FixResultSchema, GroundTruthVerification
@@ -559,13 +577,15 @@ def monitor(
                         warning           = f"Grounded source: {rag.source}",
                     )
                     failure_summary = "AUTO-FIXED: RAG_GROQ_GROUNDING applied via Wikipedia."
-                    # The RAG correction supersedes the escalation decision made
-                    # above; clear it so the response is internally consistent.
-                    requires_human_review = False
-                    escalation_reason_str = ""
+                    _rag_insufficient = rag.insufficient_context
+                    # D-060 (OD-R2): a generated fallback answer never clears a
+                    # human-review escalation. The legacy code cleared it here; that
+                    # value is still what the classifier sees (Step 8), nothing else.
+                    _fallback_cleared_review = requires_human_review
 
         except Exception as exc:
             if "Auto-fix skipped" in str(exc):
+                _gt_skip_reason = str(exc)
                 logger.debug(str(exc))
             else:
                 logger.error("Fix engine failed: %s", exc, exc_info=True)
@@ -615,7 +635,7 @@ def monitor(
             gt_confidence       = _gt_conf_xgb,
             high_failure_risk   = signal.high_failure_risk,
             fix_applied         = _fix_applied_xgb,
-            requires_escalation = requires_human_review,
+            requires_escalation = requires_human_review and not _fallback_cleared_review,
             gt_override         = _gt_override_xgb,
             archetype           = archetype,
             jury_verdict_str    = _jury_verd_str,
@@ -645,13 +665,67 @@ def monitor(
     except Exception as _clf_exc:
         logger.warning("XGBoost classifier unavailable, keeping POET decision: %s", _clf_exc)
 
+    # Step 8b: Reliability contract (D-060). Everything above is the engine's
+    # unchanged proposal — the classifier and the signal log (Step 9b) read it.
+    # Everything below delivers the contract's decision: the original answer is
+    # kept, a proposed correction is reported but not applied, an escalation
+    # stays escalated, and labels claim no more than the evidence shows.
+    _proposed_fix_schema = fix_result_schema
+    _shadow_successes    = sum(1 for r in shadow_model_results if r.success)
+    _time_sensitive      = (
+        _question_type == "TEMPORAL"
+        or bool(jury_verdict and jury_verdict.primary_verdict
+                and jury_verdict.primary_verdict.root_cause == "TEMPORAL_KNOWLEDGE_CUTOFF")
+        or getattr(gt_pipeline_result, "provenance_category", "") in
+           ("LIVE_WORLD_STATE", "USER_SPECIFIC_STATE", "MIXED_SYNTHESIS")
+    )
+    _assessment          = assess_ground_truth(gt_pipeline_result, body.primary_output, _time_sensitive)
+    if gt_pipeline_result is None and _gt_skip_reason:
+        _assessment.reasons.append(_gt_skip_reason)
+    if not ensemble_available(_shadow_successes):
+        _assessment.reasons.append(f"ensemble_unavailable ({_shadow_successes} shadow responses)")
+    if _rag_insufficient:
+        _assessment.reasons.append("wikipedia_context_insufficient")
+
+    fix_result_schema, _proposed_output, _proposed_strategy = contain_fix(
+        _proposed_fix_schema, body.primary_output,
+    )
+    if _proposed_output and failure_summary.startswith("AUTO-FIXED: "):
+        failure_summary = (
+            "CORRECTION PROPOSED, NOT APPLIED (warn-only): "
+            + failure_summary[len("AUTO-FIXED: "):]
+        )
+    if _fallback_cleared_review and not failure_summary.startswith("HUMAN REVIEW REQUIRED"):
+        failure_summary = f"HUMAN REVIEW REQUIRED: {escalation_reason_str[:150]} | {failure_summary}"
+
+    _action = decide_action(
+        _assessment.state, _assessment.verifier,
+        requires_human_review, signal.high_failure_risk,
+    )
+    from app.schemas import ReliabilityAssessment
+    reliability_schema = ReliabilityAssessment(
+        evidence_state     = _assessment.state.value,
+        answer_action      = _action.value,
+        verifier           = _assessment.verifier,
+        reasons            = _assessment.reasons,
+        evidence_source    = _assessment.evidence_source,
+        warn_only          = WARN_ONLY,
+        correction_applied = False,
+        proposed_strategy  = _proposed_strategy,
+        ensemble_available = ensemble_available(_shadow_successes),
+        shadow_responses   = _shadow_successes,
+    )
+
     # Provenance enrichment — copy GT pipeline labels onto FSV
     try:
         from engine.question_classifier import classify_provenance_category
         _prov_cat = classify_provenance_category(_question_type, body.prompt)
         if gt_pipeline_result is not None:
-            _prov_label = gt_pipeline_result.provenance_label
             _prov_cat   = gt_pipeline_result.provenance_category
+            _prov_label = contract_provenance_label(
+                _assessment, gt_pipeline_result.provenance_label, _prov_cat,
+                gt_pipeline_result.cache_source_class, _time_sensitive,
+            )
         elif _prov_cat in ("LIVE_WORLD_STATE", "USER_SPECIFIC_STATE", "MIXED_SYNTHESIS"):
             # Live/user data but GT pipeline didn't run → mark as requiring verification
             _prov_label = "REQUIRES_TOOL_VERIFICATION"
@@ -680,6 +754,7 @@ def monitor(
         ground_truth           = gt_result_schema,
         requires_human_review  = requires_human_review,
         escalation_reason      = escalation_reason_str,
+        reliability            = reliability_schema,
         classifier_probability = _xgb_prob,
         model_version          = _MODEL_VER,
         config_version         = _config_ver,
@@ -707,19 +782,25 @@ def monitor(
             _jury_verdict_str = pv.root_cause
             _jury_conf      = pv.confidence_score
 
+        # The signal log records the engine's PROPOSAL (pre-D-060 semantics), the
+        # same values the classifier was fed, so the logged dataset stays
+        # continuous: here fix_applied means "the engine proposed a correction",
+        # not "the user received one". What was delivered is in the response's
+        # fix_result and reliability fields.
+        _proposed    = _proposed_fix_schema
         _gt_source   = gt_result_schema.source          if gt_result_schema  else "none"
         _gt_conf     = gt_result_schema.confidence      if gt_result_schema  else 0.0
         _gt_override = (
-            fix_result_schema is not None
-            and fix_result_schema.fix_applied
+            _proposed is not None
+            and _proposed.fix_applied
             and gt_result_schema is not None
             and gt_result_schema.source not in ("none", "shadow_consensus")
         )
         _gt_answer   = gt_result_schema.verified_answer if gt_result_schema  else ""
-        _fix_applied = fix_result_schema.fix_applied    if fix_result_schema else False
-        _fix_strat   = fix_result_schema.fix_strategy   if fix_result_schema else ""
-        _fix_conf    = fix_result_schema.fix_confidence if fix_result_schema else 0.0
-        _fix_output  = fix_result_schema.fixed_output   if fix_result_schema else ""
+        _fix_applied = _proposed.fix_applied    if _proposed else False
+        _fix_strat   = _proposed.fix_strategy   if _proposed else ""
+        _fix_conf    = _proposed.fix_confidence if _proposed else 0.0
+        _fix_output  = _proposed.fixed_output   if _proposed else ""
         _shadow_confs= [
             getattr(r, "model_confidence", "MEDIUM") for r in shadow_results_raw if r.success
         ]
@@ -749,7 +830,7 @@ def monitor(
             gt_confidence          = _gt_conf,
             gt_override_applied    = _gt_override,
             gt_verified_answer     = _gt_answer,
-            requires_escalation    = requires_human_review,
+            requires_escalation    = requires_human_review and not _fallback_cleared_review,
             escalation_reason      = escalation_reason_str,
             fix_applied            = _fix_applied,
             fix_strategy           = _fix_strat,
